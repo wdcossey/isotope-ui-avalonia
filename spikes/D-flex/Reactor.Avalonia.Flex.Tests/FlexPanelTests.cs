@@ -50,6 +50,9 @@ public class FlexPanelTests
         Border header = Box(h: 50), body = Box(grow: 1), footer = Box(h: 30);
         var panel = new FlexPanel { Direction = FlexDirection.Column, Children = { header, body, footer } };
         Host(panel, 300, 500);
+        // Measure itself must ask for the whole slot (VerticalAlignment.Stretch + definite offer), not just
+        // the content height; Arrange alone would hide a wrong DesiredSize here.
+        Assert.Equal(500, panel.DesiredSize.Height);
         Assert.Equal(50, body.Bounds.Y);
         Assert.Equal(420, body.Bounds.Height);
         Assert.Equal(470, footer.Bounds.Y);
@@ -97,12 +100,15 @@ public class FlexPanelTests
     [AvaloniaFact]
     public void ChildMargin_IsHonoured()
     {
+        // Asymmetric margin and Left/Top alignment, so a wrong arrange rect can't be hidden by centring.
         Border a = Box(100, 40), b = Box(100, 40);
-        a.Margin = new Thickness(10, 5, 10, 5);
+        a.Margin = new Thickness(10, 5, 20, 0);
+        a.HorizontalAlignment = HorizontalAlignment.Left;
+        a.VerticalAlignment = VerticalAlignment.Top;
         var panel = new FlexPanel { AlignItems = FlexAlign.FlexStart, Children = { a, b } };
         Host(panel, 400, 300);
         Assert.Equal(new Rect(10, 5, 100, 40), a.Bounds);
-        Assert.Equal(120, b.Bounds.X);
+        Assert.Equal(130, b.Bounds.X);
     }
 
     [AvaloniaFact]
