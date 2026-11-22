@@ -180,6 +180,8 @@ public sealed class FlexPanelTests : IDisposable
         Host(panel, 300, 500);
         Assert.Equal(50, panel.DesiredSize.Height); // fit-content
 
+        // Avalonia 12 re-measures on an alignment change by itself (review pass 1 assumed it only re-arranges;
+        // checked: this test passes without an AffectsMeasure registration). Kept as a regression guard.
         panel.VerticalAlignment = VerticalAlignment.Stretch; // now fills the slot
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(500, panel.DesiredSize.Height);

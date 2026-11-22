@@ -108,8 +108,6 @@ public class FlexPanel : Panel
 
     static FlexPanel()
     {
-        // Alignment decides fit-content vs fill in MeasureOverride; Avalonia only re-arranges for it by default.
-        AffectsMeasure<FlexPanel>(HorizontalAlignmentProperty, VerticalAlignmentProperty);
         AffectsMeasure<FlexPanel>(DirectionProperty, JustifyContentProperty, AlignItemsProperty, AlignContentProperty,
             WrapProperty, LayoutDirectionProperty, ColumnGapProperty, RowGapProperty, FlexPaddingProperty);
         foreach (var p in new AvaloniaProperty[] { GrowProperty, ShrinkProperty, BasisProperty, FlexMinWidthProperty, FlexMinHeightProperty,
