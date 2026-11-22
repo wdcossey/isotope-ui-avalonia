@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spike D: upstream's Yoga engine, unmodified and linked, under an Avalonia 12 FlexPanel. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>15</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Reactor.Avalonia.Layout</RootNamespace>
+    <UpstreamSrc>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\upstream\src\Reactor\'))</UpstreamSrc>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Verbatim upstream: every Yoga file except the WinUI panel. -->
+    <Compile Include="$(UpstreamSrc)Yoga\*.cs" Exclude="$(UpstreamSrc)Yoga\FlexPanel.cs" LinkBase="Upstream\Yoga" />
+    <Compile Include="$(UpstreamSrc)Core\Polyfills\ClosedTypeAttributes.cs" Link="Upstream\Core\Polyfills\ClosedTypeAttributes.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Upstream's Yoga tests use internal Yoga types (CacheHelper, SizingMode, …). -->
+    <InternalsVisibleTo Include="Reactor.Avalonia.Flex.Tests" />
+  </ItemGroup>
+</Project>
