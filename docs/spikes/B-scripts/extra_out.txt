@@ -1,0 +1,136 @@
+PARTIAL-ADD 2026-04-21 76d0f517 W1 src/Reactor/Core/Reconciler.DragDrop.cs +335 alive=True | feat(input): declarative pointer, gesture, focus, and drag-d
+PARTIAL-ADD 2026-04-21 76d0f517 W1 src/Reactor/Core/Reconciler.Gestures.cs +470 alive=True | feat(input): declarative pointer, gesture, focus, and drag-d
+PARTIAL-ADD 2026-05-16 c27fc09b W3 src/Reactor/Elements/ElementExtensions.Events.cs +460 alive=True | feat(039): Property & event API scrub � fluents, missing eve
+PARTIAL-ADD 2026-05-16 c27fc09b W3 src/Reactor/Elements/ElementExtensions.NamedStyles.cs +122 alive=True | feat(039): Property & event API scrub � fluents, missing eve
+PARTIAL-ADD 2026-05-16 c27fc09b W3 src/Reactor/Elements/Factories.NamedStyles.cs +58 alive=True | feat(039): Property & event API scrub � fluents, missing eve
+PARTIAL-ADD 2026-05-28 836c3010 W1 src/Reactor/Core/Reconciler.KeyedItemsBinding.cs +509 alive=True | spec(047): Phase 3 close-out + finish � 100% V1 dispatch for
+PARTIAL-ADD 2026-05-30 de5c1351 W1 src/Reactor/Core/V1Protocol/Reconciler.TemplatedTree.cs +339 alive=True | refactor(spec-047): relocate Bucket 1 legacy mount/update in
+PARTIAL-ADD 2026-06-17 731954f1 W3 src/Reactor/Core/Element.Icon.cs +59 alive=True | Merge pull request #572
+PARTIAL-ADD 2026-06-17 731954f1 W3 src/Reactor/Core/Element.TabView.cs +161 alive=True | Merge pull request #572
+PARTIAL-ADD 2026-06-24 a40e9f86 W4 src/Reactor/Hosting/ReactorApp.BuiltIns.cs +191 alive=True | Merge pull request #641
+PARTIAL-ADD 2026-06-26 023d8799 W1 src/Reactor/Core/Reconciler.RichTextScrollAnchor.cs +375 alive=True | Fix #487: preserve scroll offset across RichTextBlock inline
+PARTIAL-ADD 2026-10-07 22f26792 O1 src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs +389 alive=True | Diagnostics: enumerate Reactor hosts and their roots; tag co
+PARTIAL-ADD 2026-10-07 22f26792 O1 src/Reactor/Diagnostics/ReactorSourceMap.RootMount.cs +167 alive=True | Diagnostics: enumerate Reactor hosts and their roots; tag co
+PARTIAL-ADD 2026-10-19 73328eba O1 src/Reactor/Core/Diagnostics/ReactorDiagnostics.Components.cs +455 alive=True | Add text-only component inspection to ReactorDiagnostics (#1
+PARTIAL-ADD 2026-10-19 73328eba O1 src/Reactor/Core/Diagnostics/ReactorDiagnostics.References.cs +181 alive=True | Add text-only component inspection to ReactorDiagnostics (#1
+PARTIAL-ADD 2026-10-19 73328eba W1 src/Reactor/Core/Reconciler.Diagnostics.cs +131 alive=True | Add text-only component inspection to ReactorDiagnostics (#1
+PARTIAL-ADD 2026-10-19 73328eba W4 src/Reactor/Hosting/ReactorHostControl.Diagnostics.cs +39 alive=True | Add text-only component inspection to ReactorDiagnostics (#1
+PARTIAL-ADD 2026-10-21 262488ee O1 src/Reactor/Core/Diagnostics/ReactorDiagnostics.Source.cs +53 alive=True | Inspector diagnostics without a managed agent: ReactorSource
+PARTIAL-ADD 2026-10-21 262488ee O1 src/Reactor/Diagnostics/ReactorSourceMap.StaticInfo.cs +386 alive=True | Inspector diagnostics without a managed agent: ReactorSource
+WIN-RENAME 2026-10-05 956f73bc n=29 src/Reactor.Cli/Docs/BlankFrameException.cs -> tools/Reactor.DocPipeline/BlankFrameException.cs | Move the doc pipeline out of mur; capture doc screenshots in-process w
+WIN-RENAME 2026-08-27 0cb2d1c4 n=2 samples/WinFormsInterop/SampleDuctComponent.cs -> samples/WinFormsInterop/SampleReactorComponent.cs | Rename two files whose names still said Duct (#1146)
+WIN-RENAME 2026-08-26 158eab4d n=1 src/Reactor.Cli/Loc/AzureOpenAiProvider.cs -> src/Reactor.Cli/Loc/CopilotTranslationProvider.cs | Purge stale duct/duct-loc naming from live docs and CLI output (#1129)
+WIN-RENAME 2026-08-26 ffe1de4d n=1 docs/guide/migrations/054-windowing-evolution.md -> docs/guide/migration/054-windowing-evolution.md | Guide audit: fix stale samples, phantom APIs, and the doc-pipeline gap
+WR E5 | src/Reactor/Controls/Validation/ErrorStyling.cs | 158 | 1
+WR E5 | src/Reactor/Controls/Validation/FormField.cs | 164 | 0
+WR E5 | src/Reactor/Controls/Validation/ImmediateExtensions.cs | 28 | 0
+WR E5 | src/Reactor/Controls/Validation/UseValidationContext.cs | 120 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidateExtensions.cs | 253 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidationContext.cs | 1565 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidationMessage.cs | 24 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidationReconciler.cs | 262 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidationRenderScope.cs | 359 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidationRule.cs | 221 | 0
+WR E5 | src/Reactor/Controls/Validation/ValidationVisualizer.cs | 179 | 0
+WR E5 | src/Reactor/Controls/Validation/Validators/BuiltInValidators.cs | 238 | 0
+WR E5 | src/Reactor/Controls/Validation/Validators/IValidator.cs | 25 | 0
+WR E2 | src/Reactor/Core/ChildReconciler.cs | 1454 | 24
+WR E2 | src/Reactor/Core/Internal/KeyedListDiff.cs | 938 | 0
+WR E1 | src/Reactor/Core/RenderContext.cs | 3153 | 32
+WR E5 | src/Reactor/Data/DataPage.cs | 18 | 0
+WR E5 | src/Reactor/Data/DataPageCache.cs | 345 | 1
+WR E5 | src/Reactor/Data/DataRequest.cs | 25 | 0
+WR E5 | src/Reactor/Data/DataSourceResourceExtensions.cs | 97 | 0
+WR E5 | src/Reactor/Data/FieldDescriptor.cs | 106 | 0
+WR E5 | src/Reactor/Data/FilterDescriptor.cs | 30 | 0
+WR E5 | src/Reactor/Data/GridAttributes.cs | 33 | 0
+WR E5 | src/Reactor/Data/IDataSource.cs | 60 | 0
+WR E5 | src/Reactor/Data/Providers/ListDataSource.cs | 224 | 0
+WR E5 | src/Reactor/Data/Providers/ObservableListDataSource.cs | 104 | 0
+WR E5 | src/Reactor/Data/RowKey.cs | 13 | 0
+WR E5 | src/Reactor/Data/SortDescriptor.cs | 15 | 0
+WR E4 | src/Reactor/Hooks/Pending.cs | 89 | 0
+WR E4 | src/Reactor/Hooks/PendingScope.cs | 81 | 0
+WR E4 | src/Reactor/Hooks/UseAnnounce.cs | 173 | 12
+WR E4 | src/Reactor/Hooks/UseDevtools.cs | 29 | 0
+WR E4 | src/Reactor/Hooks/UseElementFocus.cs | 62 | 3
+WR E4 | src/Reactor/Hooks/UseElementRef.cs | 57 | 3
+WR E4 | src/Reactor/Hooks/UseFocus.cs | 254 | 6
+WR E4 | src/Reactor/Hooks/UseFocusTrap.cs | 173 | 12
+WR E4 | src/Reactor/Hooks/UseInfiniteResource.cs | 460 | 1
+WR E4 | src/Reactor/Hooks/UseMemoCells.cs | 524 | 0
+WR E4 | src/Reactor/Hooks/UseMutation.cs | 346 | 2
+WR E4 | src/Reactor/Hooks/UseResource.cs | 520 | 7
+WR E3 | src/Reactor/Yoga/AlgorithmUtils.cs | 551 | 0
+WR E3 | src/Reactor/Yoga/FlexDirectionHelper.cs | 81 | 0
+WR E3 | src/Reactor/Yoga/FlexEnums.cs | 63 | 0
+WR E3 | src/Reactor/Yoga/LayoutResults.cs | 218 | 0
+WR E3 | src/Reactor/Yoga/YogaAlgorithm.cs | 2639 | 0
+WR E3 | src/Reactor/Yoga/YogaConfig.cs | 131 | 0
+WR E3 | src/Reactor/Yoga/YogaEnums.cs | 128 | 0
+WR E3 | src/Reactor/Yoga/YogaNode.cs | 697 | 0
+WR E3 | src/Reactor/Yoga/YogaStyle.cs | 422 | 0
+WR E3 | src/Reactor/Yoga/YogaValue.cs | 116 | 0
+WR-SUM files=50 lines=18025 zero-match files=38 lines=10870
+73328eba Add text-only component inspection to ReactorDiagnostics (#1332)
+
+ src/Reactor/Core/Reconciler.Diagnostics.cs | 131 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/Reactor/Core/RenderContext.cs          | 246 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---------------------------------
+ 2 files changed, 323 insertions(+), 54 deletions(-)
+
+diff --git a/src/Reactor/Core/RenderContext.cs b/src/Reactor/Core/RenderContext.cs
+index 0663d6c0..4b711838 100644
+--- a/src/Reactor/Core/RenderContext.cs
++++ b/src/Reactor/Core/RenderContext.cs
+@@ -1201,0 +1202,4 @@ public sealed class RenderContext
++        // Refreshed every render, like LastValue: a stable slot can be handed a different
++        // Context<T> instance, and readers (memo change detection, diagnostics) must see the
++        // one this render actually read.
++        hook.Context = context;
+@@ -2627,2 +2630,0 @@ public sealed class RenderContext
+-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "SnapshotHooks uses reflection on internal hook state types.")]
+-    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "SnapshotHooks uses reflection on internal hook state types.")]
+@@ -2630,0 +2633,2 @@ public sealed class RenderContext
++        // Built on the cells' diagnostic members (no reflection): the raw value keeps the
++        // shape reactor.state has always reported (a ref hook's Ref<T> box, a reducer as useState).
+@@ -2635,6 +2639,2 @@ public sealed class RenderContext
+-            var t = h.GetType();
+-            string hookName;
+-            Type? valueType = null;
+-            object? value = null;
+-
+-            if (t.IsGenericType)
++            var kind = h.DiagnosticKind;
++            string hookName = kind switch
+@@ -2642,7 +2642,3 @@ public sealed class RenderContext
+-                var def = t.GetGenericTypeDefinition();
+-                if (def == typeof(ValueHookState<>))
+-                {
+-                    valueType = t.GetGenericArguments()[0];
+-                    value = t.GetField("Value")!.GetValue(h);
+-                    // UseRef uses the same cell, but its value is a Ref<T>.
+-                    hookName = valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(Ref<>)
++                // reactor.state has always named a value cell by its stored type: a Ref<T> is "useRef".
++                HookKind.State or HookKind.Reducer or HookKind.Ref =>
++                    h.DiagnosticRawValueType is { IsGenericType: true } raw && raw.GetGenericTypeDefinition() == typeof(Ref<>)
+@@ -2650,38 +2646,10 @@ public sealed class RenderContext
+-                        : "useState";
+-                }
+-                else if (def == typeof(MemoHookState<>))
+-                {
+-                    valueType = t.GetGenericArguments()[0];
+-                    value = t.GetField("Value")!.GetValue(h);
+-                    hookName = "useMemo";
+-                }
+-                else if (def == typeof(PersistedHookState<>))
+-                {
+-                    valueType = t.GetGenericArguments()[0];
+-                    value = t.GetField("Value")!.GetValue(h);
+-                    hookName = "usePersisted";
+-                }
+-                else
+-                {
+-                    hookName = t.Name;
+-                }
+-            }
+-            else if
