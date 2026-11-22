@@ -1,6 +1,6 @@
 # Spike D (reduced): FlexPanel on Avalonia 12 over upstream's Yoga
 
-Run 2026-11-22 at upstream `28a87225`, .NET SDK 10.0.402, Avalonia 12.1.6. Project: `spikes/D-flex/`. Run it with `dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests`.
+Run 2026-11-22 at upstream `28a87225` with Avalonia 12.1.6, first on .NET SDK 10.0.402 and then on 11.0.100 (the tests are the same either way). Project: `spikes/D-flex/`. Run it with `dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests`.
 
 ## Scope: what ran, and what was set aside
 
@@ -17,7 +17,7 @@ The choice was made in away mode and is logged in FINDINGS.md under "Decisions t
 | Yoga engine (`src/Reactor/Yoga/*` except FlexPanel.cs) | 5,046 | **linked verbatim**, 10 files |
 | `FlexPanel` for Avalonia | 413 (upstream WinUI file: 978, about 60% of it comments) | hand port of `Yoga/FlexPanel.cs` |
 | Upstream Yoga tests (`tests/Reactor.Tests/Yoga*.cs`, `YogaGenerated/*.cs`) | about 35,000 | **linked verbatim**: 35 of 36 files. `YogaValueExtensionsTests.cs` (70 lines) is left out because it also imports upstream's Markdown namespace |
-| FlexPanel headless tests | 9 tests | new, written against the CSS Flexbox results in the style of upstream's `FlexPanelCssBehaviorFixtures`. Those fixtures run inside a WinUI app and can't be linked |
+| FlexPanel headless tests | 12 tests | new, written against the CSS Flexbox results in the style of upstream's `FlexPanelCssBehaviorFixtures`. Those fixtures run inside a WinUI app and can't be linked |
 
 ### The port
 
@@ -32,7 +32,7 @@ Avalonia's `Measure`/`DesiredSize`/`Arrange` include the child's `Margin` exactl
 ## Results
 
 - **Upstream's Yoga tests: 780 of 780 pass** on net10.0 with no WinUI, against the unmodified Yoga sources.
-- **FlexPanel tests: 9 of 9 pass.** Each covers one behaviour:
+- **FlexPanel tests: 12 of 12 pass.** Each covers one behaviour:
   - a grow child takes the remaining width;
   - a header/body/footer column fills the window, including the panel's own `DesiredSize`;
   - wrap with gaps;
@@ -41,9 +41,12 @@ Avalonia's `Measure`/`DesiredSize`/`Arrange` include the child's `Margin` exactl
   - asymmetric margins;
   - `justify-content: space-between`;
   - wrapped text in a column matches `StackPanel` (upstream's "CssStack" parity idea);
-  - a headless-rendered demo frame.
-- **Clean run:** a fresh clone of the branch at `67c25c2`, with `upstream` supplied through a junction, passes 789 of 789.
-- **Tests proven to fail: 8 of 8 behaviours.** Each was broken on committed code and the right test went red; the code was then restored. Two tests stayed green on the first try and were strengthened:
+  - a headless-rendered demo frame;
+  - FlexPanel as an `ItemsControl`'s ItemsPanel: an attached-property change relays out;
+  - an alignment change re-measures;
+  - negative margins larger than the slot don't throw.
+- **Clean run:** a fresh clone of the branch at `67c25c2`, with `upstream` supplied through a junction, passed 789 of 789. After the review fixes, the worktree run passes 792 of 792.
+- **Tests proven to fail: 10 of 10 behaviours** (8 at first, plus 2 added after review). One more test, for an alignment change, stays green even without the registration it was written for, because Avalonia already re-measures; the registration was dropped. Each was broken on committed code and the right test went red; the code was then restored. Two tests stayed green on the first try and were strengthened:
   - The margin test used symmetric margins, and centring hid a wrong arrange rect.
   - The column test missed a wrong `DesiredSize`, because Arrange re-solves the layout.
 
@@ -61,3 +64,16 @@ Avalonia's `Measure`/`DesiredSize`/`Arrange` include the child's `Margin` exactl
 - **Yoga is the best case:** 5,046 source lines and about 35,000 test lines taken verbatim, with zero edits.
 - **FlexPanel is a rewrite we must watch.** In Spike B's 13-week window upstream's `FlexPanel.cs` had no commits, but each future change to it needs a manual port.
 - **Upstream's tests are reusable where they test platform-neutral code.** For layout and Yoga that held completely; the WinUI-hosted FlexPanel fixtures don't link.
+## Review
+
+- **Pass 1** (`high`, about 79k tokens): 8 found, 5 fixed, 3 waived.
+  - **Fixed:**
+    - Attached-property invalidation now finds the panel by its visual parent, as upstream does, so FlexPanel works as an ItemsPanel.
+    - Negative-margin rects are clamped.
+    - The `FlexMinWidth`/`FlexMinHeight` accessors are renamed for XAML.
+    - The tests close their windows.
+    - The line count is corrected.
+  - **Waived:**
+    - *Alignment changes don't re-measure:* checked, and Avalonia 12 already re-measures; the test guards it.
+    - *The ambient Yoga mode leaks into the min-content probe,* and *Avalonia's measure cache ignores the ambient mode:* both are inherited from upstream, and keeping parity keeps the port easy to diff. Both are candidates for an upstream fix.
+- **Pass 2** (`medium`): REVIEW2.
