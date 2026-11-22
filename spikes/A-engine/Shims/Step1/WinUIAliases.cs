@@ -19,3 +19,4 @@ global using Point = Avalonia.Point;
 global using Size = Avalonia.Size;
 global using Rect = Avalonia.Rect;
 global using Panel = Avalonia.Controls.Panel;
+global using ContentControl = Avalonia.Controls.ContentControl;

@@ -1,4 +1,5 @@
-// EDITED COPY of upstream src/Reactor/Core/InfiniteResource.cs: `closed` removed (C# 15 only; global.json pins the .NET 10 SDK).
+// EDITED COPY of upstream src/Reactor/Core/InfiniteResource.cs: `closed` replaced by `abstract` (C# 15 only; global.json pins the .NET 10 SDK).
+// C# 14 loses the exhaustiveness check `closed` gives; the hierarchy stays non-instantiable.
 using System.Diagnostics;
 
 namespace Microsoft.UI.Reactor.Core;
@@ -19,7 +20,7 @@ public sealed record Page<TItem, TCursor>(
 /// Mirrors Android Paging 3's <c>LoadState</c>. The hierarchy is <c>closed</c>, so a C# 15+
 /// <c>switch</c> over all four cases is exhaustive without a discard arm.
 /// </summary>
-public record LoadState
+public abstract record LoadState
 {
     /// <summary>A page fetch is in flight.</summary>
     public sealed record Loading : LoadState { public static readonly Loading Instance = new(); }

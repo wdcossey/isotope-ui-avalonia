@@ -1,4 +1,5 @@
-// EDITED COPY of upstream src/Reactor/Core/AsyncValue.cs: `closed` removed (C# 15 only; global.json pins the .NET 10 SDK).
+// EDITED COPY of upstream src/Reactor/Core/AsyncValue.cs: `closed` replaced by `abstract` (C# 15 only; global.json pins the .NET 10 SDK).
+// C# 14 loses the exhaustiveness check `closed` gives; the hierarchy stays non-instantiable.
 namespace Microsoft.UI.Reactor.Core;
 
 /// <summary>
@@ -13,7 +14,7 @@ namespace Microsoft.UI.Reactor.Core;
 /// and §6.2 for the transition rules driven by <c>UseResource</c>.
 /// </remarks>
 /// <typeparam name="T">The value type produced by the fetcher.</typeparam>
-public record AsyncValue<T>
+public abstract record AsyncValue<T>
 {
     /// <summary>
     /// First fetch in flight; no prior data is available.

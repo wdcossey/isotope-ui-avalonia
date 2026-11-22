@@ -7,11 +7,18 @@ import path from 'node:path';
 const [logFile, flag] = process.argv.slice(2);
 const lines = readFileSync(logFile, 'utf8').split(/\r?\n/);
 const re = /^(.*?)\((\d+),(\d+)\): error (\w+): (.*?)(?: \[[^\]]*\])?$/;
+// Errors with no source position: MSBuild (MSB3073 when the rewrite Exec fails), NuGet restore (NU1301), CSC.
+const reNoPos = /^(?:\d+:\d+>)?(.*?) ?: error (\w+): (.*?)(?: \[[^\]]*\])?$/;
+let unparsed = 0;
 const seen = new Set();
 const errors = [];
 for (const l of lines) {
-  const m = re.exec(l.trim());
-  if (!m) continue;
+  let m = re.exec(l.trim());
+  if (!m) {
+    const n = reNoPos.exec(l.trim());
+    if (n) m = [l, n[1], '0', '0', n[2], n[3]];
+    else { if (/: error /.test(l)) unparsed++; continue; }
+  }
   const key = m.slice(1, 6).join('|');
   if (seen.has(key)) continue;
   seen.add(key);
@@ -22,9 +29,11 @@ for (const l of lines) {
   errors.push({ file: file.replace(/\\/g, '/'), line: +line, col: +col, code, msg, name: ns });
 }
 const count = (f) => Object.entries(errors.reduce((a, e) => ((a[f(e)] = (a[f(e)] || 0) + 1), a), {})).sort((a, b) => b[1] - a[1]);
-const rel = (f) => f.replace(/^.*?\/src\/Reactor\//, '');
+const rel = (f) => f.replace(/^.*?\/(src\/Reactor|obj\/rewritten)\//, '');
+if (unparsed) console.error('build-errors: ' + unparsed + ' error line(s) not understood; read the log: ' + logFile);
 const out = {
   total: errors.length,
+  unparsed,
   byCode: count((e) => e.code),
   byName: count((e) => e.code + ' ' + e.name),
   byFile: count((e) => rel(e.file)),

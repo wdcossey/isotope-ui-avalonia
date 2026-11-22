@@ -5,11 +5,11 @@
     "outcome": "needs edits",
     "rewritten": true,
     "errors": {
-      "seam": 66,
+      "seam": 62,
       "shim": 21,
-      "edit": 9
+      "edit": 13
     },
-    "editLines": 8
+    "editLines": 12
   },
   {
     "file": "Core/ChildReconciler.cs",
@@ -17,7 +17,7 @@
     "outcome": "needs edits",
     "rewritten": false,
     "errors": {
-      "seam": 94,
+      "seam": 92,
       "shim": 0,
       "edit": 5
     },
@@ -29,7 +29,7 @@
     "outcome": "verbatim given seam",
     "rewritten": false,
     "errors": {
-      "seam": 11,
+      "seam": 9,
       "shim": 0,
       "edit": 0
     },
@@ -1001,11 +1001,11 @@
     "outcome": "needs edits",
     "rewritten": false,
     "errors": {
-      "seam": 23,
+      "seam": 17,
       "shim": 0,
-      "edit": 1
+      "edit": 7
     },
-    "editLines": 1
+    "editLines": 5
   },
   {
     "file": "Core/Diagnostics/ReactorDiagnostics.cs",
@@ -1325,7 +1325,7 @@
     "outcome": "verbatim given seam",
     "rewritten": false,
     "errors": {
-      "seam": 3,
+      "seam": 2,
       "shim": 0,
       "edit": 0
     },
@@ -1366,6 +1366,30 @@
       "edit": 0
     },
     "editLines": 0
+  },
+  {
+    "file": "Core/AsyncValue.cs",
+    "lines": 77,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Core/InfiniteResource.cs",
+    "lines": 473,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 1
   },
   {
     "file": "Hooks/UseAnnounce.cs",

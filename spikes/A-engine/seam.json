@@ -1,31 +1,14 @@
 {
-  "note": "Members the linked upstream engine files use on upstream types that our Avalonia layer replaces (Spike A step 3, measured 2026-11-22 at upstream 28a87225).",
-  "distinctMembers": 231,
+  "note": "Members the linked upstream files use on upstream types our Avalonia layer replaces (Spike A step 3, 2026-11-22, upstream 28a87225). Only member-missing errors (CS1061/CS0117) count; constructor-shape mismatches (CS1729) are listed separately.",
+  "distinctMembers": 226,
   "types": {
-    "ReactorApp": [
-      "DefaultRenderErrorHandler",
-      "DevtoolsEnabled",
-      "FindTrayIcon",
-      "FindWindow",
-      "OpenTrayIcon",
-      "OpenWindow",
-      "UIDispatcher",
-      "Windows"
-    ],
-    "RegDecorator": [
-      "Done"
-    ],
-    "TextBoxElement": [
-      "Set"
-    ],
-    "ElementRef": [
-      "CS1729"
-    ],
-    "GridSize": [
-      "Star"
+    "T": [
+      "GetAttached",
+      "Modifiers",
+      "SetAttached",
+      "ThemeBindings"
     ],
     "Element": [
-      "CS8121",
       "CallSite",
       "CanSkipUpdate",
       "ContextValues",
@@ -36,6 +19,25 @@
       "Key",
       "Modifiers",
       "Provide"
+    ],
+    "ModifiedElement": [
+      "Inner"
+    ],
+    "TextBoxElement": [
+      "Set"
+    ],
+    "RegDecorator": [
+      "Done"
+    ],
+    "ReactorApp": [
+      "DefaultRenderErrorHandler",
+      "DevtoolsEnabled",
+      "FindTrayIcon",
+      "FindWindow",
+      "OpenTrayIcon",
+      "OpenWindow",
+      "UIDispatcher",
+      "Windows"
     ],
     "Reconciler": [
       "ApplyAmbientEnterAnimation",
@@ -78,42 +80,53 @@
       "ForIndex",
       "Get"
     ],
-    "ModifiedElement": [
-      "Inner"
-    ],
-    "ReactorFeatures": [
-      "DevtoolsSupported"
+    "GridSize": [
+      "Star"
     ],
     "NumberBoxElement": [
       "Set"
     ],
-    "DiagnosticLog": [
-      "IsWarningEnabled",
-      "Warning"
+    "ReactorFeatures": [
+      "DevtoolsSupported"
     ],
-    "LogCategory": [
-      "Reactor"
+    "ReflectionTypeMetadataProvider": [
+      "CreateMetadata"
     ],
     "ChildDiffHints": [
       "IsThemeSensitive",
       "Publish",
       "TryGet"
     ],
-    "ReflectionTypeMetadataProvider": [
-      "CreateMetadata"
-    ],
-    "ErrorBoundaryElement": [
-      "CS1729"
+    "UIThreadMarshal": [
+      "EnqueueOrThrow",
+      "IsOffUIThread",
+      "MarshalOffUIThread"
     ],
     "ChangeEchoSuppressor": [
       "BeginSuppress",
       "ShouldSuppress"
     ],
-    "ComponentNode": [
-      "Component",
-      "Context",
-      "Element",
-      "EnsureDiagnosticId"
+    "Editors": [
+      "CheckBox",
+      "Color",
+      "ColorCompact",
+      "Date",
+      "DateOffset",
+      "DateOnly",
+      "TimeOnlyEditor",
+      "TimeSpanEditor",
+      "Toggle",
+      "Uri"
+    ],
+    "CellRenderers": [
+      "CheckMark",
+      "ColorSwatch",
+      "Date",
+      "Hyperlink",
+      "Time"
+    ],
+    "OverlayLifecycle": [
+      "IsAttributionOnlyTag"
     ],
     "DiagnosticText": [
       "DelegateName",
@@ -124,6 +137,12 @@
       "PropRows",
       "TryParse",
       "TypeName"
+    ],
+    "ComponentNode": [
+      "Component",
+      "Context",
+      "Element",
+      "EnsureDiagnosticId"
     ],
     "FuncElement": [
       "RenderFunc"
@@ -138,8 +157,11 @@
       "MemoFallback",
       "RootRenderFunctionFallback"
     ],
-    "OverlayLifecycle": [
-      "IsAttributionOnlyTag"
+    "ThreadAffinity": [
+      "ThrowIfNotOnUIThread"
+    ],
+    "ArrayOperations": [
+      "GetElementType"
     ],
     "RootComponentSource": [
       "Component",
@@ -147,14 +169,20 @@
       "IsAlive",
       "RenderFunc"
     ],
-    "ReswResourceProvider": [
-      "CS1729"
+    "ThemeResourceProbe": [
+      "TryResolve"
     ],
-    "IntlAccessor": [
-      "CS1729"
+    "ResourceLookup": [
+      "TryFind"
     ],
-    "ThreadAffinity": [
-      "ThrowIfNotOnUIThread"
+    "ErrorFallback": [
+      "BuildElement",
+      "BuildPanel",
+      "BuildSafeElement",
+      "BuildSafePanel"
+    ],
+    "EmptyElement": [
+      "Instance"
     ],
     "ElementModifiers": [
       "AccessKey",
@@ -212,60 +240,6 @@
       "XYFocusRightRef",
       "XYFocusUpRef"
     ],
-    "UIThreadMarshal": [
-      "EnqueueOrThrow",
-      "IsOffUIThread",
-      "MarshalOffUIThread"
-    ],
-    "ErrorFallback": [
-      "BuildElement",
-      "BuildPanel",
-      "BuildSafeElement",
-      "BuildSafePanel"
-    ],
-    "EmptyElement": [
-      "Instance"
-    ],
-    "HookOrderException": [
-      "CS1729"
-    ],
-    "ChildDiffHint": [
-      "CS1729"
-    ],
-    "ThemeResourceProbe": [
-      "TryResolve"
-    ],
-    "NavigationTransition": [
-      "CS8121"
-    ],
-    "ResourceLookup": [
-      "TryFind"
-    ],
-    "Editors": [
-      "CheckBox",
-      "Color",
-      "ColorCompact",
-      "Date",
-      "DateOffset",
-      "DateOnly",
-      "TimeOnlyEditor",
-      "TimeSpanEditor",
-      "Toggle",
-      "Uri"
-    ],
-    "CellRenderers": [
-      "CheckMark",
-      "ColorSwatch",
-      "Date",
-      "Hyperlink",
-      "Time"
-    ],
-    "ArrayOperations": [
-      "GetElementType"
-    ],
-    "ReactorApplication": [
-      "ReportUnhandled"
-    ],
     "ReactorDiagnostics": [
       "GetItemSite",
       "SourceProperty"
@@ -275,6 +249,16 @@
       "DescribesAnotherElement",
       "IsEnabled",
       "ResolvePublishedSource"
+    ],
+    "DiagnosticLog": [
+      "IsWarningEnabled",
+      "Warning"
+    ],
+    "LogCategory": [
+      "Reactor"
+    ],
+    "ReactorApplication": [
+      "ReportUnhandled"
     ],
     "ControlRegistry": [
       "HasDecoratorRegistrations",
@@ -297,7 +281,6 @@
       "TryGetValue"
     ],
     "ObservableTreeTracker": [
-      "CS1729",
       "SyncSubscriptions"
     ],
     "UiSettingsCapabilities": [
@@ -355,5 +338,99 @@
       "CreateInstance",
       "TryMigrate"
     ]
+  },
+  "constructorShapes": [
+    "ChildDiffHint",
+    "ElementRef",
+    "ErrorBoundaryElement",
+    "HookOrderException",
+    "IntlAccessor",
+    "ObservableTreeTracker",
+    "ReswResourceProvider"
+  ],
+  "shimSurface": {
+    "distinctMembers": 52,
+    "types": {
+      "ItemsRepeater": [
+        "Layout",
+        "TryGetElement"
+      ],
+      "DispatcherQueue": [
+        "GetForCurrentThread",
+        "TryEnqueue"
+      ],
+      "FileOpenPicker": [
+        "CommitButtonText",
+        "FileTypeChoices",
+        "FileTypeFilter",
+        "InitialFileTypeIndex",
+        "PickMultipleFilesAsync",
+        "PickSingleFileAsync",
+        "SettingsIdentifier",
+        "SuggestedFolder",
+        "SuggestedStartFolder",
+        "SuggestedStartLocation",
+        "Title",
+        "ViewMode"
+      ],
+      "FolderPicker": [
+        "CommitButtonText",
+        "PickMultipleFoldersAsync",
+        "PickSingleFolderAsync",
+        "SettingsIdentifier",
+        "SuggestedFolder",
+        "SuggestedStartFolder",
+        "SuggestedStartLocation",
+        "Title",
+        "ViewMode"
+      ],
+      "FileSavePicker": [
+        "CommitButtonText",
+        "DefaultFileExtension",
+        "FileTypeChoices",
+        "InitialFileTypeIndex",
+        "PickSaveFileAsync",
+        "SettingsIdentifier",
+        "ShowOverwritePrompt",
+        "SuggestedFileName",
+        "SuggestedFolder",
+        "SuggestedStartFolder",
+        "SuggestedStartLocation",
+        "Title"
+      ],
+      "AccessibilitySettings": [
+        "HighContrast",
+        "HighContrastScheme"
+      ],
+      "AutomationProperties": [
+        "GetName"
+      ],
+      "Application": [
+        "Current"
+      ],
+      "LosingFocusEventArgs": [
+        "Cancel",
+        "Handled",
+        "NewFocusedElement"
+      ],
+      "VisualTreeHelper": [
+        "GetParent"
+      ],
+      "KeyRoutedEventArgs": [
+        "Handled",
+        "Key"
+      ],
+      "InputKeyboardSource": [
+        "GetKeyStateForCurrentThread"
+      ],
+      "UISettings": [
+        "AnimationsEnabled",
+        "AnimationsEnabledChanged",
+        "ColorValuesChanged"
+      ],
+      "WindowSizeChangedEventArgs": [
+        "Size"
+      ]
+    }
   }
 }

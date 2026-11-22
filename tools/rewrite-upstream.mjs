@@ -18,11 +18,17 @@ for (const rel of rels) {
   const src = path.join(srcDir, rel);
   let text = readFileSync(src, 'utf8');
   let hits = 0;
-  for (const r of rules) text = text.replace(r.re, (...m) => { hits++; return r.replace.replace(/\$(\d)/g, (_, i) => m[+i] ?? ''); });
+  for (const r of rules) text = text.replace(r.re, (...args) => {
+    hits++;
+    const named = typeof args.at(-1) === 'object';
+    const groups = args.slice(1, named ? -3 : -2); // drop the match, offset, input (and named groups)
+    return r.replace.replace(/\$(\d)/g, (_, i) => groups[+i - 1] ?? '');
+  });
   if (!hits) continue;
   const dst = path.join(outDir, rel);
   mkdirSync(path.dirname(dst), { recursive: true });
-  writeFileSync(dst, '// REWRITTEN from upstream src/Reactor/' + rel + ' by tools/rewrite-upstream.mjs. Do not edit.\n' + text);
+  // #line maps compiler errors back to the upstream file and line, so rewritten and verbatim files report alike.
+  writeFileSync(dst, '// REWRITTEN from upstream src/Reactor/' + rel + ' by tools/rewrite-upstream.mjs. Do not edit.\n#line 1 "' + path.resolve(src) + '"\n' + text);
   manifest.push([path.resolve(src), path.resolve(dst), hits].join('|'));
 }
 writeFileSync(path.join(outDir, 'manifest.txt'), manifest.join('\n') + (manifest.length ? '\n' : ''));

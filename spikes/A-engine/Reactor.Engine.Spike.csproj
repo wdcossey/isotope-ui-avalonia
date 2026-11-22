@@ -12,7 +12,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <SpikeStep Condition="'$(SpikeStep)' == ''">3</SpikeStep>
     <UpstreamSrc>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor\'))</UpstreamSrc>
-    <!-- Count every error, not the first 100 per file. -->
+    <!-- Missing XML doc comments are not what this spike measures. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <Import Project="EngineFiles.props" />
