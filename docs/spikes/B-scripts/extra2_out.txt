@@ -1,0 +1,9 @@
+EADD 2026-04-18 748ecc7e [('DataSourceResourceExtensions.cs', 60), ('Pending.cs', 77), ('PendingScope.cs', 79), ('UseInfiniteResource.cs', 445), ('UseMutation.cs', 345), ('UseResource.cs', 496)] donors=[]
+EADD 2026-04-21 76d0f517 [('UseElementFocus.cs', 56)] donors=[('src/Reactor/Core/Reconciler.cs', 59)]
+EADD 2026-04-22 caaf1cf2 [('UseDevtools.cs', 27)] donors=[]
+EADD 2026-05-02 cffd9750 [('UseElementRef.cs', 49)] donors=[]
+EADD 2026-05-03 125cd12f [('UseMemoCells.cs', 338)] donors=[('src/Reactor/Core/Element.cs', 54)]
+EADD 2026-05-11 60ed73f7 [('ImmediateExtensions.cs', 28)] donors=[]
+EADD 2026-05-17 516aa2db [('KeyedListDiff.cs', 547)] donors=[]
+EADD 2026-09-28 e5a3edc2 [('ValidationRenderScope.cs', 359)] donors=[]
+SIZES {"D": [1090, 256363], "E1": [1, 3153], "E2": [2, 2392], "E3": [10, 5046], "E4": [12, 2768], "E5": [25, 4667], "O1": [155, 27130], "S": [451, 111204], "T": [1831, 548149], "W1": [9, 15300], "W2": [51, 12495], "W3": [21, 15921], "W4": [64, 18488], "W5": [1, 978]}

@@ -1,0 +1,1 @@
+\bMicrosoft\.UI\.(Xaml|Composition|Dispatching|Input|Text|Windowing|Content)\b|\bWindows\.(UI|Foundation|System|Graphics|ApplicationModel|Storage)\b|WinRT|DispatcherQueue|\bUIElement\b|FrameworkElement|DependencyObject|DependencyProperty
