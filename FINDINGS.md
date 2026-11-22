@@ -19,15 +19,15 @@ Detailed reports:
 
 | Tier | What | How it syncs | Size today (measured) |
 |---|---|---|---|
-| **1. Verbatim** | Yoga, Data, most of Validation, KeyedListDiff, WinUI-free helpers, upstream's Yoga tests | The import script diffs baseline → new upstream commit on these paths, copies them (or keeps linking them), builds, and runs upstream's own tests for them. | 12,957 lines compile unmodified and 770 more after 3 mechanical rewrite rules (Spike A); 780 upstream Yoga tests pass unmodified (Spike D) |
-| **2. Verbatim + transforms** | Engine files that need only aliases, shims, mechanical rewrites, or our layer providing upstream's member names: hooks, the validation logic, RenderContext's hooks core, ChildReconciler | The same import, plus deterministic transforms (today 3 regex rules; next a Roslyn-based "drop member / rename type" step). No hand patches. A transform that stops matching fails the import loudly. | 7,703 lines verbatim given the seam and shims, plus the 18 "needs edits" files (7,746 lines, 89 edit lines, 52 of them in 4 files) as candidates for transforms (Spike A) |
-| **3. Rewritten, watched** | Element vocabulary, Reconciler, V1Protocol handlers, Hosting, FlexPanel, and RenderContext's ~25 WinUI hooks (window, theme, pickers, tray…) | Written fresh for Avalonia. The weekly sync report lists every upstream PR that touched them, because the compiler can't flag behaviour changes there. | 43,428 lines of WinUI layer in the closure (Spike A); 69% of engine PRs also change this layer (Spike B) |
+| **1. Verbatim** | Yoga, most of Data, the helper files that compile unmodified (including Navigation and Localization), upstream's Yoga tests | The import script diffs baseline → new upstream commit on these paths, copies them (or keeps linking them), builds, and runs upstream's own tests for them. | 74 files, 12,957 lines compile unmodified (Spike A); 780 upstream Yoga tests pass unmodified (Spike D) |
+| **2. Verbatim + transforms** | Engine files that need aliases, shims, mechanical rewrites, our layer providing upstream's member names, or small edits turned into transforms: KeyedListDiff, most of Validation and Hooks, RenderContext's hooks core, ChildReconciler | The same import, plus deterministic transforms (today 3 regex rules; next a Roslyn-based "drop member / rename type" step). No hand patches. A transform that stops matching fails the import loudly. | 770 lines after the 3 rewrite rules, 7,703 lines verbatim given the seam and shims, and the 18 "needs edits" files (7,746 lines, 89 edit lines, 52 of them in 4 files) as candidates for transforms (Spike A) |
+| **3. Rewritten, watched** | Element vocabulary, Reconciler, V1Protocol handlers, Hosting, FlexPanel, and RenderContext's ~25 WinUI hooks (window, theme, pickers, tray…) | Written fresh for Avalonia. The weekly sync report lists every upstream PR that touched them, because the compiler can't flag behaviour changes there. | the WinUI-heavy layer stubbed in Spike A: 66 files, 43,428 lines (split table in the Spike A report); 69% of engine PRs also change this layer (Spike B) |
 
 **Why this shape:**
 
 - **Upstream's engine is not a quiet core** (Spike B).
   - Engine files take 14% of `src/Reactor` churn: 35 commits and 5,067 lines in 13 weeks.
-  - 28 of those 35 commits hit `RenderContext.cs` or `ChildReconciler.cs`, the two engine files that also need edits here (12 and 5 edit lines, Spike A).
+  - 28 of those 35 commits hit `RenderContext.cs` or `ChildReconciler.cs`, the two hottest engine files that need edits here (12 and 5 edit lines, Spike A). Six Hooks and Validation files need 16 more edit lines between them.
   - So the hot files need a mechanism that survives weekly change without hand patches. That is what transforms are for.
 - **Text sync is cheap; semantic sync is the cost.**
   - A weekly engine-only pull is a median of 2 files and 63 lines; 10 of 13 weeks had any change at all.
@@ -37,14 +37,14 @@ Detailed reports:
   - Uno compiles 83% of `src/Reactor` with 5 patched files *because* it keeps WinUI's API.
   - With an Avalonia-native API, our tier 3 is a rewrite, and a merge-based fork would conflict on every upstream change to it.
   - Even Uno's best case is 13 days behind and has been stuck 11 days on 2 conflicts, one of them upstream's .NET 11 SDK bump.
-- **A hard fork throws away about 380 engine lines a week**, mostly keyed-diff and allocation fixes (Spike B), and we would be re-deriving those fixes ourselves.
+- **A hard fork throws away about 380 engine lines a week** (Spike B): keyed-child fixes, a validation rework (#1270, the largest single share), and allocation, diagnostics and picker changes in RenderContext. We would be re-deriving those fixes ourselves.
 - **Proposing a core/platform split upstream isn't realistic** (Spike C).
   - Upstream's specs reject an abstractions layer (062) and make anything but Win32 a non-goal (036).
   - Uno's port was sent off to be hosted elsewhere.
   - At most, small behaviour-neutral fixes might be accepted, which could shrink our transforms. That means contacting upstream, which is out of scope until you decide.
 - **Paths are stable enough for path-based import:** no engine file has been renamed, moved, split or deleted since 2026-04-17 (Spike B). The import script still has to flag new and renamed files, and fail on includes that silently match nothing (a trap Uno hit: 74 files dropped with a green build).
 
-**The price of tiers 1 and 2:** our Avalonia layer has to present upstream's *member names* to the engine: 226 members on 55 types, mostly `ElementModifiers` (54), `Reconciler` (33), `ReactorWindow` (16) and `Element` (11) (Spike A, `spikes/A-engine/seam.json`). The *value types* can be Avalonia's (`Thickness`, `IBrush`), so this fits decision 2 (Avalonia-native API) everywhere except RenderContext's public WinUI-typed hooks, which go to tier 3.
+**The price of tiers 1 and 2:** our Avalonia layer has to present upstream's *member names* to the engine: 226 members on 55 types, mostly `ElementModifiers` (54), `Reconciler` (33), `ReactorWindow` (16) and `Element` (10) (Spike A, `spikes/A-engine/seam.json`). The *value types* can be Avalonia's (`Thickness`, `IBrush`), so this fits decision 2 (Avalonia-native API) everywhere except RenderContext's public WinUI-typed hooks, which go to tier 3.
 
 ## Spike A: how much of the engine compiles without WinUI (measured)
 
@@ -72,7 +72,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 - 334 mainline commits, all squash merges with PR numbers (3.6 a day).
 - Engine (E) 35 commits and 5,067 lines; WinUI layer 96 commits and 20,286 lines; the rest of `src/Reactor` 10,626 lines; tests 148,478 lines.
-- The engine trend is well down from March to May (6.6 commits a week) but rising again: 6 commits in W35 to W40, 29 in W41 to W47.
+- Engine churn is well down from the March to May build-out (6.6 commits a week) to 2.6 a week now, but rising again within the window: 6 commits in W35 to W40, 29 in W41 to W47.
 - Hot files: RenderContext (16 commits), ChildReconciler (12), KeyedListDiff (3). Yoga had one PR, a facebook/yoga resync. FlexPanel had none.
 - Coupling: 69% of engine commits also touch the WinUI layer.
 - First real sync delta (`28a87225` → `14172dce`): 2 commits, nothing in `src/`.
@@ -85,7 +85,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 ## Spike D (reduced): FlexPanel on Avalonia 12 (built and run)
 
-- Upstream Yoga (10 files, 5,046 lines) is linked verbatim under a 406-line Avalonia port of `FlexPanel.cs` (978 lines upstream).
+- Upstream Yoga (10 files, 5,046 lines) is linked verbatim under a 415-line Avalonia port of `FlexPanel.cs` (978 lines upstream).
 - **780 of upstream's Yoga tests (35 of 36 files, linked verbatim) pass on net10.0 with no WinUI.**
 - **14 Avalonia headless FlexPanel tests pass**, 794 in all. 11 of 11 behaviours were proven to fail when broken. A clean clone of `main` at `7f5670f` on SDK 11.0.100 passes 794 of 794, and re-runs Spike A to exactly 567 errors.
 - **Leaks:**
@@ -130,7 +130,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 ## Repo state at the end of the session
 
-- `main` is at `7f5670f`; there are no other branches or worktrees.
+- Everything is merged into `main` (this file included); no other branches or worktrees were left. The clean run above is of `7f5670f`, the commit before this file.
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
@@ -149,6 +149,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 | Spike A review | about 80k |
 | Spike D reviews | pass 1 about 79k, pass 2 about 71k |
 | SDK-switch review | about 54k |
+| FINDINGS review | about 67k |
 | This session's own work | not measured |
 
 ## Sources
