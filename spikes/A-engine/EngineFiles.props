@@ -115,5 +115,9 @@
     <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationLifecycle.cs" Link="Upstream\Core\Navigation\NavigationLifecycle.cs" />
     <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationStack.cs" Link="Upstream\Core\Navigation\NavigationStack.cs" />
     <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationState.cs" Link="Upstream\Core\Navigation\NavigationState.cs" />
+    <!-- C# 15 (`closed`) files, unmodified since the .NET 11 SDK pin, with upstream's own attribute polyfill. -->
+    <Compile Include="$(UpstreamSrc)Core\AsyncValue.cs" Link="Upstream\Core\AsyncValue.cs" />
+    <Compile Include="$(UpstreamSrc)Core\InfiniteResource.cs" Link="Upstream\Core\InfiniteResource.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Polyfills\ClosedTypeAttributes.cs" Link="Upstream\Core\Polyfills\ClosedTypeAttributes.cs" />
   </ItemGroup>
 </Project>
