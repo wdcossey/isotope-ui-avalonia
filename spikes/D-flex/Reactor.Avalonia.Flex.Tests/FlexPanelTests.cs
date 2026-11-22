@@ -15,11 +15,20 @@ namespace Reactor.Avalonia.Flex.Tests;
 /// The ported FlexPanel in a real Avalonia layout pass (headless). Expected values are the CSS Flexbox results,
 /// the same way upstream's FlexPanelCssBehaviorFixtures derive them (those run in a WinUI app and can't be linked).
 /// </summary>
-public class FlexPanelTests
+public sealed class FlexPanelTests : IDisposable
 {
-    private static Window Host(Control content, double width, double height)
+    private readonly List<Window> _windows = new();
+
+    public void Dispose()
+    {
+        foreach (var w in _windows) w.Close();
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    private Window Host(Control content, double width, double height)
     {
         var w = new Window { Width = width, Height = height, Content = content, SizeToContent = SizeToContent.Manual };
+        _windows.Add(w);
         w.Show();
         Dispatcher.UIThread.RunJobs();
         return w;
@@ -140,6 +149,51 @@ public class FlexPanelTests
             Assert.Equal(stackKids[i].Bounds.Height, flexKids[i].Bounds.Height, 1.5);
         }
         Assert.True(flexKids[1].Bounds.Height > flexKids[0].Bounds.Height * 1.5, "the long line wraps");
+    }
+
+    [AvaloniaFact]
+    public void AsItemsPanel_AttachedChange_RelaysOut()
+    {
+        // The panel's children are item containers whose logical parent is the ItemsControl.
+        var items = new ItemsControl
+        {
+            ItemsPanel = new global::Avalonia.Controls.Templates.FuncTemplate<Panel?>(() => new FlexPanel()),
+            ItemsSource = new[] { "a", "b" },
+        };
+        Host(items, 400, 300);
+        var panel = Assert.IsType<FlexPanel>(items.ItemsPanelRoot);
+        var second = panel.Children[1];
+        FlexPanel.SetBasis(second, 50);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(50, second.Bounds.Width, 0.5);
+
+        FlexPanel.SetGrow(second, 1);
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(second.Bounds.Width > 300, $"grown width {second.Bounds.Width}");
+    }
+
+    [AvaloniaFact]
+    public void ChangingVerticalAlignment_ReMeasures()
+    {
+        Border header = Box(h: 50), body = Box(grow: 1);
+        var panel = new FlexPanel { Direction = FlexDirection.Column, VerticalAlignment = VerticalAlignment.Top, Children = { header, body } };
+        Host(panel, 300, 500);
+        Assert.Equal(50, panel.DesiredSize.Height); // fit-content
+
+        panel.VerticalAlignment = VerticalAlignment.Stretch; // now fills the slot
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(500, panel.DesiredSize.Height);
+    }
+
+    [AvaloniaFact]
+    public void NegativeMargins_LargerThanSlot_DoNotThrow()
+    {
+        var a = Box(h: 40);
+        FlexPanel.SetBasis(a, 10);
+        a.Margin = new Thickness(-20, 0, -20, 0);
+        var panel = new FlexPanel { Children = { a } };
+        var ex = Record.Exception(() => Host(panel, 400, 300));
+        Assert.Null(ex);
     }
 
     [AvaloniaFact]

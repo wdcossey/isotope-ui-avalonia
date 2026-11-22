@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.VisualTree;
 using Microsoft.UI.Reactor.Layout;
 
 namespace Reactor.Avalonia.Layout;
@@ -86,10 +87,12 @@ public class FlexPanel : Panel
     public static double GetShrink(Control el) => el.GetValue(ShrinkProperty);
     public static void SetBasis(Control el, double value) => el.SetValue(BasisProperty, value);
     public static double GetBasis(Control el) => el.GetValue(BasisProperty);
-    public static void SetMinWidth(Control el, double value) => el.SetValue(FlexMinWidthProperty, value);
-    public static double GetMinWidth(Control el) => el.GetValue(FlexMinWidthProperty);
-    public static void SetMinHeight(Control el, double value) => el.SetValue(FlexMinHeightProperty, value);
-    public static double GetMinHeight(Control el) => el.GetValue(FlexMinHeightProperty);
+    // Named after the registered properties so XAML resolves FlexPanel.FlexMinWidth (upstream calls them
+    // SetMinWidth/GetMinWidth, which in Avalonia XAML would hit Layoutable.MinWidth instead).
+    public static void SetFlexMinWidth(Control el, double value) => el.SetValue(FlexMinWidthProperty, value);
+    public static double GetFlexMinWidth(Control el) => el.GetValue(FlexMinWidthProperty);
+    public static void SetFlexMinHeight(Control el, double value) => el.SetValue(FlexMinHeightProperty, value);
+    public static double GetFlexMinHeight(Control el) => el.GetValue(FlexMinHeightProperty);
     public static void SetAlignSelf(Control el, FlexAlign value) => el.SetValue(AlignSelfProperty, value);
     public static FlexAlign GetAlignSelf(Control el) => el.GetValue(AlignSelfProperty);
     public static void SetPosition(Control el, FlexPositionType value) => el.SetValue(PositionProperty, value);
@@ -105,6 +108,8 @@ public class FlexPanel : Panel
 
     static FlexPanel()
     {
+        // Alignment decides fit-content vs fill in MeasureOverride; Avalonia only re-arranges for it by default.
+        AffectsMeasure<FlexPanel>(HorizontalAlignmentProperty, VerticalAlignmentProperty);
         AffectsMeasure<FlexPanel>(DirectionProperty, JustifyContentProperty, AlignItemsProperty, AlignContentProperty,
             WrapProperty, LayoutDirectionProperty, ColumnGapProperty, RowGapProperty, FlexPaddingProperty);
         foreach (var p in new AvaloniaProperty[] { GrowProperty, ShrinkProperty, BasisProperty, FlexMinWidthProperty, FlexMinHeightProperty,
@@ -121,7 +126,9 @@ public class FlexPanel : Panel
 
     private static void OnChildPropertyChanged(Control el)
     {
-        if (el.Parent is FlexPanel panel)
+        // Visual parent, as upstream (VisualTreeHelper.GetParent): an ItemsPanel's children have the
+        // ItemsControl as logical parent.
+        if (el.GetVisualParent() is FlexPanel panel)
         {
             panel._attachedCache.Remove(el);
             panel.InvalidateMeasure();
@@ -208,7 +215,7 @@ public class FlexPanel : Panel
                 if (!_measuredThisPass.Contains(child))
                 {
                     var m = child.Margin;
-                    child.Measure(new Size(layout.Width + m.Left + m.Right, layout.Height + m.Top + m.Bottom));
+                    child.Measure(new Size(Math.Max(0, layout.Width + m.Left + m.Right), Math.Max(0, layout.Height + m.Top + m.Bottom)));
                 }
             }
             else _cachedChildLayouts.Add(default);
@@ -250,7 +257,8 @@ public class FlexPanel : Panel
             var layout = _cachedChildLayouts[i];
             var child = Children[i];
             var m = child.Margin;
-            child.Arrange(new Rect(layout.X - m.Left, layout.Y - m.Top, layout.Width + m.Left + m.Right, layout.Height + m.Top + m.Bottom));
+            // Clamped: negative margins larger than the slot would give an invalid (negative) rect.
+            child.Arrange(new Rect(layout.X - m.Left, layout.Y - m.Top, Math.Max(0, layout.Width + m.Left + m.Right), Math.Max(0, layout.Height + m.Top + m.Bottom)));
         }
         return finalSize;
     }
@@ -351,7 +359,7 @@ public class FlexPanel : Panel
             ap = new AttachedProps
             {
                 Grow = GetGrow(el), Shrink = GetShrink(el), Basis = GetBasis(el), AlignSelf = GetAlignSelf(el),
-                Position = GetPosition(el), MinWidth = GetMinWidth(el), MinHeight = GetMinHeight(el),
+                Position = GetPosition(el), MinWidth = GetFlexMinWidth(el), MinHeight = GetFlexMinHeight(el),
                 Left = GetLeft(el), Top = GetTop(el), Right = GetRight(el), Bottom = GetBottom(el),
             };
             _attachedCache[el] = ap;

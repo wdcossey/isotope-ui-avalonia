@@ -15,7 +15,7 @@ The choice was made in away mode and is logged in FINDINGS.md under "Decisions t
 | Piece | Lines | Source |
 |---|---|---|
 | Yoga engine (`src/Reactor/Yoga/*` except FlexPanel.cs) | 5,046 | **linked verbatim**, 10 files |
-| `FlexPanel` for Avalonia | 406 (upstream WinUI file: 978, about 60% of it comments) | hand port of `Yoga/FlexPanel.cs` |
+| `FlexPanel` for Avalonia | 413 (upstream WinUI file: 978, about 60% of it comments) | hand port of `Yoga/FlexPanel.cs` |
 | Upstream Yoga tests (`tests/Reactor.Tests/Yoga*.cs`, `YogaGenerated/*.cs`) | about 35,000 | **linked verbatim**: 35 of 36 files. `YogaValueExtensionsTests.cs` (70 lines) is left out because it also imports upstream's Markdown namespace |
 | FlexPanel headless tests | 9 tests | new, written against the CSS Flexbox results in the style of upstream's `FlexPanelCssBehaviorFixtures`. Those fixtures run inside a WinUI app and can't be linked |
 
