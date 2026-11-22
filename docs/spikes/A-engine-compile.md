@@ -7,6 +7,16 @@ Measured 2026-11-22 at upstream `28a87225` (UPSTREAM.lock) first with the .NET 1
 1. **Step 0:** the 50 candidate files from HANDOVER.md, built alone (RenderContext, ChildReconciler, KeyedListDiff, Yoga minus FlexPanel, Hooks, Data, Validation; 18,025 lines).
 2. **Closure:** repeatedly add the upstream file that declares each missing Reactor type, until only non-Reactor names are missing.
 3. **Split the closure.** WinUI-free and lightly coupled helper files are linked verbatim. The WinUI-heavy layer (`Core/Element*.cs`, `Core/Reconciler*.cs`, `Core/V1Protocol/`, `Elements/`, `Hosting/`, `Animation/`, `Input/`, `Accessibility/`, `Yoga/FlexPanel.cs`) is **not** linked. Each type the linked files use from it gets a generated empty stub (`Shims/Stubs.g.cs`, 77 types). A stub keeps upstream's base class but not its interfaces. The stubs' missing members are then the **seam**: what our Avalonia layer must provide, under upstream's names, for the linked files to compile unchanged.
+   The split of the 165-file closure (line counts from `wc -l` at `28a87225`):
+
+   | Part | Files | Lines |
+   |---|---|---|
+   | Candidate engine files | 50 | 18,025 |
+   | WinUI-free helpers, linked | 26 | 3,967 |
+   | Helpers with 1 to 8 WinUI references, linked | 21 | 5,116 |
+   | WinUI-heavy layer, stubbed | 66 | 43,428 |
+
+   Later steps also linked Navigation, Localization and `LruCache.cs` (outside the closure as first computed), and the C# 15 polyfill.
 4. Then the cheapest fixes, in the order HANDOVER asked for:
    - **Step 1:** global `using` aliases onto Avalonia types (`Shims/Step1`).
    - **Step 2:** shim types for WinUI concepts that have no single Avalonia type (`Shims/Step2`).
