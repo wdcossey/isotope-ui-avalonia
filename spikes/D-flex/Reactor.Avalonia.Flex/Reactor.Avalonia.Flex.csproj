@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <LangVersion>15</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Reactor.Avalonia.Layout</RootNamespace>
     <UpstreamSrc>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\upstream\src\Reactor\'))</UpstreamSrc>
@@ -10,6 +11,7 @@
   <ItemGroup>
     <!-- Verbatim upstream: every Yoga file except the WinUI panel. -->
     <Compile Include="$(UpstreamSrc)Yoga\*.cs" Exclude="$(UpstreamSrc)Yoga\FlexPanel.cs" LinkBase="Upstream\Yoga" />
+    <Compile Include="$(UpstreamSrc)Core\Polyfills\ClosedTypeAttributes.cs" Link="Upstream\Core\Polyfills\ClosedTypeAttributes.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.6" />

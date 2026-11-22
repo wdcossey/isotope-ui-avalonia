@@ -108,6 +108,11 @@ public class FlexPanel : Panel
 
     static FlexPanel()
     {
+        // A child's own size, margin or visibility feeds its Yoga node. WinUI re-measures the parent when these
+        // change; in Avalonia the child is re-measured at its old (exact) slot, so its DesiredSize can stay the
+        // same and the panel never hears about it unless it registers for them.
+        AffectsParentMeasure<FlexPanel>(WidthProperty, HeightProperty, MinWidthProperty, MinHeightProperty,
+            MaxWidthProperty, MaxHeightProperty, MarginProperty, IsVisibleProperty);
         AffectsMeasure<FlexPanel>(DirectionProperty, JustifyContentProperty, AlignItemsProperty, AlignContentProperty,
             WrapProperty, LayoutDirectionProperty, ColumnGapProperty, RowGapProperty, FlexPaddingProperty);
         foreach (var p in new AvaloniaProperty[] { GrowProperty, ShrinkProperty, BasisProperty, FlexMinWidthProperty, FlexMinHeightProperty,
@@ -312,8 +317,8 @@ public class FlexPanel : Panel
                         if (hMode == YogaMeasureMode.Exactly) aOutH = (float)h;
                         return new YogaSize(Math.Max(0, aOutW), Math.Max(0, aOutH));
                     }
-                    var constraintW = wMode == YogaMeasureMode.Undefined ? double.PositiveInfinity : w + mH;
-                    var constraintH = hMode == YogaMeasureMode.Undefined ? double.PositiveInfinity : h + mV;
+                    var constraintW = wMode == YogaMeasureMode.Undefined ? double.PositiveInfinity : Math.Max(0, w + mH);
+                    var constraintH = hMode == YogaMeasureMode.Undefined ? double.PositiveInfinity : Math.Max(0, h + mV);
                     var prevYogaH = _outerYogaHeightMode;
                     _outerYogaHeightMode = hMode;
                     try { capturedChild.Measure(new Size(constraintW, constraintH)); }
@@ -404,7 +409,7 @@ public class FlexPanel : Panel
     {
         var margin = el.Margin;
         double mH = margin.Left + margin.Right, mV = margin.Top + margin.Bottom;
-        var constraint = isWidth ? new Size(mH, double.PositiveInfinity) : new Size(double.PositiveInfinity, mV);
+        var constraint = isWidth ? new Size(Math.Max(0, mH), double.PositiveInfinity) : new Size(double.PositiveInfinity, Math.Max(0, mV));
         el.Measure(constraint);
         return isWidth ? Math.Max(0, el.DesiredSize.Width - mH) : Math.Max(0, el.DesiredSize.Height - mV);
     }

@@ -199,6 +199,43 @@ public sealed class FlexPanelTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void NestedPanel_ChildHeightChange_PropagatesUp()
+    {
+        // The leaf is re-measured at its old exact slot when its Height changes, so its DesiredSize alone would not
+        // tell the panels; FlexPanel registers Width/Height/Margin/IsVisible to re-measure itself.
+        var leaf = Box(h: 40);
+        var inner = new FlexPanel { Direction = FlexDirection.Column, Children = { leaf } };
+        var filler = Box(h: 30);
+        FlexPanel.SetGrow(filler, 1);
+        var outer = new FlexPanel { Direction = FlexDirection.Column, Children = { inner, filler } };
+        Host(outer, 300, 500);
+        Assert.Equal(40, inner.Bounds.Height);
+
+        leaf.Height = 60;              // invalidates the inner panel's measure first
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(60, inner.Bounds.Height);
+        Assert.Equal(60 + (440 - 30) / 2.0, filler.Bounds.Y); // filler has Height 30: centred in its grown slot
+    }
+
+    [AvaloniaFact]
+    public void Reattached_ToLargerHost_ArrangesChildren()
+    {
+        Border a = Box(h: 40), b = Box(h: 40);
+        FlexPanel.SetGrow(a, 1);
+        FlexPanel.SetGrow(b, 1);
+        var panel = new FlexPanel { Children = { a, b } };
+        var first = new Border { Child = panel };
+        Host(first, 300, 200);
+        Assert.Equal(150, a.Bounds.Width);
+
+        first.Child = null;            // detach (clears the Yoga node cache)
+        Dispatcher.UIThread.RunJobs();
+        Host(new Border { Child = panel }, 500, 200);
+        Assert.Equal(250, a.Bounds.Width);
+        Assert.Equal(250, b.Bounds.X);
+    }
+
+    [AvaloniaFact]
     public void Demo_RendersToPng()
     {
         var tiles = new FlexPanel { Wrap = FlexWrap.Wrap, ColumnGap = 8, RowGap = 8, FlexPadding = new Thickness(12) };
