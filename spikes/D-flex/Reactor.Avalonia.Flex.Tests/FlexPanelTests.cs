@@ -1,0 +1,166 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Headless.XUnit;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia.Threading;
+using Microsoft.UI.Reactor.Layout;
+using Reactor.Avalonia.Layout;
+using Xunit;
+
+namespace Reactor.Avalonia.Flex.Tests;
+
+/// <summary>
+/// The ported FlexPanel in a real Avalonia layout pass (headless). Expected values are the CSS Flexbox results,
+/// the same way upstream's FlexPanelCssBehaviorFixtures derive them (those run in a WinUI app and can't be linked).
+/// </summary>
+public class FlexPanelTests
+{
+    private static Window Host(Control content, double width, double height)
+    {
+        var w = new Window { Width = width, Height = height, Content = content, SizeToContent = SizeToContent.Manual };
+        w.Show();
+        Dispatcher.UIThread.RunJobs();
+        return w;
+    }
+
+    private static Border Box(double w = double.NaN, double h = double.NaN, double grow = 0)
+    {
+        var b = new Border { Width = w, Height = h, Background = Brushes.SteelBlue };
+        FlexPanel.SetGrow(b, grow);
+        return b;
+    }
+
+    [AvaloniaFact]
+    public void Row_GrowChild_TakesRemainingWidth()
+    {
+        Border a = Box(100, 40), b = Box(h: 40, grow: 1), c = Box(50, 40);
+        var panel = new FlexPanel { Children = { a, b, c } };
+        Host(panel, 400, 300);
+        Assert.Equal(0, a.Bounds.X);
+        Assert.Equal(100, b.Bounds.X);
+        Assert.Equal(250, b.Bounds.Width);
+        Assert.Equal(350, c.Bounds.X);
+    }
+
+    [AvaloniaFact]
+    public void Column_HeaderBodyFooter_FillsWindowHeight()
+    {
+        Border header = Box(h: 50), body = Box(grow: 1), footer = Box(h: 30);
+        var panel = new FlexPanel { Direction = FlexDirection.Column, Children = { header, body, footer } };
+        Host(panel, 300, 500);
+        Assert.Equal(50, body.Bounds.Y);
+        Assert.Equal(420, body.Bounds.Height);
+        Assert.Equal(470, footer.Bounds.Y);
+        Assert.Equal(300, body.Bounds.Width); // align-items: stretch
+    }
+
+    [AvaloniaFact]
+    public void Wrap_WithGaps_BreaksLines()
+    {
+        var boxes = Enumerable.Range(0, 5).Select(_ => Box(100, 40)).ToArray();
+        var panel = new FlexPanel { Wrap = FlexWrap.Wrap, ColumnGap = 10, RowGap = 10, HorizontalAlignment = HorizontalAlignment.Left, Width = 250 };
+        foreach (var b in boxes) panel.Children.Add(b);
+        Host(panel, 400, 400);
+        Assert.Equal(new Point(110, 0), boxes[1].Bounds.Position);
+        Assert.Equal(new Point(0, 50), boxes[2].Bounds.Position);
+        Assert.Equal(new Point(0, 100), boxes[4].Bounds.Position);
+    }
+
+    [AvaloniaFact]
+    public void InvisibleChild_TakesNoSpaceAndNoGap()
+    {
+        Border a = Box(100, 40), b = Box(100, 40), c = Box(100, 40);
+        b.IsVisible = false; // CSS display:none
+        var panel = new FlexPanel { ColumnGap = 10, Children = { a, b, c } };
+        Host(panel, 400, 300);
+        Assert.Equal(110, c.Bounds.X);
+    }
+
+    [AvaloniaFact]
+    public void ChangingAttachedGrow_RelaysOut()
+    {
+        // b has a flex basis, not an explicit Width: an explicit Width wins at Arrange (Avalonia and WinUI
+        // alike), so Yoga's grown slot would not show in Bounds.
+        Border a = Box(100, 40), b = Box(h: 40);
+        FlexPanel.SetBasis(b, 100);
+        var panel = new FlexPanel { Children = { a, b } };
+        Host(panel, 400, 300);
+        Assert.Equal(100, b.Bounds.Width);
+
+        FlexPanel.SetGrow(b, 1); // must drop the panel's attached-property cache and invalidate measure
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(300, b.Bounds.Width);
+    }
+
+    [AvaloniaFact]
+    public void ChildMargin_IsHonoured()
+    {
+        Border a = Box(100, 40), b = Box(100, 40);
+        a.Margin = new Thickness(10, 5, 10, 5);
+        var panel = new FlexPanel { AlignItems = FlexAlign.FlexStart, Children = { a, b } };
+        Host(panel, 400, 300);
+        Assert.Equal(new Rect(10, 5, 100, 40), a.Bounds);
+        Assert.Equal(120, b.Bounds.X);
+    }
+
+    [AvaloniaFact]
+    public void JustifySpaceBetween_DistributesFreeSpace()
+    {
+        Border a = Box(50, 40), b = Box(50, 40), c = Box(50, 40);
+        var panel = new FlexPanel { JustifyContent = FlexJustify.SpaceBetween, Children = { a, b, c } };
+        Host(panel, 350, 300);
+        Assert.Equal(0, a.Bounds.X);
+        Assert.Equal(150, b.Bounds.X);
+        Assert.Equal(300, c.Bounds.X);
+    }
+
+    [AvaloniaFact]
+    public void Column_OfText_MatchesStackPanel()
+    {
+        // Upstream's CssStack_* fixtures: where CSS and StackPanel agree, FlexPanel must match StackPanel.
+        static TextBlock T(string s) => new() { Text = s, TextWrapping = TextWrapping.Wrap };
+        var flexKids = new[] { T("Short"), T("A longer line of text that wraps at this width more than once, probably twice."), T("End") };
+        var stackKids = new[] { T("Short"), T("A longer line of text that wraps at this width more than once, probably twice."), T("End") };
+        var flex = new FlexPanel { Direction = FlexDirection.Column, Width = 200, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        foreach (var k in flexKids) flex.Children.Add(k);
+        var stack = new StackPanel { Width = 200, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        foreach (var k in stackKids) stack.Children.Add(k);
+        Host(new StackPanel { Orientation = Orientation.Horizontal, Children = { flex, stack } }, 500, 400);
+        for (int i = 0; i < 3; i++)
+        {
+            Assert.Equal(stackKids[i].Bounds.Y, flexKids[i].Bounds.Y, 1.5);
+            Assert.Equal(stackKids[i].Bounds.Height, flexKids[i].Bounds.Height, 1.5);
+        }
+        Assert.True(flexKids[1].Bounds.Height > flexKids[0].Bounds.Height * 1.5, "the long line wraps");
+    }
+
+    [AvaloniaFact]
+    public void Demo_RendersToPng()
+    {
+        var tiles = new FlexPanel { Wrap = FlexWrap.Wrap, ColumnGap = 8, RowGap = 8, FlexPadding = new Thickness(12) };
+        var colors = new[] { Colors.SteelBlue, Colors.SeaGreen, Colors.Goldenrod, Colors.IndianRed, Colors.SlateBlue, Colors.Teal, Colors.DarkOrange };
+        for (int i = 0; i < 7; i++)
+        {
+            var tile = new Border { Width = 90 + 20 * (i % 3), Height = 60, Background = new SolidColorBrush(colors[i]), CornerRadius = new CornerRadius(6),
+                Child = new TextBlock { Text = "item " + (i + 1), Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
+            if (i == 6) FlexPanel.SetGrow(tile, 1);
+            tiles.Children.Add(tile);
+        }
+        var header = new Border { Height = 48, Background = Brushes.DimGray, Child = new TextBlock { Text = "FlexPanel on Avalonia 12 (upstream Yoga, unmodified)", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0) } };
+        var body = new Border { Background = Brushes.WhiteSmoke, Child = tiles };
+        FlexPanel.SetGrow(body, 1);
+        var footer = new Border { Height = 32, Background = Brushes.Gainsboro, Child = new TextBlock { Text = "header (48) / body (grow 1, wrapping row, gap 8) / footer (32)", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0) } };
+        var root = new FlexPanel { Direction = FlexDirection.Column, Children = { header, body, footer } };
+        var w = Host(root, 480, 320);
+        var frame = w.CaptureRenderedFrame();
+        Assert.NotNull(frame);
+        var path = Path.Combine(AppContext.BaseDirectory, "flex-demo.png");
+        #pragma warning disable CS0618 // Save(string) is obsolete in 12.x but still the plain PNG path
+        frame!.Save(path);
+#pragma warning restore CS0618
+        Assert.True(new FileInfo(path).Length > 1000);
+        Assert.Equal(320 - 48 - 32, body.Bounds.Height);
+    }
+}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spike D tests: upstream's Yoga tests linked verbatim, plus Avalonia headless tests of the ported FlexPanel. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <UpstreamTests>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..\upstream\tests\Reactor.Tests\'))</UpstreamTests>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- YogaValueExtensionsTests.cs is left out: it also uses upstream's Markdown namespace (not Yoga). -->
+    <Compile Include="$(UpstreamTests)Yoga*.cs;$(UpstreamTests)YogaGenerated\*.cs" Exclude="$(UpstreamTests)YogaValueExtensionsTests.cs" LinkBase="Upstream\Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- xunit.v3 3.2.x: the version Avalonia.Headless.XUnit 12.1.6 is built against (upstream uses 4.0.3). -->
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Reactor.Avalonia.Flex\Reactor.Avalonia.Flex.csproj" />
+  </ItemGroup>
+</Project>
