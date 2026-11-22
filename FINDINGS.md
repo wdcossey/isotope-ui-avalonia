@@ -1,47 +1,160 @@
-# Reactor -> Avalonia feasibility findings (2026-11-22)
+# Reactor → Avalonia: findings
 
-Goal: research project. Assess feasibility of an Avalonia (v12.x) fork/port of microsoft/microsoft-ui-reactor (MIT, WinUI 3 only).
-Upstream clone (read-only reference, shallow): <repo root>\upstream
-Method: static read/grep only. Nothing built or prototyped. Numbers are crude (grep for WinUI namespaces).
+Research project: an Avalonia 12 version of microsoft/microsoft-ui-reactor (MIT, WinUI 3 only).
 
-## Verdict
-- Not supported out of the box; cannot be done by just extending the library with a handler package.
-- Feasible as a port/fork: ~26k of 107k lines in src/Reactor are WinUI-free; ~81k lines (174 of 344 files) touch WinUI.
+**Updated 2026-11-22 with measured results from Spikes A to D.** Upstream baseline: `28a87225` (UPSTREAM.lock). The first version of this file (a grep survey) is in git history at `2c2baf3`; its estimates are replaced below.
 
-## Measurements (src/Reactor)
-- Portable: hooks, context, state, AsyncValue, Command, Callbacks, child diff hints/slots, validation stack, Yoga flexbox (6k lines; only Rect/Size types to swap), much pure logic in Data/Animation.
-- WinUI-bound: Reconciler.* mount/update, V1 handler protocol, pooling, theming/resource lookup, accessibility, Hosting (18k lines), navigation, drag/drop, flyouts.
-- Other projects: Reactor.Advanced 44k lines (Win2D/WinAppSDK), Devtools 9.6k, Analyzers 22k, Cli 11k, Wrappers.Generator 3.5k.
+Detailed reports:
 
-## Why it can't just be extended
-1. WinUI types in public contract: IElementHandler<TElement,TControl> has 'where TControl : UIElement'; internal IV1HandlerEntry and Reconciler.Mount() return UIElement. Element.cs uses WinUI Orientation/Brush/HorizontalAlignment/FontWeight/Thickness/CornerRadius/FrameworkElement 200+ times.
-2. Project is net10.0-windows10.0.22621.0 with UseWinUI=true (even portable files compile inside it). LangVersion 15, .NET 11 SDK pinned in global.json.
-3. Advanced/Devtools depend on Win2D / WinAppSDK.
+| Report | Topic |
+|---|---|
+| `docs/spikes/A-engine-compile.md` | how much of the engine compiles without WinUI |
+| `docs/spikes/B-upstream-churn.md` | how fast upstream moves, and where |
+| `docs/spikes/C-uno-and-upstream-openness.md` | how Uno did it; how open upstream is |
+| `docs/spikes/D-flex-slice.md` | FlexPanel on Avalonia over upstream's Yoga |
 
-## What helps
-- Handler protocol (src/Reactor/Core/V1Protocol: IElementHandler, ControlRegistry, Reg*) is the right seam: immutable Element records vs. per-control mount/update handlers.
-- Avalonia 12 targets net10.0 (same as Reactor), compiled bindings by default, 12.1 added TableView. Avalonia has no hooks/function components, so Reactor adds something new. Community prior art: Avalonia.Markup.Declarative.
-- Upstream has its own docs/research/compare/avalonia.md.
-- MIT licence.
+## Recommendation: how to stay in sync
 
-## Friction points
-- Property model: DP -> StyledProperty/DirectProperty; ReactorAttached tagging, change-echo suppression, pooled-control reset need rethinking.
-- Control gaps: NavigationView, TabView, ItemsView, ItemsRepeater, InfoBar have no 1:1 Avalonia equivalents (SplitView, TabControl...); virtualization/TreeView handlers need Avalonia versions.
-- Styling/theming: Avalonia selectors + ControlTheme vs ResourceDictionary/ThemeResource.
-- Dispatcher: DispatcherQueue -> Dispatcher.UIThread (easy, touches render scheduling).
-- Hosting: window/titlebar/backdrop/MSIX is Windows-specific.
-- Layout: Yoga is custom, probably fits Avalonia Measure/Arrange; integration unchecked.
-- Tests: Reactor.Tests (13k+ xUnit, headless) most reusable; SelfTests/AppTests WinUI-bound.
+**A separate repo that imports upstream files through a scripted, deterministic pipeline, sorted into three tiers, pulled weekly with a per-PR report.** Not a git-merge fork, not a hard fork, and not a core/platform split proposed upstream.
 
-## Proposed next step (not started)
-Vertical slice: new plain-net10.0 core project with the portable files; define an IHost/IControlAdapter seam + minimal Avalonia reconciler; implement UseState, Button, TextBlock, StackPanel, TextBox as a counter demo. Shows whether hooks/diff layer lifts cleanly and where the abstraction leaks.
+| Tier | What | How it syncs | Size today (measured) |
+|---|---|---|---|
+| **1. Verbatim** | Yoga, Data, most of Validation, KeyedListDiff, WinUI-free helpers, upstream's Yoga tests | The import script diffs baseline → new upstream commit on these paths, copies them (or keeps linking them), builds, and runs upstream's own tests for them. | 12,957 lines compile unmodified and 770 more after 3 mechanical rewrite rules (Spike A); 780 upstream Yoga tests pass unmodified (Spike D) |
+| **2. Verbatim + transforms** | Engine files that need only aliases, shims, mechanical rewrites, or our layer providing upstream's member names: hooks, the validation logic, RenderContext's hooks core, ChildReconciler | The same import, plus deterministic transforms (today 3 regex rules; next a Roslyn-based "drop member / rename type" step). No hand patches. A transform that stops matching fails the import loudly. | 7,703 lines verbatim given the seam and shims, plus the 18 "needs edits" files (7,746 lines, 89 edit lines, 52 of them in 4 files) as candidates for transforms (Spike A) |
+| **3. Rewritten, watched** | Element vocabulary, Reconciler, V1Protocol handlers, Hosting, FlexPanel, and RenderContext's ~25 WinUI hooks (window, theme, pickers, tray…) | Written fresh for Avalonia. The weekly sync report lists every upstream PR that touched them, because the compiler can't flag behaviour changes there. | 43,428 lines of WinUI layer in the closure (Spike A); 69% of engine PRs also change this layer (Spike B) |
 
-## Open questions for the user
-- API shape: Avalonia-native vocabulary (Avalonia.Media.Brush, Thickness) vs WinUI-style names for source compatibility?
-- Build the slice, or first produce a per-control mapping table (~60 elements)?
+**Why this shape:**
+
+- **Upstream's engine is not a quiet core** (Spike B).
+  - Engine files take 14% of `src/Reactor` churn: 35 commits and 5,067 lines in 13 weeks.
+  - 28 of those 35 commits hit `RenderContext.cs` or `ChildReconciler.cs`, the two engine files that also need edits here (12 and 5 edit lines, Spike A).
+  - So the hot files need a mechanism that survives weekly change without hand patches. That is what transforms are for.
+- **Text sync is cheap; semantic sync is the cost.**
+  - A weekly engine-only pull is a median of 2 files and 63 lines; 10 of 13 weeks had any change at all.
+  - But 69% of engine PRs also change the WinUI layer we rewrite, and only 11% touch no other source code.
+  - Each pull means reading 2 or 3 PRs a week and porting their WinUI half by hand. *(Judgement: 1 to 3 hours a week while upstream keeps its current pace.)*
+- **A git-merge fork like Uno's doesn't fit us** (Spike C).
+  - Uno compiles 83% of `src/Reactor` with 5 patched files *because* it keeps WinUI's API.
+  - With an Avalonia-native API, our tier 3 is a rewrite, and a merge-based fork would conflict on every upstream change to it.
+  - Even Uno's best case is 13 days behind and has been stuck 11 days on 2 conflicts, one of them upstream's .NET 11 SDK bump.
+- **A hard fork throws away about 380 engine lines a week**, mostly keyed-diff and allocation fixes (Spike B), and we would be re-deriving those fixes ourselves.
+- **Proposing a core/platform split upstream isn't realistic** (Spike C).
+  - Upstream's specs reject an abstractions layer (062) and make anything but Win32 a non-goal (036).
+  - Uno's port was sent off to be hosted elsewhere.
+  - At most, small behaviour-neutral fixes might be accepted, which could shrink our transforms. That means contacting upstream, which is out of scope until you decide.
+- **Paths are stable enough for path-based import:** no engine file has been renamed, moved, split or deleted since 2026-04-17 (Spike B). The import script still has to flag new and renamed files, and fail on includes that silently match nothing (a trap Uno hit: 74 files dropped with a green build).
+
+**The price of tiers 1 and 2:** our Avalonia layer has to present upstream's *member names* to the engine: 226 members on 55 types, mostly `ElementModifiers` (54), `Reconciler` (33), `ReactorWindow` (16) and `Element` (11) (Spike A, `spikes/A-engine/seam.json`). The *value types* can be Avalonia's (`Thickness`, `IBrush`), so this fits decision 2 (Avalonia-native API) everywhere except RenderContext's public WinUI-typed hooks, which go to tier 3.
+
+## Spike A: how much of the engine compiles without WinUI (measured)
+
+A `net10.0` library links upstream files, never copies them. The WinUI-heavy layer is replaced by generated stubs; then come aliases, shims, a mechanical import rewrite, and finally edits.
+
+- **The 50 candidate files (18,025 lines) aren't self-contained.** Followed to closure they pull in 165 files and 71,086 lines, 80 of which reference WinUI. The engine's input type is upstream's own `Element`, which shares `Element.cs` (8,141 lines) with about 160 WinUI-typed records.
+- **With the WinUI layer stubbed,** 117 upstream files (29,176 lines) were linked:
+
+| Outcome | Files | Lines |
+|---|---|---|
+| Compiles unmodified | 74 | 12,957 |
+| After the mechanical rewrite (3 regex rules) | 4 | 770 |
+| Verbatim, given our layer provides the seam | 15 | 5,818 |
+| Verbatim plus WinUI-concept shims | 6 | 1,885 |
+| Needs edits (89 edit lines) | 18 | 7,746 |
+| Rewrite (`Hooks/UseAnnounce.cs`, a generated WinUI wrapper) | 1 | 173 |
+
+- **73% of the linked lines need no edits.** Yoga's 5,046 lines are completely free.
+- **The seam is 226 members on 55 types; the shim surface is 52 members on 14 WinUI-concept types** (pickers, `UISettings`, `DispatcherQueue`, focus/key args…).
+- **Upstream's public hooks expose WinUI types** (`PickFileResult`, `FocusState`, `SystemBackdrop`, `Window` parameters), so a verbatim RenderContext would leak WinUI-named shims into our public API.
+- **C# 15 files compile unmodified with the .NET 11 SDK** (pinned since 2026-11-22). Under the earlier net10 pin each `closed` hierarchy needed an edit; the step 3b total was the same either way (567).
+- **The edit count is a lower bound:** implementing the seam will type-check more expressions.
+
+## Spike B: how upstream moves (measured, 13 weeks to 2026-11-22)
+
+- 334 mainline commits, all squash merges with PR numbers (3.6 a day).
+- Engine (E) 35 commits and 5,067 lines; WinUI layer 96 commits and 20,286 lines; the rest of `src/Reactor` 10,626 lines; tests 148,478 lines.
+- The engine trend is well down from March to May (6.6 commits a week) but rising again: 6 commits in W35 to W40, 29 in W41 to W47.
+- Hot files: RenderContext (16 commits), ChildReconciler (12), KeyedListDiff (3). Yoga had one PR, a facebook/yoga resync. FlexPanel had none.
+- Coupling: 69% of engine commits also touch the WinUI layer.
+- First real sync delta (`28a87225` → `14172dce`): 2 commits, nothing in `src/`.
+
+## Spike C: Uno, and upstream's openness (researched)
+
+- **The "Reactor runs on Uno" claim holds:** Uno Platform 7.0 ships it, in preview. Microsoft didn't retarget Reactor, though: **Uno maintains a fork** (`unoplatform/Uno.microsoft-ui-reactor`), shipped as `Uno.Microsoft.UI.Reactor`.
+- **Its sync mechanics:** a nightly merge bot, a "don't modify Microsoft's files" rule with a patch ledger, build checks against silently-empty includes, and triage of new `Hosting/` files. Worth copying (MIT).
+- **Upstream's stance:** the maintainers asked Uno to host the port itself. Specs 062 and 036 reject in-repo abstraction and non-Win32 windowing. Upstream's own `docs/research/compare/avalonia.md` treats Avalonia as a competitor.
+
+## Spike D (reduced): FlexPanel on Avalonia 12 (built and run)
+
+- Upstream Yoga (10 files, 5,046 lines) is linked verbatim under a 406-line Avalonia port of `FlexPanel.cs` (978 lines upstream).
+- **780 of upstream's Yoga tests (35 of 36 files, linked verbatim) pass on net10.0 with no WinUI.**
+- **14 Avalonia headless FlexPanel tests pass**, 794 in all. 11 of 11 behaviours were proven to fail when broken. A clean clone of `main` at `7f5670f` on SDK 11.0.100 passes 794 of 794, and re-runs Spike A to exactly 567 errors.
+- **Leaks:**
+  - An explicit `Width` beats flex-grow at Arrange (the same as upstream on WinUI).
+  - A child's own Width, Height, Margin or Visibility change doesn't reach the panel by itself in Avalonia, where WinUI re-measures the parent. The port registers those properties with `AffectsParentMeasure`; review pass 2 found this.
+  - Avalonia 12 lays out on the render tick, so headless tests pump the dispatcher.
+  - Avalonia.Headless.XUnit needs xunit v3 3.2.x, while upstream is on 4.0.3.
+- **Not run:** the hooks, controlled `TextBox` and keyed-list half of the slice. It needs our layer to implement the Spike A seam first. See "Decisions taken while you were away".
+
+## Still true from the first survey
+
+- **WinUI is in the public contract:** `IElementHandler<TElement,TControl> where TControl : UIElement`; `Reconciler.Mount` returns `UIElement?`; `Element.cs` records carry WinUI types. There is no plug-in route.
+- **Friction points for the rewritten layer:**
+  - The property model: DependencyProperty → StyledProperty/DirectProperty; change-echo suppression; pooled-control reset.
+  - Control gaps: NavigationView, TabView, ItemsView, ItemsRepeater and InfoBar have no 1:1 Avalonia equivalents.
+  - Styling and theming: Avalonia selectors and ControlTheme vs ThemeResource.
+  - Hosting: window, title bar, backdrop and MSIX are Windows-specific.
+- **Other upstream projects:** Reactor.Advanced (44k lines, Win2D/WinAppSDK), Devtools 9.6k, Analyzers 22k, Cli 11k, Wrappers.Generator 3.5k. All are out of scope so far.
+- `src/Reactor.Wrappers.Generator` might generate much of the element/handler layer from Avalonia metadata. Still unexamined.
+
+## Decisions taken while you were away (from 2026-11-22 23:09)
+
+| What | Options | Chosen | Why |
+|---|---|---|---|
+| Spike D scope | full slice (hooks, TextBox, keyed list, FlexPanel) / FlexPanel and Yoga only | **FlexPanel and Yoga only** | The engine half needs the 226-member seam implemented; it wouldn't fit, and a half-done seam would measure nothing |
+| Review depth for spike tooling (A) | two passes (high, medium) / one pass at medium as chore | **one pass, medium** | measurement tooling, not product code; all 9 findings fixed and re-measured |
+| Review of the B and C report docs | one medium pass / checked against the agents' output | **checked by hand, pass waived** | they transcribe agent measurements; recorded in the merge commit |
+| Spike D review | per PROCESS: high then medium | **as PROCESS** | it ports product code with tests |
+| xunit version for Spike D | upstream's 4.0.3 / 3.2.2 | **3.2.2** | what Avalonia.Headless.XUnit 12.1.6 is built against; upstream tests ran unchanged |
+| Screenshots | real window / headless render | **headless render** | a real window is ask-first |
+| SDK after you installed 11.0.100 | keep the net10 pin / pin 11.0.100 | **pinned 11.0.100**, targets stay `net10.0` | you had said you would install it; it was open question 3; upstream and Uno both hinge on it |
+| Spike D review findings on behaviour inherited from upstream (ambient Yoga mode) | fix in our port / keep upstream parity | **keep parity**, logged as upstream-fix candidates | a tier 3 file is easier to watch when it diffs cleanly against upstream |
+
+## Open questions, each with a recommended answer
+
+1. **Adopt the three-tier import strategy above?** *Recommended: yes.* Next step: a `tools/sync` script that reads UPSTREAM.lock, diffs to a new upstream commit by tier, applies the transforms, builds, runs the upstream tests, and writes a PR report for the tier 3 paths.
+2. **Keep upstream's member names on the engine-facing seam** (`Element`, `ElementModifiers`, `Reconciler`, …) **with Avalonia value types?** *Recommended: yes.* It is what makes tiers 1 and 2 possible, and the names are vocabulary-neutral (Margin, Background, Width).
+3. ~~The .NET 11 SDK.~~ **Done:** you installed 11.0.100 and `global.json` now pins it, with targets still `net10.0`. Upstream moved to it for C# 15 on 2026-11-12, and Uno is stuck on that same change. Keeping our SDK at or ahead of upstream's belongs on the sync checklist.
+4. **Next session:** the engine half of Spike D. *Recommended: a minimal Avalonia `Reconciler`/`Element`/`ElementModifiers` that implements the seam for ChildReconciler, KeyedListDiff and RenderContext's hooks core; then `UseState` plus a button, a controlled `TextBox` and a keyed list.* Port the upstream unit tests that cover them.
+5. **A GitHub remote.** *Recommended: stay local until the import script and the slice exist, then a private repo with CI,* so that the import → build → upstream-tests gate runs on every sync.
+6. **Contacting upstream** (small behaviour-neutral fixes that would shrink our transforms). *Recommended: not yet.* Revisit when the transform list is known.
+
+## Repo state at the end of the session
+
+- `main` is at `7f5670f`; there are no other branches or worktrees.
+- Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
+- `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
+
+## Not done
+
+- The engine half of Spike D (see above).
+- No real merge conflicts were measured: nothing has been synced yet. Spike B used a proximity proxy.
+- The wrappers generator is unexamined.
+
+## Token use
+
+| Work | Tokens |
+|---|---|
+| Spike B agent | 164k |
+| Spike C agent | 204k |
+| Spike A review | about 80k |
+| Spike D reviews | pass 1 about 79k, pass 2 about 71k |
+| SDK-switch review | about 54k |
+| This session's own work | not measured |
 
 ## Sources
-- https://docs.avaloniaui.net/docs/avalonia12-breaking-changes
-- https://avaloniaui.net/blog/avalonia-12
-- https://avaloniaui.net/blog/release-12-1
-- https://github.com/microsoft/microsoft-ui-reactor
+
+- https://github.com/microsoft/microsoft-ui-reactor (clone at `upstream/`)
+- https://platform.uno/blog/uno-platform-7-0/ and https://platform.uno/docs/articles/features/using-reactor.html
+- https://github.com/unoplatform/Uno.microsoft-ui-reactor
+- https://infoq.com/news/2026/11/uno-platform-6-7-targets
+- https://docs.avaloniaui.net/docs/avalonia12-breaking-changes, https://avaloniaui.net/blog/avalonia-12, https://avaloniaui.net/blog/release-12-1
