@@ -1,0 +1,17 @@
+[
+  {
+    "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.(?:Controls\\.)?(Window|UIElement|FrameworkElement|Thickness|TextBlock|Panel|TextBox|NumberBox|DependencyObject)\\b(?!\\s*\\()",
+    "replace": "$1",
+    "why": "Fully qualified WinUI identity types: drop the namespace so the global aliases (Shims/Step1) map them to Avalonia."
+  },
+  {
+    "find": "\\bWinUI\\.(TextBlock|Panel|TextBox|NumberBox|ScrollViewer)\\b",
+    "replace": "$1",
+    "why": "Same, through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias."
+  },
+  {
+    "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.Controls\\.Control\\b",
+    "replace": "Control",
+    "why": "WinUI Control (templated) maps to Avalonia TemplatedControl via the alias."
+  }
+]

@@ -1,0 +1,359 @@
+{
+  "note": "Members the linked upstream engine files use on upstream types that our Avalonia layer replaces (Spike A step 3, measured 2026-11-22 at upstream 28a87225).",
+  "distinctMembers": 231,
+  "types": {
+    "ReactorApp": [
+      "DefaultRenderErrorHandler",
+      "DevtoolsEnabled",
+      "FindTrayIcon",
+      "FindWindow",
+      "OpenTrayIcon",
+      "OpenWindow",
+      "UIDispatcher",
+      "Windows"
+    ],
+    "RegDecorator": [
+      "Done"
+    ],
+    "TextBoxElement": [
+      "Set"
+    ],
+    "ElementRef": [
+      "CS1729"
+    ],
+    "GridSize": [
+      "Star"
+    ],
+    "Element": [
+      "CS8121",
+      "CallSite",
+      "CanSkipUpdate",
+      "ContextValues",
+      "ElementTransition",
+      "GetAttached",
+      "HasCallbacks",
+      "IsVisible",
+      "Key",
+      "Modifiers",
+      "Provide"
+    ],
+    "Reconciler": [
+      "ApplyAmbientEnterAnimation",
+      "CallSiteChangedOnSkip",
+      "CanUpdate",
+      "CountPerfChanges",
+      "DebugElementsSkipped",
+      "DefaultAutomationNameFromCaption",
+      "DiagnosticComponent",
+      "ForceFullRenderActive",
+      "ForceRenderThroughWrapper",
+      "GetMountedElement",
+      "GetOrCreateReactorState",
+      "HasActiveContextValues",
+      "HasExitingControls",
+      "HasGestureOrDragSlots",
+      "HoldsExitingControlIn",
+      "IsExiting",
+      "IsFlyoutDecorator",
+      "IsOnDirtyAncestorPath",
+      "Mount",
+      "PerfComponentName",
+      "RefreshSkippedChildState",
+      "RemoveChildWithExitTransition",
+      "ReplaceChildWithExitTransition",
+      "ResolveCaptionForElement",
+      "ResolveDirtyChildIndices",
+      "ShouldDeclineSkip",
+      "SkipsCallSiteOnlyTags",
+      "TryFindComponentNode",
+      "TryFindRootComponent",
+      "TryGetReactorState",
+      "UnmountChild",
+      "UpdateChildTracked",
+      "_logger"
+    ],
+    "ChildSlots": [
+      "AlignByIndex",
+      "At",
+      "ForIndex",
+      "Get"
+    ],
+    "ModifiedElement": [
+      "Inner"
+    ],
+    "ReactorFeatures": [
+      "DevtoolsSupported"
+    ],
+    "NumberBoxElement": [
+      "Set"
+    ],
+    "DiagnosticLog": [
+      "IsWarningEnabled",
+      "Warning"
+    ],
+    "LogCategory": [
+      "Reactor"
+    ],
+    "ChildDiffHints": [
+      "IsThemeSensitive",
+      "Publish",
+      "TryGet"
+    ],
+    "ReflectionTypeMetadataProvider": [
+      "CreateMetadata"
+    ],
+    "ErrorBoundaryElement": [
+      "CS1729"
+    ],
+    "ChangeEchoSuppressor": [
+      "BeginSuppress",
+      "ShouldSuppress"
+    ],
+    "ComponentNode": [
+      "Component",
+      "Context",
+      "Element",
+      "EnsureDiagnosticId"
+    ],
+    "DiagnosticText": [
+      "DelegateName",
+      "Format",
+      "FormatPlain",
+      "FriendlyTypeName",
+      "IsEditable",
+      "PropRows",
+      "TryParse",
+      "TypeName"
+    ],
+    "FuncElement": [
+      "RenderFunc"
+    ],
+    "MemoElement": [
+      "RenderFunc"
+    ],
+    "ComponentNames": [
+      "For",
+      "ForRenderFunction",
+      "FuncFallback",
+      "MemoFallback",
+      "RootRenderFunctionFallback"
+    ],
+    "OverlayLifecycle": [
+      "IsAttributionOnlyTag"
+    ],
+    "RootComponentSource": [
+      "Component",
+      "FuncContext",
+      "IsAlive",
+      "RenderFunc"
+    ],
+    "ReswResourceProvider": [
+      "CS1729"
+    ],
+    "IntlAccessor": [
+      "CS1729"
+    ],
+    "ThreadAffinity": [
+      "ThrowIfNotOnUIThread"
+    ],
+    "ElementModifiers": [
+      "AccessKey",
+      "Accessibility",
+      "AttachedFlyout",
+      "AutomationId",
+      "AutomationName",
+      "Background",
+      "BorderBrush",
+      "BorderInlineStart",
+      "BorderThickness",
+      "CenterPoint",
+      "ContextFlyout",
+      "CornerRadius",
+      "ElementSoundMode",
+      "FontFamily",
+      "FontSize",
+      "FontWeight",
+      "Foreground",
+      "HeadingLevel",
+      "Height",
+      "HorizontalAlignment",
+      "HorizontalContentAlignment",
+      "IsDragRegion",
+      "IsEnabled",
+      "IsHitTestVisible",
+      "IsTabStop",
+      "IsVisible",
+      "Margin",
+      "MarginInlineEnd",
+      "MarginInlineStart",
+      "MaxHeight",
+      "MaxWidth",
+      "MinHeight",
+      "MinWidth",
+      "Opacity",
+      "Padding",
+      "PaddingInlineEnd",
+      "PaddingInlineStart",
+      "RequestedTheme",
+      "RichToolTip",
+      "Rotation",
+      "Scale",
+      "TabIndex",
+      "ToolTip",
+      "ToolTipPlacement",
+      "ToolTipPlacementTargetRef",
+      "Translation",
+      "VerticalAlignment",
+      "VerticalContentAlignment",
+      "Width",
+      "XYFocusDownRef",
+      "XYFocusKeyboardNavigation",
+      "XYFocusLeftRef",
+      "XYFocusRightRef",
+      "XYFocusUpRef"
+    ],
+    "UIThreadMarshal": [
+      "EnqueueOrThrow",
+      "IsOffUIThread",
+      "MarshalOffUIThread"
+    ],
+    "ErrorFallback": [
+      "BuildElement",
+      "BuildPanel",
+      "BuildSafeElement",
+      "BuildSafePanel"
+    ],
+    "EmptyElement": [
+      "Instance"
+    ],
+    "HookOrderException": [
+      "CS1729"
+    ],
+    "ChildDiffHint": [
+      "CS1729"
+    ],
+    "ThemeResourceProbe": [
+      "TryResolve"
+    ],
+    "NavigationTransition": [
+      "CS8121"
+    ],
+    "ResourceLookup": [
+      "TryFind"
+    ],
+    "Editors": [
+      "CheckBox",
+      "Color",
+      "ColorCompact",
+      "Date",
+      "DateOffset",
+      "DateOnly",
+      "TimeOnlyEditor",
+      "TimeSpanEditor",
+      "Toggle",
+      "Uri"
+    ],
+    "CellRenderers": [
+      "CheckMark",
+      "ColorSwatch",
+      "Date",
+      "Hyperlink",
+      "Time"
+    ],
+    "ArrayOperations": [
+      "GetElementType"
+    ],
+    "ReactorApplication": [
+      "ReportUnhandled"
+    ],
+    "ReactorDiagnostics": [
+      "GetItemSite",
+      "SourceProperty"
+    ],
+    "ReactorSourcePublisher": [
+      "AtKey",
+      "DescribesAnotherElement",
+      "IsEnabled",
+      "ResolvePublishedSource"
+    ],
+    "ControlRegistry": [
+      "HasDecoratorRegistrations",
+      "TryGetSourceTarget"
+    ],
+    "FlyoutElement": [
+      "Target"
+    ],
+    "MenuFlyoutElement": [
+      "Target"
+    ],
+    "CommandBarFlyoutElement": [
+      "Target"
+    ],
+    "AnimationKindMap": [
+      "ToCurve"
+    ],
+    "ApplicationPersistedScope": [
+      "Default",
+      "TryGetValue"
+    ],
+    "ObservableTreeTracker": [
+      "CS1729",
+      "SyncSubscriptions"
+    ],
+    "UiSettingsCapabilities": [
+      "HasAnimationsEnabledChanged"
+    ],
+    "ReactorWindow": [
+      "Activated",
+      "BeginDragMove",
+      "Deactivated",
+      "Dpi",
+      "DpiChanged",
+      "IsActive",
+      "NativeWindow",
+      "PersistedScope",
+      "Position",
+      "PositionChanged",
+      "RegisterAspectRatioOverride",
+      "RegisterClosingGuard",
+      "State",
+      "StateChanged",
+      "Update",
+      "ZOrderChanged"
+    ],
+    "WindowDipPositionChangedEventArgs": [
+      "Position"
+    ],
+    "WindowZOrderChangedEventArgs": [
+      "IsCovered",
+      "MovedToTop"
+    ],
+    "ReactorDisplay": [
+      "DisplayLayoutChanged",
+      "Displays"
+    ],
+    "WindowState": [
+      "Normal"
+    ],
+    "DpiHelpers": [
+      "GetSystemDpiSafe"
+    ],
+    "WindowSpec": [
+      "Key"
+    ],
+    "TrayIconSpec": [
+      "Key"
+    ],
+    "ReactorTrayIcon": [
+      "Close",
+      "Update"
+    ],
+    "HotReloadService": [
+      "WithinUpdatePass"
+    ],
+    "ReactorHotReloadCopier": [
+      "CreateInstance",
+      "TryMigrate"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+// Spike A step 1: WinUI names used bare in upstream engine files, mapped onto Avalonia types.
+global using UIElement = Avalonia.Controls.Control;
+global using FrameworkElement = Avalonia.Controls.Control;
+global using DependencyObject = Avalonia.AvaloniaObject;
+global using DependencyProperty = Avalonia.AvaloniaProperty;
+global using Brush = Avalonia.Media.IBrush;
+global using Thickness = Avalonia.Thickness;
+global using Window = Avalonia.Controls.Window;
+global using TextBlock = Avalonia.Controls.TextBlock;
+global using Control = Avalonia.Controls.Primitives.TemplatedControl;
+global using ScrollViewer = Avalonia.Controls.ScrollViewer;
+global using ResourceDictionary = Avalonia.Controls.ResourceDictionary;
+global using UIElementCollection = Avalonia.Controls.Controls;
+global using RoutedEventArgs = Avalonia.Interactivity.RoutedEventArgs;
+global using Orientation = Avalonia.Layout.Orientation;
+global using HorizontalAlignment = Avalonia.Layout.HorizontalAlignment;
+global using VerticalAlignment = Avalonia.Layout.VerticalAlignment;
+global using Point = Avalonia.Point;
+global using Size = Avalonia.Size;
+global using Rect = Avalonia.Rect;
+global using Panel = Avalonia.Controls.Panel;

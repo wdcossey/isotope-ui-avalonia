@@ -1,0 +1,1376 @@
+[
+  {
+    "file": "Core/RenderContext.cs",
+    "lines": 3153,
+    "outcome": "needs edits",
+    "rewritten": true,
+    "errors": {
+      "seam": 66,
+      "shim": 21,
+      "edit": 9
+    },
+    "editLines": 8
+  },
+  {
+    "file": "Core/ChildReconciler.cs",
+    "lines": 1454,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 94,
+      "shim": 0,
+      "edit": 5
+    },
+    "editLines": 5
+  },
+  {
+    "file": "Core/Internal/KeyedListDiff.cs",
+    "lines": 938,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 11,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/Pending.cs",
+    "lines": 89,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 4,
+      "shim": 0,
+      "edit": 2
+    },
+    "editLines": 2
+  },
+  {
+    "file": "Hooks/PendingScope.cs",
+    "lines": 81,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseDevtools.cs",
+    "lines": 29,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 1,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseElementFocus.cs",
+    "lines": 62,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 2,
+      "edit": 1
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Hooks/UseElementRef.cs",
+    "lines": 57,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 1,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseFocus.cs",
+    "lines": 254,
+    "outcome": "shims",
+    "rewritten": true,
+    "errors": {
+      "seam": 4,
+      "shim": 5,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseFocusTrap.cs",
+    "lines": 173,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 2,
+      "shim": 4,
+      "edit": 6
+    },
+    "editLines": 4
+  },
+  {
+    "file": "Hooks/UseInfiniteResource.cs",
+    "lines": 460,
+    "outcome": "shims",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 1,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseMemoCells.cs",
+    "lines": 524,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 8,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseMutation.cs",
+    "lines": 346,
+    "outcome": "shims",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 1,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseResource.cs",
+    "lines": 520,
+    "outcome": "shims",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 3,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/AlgorithmUtils.cs",
+    "lines": 551,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/FlexDirectionHelper.cs",
+    "lines": 81,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/FlexEnums.cs",
+    "lines": 63,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/LayoutResults.cs",
+    "lines": 218,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/YogaAlgorithm.cs",
+    "lines": 2639,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/YogaConfig.cs",
+    "lines": 131,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/YogaEnums.cs",
+    "lines": 128,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/YogaNode.cs",
+    "lines": 697,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/YogaStyle.cs",
+    "lines": 422,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Yoga/YogaValue.cs",
+    "lines": 116,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/DataPage.cs",
+    "lines": 18,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/DataPageCache.cs",
+    "lines": 345,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/DataRequest.cs",
+    "lines": 25,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/DataSourceResourceExtensions.cs",
+    "lines": 97,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 3,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/FieldDescriptor.cs",
+    "lines": 106,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/FilterDescriptor.cs",
+    "lines": 30,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/GridAttributes.cs",
+    "lines": 33,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/IDataSource.cs",
+    "lines": 60,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/Providers/ListDataSource.cs",
+    "lines": 224,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/Providers/ObservableListDataSource.cs",
+    "lines": 104,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/RowKey.cs",
+    "lines": 13,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Data/SortDescriptor.cs",
+    "lines": 15,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ErrorStyling.cs",
+    "lines": 158,
+    "outcome": "verbatim given seam",
+    "rewritten": true,
+    "errors": {
+      "seam": 10,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/FormField.cs",
+    "lines": 164,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 3,
+      "shim": 0,
+      "edit": 4
+    },
+    "editLines": 4
+  },
+  {
+    "file": "Controls/Validation/ImmediateExtensions.cs",
+    "lines": 28,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 1,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/UseValidationContext.cs",
+    "lines": 120,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ValidateExtensions.cs",
+    "lines": 253,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 9,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ValidationContext.cs",
+    "lines": 1565,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 1,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ValidationMessage.cs",
+    "lines": 24,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ValidationReconciler.cs",
+    "lines": 262,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ValidationRenderScope.cs",
+    "lines": 359,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 2,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/ValidationRule.cs",
+    "lines": 221,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 2,
+      "shim": 0,
+      "edit": 2
+    },
+    "editLines": 2
+  },
+  {
+    "file": "Controls/Validation/ValidationVisualizer.cs",
+    "lines": 179,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 3,
+      "shim": 0,
+      "edit": 3
+    },
+    "editLines": 3
+  },
+  {
+    "file": "Controls/Validation/Validators/BuiltInValidators.cs",
+    "lines": 238,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Validation/Validators/IValidator.cs",
+    "lines": 25,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/Virtualization/VirtualListFactories.cs",
+    "lines": 36,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 1
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Controls/PropertyGrid/PropertyGridFactories.cs",
+    "lines": 28,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 1
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Core/SourceLocation.cs",
+    "lines": 70,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Context.cs",
+    "lines": 35,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/QueryCache.cs",
+    "lines": 379,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Internal/AmbientAnimation.cs",
+    "lines": 101,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/ContentOwner.cs",
+    "lines": 35,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Diagnostics/ReactorSourceTransparentAttribute.cs",
+    "lines": 74,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/FocusRevalidationService.cs",
+    "lines": 123,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Animation.cs",
+    "lines": 95,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/PersistedStateScope.cs",
+    "lines": 62,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Command.cs",
+    "lines": 149,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Diagnostics/ReactorSourceMap.StaticInfo.cs",
+    "lines": 386,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Diagnostics/ReactorSourceMap.RootMount.cs",
+    "lines": 171,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/PropertyGrid/TypeMetadata.cs",
+    "lines": 61,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/RenderError.cs",
+    "lines": 129,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Optional.cs",
+    "lines": 116,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/WindowPersistedScope.cs",
+    "lines": 95,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Internal/IItemViewSource.cs",
+    "lines": 47,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Controls/PropertyGrid/PropertyGridElement.cs",
+    "lines": 51,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/IReactorKeyed.cs",
+    "lines": 43,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/ReactorPerfTrace.cs",
+    "lines": 692,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/ThemeResourceListeners.cs",
+    "lines": 152,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/RenderPassRequests.cs",
+    "lines": 175,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/ComponentPerfTally.cs",
+    "lines": 88,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/ReactorEventSource.cs",
+    "lines": 574,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Component.cs",
+    "lines": 398,
+    "outcome": "needs edits",
+    "rewritten": true,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 1
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Controls/PropertyGrid/TypeRegistry.cs",
+    "lines": 337,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 20,
+      "shim": 0,
+      "edit": 11
+    },
+    "editLines": 11
+  },
+  {
+    "file": "Core/Internal/ReactorListState.cs",
+    "lines": 173,
+    "outcome": "rewritten (mechanical), compiles",
+    "rewritten": true,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/ChildCollection.cs",
+    "lines": 106,
+    "outcome": "rewritten (mechanical), compiles",
+    "rewritten": true,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/ContextScope.cs",
+    "lines": 256,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/ColorScheme.cs",
+    "lines": 76,
+    "outcome": "shims",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 1,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Pickers.cs",
+    "lines": 229,
+    "outcome": "shims",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 36,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/ReactorDiagnostics.Components.cs",
+    "lines": 455,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 33,
+      "shim": 1,
+      "edit": 4
+    },
+    "editLines": 2
+  },
+  {
+    "file": "Diagnostics/ReactorSourceMap.cs",
+    "lines": 272,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 23,
+      "shim": 0,
+      "edit": 1
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Core/Diagnostics/ReactorDiagnostics.cs",
+    "lines": 319,
+    "outcome": "verbatim given seam",
+    "rewritten": true,
+    "errors": {
+      "seam": 1,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/BackdropKind.cs",
+    "lines": 95,
+    "outcome": "rewritten (mechanical), compiles",
+    "rewritten": true,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Theme.cs",
+    "lines": 347,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 2,
+      "shim": 5,
+      "edit": 8
+    },
+    "editLines": 8
+  },
+  {
+    "file": "Controls/Virtualization/VirtualListElement.cs",
+    "lines": 127,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 2,
+      "edit": 5
+    },
+    "editLines": 5
+  },
+  {
+    "file": "Core/IItemsRepeaterFactorySource.cs",
+    "lines": 79,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/AppliedModifierMap.cs",
+    "lines": 229,
+    "outcome": "needs edits",
+    "rewritten": true,
+    "errors": {
+      "seam": 74,
+      "shim": 0,
+      "edit": 21
+    },
+    "editLines": 21
+  },
+  {
+    "file": "Core/V1HandlerRegistry.cs",
+    "lines": 162,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/DragAttached.cs",
+    "lines": 22,
+    "outcome": "needs edits",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 1
+    },
+    "editLines": 1
+  },
+  {
+    "file": "Core/RenderErrorDispatch.cs",
+    "lines": 517,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 11,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/ReactorDiagnostics.Hosts.cs",
+    "lines": 396,
+    "outcome": "rewritten (mechanical), compiles",
+    "rewritten": true,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Diagnostics/ComponentRenderTrace.cs",
+    "lines": 445,
+    "outcome": "verbatim given seam",
+    "rewritten": true,
+    "errors": {
+      "seam": 9,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/ReactorBinding.cs",
+    "lines": 76,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 3,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Internal/LruCache.cs",
+    "lines": 143,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/DateFormatOptions.cs",
+    "lines": 17,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/IStringResourceProvider.cs",
+    "lines": 14,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/ListFormatType.cs",
+    "lines": 10,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/LocaleContext.cs",
+    "lines": 60,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/MessageCache.cs",
+    "lines": 52,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/MessageKey.cs",
+    "lines": 11,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/NumberFormatOptions.cs",
+    "lines": 18,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/PseudoLocalizer.cs",
+    "lines": 89,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Localization/RtlHelper.cs",
+    "lines": 22,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/ConnectedNavigationCompletion.cs",
+    "lines": 20,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/DeepLinkMap.cs",
+    "lines": 284,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/NavigationContext.cs",
+    "lines": 15,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/NavigationDiagnostics.cs",
+    "lines": 141,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/NavigationHandle.cs",
+    "lines": 453,
+    "outcome": "verbatim given seam",
+    "rewritten": false,
+    "errors": {
+      "seam": 3,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/NavigationLifecycle.cs",
+    "lines": 56,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/NavigationStack.cs",
+    "lines": 257,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Core/Navigation/NavigationState.cs",
+    "lines": 20,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
+    "file": "Hooks/UseAnnounce.cs",
+    "lines": 173,
+    "outcome": "rewrite (not linked)",
+    "note": "declares AnnounceRegionElement, a WinUI TextBlock wrapper whose descriptor is source-generated ([GenerateReactorDescriptor]); the hook half is about 100 lines"
+  }
+]
