@@ -1,0 +1,63 @@
+# Spike D (reduced): FlexPanel on Avalonia 12 over upstream's Yoga
+
+Run 2026-11-22 at upstream `28a87225`, .NET SDK 10.0.402, Avalonia 12.1.6. Project: `spikes/D-flex/`. Run it with `dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests`.
+
+## Scope: what ran, and what was set aside
+
+HANDOVER asked for a vertical slice with four parts: `UseState` plus a button, a controlled `TextBox`, a keyed list through upstream's `ChildReconciler`/`KeyedListDiff`, and `FlexPanel` over the unmodified Yoga. **Only the FlexPanel part ran.**
+
+The other three need upstream's `RenderContext` and `ChildReconciler` to run on our Avalonia layer, which means implementing the seam Spike A measured: 226 members on 55 types, including `Reconciler.Mount`, the `Element` base and `ElementModifiers`. That doesn't fit in one session.
+
+The choice was made in away mode and is logged in FINDINGS.md under "Decisions taken while you were away". `spikes/A-engine/seam.json` is the spec for that next step.
+
+## What was built
+
+| Piece | Lines | Source |
+|---|---|---|
+| Yoga engine (`src/Reactor/Yoga/*` except FlexPanel.cs) | 5,046 | **linked verbatim**, 10 files |
+| `FlexPanel` for Avalonia | 406 (upstream WinUI file: 978, about 60% of it comments) | hand port of `Yoga/FlexPanel.cs` |
+| Upstream Yoga tests (`tests/Reactor.Tests/Yoga*.cs`, `YogaGenerated/*.cs`) | about 35,000 | **linked verbatim**: 35 of 36 files. `YogaValueExtensionsTests.cs` (70 lines) is left out because it also imports upstream's Markdown namespace |
+| FlexPanel headless tests | 9 tests | new, written against the CSS Flexbox results in the style of upstream's `FlexPanelCssBehaviorFixtures`. Those fixtures run inside a WinUI app and can't be linked |
+
+### The port
+
+The layout logic is kept line for line: the two-pass measure, the arrange from cached Yoga results, the `MeasureFunction` bridge with the `[ThreadStatic]` outer-mode handshake, and the CSS §4.5 automatic minimum size. Mechanical changes:
+
+- `DependencyProperty` → `StyledProperty`/`AttachedProperty`. `PropertyMetadata` callbacks → `AffectsMeasure` plus `Changed` observers.
+- `Visibility.Collapsed` → `!IsVisible`. `XamlRoot.RasterizationScale` → `TopLevel.RenderScaling`. `Unloaded` → `OnDetachedFromVisualTree`.
+- No `ScrollView`, only `ScrollViewer`.
+
+Avalonia's `Measure`/`DesiredSize`/`Arrange` include the child's `Margin` exactly as WinUI's do, so the margin arithmetic carried over unchanged. It compiled first time.
+
+## Results
+
+- **Upstream's Yoga tests: 780 of 780 pass** on net10.0 with no WinUI, against the unmodified Yoga sources.
+- **FlexPanel tests: 9 of 9 pass.** Each covers one behaviour:
+  - a grow child takes the remaining width;
+  - a header/body/footer column fills the window, including the panel's own `DesiredSize`;
+  - wrap with gaps;
+  - an invisible child takes no space and no gap;
+  - changing an attached `Grow` relays out;
+  - asymmetric margins;
+  - `justify-content: space-between`;
+  - wrapped text in a column matches `StackPanel` (upstream's "CssStack" parity idea);
+  - a headless-rendered demo frame.
+- **Clean run:** a fresh clone of the branch at `67c25c2`, with `upstream` supplied through a junction, passes 789 of 789.
+- **Tests proven to fail: 8 of 8 behaviours.** Each was broken on committed code and the right test went red; the code was then restored. Two tests stayed green on the first try and were strengthened:
+  - The margin test used symmetric margins, and centring hid a wrong arrange rect.
+  - The column test missed a wrong `DesiredSize`, because Arrange re-solves the layout.
+
+![FlexPanel demo, rendered headless](img/D-flex-demo.png)
+
+## Where the abstraction leaked
+
+- **An explicit size beats flex-grow at Arrange**, in Avalonia exactly as in WinUI. "item 7" in the demo has `Grow = 1` and a `Width`: Yoga gives it the grown slot, but the control stays at its `Width`, centred in the slot. CSS would grow the box. Upstream has the same behaviour, so it is parity, not a port bug. It cost one wrong test.
+- **Layout runs on the render tick in Avalonia 12.** Headless tests have to pump the dispatcher (`Dispatcher.UIThread.RunJobs()`). WinUI has no equivalent step.
+- **Test framework versions differ:** Avalonia.Headless.XUnit 12.1.6 is built on xunit v3 3.2.x, while upstream uses 4.0.3. The linked upstream tests compiled and ran unchanged on 3.2.2.
+- **`Bitmap.Save(string)` is obsolete** in Avalonia 12.1 and the replacement options type is abstract; kept with a pragma.
+
+## What it says about sync
+
+- **Yoga is the best case:** 5,046 source lines and about 35,000 test lines taken verbatim, with zero edits.
+- **FlexPanel is a rewrite we must watch.** In Spike B's 13-week window upstream's `FlexPanel.cs` had no commits, but each future change to it needs a manual port.
+- **Upstream's tests are reusable where they test platform-neutral code.** For layout and Yoga that held completely; the WinUI-hosted FlexPanel fixtures don't link.
