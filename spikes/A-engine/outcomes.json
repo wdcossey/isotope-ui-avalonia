@@ -1394,6 +1394,18 @@
     "note": "C# 15 (closed); linked unmodified since the .NET 11 SDK pin"
   },
   {
+    "file": "Core/Polyfills/ClosedTypeAttributes.cs",
+    "lines": 9,
+    "outcome": "unmodified, compiles",
+    "rewritten": false,
+    "errors": {
+      "seam": 0,
+      "shim": 0,
+      "edit": 0
+    },
+    "editLines": 0
+  },
+  {
     "file": "Hooks/UseAnnounce.cs",
     "lines": 173,
     "outcome": "rewrite (not linked)",

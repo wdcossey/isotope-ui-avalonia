@@ -31,18 +31,18 @@ Roslyn reports no method-body errors while declaration errors remain. So the cou
 
 ## Outcome per file (step 3b)
 
-116 upstream files and 29,167 lines are linked. `Hooks/UseAnnounce.cs` (173 lines) is set aside.
+117 upstream files and 29,176 lines are linked. `Hooks/UseAnnounce.cs` (173 lines) is set aside.
 
 | Outcome | Files | Lines | Meaning |
 |---|---|---|---|
-| Compiles unmodified | 73 | 12,948 | taken verbatim, nothing else needed |
+| Compiles unmodified | 74 | 12,957 | taken verbatim, nothing else needed |
 | Compiles after the mechanical rewrite | 4 | 770 | verbatim, plus a scripted rewrite on every import |
 | Verbatim given the seam | 15 | 5,818 | the only errors are on members of stubbed upstream types |
 | Verbatim with shims | 6 | 1,885 | also needs members on WinUI-concept shims |
 | Needs edits | 18 | 7,746 | at least one error our layer can't absorb |
 | Rewrite (not linked) | 1 | 173 | `Hooks/UseAnnounce.cs` |
 
-**21,421 of 29,167 linked lines (73%) need no edits.**
+**21,430 of 29,176 linked lines (73%) need no edits.**
 
 By the handover's areas:
 
@@ -55,7 +55,7 @@ By the handover's areas:
 | Yoga (minus FlexPanel), 5,046 L | 5,046 | 0 | 0 |
 | Data, 1,070 L | 973 | 97 | 0 |
 | Validation, 3,596 L | 669 | 2,363 | 564 (9 edit lines) |
-| Helpers pulled in by the closure, 11,315 L | 6,179 | 2,885 | 2,251 (56 edit lines) |
+| Helpers pulled in by the closure, 11,324 L | 6,188 | 2,885 | 2,251 (56 edit lines) |
 
 ### Files that need edits
 
@@ -148,4 +148,4 @@ The full list is in `seam.json`.
 
 ## Update: .NET 11 SDK (2026-11-22)
 
-With SDK 11.0.100 installed, `global.json` pins 11.0.100 and the spike compiles with `LangVersion 15` (still targeting `net10.0`), linking upstream's `Core/Polyfills/ClosedTypeAttributes.cs`. `Core/AsyncValue.cs` and `Core/InfiniteResource.cs` now link unmodified; the edited copies are gone. The step-3b total is unchanged (567). The tables above reflect this.
+With SDK 11.0.100 installed, `global.json` pins 11.0.100 and the spike compiles with `LangVersion 15` (still targeting `net10.0`), linking upstream's `Core/Polyfills/ClosedTypeAttributes.cs`. `Core/AsyncValue.cs`, `Core/InfiniteResource.cs` and the polyfill now link unmodified from `EngineFiles.props`; the edited copies are gone. The step-3b total is unchanged (567). The tables above reflect this.

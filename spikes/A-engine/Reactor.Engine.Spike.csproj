@@ -24,8 +24,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Shims/*.cs" />
-    <!-- Upstream files that need C# 15, linked unmodified, with upstream's own polyfill for the attribute. -->
-    <Compile Include="$(UpstreamSrc)Core\AsyncValue.cs;$(UpstreamSrc)Core\InfiniteResource.cs;$(UpstreamSrc)Core\Polyfills\ClosedTypeAttributes.cs" LinkBase="Upstream\Core" />
     <Compile Include="Shims/Step1/*.cs" Condition="$(SpikeStep) &gt;= 1" />
     <Compile Include="Shims/Step2/*.cs" Condition="$(SpikeStep) &gt;= 2" />
   </ItemGroup>
