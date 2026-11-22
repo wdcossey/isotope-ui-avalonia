@@ -1,6 +1,6 @@
 # Spike A: how much of the engine compiles without WinUI
 
-Measured 2026-11-22 at upstream `28a87225` (UPSTREAM.lock) with the .NET 10 SDK (10.0.402, C# 14) and Avalonia 12.1.6. Project: `spikes/A-engine/`, a plain `net10.0` library that **links** upstream files (`EngineFiles.props`) and never copies them. Re-run with `node spikes/A-engine/run-spike.mjs [1|2|3]`. Per-file results: `spikes/A-engine/outcomes.json`. The seam and the shim surface: `spikes/A-engine/seam.json`. Errors are grouped by `tools/build-errors.mjs`.
+Measured 2026-11-22 at upstream `28a87225` (UPSTREAM.lock) first with the .NET 10 SDK (10.0.402, C# 14), then re-run with the .NET 11 SDK (11.0.100, C# 15; 567 errors either way) and Avalonia 12.1.6. Project: `spikes/A-engine/`, a plain `net10.0` library that **links** upstream files (`EngineFiles.props`) and never copies them. Re-run with `node spikes/A-engine/run-spike.mjs [1|2|3]`. Per-file results: `spikes/A-engine/outcomes.json`. The seam and the shim surface: `spikes/A-engine/seam.json`. Errors are grouped by `tools/build-errors.mjs`.
 
 ## Method
 
@@ -27,7 +27,7 @@ Roslyn reports no method-body errors while declaration errors remain. So the cou
 | 1: + global aliases and placeholder namespaces | 97 | 129 | fully qualified WinUI names, pickers, `WindowId`, `Navigation.*` |
 | 2: + WinUI-concept shims; Navigation, Localization and LruCache linked | 115 | 44 | **public signatures exposing WinUI types** (19), fully qualified identity types |
 | 3a: + mechanical import rewrite (12 files) | 115 | 4 → 1 | `UseAnnounce.cs` (a source-generated WinUI wrapper) moved to "rewrite" |
-| 3b: declarations clean, method bodies checked | 114 + 2 edited | **567** | seam 374 (+15 constructor shapes), shim members 82, edits 96 |
+| 3b: declarations clean, method bodies checked | 116 | **567** | seam 374 (+15 constructor shapes), shim members 82, edits 96 |
 
 ## Outcome per file (step 3b)
 
@@ -35,14 +35,14 @@ Roslyn reports no method-body errors while declaration errors remain. So the cou
 
 | Outcome | Files | Lines | Meaning |
 |---|---|---|---|
-| Compiles unmodified | 71 | 12,398 | taken verbatim, nothing else needed |
+| Compiles unmodified | 73 | 12,948 | taken verbatim, nothing else needed |
 | Compiles after the mechanical rewrite | 4 | 770 | verbatim, plus a scripted rewrite on every import |
 | Verbatim given the seam | 15 | 5,818 | the only errors are on members of stubbed upstream types |
 | Verbatim with shims | 6 | 1,885 | also needs members on WinUI-concept shims |
-| Needs edits | 20 | 8,296 | at least one error our layer can't absorb; includes `Core/AsyncValue.cs` and `Core/InfiniteResource.cs` (C# 15 `closed` replaced by `abstract`, 1 line each, forced by the net10 SDK pin) |
+| Needs edits | 18 | 7,746 | at least one error our layer can't absorb |
 | Rewrite (not linked) | 1 | 173 | `Hooks/UseAnnounce.cs` |
 
-**20,871 of 29,167 linked lines (72%) need no edits.**
+**21,421 of 29,167 linked lines (73%) need no edits.**
 
 By the handover's areas:
 
@@ -55,7 +55,7 @@ By the handover's areas:
 | Yoga (minus FlexPanel), 5,046 L | 5,046 | 0 | 0 |
 | Data, 1,070 L | 973 | 97 | 0 |
 | Validation, 3,596 L | 669 | 2,363 | 564 (9 edit lines) |
-| Helpers pulled in by the closure, 11,315 L | 5,629 | 2,885 | 2,801 (58 edit lines) |
+| Helpers pulled in by the closure, 11,315 L | 6,179 | 2,885 | 2,251 (56 edit lines) |
 
 ### Files that need edits
 
@@ -81,10 +81,8 @@ The edit count is the number of distinct source lines with an error our layer ca
 | Controls/PropertyGrid/PropertyGridFactories.cs | 28 | 1 | 0 | 0 |
 | Core/Component.cs | 398 | 1 | 0 | 0 |
 | Core/DragAttached.cs | 22 | 1 | 0 | 0 |
-| Core/AsyncValue.cs | 77 | 1 | 0 | 0 |
-| Core/InfiniteResource.cs | 473 | 1 | 0 | 0 |
 
-**Total: 91 edit lines in 20 files.** The typical causes:
+**Total: 89 edit lines in 18 files.** The typical causes:
 - Avalonia event delegate shapes, such as `EventHandler<KeyEventArgs>` where WinUI has its own typed handlers.
 - WinUI-only members on aliased types (`Control.RequestedTheme`, `ScrollViewer.ChangeView`, `XamlRoot`, `Visibility`).
 - WinUI control types named fully qualified for diagnostics: `AppliedModifierMap.cs` names Border, Grid, StackPanel and RelativePanel.
@@ -130,7 +128,7 @@ The full list is in `seam.json`.
 3. **Upstream's public hook signatures expose WinUI types:** `PickFileResult`, `FocusState`, `PickerLocationId`, `SystemBackdrop`, and `Window` parameters.
    - A verbatim `RenderContext` therefore puts WinUI-namespaced shim types into our public API, against decision 2 (Avalonia-native).
    - Those hooks have to be rewritten or hidden on our side regardless.
-4. **The verbatim route is viable for most of the engine by line count:** 72% of the linked lines need no edits.
+4. **The verbatim route is viable for most of the engine by line count:** 73% of the linked lines need no edits.
    - **The condition:** our Avalonia layer has to keep upstream's internal shapes for `Element`, `ElementModifiers`, `Reconciler`, `Component` and the other seam types.
    - That is the price of verbatim: our reconciler and element records are written fresh for Avalonia, but from the engine's side they must look like upstream's.
 5. **The two hottest upstream files (Spike B) are among the ones that need edits:** `RenderContext` (12 edit lines) and `ChildReconciler` (5).
@@ -146,4 +144,8 @@ The full list is in `seam.json`.
 - **Nothing here ran:** no tests and no behaviour checks. Spike D does that for Yoga and FlexPanel.
 - **The heavy/light split is a judgement** (file prefixes listed in Method). Moving `Component.cs` or the diagnostics files to "rewrite" would shrink both the seam and the edits.
 - **The seam counts members, not effort.** `Reconciler.Mount` is one member and most of a reconciler.
-- **Corrections after review (2026-11-22).** A first version of this report had three problems: stubs without their base types, error codes counted as seam members, and the two C# 15 files outside "needs edits". The numbers above are re-measured with all three fixed.
+- **Corrections after review (2026-11-22).** A first version of this report had three problems: stubs without their base types, error codes counted as seam members, and the two C# 15 files outside "needs edits" (since moot: with the .NET 11 SDK they link unmodified). The numbers above are re-measured with all three fixed.
+
+## Update: .NET 11 SDK (2026-11-22)
+
+With SDK 11.0.100 installed, `global.json` pins 11.0.100 and the spike compiles with `LangVersion 15` (still targeting `net10.0`), linking upstream's `Core/Polyfills/ClosedTypeAttributes.cs`. `Core/AsyncValue.cs` and `Core/InfiniteResource.cs` now link unmodified; the edited copies are gone. The step-3b total is unchanged (567). The tables above reflect this.
