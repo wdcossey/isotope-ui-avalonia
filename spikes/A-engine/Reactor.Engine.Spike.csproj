@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spike A: how much of upstream's engine compiles without WinUI.
+       Links (does not copy) files from ../../upstream at the commit in UPSTREAM.lock.
+       The file list is in EngineFiles.props so each step of the spike can change it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Microsoft.UI.Reactor</RootNamespace>
+    <AssemblyName>Reactor.Engine.Spike</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <SpikeStep Condition="'$(SpikeStep)' == ''">3</SpikeStep>
+    <UpstreamSrc>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor\'))</UpstreamSrc>
+    <!-- Missing XML doc comments are not what this spike measures. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <Import Project="EngineFiles.props" />
+  <ItemGroup>
+    <!-- The [GenerateReactorDescriptor]/[WrapManual] attributes live in upstream's Reactor.Wrappers.Abstractions. -->
+    <Compile Include="$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor.Wrappers.Abstractions\**\*.cs" Exclude="$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor.Wrappers.Abstractions\obj\**;$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor.Wrappers.Abstractions\bin\**" LinkBase="Upstream\Wrappers.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Shims/*.cs;Shims/Edited/*.cs" />
+    <Compile Include="Shims/Step1/*.cs" Condition="$(SpikeStep) &gt;= 1" />
+    <Compile Include="Shims/Step2/*.cs" Condition="$(SpikeStep) &gt;= 2" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0" />
+    <PackageReference Include="Avalonia" Version="12.1.6" />
+    <PackageReference Include="MessageFormat" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- Step 3a: mechanical rewrite on import. Rewritten copies replace their upstream originals in the compile. -->
+  <PropertyGroup>
+    <RewriteDir>$(BaseIntermediateOutputPath)rewritten\</RewriteDir>
+  </PropertyGroup>
+  <Target Name="_RewriteUpstream" BeforeTargets="BeforeBuild;CoreCompile" Condition="$(SpikeStep) &gt;= 3">
+    <Exec Command="node &quot;$(MSBuildThisFileDirectory)..\..\tools\rewrite-upstream.mjs&quot; &quot;$(MSBuildThisFileDirectory)EngineFiles.props&quot; &quot;$(MSBuildThisFileDirectory)rewrite-rules.json&quot; &quot;$(UpstreamSrc.TrimEnd('\'))&quot; &quot;$(RewriteDir.TrimEnd('\'))&quot;" StandardOutputImportance="low" />
+    <ReadLinesFromFile File="$(RewriteDir)manifest.txt">
+      <Output TaskParameter="Lines" ItemName="_RewriteLine" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <_RewriteOrig Include="$([System.String]::Copy('%(_RewriteLine.Identity)').Split('|')[0])" />
+      <_RewriteNew Include="$([System.String]::Copy('%(_RewriteLine.Identity)').Split('|')[1])" />
+      <Compile Remove="@(_RewriteOrig)" />
+      <Compile Include="@(_RewriteNew)" />
+    </ItemGroup>
+  </Target>
+</Project>

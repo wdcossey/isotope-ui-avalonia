@@ -1,0 +1,436 @@
+{
+  "note": "Members the linked upstream files use on upstream types our Avalonia layer replaces (Spike A step 3, 2026-11-22, upstream 28a87225). Only member-missing errors (CS1061/CS0117) count; constructor-shape mismatches (CS1729) are listed separately.",
+  "distinctMembers": 226,
+  "types": {
+    "T": [
+      "GetAttached",
+      "Modifiers",
+      "SetAttached",
+      "ThemeBindings"
+    ],
+    "Element": [
+      "CallSite",
+      "CanSkipUpdate",
+      "ContextValues",
+      "ElementTransition",
+      "GetAttached",
+      "HasCallbacks",
+      "IsVisible",
+      "Key",
+      "Modifiers",
+      "Provide"
+    ],
+    "ModifiedElement": [
+      "Inner"
+    ],
+    "TextBoxElement": [
+      "Set"
+    ],
+    "RegDecorator": [
+      "Done"
+    ],
+    "ReactorApp": [
+      "DefaultRenderErrorHandler",
+      "DevtoolsEnabled",
+      "FindTrayIcon",
+      "FindWindow",
+      "OpenTrayIcon",
+      "OpenWindow",
+      "UIDispatcher",
+      "Windows"
+    ],
+    "Reconciler": [
+      "ApplyAmbientEnterAnimation",
+      "CallSiteChangedOnSkip",
+      "CanUpdate",
+      "CountPerfChanges",
+      "DebugElementsSkipped",
+      "DefaultAutomationNameFromCaption",
+      "DiagnosticComponent",
+      "ForceFullRenderActive",
+      "ForceRenderThroughWrapper",
+      "GetMountedElement",
+      "GetOrCreateReactorState",
+      "HasActiveContextValues",
+      "HasExitingControls",
+      "HasGestureOrDragSlots",
+      "HoldsExitingControlIn",
+      "IsExiting",
+      "IsFlyoutDecorator",
+      "IsOnDirtyAncestorPath",
+      "Mount",
+      "PerfComponentName",
+      "RefreshSkippedChildState",
+      "RemoveChildWithExitTransition",
+      "ReplaceChildWithExitTransition",
+      "ResolveCaptionForElement",
+      "ResolveDirtyChildIndices",
+      "ShouldDeclineSkip",
+      "SkipsCallSiteOnlyTags",
+      "TryFindComponentNode",
+      "TryFindRootComponent",
+      "TryGetReactorState",
+      "UnmountChild",
+      "UpdateChildTracked",
+      "_logger"
+    ],
+    "ChildSlots": [
+      "AlignByIndex",
+      "At",
+      "ForIndex",
+      "Get"
+    ],
+    "GridSize": [
+      "Star"
+    ],
+    "NumberBoxElement": [
+      "Set"
+    ],
+    "ReactorFeatures": [
+      "DevtoolsSupported"
+    ],
+    "ReflectionTypeMetadataProvider": [
+      "CreateMetadata"
+    ],
+    "ChildDiffHints": [
+      "IsThemeSensitive",
+      "Publish",
+      "TryGet"
+    ],
+    "UIThreadMarshal": [
+      "EnqueueOrThrow",
+      "IsOffUIThread",
+      "MarshalOffUIThread"
+    ],
+    "ChangeEchoSuppressor": [
+      "BeginSuppress",
+      "ShouldSuppress"
+    ],
+    "Editors": [
+      "CheckBox",
+      "Color",
+      "ColorCompact",
+      "Date",
+      "DateOffset",
+      "DateOnly",
+      "TimeOnlyEditor",
+      "TimeSpanEditor",
+      "Toggle",
+      "Uri"
+    ],
+    "CellRenderers": [
+      "CheckMark",
+      "ColorSwatch",
+      "Date",
+      "Hyperlink",
+      "Time"
+    ],
+    "OverlayLifecycle": [
+      "IsAttributionOnlyTag"
+    ],
+    "DiagnosticText": [
+      "DelegateName",
+      "Format",
+      "FormatPlain",
+      "FriendlyTypeName",
+      "IsEditable",
+      "PropRows",
+      "TryParse",
+      "TypeName"
+    ],
+    "ComponentNode": [
+      "Component",
+      "Context",
+      "Element",
+      "EnsureDiagnosticId"
+    ],
+    "FuncElement": [
+      "RenderFunc"
+    ],
+    "MemoElement": [
+      "RenderFunc"
+    ],
+    "ComponentNames": [
+      "For",
+      "ForRenderFunction",
+      "FuncFallback",
+      "MemoFallback",
+      "RootRenderFunctionFallback"
+    ],
+    "ThreadAffinity": [
+      "ThrowIfNotOnUIThread"
+    ],
+    "ArrayOperations": [
+      "GetElementType"
+    ],
+    "RootComponentSource": [
+      "Component",
+      "FuncContext",
+      "IsAlive",
+      "RenderFunc"
+    ],
+    "ThemeResourceProbe": [
+      "TryResolve"
+    ],
+    "ResourceLookup": [
+      "TryFind"
+    ],
+    "ErrorFallback": [
+      "BuildElement",
+      "BuildPanel",
+      "BuildSafeElement",
+      "BuildSafePanel"
+    ],
+    "EmptyElement": [
+      "Instance"
+    ],
+    "ElementModifiers": [
+      "AccessKey",
+      "Accessibility",
+      "AttachedFlyout",
+      "AutomationId",
+      "AutomationName",
+      "Background",
+      "BorderBrush",
+      "BorderInlineStart",
+      "BorderThickness",
+      "CenterPoint",
+      "ContextFlyout",
+      "CornerRadius",
+      "ElementSoundMode",
+      "FontFamily",
+      "FontSize",
+      "FontWeight",
+      "Foreground",
+      "HeadingLevel",
+      "Height",
+      "HorizontalAlignment",
+      "HorizontalContentAlignment",
+      "IsDragRegion",
+      "IsEnabled",
+      "IsHitTestVisible",
+      "IsTabStop",
+      "IsVisible",
+      "Margin",
+      "MarginInlineEnd",
+      "MarginInlineStart",
+      "MaxHeight",
+      "MaxWidth",
+      "MinHeight",
+      "MinWidth",
+      "Opacity",
+      "Padding",
+      "PaddingInlineEnd",
+      "PaddingInlineStart",
+      "RequestedTheme",
+      "RichToolTip",
+      "Rotation",
+      "Scale",
+      "TabIndex",
+      "ToolTip",
+      "ToolTipPlacement",
+      "ToolTipPlacementTargetRef",
+      "Translation",
+      "VerticalAlignment",
+      "VerticalContentAlignment",
+      "Width",
+      "XYFocusDownRef",
+      "XYFocusKeyboardNavigation",
+      "XYFocusLeftRef",
+      "XYFocusRightRef",
+      "XYFocusUpRef"
+    ],
+    "ReactorDiagnostics": [
+      "GetItemSite",
+      "SourceProperty"
+    ],
+    "ReactorSourcePublisher": [
+      "AtKey",
+      "DescribesAnotherElement",
+      "IsEnabled",
+      "ResolvePublishedSource"
+    ],
+    "DiagnosticLog": [
+      "IsWarningEnabled",
+      "Warning"
+    ],
+    "LogCategory": [
+      "Reactor"
+    ],
+    "ReactorApplication": [
+      "ReportUnhandled"
+    ],
+    "ControlRegistry": [
+      "HasDecoratorRegistrations",
+      "TryGetSourceTarget"
+    ],
+    "FlyoutElement": [
+      "Target"
+    ],
+    "MenuFlyoutElement": [
+      "Target"
+    ],
+    "CommandBarFlyoutElement": [
+      "Target"
+    ],
+    "AnimationKindMap": [
+      "ToCurve"
+    ],
+    "ApplicationPersistedScope": [
+      "Default",
+      "TryGetValue"
+    ],
+    "ObservableTreeTracker": [
+      "SyncSubscriptions"
+    ],
+    "UiSettingsCapabilities": [
+      "HasAnimationsEnabledChanged"
+    ],
+    "ReactorWindow": [
+      "Activated",
+      "BeginDragMove",
+      "Deactivated",
+      "Dpi",
+      "DpiChanged",
+      "IsActive",
+      "NativeWindow",
+      "PersistedScope",
+      "Position",
+      "PositionChanged",
+      "RegisterAspectRatioOverride",
+      "RegisterClosingGuard",
+      "State",
+      "StateChanged",
+      "Update",
+      "ZOrderChanged"
+    ],
+    "WindowDipPositionChangedEventArgs": [
+      "Position"
+    ],
+    "WindowZOrderChangedEventArgs": [
+      "IsCovered",
+      "MovedToTop"
+    ],
+    "ReactorDisplay": [
+      "DisplayLayoutChanged",
+      "Displays"
+    ],
+    "WindowState": [
+      "Normal"
+    ],
+    "DpiHelpers": [
+      "GetSystemDpiSafe"
+    ],
+    "WindowSpec": [
+      "Key"
+    ],
+    "TrayIconSpec": [
+      "Key"
+    ],
+    "ReactorTrayIcon": [
+      "Close",
+      "Update"
+    ],
+    "HotReloadService": [
+      "WithinUpdatePass"
+    ],
+    "ReactorHotReloadCopier": [
+      "CreateInstance",
+      "TryMigrate"
+    ]
+  },
+  "constructorShapes": [
+    "ChildDiffHint",
+    "ElementRef",
+    "ErrorBoundaryElement",
+    "HookOrderException",
+    "IntlAccessor",
+    "ObservableTreeTracker",
+    "ReswResourceProvider"
+  ],
+  "shimSurface": {
+    "distinctMembers": 52,
+    "types": {
+      "ItemsRepeater": [
+        "Layout",
+        "TryGetElement"
+      ],
+      "DispatcherQueue": [
+        "GetForCurrentThread",
+        "TryEnqueue"
+      ],
+      "FileOpenPicker": [
+        "CommitButtonText",
+        "FileTypeChoices",
+        "FileTypeFilter",
+        "InitialFileTypeIndex",
+        "PickMultipleFilesAsync",
+        "PickSingleFileAsync",
+        "SettingsIdentifier",
+        "SuggestedFolder",
+        "SuggestedStartFolder",
+        "SuggestedStartLocation",
+        "Title",
+        "ViewMode"
+      ],
+      "FolderPicker": [
+        "CommitButtonText",
+        "PickMultipleFoldersAsync",
+        "PickSingleFolderAsync",
+        "SettingsIdentifier",
+        "SuggestedFolder",
+        "SuggestedStartFolder",
+        "SuggestedStartLocation",
+        "Title",
+        "ViewMode"
+      ],
+      "FileSavePicker": [
+        "CommitButtonText",
+        "DefaultFileExtension",
+        "FileTypeChoices",
+        "InitialFileTypeIndex",
+        "PickSaveFileAsync",
+        "SettingsIdentifier",
+        "ShowOverwritePrompt",
+        "SuggestedFileName",
+        "SuggestedFolder",
+        "SuggestedStartFolder",
+        "SuggestedStartLocation",
+        "Title"
+      ],
+      "AccessibilitySettings": [
+        "HighContrast",
+        "HighContrastScheme"
+      ],
+      "AutomationProperties": [
+        "GetName"
+      ],
+      "Application": [
+        "Current"
+      ],
+      "LosingFocusEventArgs": [
+        "Cancel",
+        "Handled",
+        "NewFocusedElement"
+      ],
+      "VisualTreeHelper": [
+        "GetParent"
+      ],
+      "KeyRoutedEventArgs": [
+        "Handled",
+        "Key"
+      ],
+      "InputKeyboardSource": [
+        "GetKeyStateForCurrentThread"
+      ],
+      "UISettings": [
+        "AnimationsEnabled",
+        "AnimationsEnabledChanged",
+        "ColorValuesChanged"
+      ],
+      "WindowSizeChangedEventArgs": [
+        "Size"
+      ]
+    }
+  }
+}
