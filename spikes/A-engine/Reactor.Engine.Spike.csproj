@@ -8,6 +8,8 @@
     <AssemblyName>Reactor.Engine.Spike</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- C# 15 for upstream's `closed` hierarchies (AsyncValue<T>, LoadState); needs the .NET 11 SDK (global.json). -->
+    <LangVersion>15</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <SpikeStep Condition="'$(SpikeStep)' == ''">3</SpikeStep>
@@ -21,7 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor.Wrappers.Abstractions\**\*.cs" Exclude="$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor.Wrappers.Abstractions\obj\**;$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor.Wrappers.Abstractions\bin\**" LinkBase="Upstream\Wrappers.Abstractions" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Shims/*.cs;Shims/Edited/*.cs" />
+    <Compile Include="Shims/*.cs" />
     <Compile Include="Shims/Step1/*.cs" Condition="$(SpikeStep) &gt;= 1" />
     <Compile Include="Shims/Step2/*.cs" Condition="$(SpikeStep) &gt;= 2" />
   </ItemGroup>
