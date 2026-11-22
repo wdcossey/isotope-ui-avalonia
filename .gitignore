@@ -1,0 +1,10 @@
+# upstream reference clone: pinned in UPSTREAM.lock, never committed here
+/upstream/
+
+# build output
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/

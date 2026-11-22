@@ -1,0 +1,5 @@
+# Upstream baseline. The sync script diffs upstream from this commit to a newer one.
+repo=https://github.com/microsoft/microsoft-ui-reactor
+baseline=28a87225540879d357f274c10e29af25cb0aa3bc
+baseline_date=2026-11-20
+baseline_note=PR #1646; the clone in ./upstream is checked out here

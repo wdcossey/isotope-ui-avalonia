@@ -1,0 +1,70 @@
+# How work runs
+
+Adapted from `~/.claude/ways-of-working/PROCESS.md` for a **local-only git repo** (user's choice, 2026-11-22):
+no GitHub remote, so no issues, PRs, CI or branch protection. The loop is otherwise the same.
+
+```
+ TASK → BRANCH/WORKTREE → BUILD → SELF-REVIEW ×2 → PROVE THE TESTS → CLEAN RUN → MERGE TO main → TIDY
+```
+
+## 1. The task list
+
+The spikes and work in `HANDOVER.md` are the task list, done in its order. A task that needs the developer stops
+at that step, and the rest goes on.
+
+## 2. Ask first, always
+
+Never without the developer's go-ahead in the conversation:
+
+- **Anything that takes over the machine:** launching an Avalonia app in a real window, UI automation, screen
+  capture of real windows (use the `device-lease` skill). Screenshots come from Avalonia.Headless rendering instead.
+- **Tools that need a human:** debugger MCPs (x64dbg/x32dbg), Rider/WebStorm MCPs driving the IDE.
+- **Anything that leaves this folder:** adding a git remote, pushing, publishing packages, contacting upstream
+  maintainers, opening issues or PRs anywhere.
+- **Commands that change the system:** installing SDKs or workloads (the .NET 11 SDK is the developer's to install),
+  global tools, registry, stopping processes Claude didn't start.
+- **Changes inside `upstream/`:** none. Read-only git only (log, show, diff, grep, rev-parse). No checkout, reset,
+  edits, or `global.json` changes there.
+- **Decisions that aren't Claude's:** those listed under "Decisions already made" in `HANDOVER.md` are not reopened.
+
+## 3. Build
+
+1. **Branch** from `main`: `spike/<letter>-<slug>`, `feat/<slug>`, `chore/<slug>`. Parallel work that changes code
+   gets its own worktree under `../<repo folder>.worktrees\<slug>` (a sibling, so nothing scans it):
+   `git worktree add ../<repo folder>.worktrees/<slug> -b <branch> main`.
+2. **Build** in small commits. Before every commit: `dotnet build` and `dotnet test` for the projects touched.
+   Stage files by name, never `git add -A`.
+3. **Measure, don't estimate:** every number in FINDINGS.md says how it was measured (command or script, which is
+   committed under `tools/` or the spike's folder).
+4. **Document** in the same branch: FINDINGS.md section for the spike.
+
+## 4. Self-review
+
+1. **Pass 1:** `code-review high main...<branch> --max-findings all` (`medium` for a small fix). Name the branch;
+   never a range ending in `HEAD` from a worktree. Fix each finding or waive it with a reason; findings can be wrong.
+2. **Pass 2:** `code-review medium main...<branch> --max-findings all` on the fixed branch.
+   Docs-only and chore branches get one pass at `medium`.
+3. **Prove the tests can fail:** on committed work, break each behaviour a new test covers, see it go red, restore.
+4. **Clean run:** fresh clone of the branch (`git clone -b <branch> <repo root> <temp>`), with
+   `upstream` provided by path (it's ignored, so a clone lacks it): build and full test suite.
+5. Before merging: `git grep -n -I -E '^(<<<<<<<|>>>>>>>)'` prints nothing.
+
+## 5. Merging
+
+Claude merges its own branches into `main` (`git merge --no-ff`) once the build, tests, both review passes and the
+clean run hold. The merge commit message records each pass's level, tokens ("not measured" if not visible), what it
+found, fixed and waived, tests proven to fail, **For you to decide** and **Hands-on follow-ups**. Then delete the
+branch and its worktree.
+
+## 6. Batches
+
+Two or three agents at once, each on **Opus set explicitly**, briefed from `~/.claude/ways-of-working/agent-brief.md`
+adapted to this file, each with its own temp folder under the session scratchpad. Research agents (no code) write
+their report to their temp folder and never touch the repo; the coordinator folds results into FINDINGS.md.
+**Shared files** agents never change: `CLAUDE.md`, `docs/`, `HANDOVER.md`, `FINDINGS.md`, `global.json`,
+`UPSTREAM.lock`, `.gitignore`, `Directory.*.props`.
+
+## 7. End of session
+
+Update the project memory with what's in flight (branches, worktrees, agents) and what's next. Check
+`git branch` and `git worktree list` before trusting a note.
