@@ -137,6 +137,10 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Tracking
+
+Open work is tracked in GitHub Issues (since 2026-11-23): #1 seam types, #2 vertical slice, #3 `tools/sync`, #4 Roslyn transforms, #5 first real sync, #6 CI, #7 PR process (hands-on), #8 wrappers-generator research, #9 FlexPanel ambient-mode divergence.
+
 ## Not done
 
 - The engine half of Spike D (see above).

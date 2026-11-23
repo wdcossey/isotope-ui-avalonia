@@ -2,7 +2,7 @@
 
 An Avalonia 12 version of microsoft/microsoft-ui-reactor. Private GitHub repo (`origin`). Package prefix: `Isotope.` (`Avalonia.` is reserved on NuGet). Machine-specific notes live in `CLAUDE.local.md` (git-ignored).
 
-Read `docs/PROCESS.md` first: it is how work runs here. Then `FINDINGS.md` (and a local `HANDOVER.md` if there is one; it is never committed).
+Read `docs/PROCESS.md` first: it is how work runs here. Then `FINDINGS.md`. **GitHub Issues are the task list** (`gh issue list`); a local `HANDOVER.md`, if any, is a historical brief and never committed.
 
 - Private GitHub remote `origin` since 2026-11-23. Until the PR-based process is adopted: one branch per spike or unit of work, self-reviewed, merged into `main` locally, then `main` pushed. No issues, PRs, CI or branch protection yet.
 - `upstream/` is a read-only reference clone of microsoft/microsoft-ui-reactor, git-ignored, pinned in `UPSTREAM.lock`. Only read-only git commands run in it (log, show, diff, grep). Never edit, check out or commit there.
