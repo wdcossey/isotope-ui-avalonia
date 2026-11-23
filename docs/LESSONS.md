@@ -32,6 +32,11 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   naming a person; a later commit removed it. A `--no-ff` merge would have kept it in `main`'s history, so the branch was
   squashed into one commit. (2026-11-23)
 
+- **A test that makes commits needs its own git identity.** A harness test passed on a developer machine and failed on a
+  fresh CI runner ("Author identity unknown"): the code under test committed with the machine's identity. Fixture repos
+  set `user.name`/`user.email` locally; reproduce with `GIT_CONFIG_GLOBAL=<empty file>` and `GIT_CONFIG_NOSYSTEM=1`.
+  (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

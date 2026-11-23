@@ -111,6 +111,10 @@ test('--commit commits only what the sync wrote, refuses a dirty index, and skip
     { cwd: f.repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   try {
     g('init', '-q');
+    // The harness's own `git commit` (--commit) uses the repo's config: give the fixture repo an identity, so the test
+    // doesn't depend on the machine's (a fresh CI runner has none).
+    g('config', 'user.name', 't');
+    g('config', 'user.email', 't@example.invalid');
     g('add', '-A');
     g('commit', '-q', '-m', 'settings');
     f.put('notes.txt', 'staged work\n');
