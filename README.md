@@ -11,16 +11,19 @@ React-style function components and hooks for **Avalonia 12**, built on the engi
 **Your UI is a function of state.** No XAML, no data binding, no view models. You write C# functions that return a
 description of the UI. Hooks hold the state, and Isotope keeps the screen in sync on every platform Avalonia runs on.
 
+<!-- snippet: counter -->
 ```csharp
-// Illustrative: the element factories will use Avalonia's vocabulary.
-Element Counter(RenderContext ctx)
+public static Element Counter(RenderContext ctx)
 {
     var (count, setCount) = ctx.UseState(0);
-    return StackPanel(
+    return VStack(
         TextBlock($"Clicked {count} times"),
         Button("Click", () => setCount(count + 1)));
 }
 ```
+
+The factories (`using static Isotope.UI.Factories;`) keep Reactor's names, with Avalonia's value types. See
+[Writing components](docs/guide/writing-components.md) for the vocabulary, a todo app and an example of each hook.
 
 This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12:
 
@@ -60,6 +63,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `FINDINGS.md` | The research results, the sync recommendation and the decisions taken |
 | `docs/PROCESS.md` | How work runs: issues, branches, self-review, merging |
 | `docs/spikes/` | Spike reports: A (engine compile), B (upstream churn), C (Uno and upstream), D (FlexPanel on Avalonia), E (wrappers generator), F (descriptor runtime), G (the vertical slice) |
+| `docs/guide/` | Writing components: the element factories and the hooks, from tested code |
 | `docs/LESSONS.md`, `docs/agent-brief.md` | Traps already hit; the brief for parallel agents |
 | `src/Isotope.UI.Avalonia/` | The library (`Isotope.UI.*`): our Avalonia seam (`Element`, `ElementModifiers`, `Reconciler`, …) plus upstream's engine files, compiled from the vendored `src/Upstream/` (listed in `UpstreamFiles.props`) |
 | `src/Isotope.UI.Avalonia.Generators/` | Upstream's wrappers generator built for Avalonia (vendored, `gen-*` rules), referenced by the library as an analyzer |
@@ -91,7 +95,7 @@ git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.l
 
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (567 recorded)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 605 of upstream's engine tests (711 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 605 of upstream's engine tests (740 tests; needs no upstream/)
 node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
 node tools/sync/test/all.mjs                                # the sync harness's own tests
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms

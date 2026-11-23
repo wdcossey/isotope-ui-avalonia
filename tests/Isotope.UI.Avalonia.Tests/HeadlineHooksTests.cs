@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Isotope.UI.Core;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -39,7 +39,7 @@ public class HeadlineHooksTests
         {
             var (count, setCount) = ctx.UseState(0);
             return Button($"{key} {count}", () => setCount(count + 1));
-        }, key);
+        }).WithKey(key);
         var host = new TestHost(() => VStack(Counter("a"), Counter("b")));
 
         TestHost.Click(host.All<Button>()[1]);
@@ -76,7 +76,7 @@ public class HeadlineHooksTests
         {
             var (count, u) = ctx.UseReducer(3);
             update = u;
-            return Text(count.ToString());
+            return TextBlock(count.ToString());
         }));
 
         update!(c => c);
@@ -98,7 +98,7 @@ public class HeadlineHooksTests
             var s = step;
             var (total, dispatch) = ctx.UseReducer<int, Op>((state, op) => op == Op.Add ? state + s : 0, 0);
             dispatches.Add(dispatch);
-            return Text(total.ToString());
+            return TextBlock(total.ToString());
         }));
         dispatches[0](Op.Add);
         host.Flush();
@@ -125,7 +125,7 @@ public class HeadlineHooksTests
         {
             var (total, d) = ctx.UseReducer<int, Op>((state, op) => op == Op.Add ? state + 1 : 0, 0);
             dispatch = d;
-            return Text(total.ToString());
+            return TextBlock(total.ToString());
         }));
 
         dispatch!(Op.Reset); // already 0
@@ -148,7 +148,7 @@ public class HeadlineHooksTests
                     log.Add("mount");
                     return () => log.Add("unmount");
                 });
-                return Text(label);
+                return TextBlock(label);
             })
             : EmptyElement.Instance));
         Assert.Equal(["render a", "mount"], log);
@@ -175,7 +175,7 @@ public class HeadlineHooksTests
             ctx.UseEffect(() => { log.Add($"run A{d}"); return () => log.Add($"cleanup A{d}"); }, d);
             ctx.UseEffect(() => { log.Add($"run B{d}"); return () => log.Add($"cleanup B{d}"); }, d);
             ctx.UseEffect(() => { log.Add("run C"); return () => log.Add("cleanup C"); }, "fixed");
-            return Text(d.ToString());
+            return TextBlock(d.ToString());
         }));
         Assert.Equal(["run A1", "run B1", "run C"], log);
         log.Clear();
@@ -200,7 +200,7 @@ public class HeadlineHooksTests
         Element Child() => Component(ctx =>
         {
             ctx.UseEffect(() => { log.Add("child effect"); return () => log.Add("child cleanup"); });
-            return Text("child");
+            return TextBlock("child");
         });
         var host = new TestHost(() => Component(ctx =>
         {
@@ -222,7 +222,7 @@ public class HeadlineHooksTests
         {
             var (loaded, setLoaded) = ctx.UseState("loading");
             ctx.UseEffect(() => setLoaded("ready"));
-            return Text(loaded);
+            return TextBlock(loaded);
         }));
         Assert.Equal(["loading"], host.Texts());
         Assert.True(host.RerenderRequested);
@@ -263,7 +263,7 @@ public class HeadlineHooksTests
         var host = new TestHost(() => Component(ctx =>
         {
             var value = ctx.UseMemo(() => ++computed);
-            return Text(value.ToString());
+            return TextBlock(value.ToString());
         }));
         host.Render();
         host.Render();
@@ -283,7 +283,7 @@ public class HeadlineHooksTests
             refs[key] = renders;
             var (n, setN) = ctx.UseState(0);
             return Button($"{key} {n}", () => setN(n + 1));
-        }, key);
+        }).WithKey(key);
         var host = new TestHost(() => VStack(Row("a"), Row("b")));
         var a = refs["a"];
 
@@ -306,8 +306,8 @@ public class HeadlineHooksTests
             var (size, setSize) = ctx.UseState(12);
             grow = () => setSize(size + 1);
             return VStack(
-                Component(c => Text("inner " + c.UseContext(Size))),
-                Text("outside")).Provide(Size, size);
+                Component(c => TextBlock("inner " + c.UseContext(Size))),
+                TextBlock("outside")).Provide(Size, size);
         }));
         Assert.Equal(["inner 12", "outside"], host.Texts());
 
