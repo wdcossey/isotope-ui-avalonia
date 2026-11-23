@@ -37,7 +37,7 @@ Detailed reports:
   - Uno compiles 83% of `src/Reactor` with 5 patched files *because* it keeps WinUI's API.
   - With an Avalonia-native API, our tier 3 is a rewrite, and a merge-based fork would conflict on every upstream change to it.
   - Even Uno's best case is 13 days behind and has been stuck 11 days on 2 conflicts, one of them upstream's .NET 11 SDK bump.
-- **A hard fork throws away about 380 engine lines a week** (Spike B): keyed-child fixes, a validation rework (#12 (done 2026-11-23)70, the largest single share), and allocation, diagnostics and picker changes in RenderContext. We would be re-deriving those fixes ourselves.
+- **A hard fork throws away about 380 engine lines a week** (Spike B): keyed-child fixes, a validation rework (#1270, the largest single share), and allocation, diagnostics and picker changes in RenderContext. We would be re-deriving those fixes ourselves.
 - **Proposing a core/platform split upstream isn't realistic** (Spike C).
   - Upstream's specs reject an abstractions layer (062) and make anything but Win32 a non-goal (036).
   - Uno's port was sent off to be hosted elsewhere.
@@ -149,7 +149,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Upstream's generator ports to Avalonia** in descriptor-only mode, which upstream itself uses for 74 built-in elements. A patched copy (36 added and 33 removed lines, after the rename) generated descriptors for Button, TextBox and Slider from Avalonia 12.1.6 metadata.
 - **Its WinUI coupling is small:** 52 code lines in 3,920, and 45 of them are inside string literals.
 - **Coverage [J]:** 45 of upstream's 69 generated WinUI controls have an Avalonia counterpart. About 17 to 20 of those would be fully generated, and about 25 to 28 generated with a hand-written `Customize`.
-- **The runtime it targets** (6 files, 3,522 lines) isn't ported yet: #12.
+- **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
 ## Spike F: descriptor runtime and generated controls (issue #12, 2026-11-23)
