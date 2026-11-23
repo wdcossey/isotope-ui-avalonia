@@ -60,7 +60,7 @@ public class GeneratorTests
         var (diagnostics, generated) = Run("public string? Header { get; init; } public bool? IsSpellCheckEnabled { get; init; }");
 
         var missing = Assert.Single(diagnostics, d => d.Id == "ISOTOPEGEN001");
-        Assert.Equal(DiagnosticSeverity.Warning, missing.Severity);
+        Assert.Equal(DiagnosticSeverity.Error, missing.Severity);
         var message = missing.GetMessage();
         Assert.Contains("'Header'", message);
         Assert.Contains("'IsSpellCheckEnabled'", message);
