@@ -83,10 +83,17 @@ public abstract record Element
         return (a, b) switch
         {
             (EmptyElement, EmptyElement) => true,
-            (TextBlockElement x, TextBlockElement y) => x.Content == y.Content,
-            (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled,
+            (TextBlockElement x, TextBlockElement y) => x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
+            (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled
+                && ReferenceEquals(x.Setters, y.Setters),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
-                && ReferenceEquals(x.Children, y.Children),
+                && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
+            (TextBoxElement x, TextBoxElement y) => x.Value.Equals(y.Value) && x.PlaceholderText == y.PlaceholderText
+                && x.IsReadOnly == y.IsReadOnly && x.AcceptsReturn == y.AcceptsReturn && x.TextWrapping == y.TextWrapping
+                && x.MaxLength == y.MaxLength && ReferenceEquals(x.Setters, y.Setters),
+            (SliderElement x, SliderElement y) => x.Value.Equals(y.Value) && x.Min == y.Min && x.Max == y.Max
+                && x.Orientation == y.Orientation && x.TickFrequency == y.TickFrequency && x.TickPlacement == y.TickPlacement
+                && ReferenceEquals(x.Setters, y.Setters),
             _ => false,
         };
     }
@@ -161,24 +168,6 @@ public record FuncElement(Func<RenderContext, Element> RenderFunc) : Element;
 /// <c>null</c> dependencies render once, then only on the component's own state changes.
 /// </summary>
 public record MemoElement(Func<RenderContext, Element> RenderFunc, object?[]? Dependencies = null) : Element;
-
-/// <summary>Text, as an Avalonia <see cref="Avalonia.Controls.TextBlock"/>.</summary>
-public record TextBlockElement(string Content) : Element;
-
-/// <summary>A push button, as an Avalonia <see cref="Avalonia.Controls.Button"/>.</summary>
-public record ButtonElement(string Label, Action? OnClick = null) : Element
-{
-    public bool IsEnabled { get; init; } = true;
-
-    internal override bool HasCallbacks => OnClick is not null;
-}
-
-/// <summary>Children stacked in one direction, as an Avalonia <see cref="Avalonia.Controls.StackPanel"/>.</summary>
-public record StackElement(Orientation Orientation, Element[] Children) : Element
-{
-    /// <summary>Spacing between children, in DIPs (upstream's default: 8).</summary>
-    public double Spacing { get; init; } = 8;
-}
 
 /// <summary>
 /// Modifiers applied to an element's control, with Avalonia value types. Only what the engine and the

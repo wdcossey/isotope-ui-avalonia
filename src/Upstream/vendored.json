@@ -11,6 +11,15 @@
       "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
     },
     {
+      "path": "src/Reactor.SourceMap.Generator/SourceMapShared.cs",
+      "tier": 1,
+      "lastChanged": "e8825993408bbe4c6ae3ce36eec368f2f16598f0",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b4faba5b122372db18fd168db5a2d8cac367c3662260f5507752dc3e083aa78c"
+    },
+    {
       "path": "src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs",
       "tier": 1,
       "lastChanged": "91540bb61ea6918b411bd738ff6070004594099f",
@@ -18,6 +27,151 @@
         "namespace-isotope"
       ],
       "sha256": "429863cf2532bd1e9c8ed159cd340ddebae25ad5bdb48a431615c99a756e7241"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/IsExternalInit.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [],
+      "sha256": "aecf40813162e69bd870225344d0b32149dce9fca55225e10db97d023d51c9be"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapAliasAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "67b0f68628ac7e0cc421445b24a55588b288b9d774182827d68a10ef6d572582"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapContentAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "32d7bd434a06e00b8e84e421008f89fa0860efc73be51dc1ec253a5f1c8f1404"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapControlledAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "70c321a8da68926eb0f78910722263a6c7d4dc2d6a9c2ae7908502f89c97010e"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapConvertAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "c1886fbb436a957069ea593d411163bb7fe2f1b2cc6fac675a1cf25ea4aa96de"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapElementSlotAnalyzer.cs",
+      "tier": 2,
+      "lastChanged": "b69ec14add5022efa8c3b67bedcc6946497f79fe",
+      "transforms": [
+        "gen-uielement",
+        "namespace-isotope"
+      ],
+      "sha256": "27624cc8f356e50af6718d769fcf1a36b0c599d100553254d0672d80ca0e500a"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapEventAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1d185e03a9593505aab193dc9385245e68a99fc8c8d1fdc50e4ba470e7537b9d"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapLifecycleAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "4804d0c8e71530a8e2e58cbd8a5bb0ea603da206b458fff9dc98f63b8902bd0d"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapOneWayAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "7a483925f4225f29117edb2d91ebb6bef3b9c353edbf930fdcb82eaf655dad60"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.Controlled.cs",
+      "tier": 2,
+      "lastChanged": "df815e2ce69757f342f4d284b2182720b25cbc03",
+      "transforms": [
+        "gen-attached-controlled-state",
+        "gen-attached-event-owner",
+        "namespace-isotope"
+      ],
+      "sha256": "8ed365c8f96faaa93e8349bf7ab43d190fdf7d8c0e817f9b19e4ef9a191c4cd3"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.Metadata.cs",
+      "tier": 1,
+      "lastChanged": "24cf929536ce80f93868e6cd66c3e3008c933f32",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "c1a635463eacee6f2f3028fc2be8a27efa4b2b6ebaacf98b1eec8c1b8a8061ea"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.SourceMap.cs",
+      "tier": 1,
+      "lastChanged": "e8825993408bbe4c6ae3ce36eec368f2f16598f0",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b712f261cd6224497a115ee477528698cb94d76183b200347b3d1859f0980bbb"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.cs",
+      "tier": 2,
+      "lastChanged": "df815e2ce69757f342f4d284b2182720b25cbc03",
+      "transforms": [
+        "gen-target-base",
+        "gen-target-message",
+        "gen-uielement",
+        "gen-member-walk-cutoff",
+        "gen-full-wrapper-cutoffs",
+        "gen-routed-event-handler",
+        "gen-routed-event-args",
+        "gen-panel-children",
+        "gen-template-exclusions",
+        "gen-polymorphic-textblock",
+        "gen-avalonia-property-lookup",
+        "gen-avalonia-content-attribute",
+        "gen-obsolete-filter",
+        "gen-items-host-ilist",
+        "gen-items-host-adapter",
+        "gen-missing-counterpart-check",
+        "gen-missing-counterpart-report",
+        "gen-drop-try-register-assembly",
+        "namespace-isotope"
+      ],
+      "sha256": "4d75695434c12733365a22e3fc6355b9c03d321b734127b397a1215abdeb467c"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1038f97a01a70d09a2726c49447c467a079d9f7ae83a1ff334734d3ca61b6715"
     },
     {
       "path": "src/Reactor/Controls/PropertyGrid/PropertyGridElement.cs",

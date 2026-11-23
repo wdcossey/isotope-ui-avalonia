@@ -350,11 +350,10 @@ public sealed partial class Reconciler
                 FuncElement func => MountFunc(func, requestRerender),
                 MemoElement memo => MountMemo(memo, requestRerender),
                 ComponentElement comp => MountComponent(comp, requestRerender),
-                TextBlockElement text => new TextBlock { Text = text.Content },
-                ButtonElement button => MountButton(button),
-                StackElement stack => MountStack(stack, requestRerender),
                 GroupElement => throw new NotSupportedException(
                     "A GroupElement is flattened into its container's children; it can't be mounted on its own."),
+                // Controls: the handler registered for the element type (a generated descriptor, #12).
+                _ when TryGetV1Handler(element.GetType(), out var entry) => entry.Mount(element, requestRerender, this),
                 _ => throw new NotSupportedException(
                     $"{element.GetType().Name} has no Avalonia control yet (the element vocabulary is tier 3)."),
             };
@@ -370,24 +369,6 @@ public sealed partial class Reconciler
         {
             PopContext(pushed);
         }
-    }
-
-    private Button MountButton(ButtonElement element)
-    {
-        var button = new Button { Content = element.Label };
-        // Dispatch through the mounted element, so a skipped update's refreshed closure is the one called.
-        button.Click += static (sender, _) =>
-        {
-            if (sender is Button b && GetMountedElement(b) is ButtonElement { OnClick: { } onClick }) onClick();
-        };
-        return button;
-    }
-
-    private StackPanel MountStack(StackElement element, Action requestRerender)
-    {
-        var panel = new StackPanel { Orientation = element.Orientation, Spacing = element.Spacing };
-        ChildReconciler.Reconcile([], Flatten(element.Children), new PanelChildCollection(panel), this, requestRerender, panel);
-        return panel;
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -430,20 +411,14 @@ public sealed partial class Reconciler
                 case ComponentElement comp:
                     ReconcileComponent(comp, (Border)control, requestRerender);
                     break;
-                case TextBlockElement text:
-                    var tb = (TextBlock)control;
-                    if (tb.Text != text.Content) tb.Text = text.Content;
-                    break;
-                case ButtonElement button:
-                    var b = (Button)control;
-                    if (!Equals(b.Content, button.Label)) b.Content = button.Label;
-                    break;
-                case StackElement stack:
-                    var panel = (StackPanel)control;
-                    if (panel.Orientation != stack.Orientation) panel.Orientation = stack.Orientation;
-                    if (panel.Spacing != stack.Spacing) panel.Spacing = stack.Spacing;
-                    ChildReconciler.Reconcile(Flatten(((StackElement)oldInner).Children), Flatten(stack.Children),
-                        new PanelChildCollection(panel), this, requestRerender, panel);
+                default:
+                    // Controls: the registered handler updates the control in place. It returns another control only
+                    // when the slot held a control of the wrong type, which it has mounted afresh.
+                    if (TryGetV1Handler(newInner.GetType(), out var entry))
+                    {
+                        var updated = entry.Update(oldInner, newInner, control, requestRerender, this);
+                        if (!ReferenceEquals(updated, control)) return updated;
+                    }
                     break;
             }
             ApplyModifiers(control, oldModifiers, newModifiers);
@@ -874,6 +849,11 @@ public sealed partial class Reconciler
             node.Component?.Context.RunCleanups();
             node.Context?.RunCleanups();
         }
+        // A control a handler mounted: the handler tears down what it owns (its children strategy, its unmount
+        // hooks) and says whether the generic walk below still visits the children (a panel strategy's).
+        if (GetMountedElement(control) is { } mounted && TryGetV1Handler(mounted.GetType(), out var entry)
+            && entry.Unmount(control, this) != V1Protocol.V1UnmountDisposition.ContinueDefaultTraversal)
+            return;
         switch (control)
         {
             case Avalonia.Controls.Panel panel:

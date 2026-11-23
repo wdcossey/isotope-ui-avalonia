@@ -37,6 +37,31 @@
       "note": "Spike A: the [GenerateReactorDescriptor]/[WrapManual] attributes, compiled unmodified"
     },
     {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.cs",
+      "tier": 2,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; Avalonia name table, the two logic hunks, and our rules (see transforms.json, gen-*)"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.Controlled.cs",
+      "tier": 2,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; attached state through AvaloniaProperty.RegisterAttached"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapElementSlotAnalyzer.cs",
+      "tier": 2,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; the slot type check names Avalonia Control"
+    },
+    {
+      "glob": "src/Reactor.Wrappers.Generator/*.cs",
+      "tier": 1,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; the analyzers and helpers compile unmodified"
+    },
+    {
+      "path": "src/Reactor.SourceMap.Generator/SourceMapShared.cs",
+      "tier": 1,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; shared with the source-map generator, linked by the wrappers generator"
+    },
+    {
       "path": "src/Reactor/Core/RenderContext.cs",
       "tier": 2,
       "note": "Spike A: needs edits (12 edit lines); mechanical rewrite"

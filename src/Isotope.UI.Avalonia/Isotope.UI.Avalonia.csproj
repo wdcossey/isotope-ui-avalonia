@@ -25,4 +25,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Isotope.UI.Avalonia.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Upstream's wrappers generator, built for Avalonia: generates the descriptors of the element records. -->
+    <ProjectReference Include="..\Isotope.UI.Avalonia.Generators\Isotope.UI.Avalonia.Generators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>
