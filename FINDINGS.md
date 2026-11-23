@@ -119,14 +119,21 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 | SDK after you installed 11.0.100 | keep the net10 pin / pin 11.0.100 | **pinned 11.0.100**, targets stay `net10.0` | you had said you would install it; it was open question 3; upstream and Uno both hinge on it |
 | Spike D review findings on behaviour inherited from upstream (ambient Yoga mode) | fix in our port / keep upstream parity | **keep parity**, logged as upstream-fix candidates | a tier 3 file is easier to watch when it diffs cleanly against upstream |
 
-## Open questions, each with a recommended answer
+## Decisions on the open questions (2026-11-23)
 
-1. **Adopt the three-tier import strategy above?** *Recommended: yes.* Next step: a `tools/sync` script that reads UPSTREAM.lock, diffs to a new upstream commit by tier, applies the transforms, builds, runs the upstream tests, and writes a PR report for the tier 3 paths.
-2. **Keep upstream's member names on the engine-facing seam** (`Element`, `ElementModifiers`, `Reconciler`, …) **with Avalonia value types?** *Recommended: yes.* It is what makes tiers 1 and 2 possible, and the names are vocabulary-neutral (Margin, Background, Width).
-3. ~~The .NET 11 SDK.~~ **Done:** you installed 11.0.100 and `global.json` now pins it, with targets still `net10.0`. Upstream moved to it for C# 15 on 2026-11-12, and Uno is stuck on that same change. Keeping our SDK at or ahead of upstream's belongs on the sync checklist.
-4. **Next session:** the engine half of Spike D. *Recommended: a minimal Avalonia `Reconciler`/`Element`/`ElementModifiers` that implements the seam for ChildReconciler, KeyedListDiff and RenderContext's hooks core; then `UseState` plus a button, a controlled `TextBox` and a keyed list.* Port the upstream unit tests that cover them.
-5. **A GitHub remote.** *Recommended: stay local until the import script and the slice exist, then a private repo with CI,* so that the import → build → upstream-tests gate runs on every sync.
-6. **Contacting upstream** (small behaviour-neutral fixes that would shrink our transforms). *Recommended: not yet.* Revisit when the transform list is known.
+1. **Three-tier import strategy: adopted.**
+2. **Upstream's member names on the engine-facing seam, with Avalonia value types: adopted.**
+3. **Next session:** the engine half of Spike D (a minimal Avalonia `Reconciler`/`Element`/`ElementModifiers` implementing the seam, then `UseState` plus a button, a controlled `TextBox` and a keyed list) and a `tools/sync` import script. Agreed.
+4. **GitHub remote:** you will create a private repo; then add it as `origin` and push.
+5. **Contacting upstream:** nothing is required, since the pipeline works around every gap. Candidate changes that would shrink our transforms, in order of payoff:
+   - Split `RenderContext.cs`'s WinUI hooks into a partial file.
+   - Split the base records out of `Element.cs`.
+   - Two inherited FlexPanel ambient-mode bugs (to reproduce on WinUI first).
+   - Short names instead of fully qualified WinUI names.
+   - `YogaValueExtensionsTests.cs`'s Markdown dependency.
+
+   Revisit once the import script shows the real transform list; nothing goes upstream without your go-ahead.
+6. **Targets stay `net10.0` (LTS);** the .NET 11 SDK is installed for the C# 15 compiler only.
 
 ## Repo state at the end of the session
 
