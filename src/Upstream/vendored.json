@@ -1601,6 +1601,375 @@
       "sha256": "3c010735e9be813e72603c608bb425308c4d057169fb609a31136b846d689503"
     },
     {
+      "path": "tests/Reactor.Tests/ChangeEchoSuppressorStateTests.cs",
+      "tier": 1,
+      "lastChanged": "ef9f6037a76a7db0a1ccb2917710e45a73eaa908",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "e6e3aef44ab066f97a3707272a3926f967336acb96941e8d952c53943a42c921"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildDiffHintsTests.cs",
+      "tier": 2,
+      "lastChanged": "c8ac8b3804b9cf63b7ac5cfa2198552aa3eeba12",
+      "transforms": [
+        "drop-test-ThemeBindings-not-theme-sensitive",
+        "namespace-isotope"
+      ],
+      "sha256": "eacf7c13e4a4f9ce8cfd276e6501c130ca99ccfd0d539b301a09ab64f7a51714"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerKeyedMiddleCoreTests.cs",
+      "tier": 1,
+      "lastChanged": "628fb7f4d10a3f6c38dc9774a4a2d8932bff2a30",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b41abd0327ef2ad4f16096f85b8ff51e50174c547c8fdb77f2a94ba5c8837a23"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerLisIntoTests.cs",
+      "tier": 1,
+      "lastChanged": "628fb7f4d10a3f6c38dc9774a4a2d8932bff2a30",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "86a1f74b77e85946e6337f86f68c8fdc181df543ebbbd6f40066a2fa970ed153"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerLisTests.cs",
+      "tier": 1,
+      "lastChanged": "e85f4d86ea69303b8cf758b8669758cb7e818f59",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b756934bda3f8de002052dbc25f66938ad0bd5fccb026ea2417a95d8ceed466d"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerTests.cs",
+      "tier": 2,
+      "lastChanged": "58c2f12a13d4ec18d6eb4d2f1efb98f2c73db92b",
+      "transforms": [
+        "drop-test-TextBlockElement-FontSize-equality",
+        "test-winui-orientation",
+        "namespace-isotope"
+      ],
+      "sha256": "7d7c1b564c1e655f72629fb1bfacc67303bf507ab8f2d4b04975e2cb7076e825"
+    },
+    {
+      "path": "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",
+      "tier": 1,
+      "lastChanged": "4f09a719445ec728d5b80e908b0c3df1498921af",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "246531dd750031798165bc4df27b042309b2d8097d37a0328e746394c8cd1abc"
+    },
+    {
+      "path": "tests/Reactor.Tests/ContextCaptureUnitTests.cs",
+      "tier": 1,
+      "lastChanged": "dfd553ee3416d34aeadc991c88cf95b8e6f171cb",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b9efd627a3d12f64b48cdd2a0f4f9c6f841e1bd9993fa5dffa060e02979b44c5"
+    },
+    {
+      "path": "tests/Reactor.Tests/ContextSystemSelfHostTests.cs",
+      "tier": 1,
+      "lastChanged": "1851f43b6ad2e7ae406daf5250edf61bd6ad5cc3",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "02eb965c234f0ac45da3acab3d2047d4ceef58f1a330f3886f8c06df152f34ca"
+    },
+    {
+      "path": "tests/Reactor.Tests/ContextSystemUnitTests.cs",
+      "tier": 1,
+      "lastChanged": "bb856424eebcd5715bfc400a46f1b9c407d6033c",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "9d130f5b4d26cc54b82d075f19b4d21e2c3bc8e32739b720aee49068a5fe6185"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/FocusRevalidationTests.cs",
+      "tier": 1,
+      "lastChanged": "66b3cbb6a6f8ebf73fc5ddc97deb30395b37290b",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "d35db3b32a0f4e8c0a132085e7f35bc4e362f396bbadd6c509c99b27a3cf128f"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/PendingTests.cs",
+      "tier": 1,
+      "lastChanged": "3d6efd1da656989ef9625b2e695eb28359dad904",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b7d72eabdc574bcc5eb8ff77a3ad3295c39f3f37c0828c6b2e946dba69c92fe7"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/RenderContextDependencyTests.cs",
+      "tier": 1,
+      "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "93a52d0d232a936ffbc2078a0e606bf515a148fc2b901d8fa2f8abcae0303964"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/ResourceDependencyIdentityTests.cs",
+      "tier": 1,
+      "lastChanged": "fb64db021b8527d688daa8feb18587dd23c0c3f4",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b20cb74fa0b4c033fb235a0c57bf4c19bfaa1cab717cf422261847ffab75e69f"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseInfiniteResourceTests.cs",
+      "tier": 1,
+      "lastChanged": "f45d2edb35b4250154c911407779f84d5ae03c4b",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "cd00b8b3c5394a25a27d8d663f5b03721a0ff472aebb41f30938849b848e0ea9"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseInfiniteResourceThreadingTests.cs",
+      "tier": 1,
+      "lastChanged": "f45d2edb35b4250154c911407779f84d5ae03c4b",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "16b36729f1466cf37a63cf159fbe670f1bcb48146e0f264c89e8253b89b19831"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseMutationTests.cs",
+      "tier": 1,
+      "lastChanged": "3d6efd1da656989ef9625b2e695eb28359dad904",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1518b6b78bef740634c5816f8c4e40cf2bf3fd2d4800c6b2972c920932dfef12"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseMutationThreadingTests.cs",
+      "tier": 1,
+      "lastChanged": "3d6efd1da656989ef9625b2e695eb28359dad904",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "c89d28b5b5d92bb79181dd9560f192e655c9d5ddead947a780b701cee3c51fa1"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseResourceTests.cs",
+      "tier": 1,
+      "lastChanged": "3d6efd1da656989ef9625b2e695eb28359dad904",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "493b51195d207f979977140321444952873047c45da9518af0d43b77d07b6e70"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseResourceThreadingTests.cs",
+      "tier": 1,
+      "lastChanged": "3d6efd1da656989ef9625b2e695eb28359dad904",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "fea48bc948cc346ed396d3c620a0f80943ad7a141732f7d8bf414eccee7df50f"
+    },
+    {
+      "path": "tests/Reactor.Tests/Data/DataPageCacheParityTests.cs",
+      "tier": 1,
+      "lastChanged": "f518b05b6e45674a166d814a1eb108ff94b9fb6c",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "48f8b11bf7078c236f72fd4dd3334012c22e34a3b9fa953782cdf872e7af3e58"
+    },
+    {
+      "path": "tests/Reactor.Tests/HookArityOverloadTests.cs",
+      "tier": 1,
+      "lastChanged": "e0394e0cc3392be9fcab7bdcd068c2e69fad2efd",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "74b59bc84b2d1bf1cf258fc4d9baf8f421d74b72f497a18e6628931042a53ac8"
+    },
+    {
+      "path": "tests/Reactor.Tests/HookDelegateCachingTests.cs",
+      "tier": 2,
+      "lastChanged": "fbeb1d76655aa1d9c6580347e425f274527fd54a",
+      "transforms": [
+        "drop-test-UseMemoCells-FullCacheHit",
+        "drop-test-UseMemoCells-PartialChange",
+        "drop-test-UseMemoCellsByKey-FullCacheHit",
+        "namespace-isotope"
+      ],
+      "sha256": "b0298be65eb0202b994b289d64c1027a2074d5fdd951a0a0ed15fc2120135b74"
+    },
+    {
+      "path": "tests/Reactor.Tests/HookStateRefactorTests.cs",
+      "tier": 1,
+      "lastChanged": "bb856424eebcd5715bfc400a46f1b9c407d6033c",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1e19b30160a076859e1d48d47fa2f8d63bbe8a3d90bd7305eb2f8c7109267e0b"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/KeyedListDiffAnimationTests.cs",
+      "tier": 2,
+      "lastChanged": "516aa2db0ceb526f741fbac701cf033c4a7c7bf1",
+      "transforms": [
+        "drop-test-AnimationKind-curves",
+        "namespace-isotope"
+      ],
+      "sha256": "2ff7e6a368d225ad443843608ca7254ce60c5fcbe12e24c5c3a0fcab36d97b9e"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/KeyedListDiffPoolingTests.cs",
+      "tier": 1,
+      "lastChanged": "628fb7f4d10a3f6c38dc9774a4a2d8932bff2a30",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b37e47890dcbee22ba4b109c3a1062e5f4aec53cb4d0f99baa7ae2c6f9d9e69b"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/KeyedListDiffTests.cs",
+      "tier": 1,
+      "lastChanged": "84d1e805c17cd48b6b0c10fd1a52fcabd40529b9",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b13b4a4a1b1cd2ed6ae82a7074035387e3defb6f1303a9f5e5d62b2d073a252b"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/ReactorListStateTests.cs",
+      "tier": 1,
+      "lastChanged": "59541d3f6af130bf050a0995ce05887fdb893ce9",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "e5a31535e36137fc79e6d0bce0b736ee41feaa6b63708ca4ff1b851d692e910d"
+    },
+    {
+      "path": "tests/Reactor.Tests/MemoizationPropagationTests.cs",
+      "tier": 1,
+      "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "f337f11c2cf2b4f3effc98e6f81ad61c99fb687af2067dbcaf584a1dc5156278"
+    },
+    {
+      "path": "tests/Reactor.Tests/NavigationLifecycleTests.cs",
+      "tier": 1,
+      "lastChanged": "bb856424eebcd5715bfc400a46f1b9c407d6033c",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "4e88fe1f0ffeeed6583f98d3203f6b85f029e61945bc9ebd8eedad6dda1e7ae2"
+    },
+    {
+      "path": "tests/Reactor.Tests/ObservableHookTests.cs",
+      "tier": 1,
+      "lastChanged": "4041437123584424546b6b882827d1187f73f5fb",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "45456774a38329afe4baa8ef5b3db1287319116a08280b883efeca73f4e069c9"
+    },
+    {
+      "path": "tests/Reactor.Tests/ObservableTreeHookTests.cs",
+      "tier": 1,
+      "lastChanged": "ea0cb9bf62b4f34c41ee67f55da778fa26875f89",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "3babbcb779f73836ef3a60b08f4842514b9ff1995f85b2c025aedd71bad72688"
+    },
+    {
+      "path": "tests/Reactor.Tests/PersistedStateScopeTests.cs",
+      "tier": 1,
+      "lastChanged": "b0e0fe30d6d0950895f2cc851ec8b8a5c9c936ec",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "063737599d406780cea18143ad47b8f34a4aeeea9ddfd179684b72a7564c2d47"
+    },
+    {
+      "path": "tests/Reactor.Tests/PersistedStateTests.cs",
+      "tier": 1,
+      "lastChanged": "1cf3840e3ddcdd8bd15c28bef3ff6b6515014cf6",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "189e9117fde1c0817d016f43bed5f7d02dae08894d41288b5a96885104b7bdfe"
+    },
+    {
+      "path": "tests/Reactor.Tests/RenderContextHookOrderTests.cs",
+      "tier": 2,
+      "lastChanged": "c65a9df5ea32c6de7f9a420df07fe0584a057361",
+      "transforms": [
+        "drop-test-UseColorScheme-NoApplication",
+        "drop-test-UseIsDarkTheme-NoApplication",
+        "namespace-isotope"
+      ],
+      "sha256": "928f0f6e6afeee43bcdbc8ee3fd1ed363767be977002fc09844df328a3eecd5e"
+    },
+    {
+      "path": "tests/Reactor.Tests/TestIsolationCollections.cs",
+      "tier": 1,
+      "lastChanged": "aa7fd62817e4fb18f2bbf7b28901e84a120d3cfe",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "a2c8b0dba0abf9c623b7d7a2de72c81fd6605a8f4a3f1bd379c6a4d57550abd6"
+    },
+    {
+      "path": "tests/Reactor.Tests/ThreadSafeHookTests.cs",
+      "tier": 1,
+      "lastChanged": "1cf3840e3ddcdd8bd15c28bef3ff6b6515014cf6",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1c65d309f50f5f0fdbe84ffbc4d23ca1af3707b33cf62de0e9d4ca0b9a2c6c3c"
+    },
+    {
+      "path": "tests/Reactor.Tests/ThreadSafeNavigationTests.cs",
+      "tier": 1,
+      "lastChanged": "cf23a2a2340da9a8b4ff497be713277db0cfef62",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "f7ac9c244ec4b25fce1e1522b192b1d3ab98c3db82843ee30eb44ab4d0b91362"
+    },
+    {
+      "path": "tests/Reactor.Tests/UseCommandTests.cs",
+      "tier": 1,
+      "lastChanged": "3d6efd1da656989ef9625b2e695eb28359dad904",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "3ad51fd4096ffc5b72f8aeca8a19fcbe060d60aaa1af853b4f249a0497a47b1a"
+    },
+    {
+      "path": "tests/Reactor.Tests/UseNavigationTests.cs",
+      "tier": 1,
+      "lastChanged": "ea0cb9bf62b4f34c41ee67f55da778fa26875f89",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "870d5426aa2057cac5f72f77262b1b46a4eb2c6193f9d1580dd3bd80dd55e7fa"
+    },
+    {
       "path": "tests/Reactor.Tests/YogaAutoMinSizeTests.cs",
       "tier": 1,
       "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",

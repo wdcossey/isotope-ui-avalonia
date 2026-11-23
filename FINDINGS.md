@@ -152,13 +152,36 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## Spike G: the vertical slice (issue #2, 2026-11-23)
+
+- **The premise works on Avalonia.** `UseState`, `UseReducer` (both forms), `UseEffect`, `UseMemo`, `UseCallback`, `UseRef`
+  and `UseContext` behave as upstream's engine defines them (14 tests).
+  - One difference from React: upstream runs a parent's effects before its child mounts. The tests pin upstream's order.
+- **605 of upstream's engine tests run against the library:** 40 vendored test files; 35 unchanged (548 tests), 5 through
+  rules (57 tests, 8 tier 3 tests dropped).
+- **Controls and layout:**
+  - The controlled TextBox is tested (2 tests).
+  - The keyed list keeps each row's controls, state and typed text through insert, remove, reorder and reverse (5 tests).
+  - FlexPanel is library code over the vendored Yoga (21 tests).
+- **Examples:** a counter and a todo app, driven by headless input and rendered to `docs/spikes/img/G-counter.png` and
+  `G-todo.png`.
+- **Total:** 711 tests; the 45 new ones were all proven to fail when broken.
+- **Timings** (1,000 keyed rows, headless, medians over 3 runs): mount 37.5–40.2 ms; same-key re-render 1.2–1.6 ms;
+  reverse 47.6–78.0 ms; one row's state change 0.34–0.45 ms.
+- **Leaks:**
+  - Avalonia 12 binds `Dispatcher.UIThread` to the first thread that reads it (fixed in the seam).
+  - Avalonia clamps `DesiredSize`, so FlexPanel's CSS minimum size is lost (#15).
+  - A keyed move detaches the control; Avalonia's own `Move` is unmeasured (#14).
+- **Next:** an app host (#16). Report: `docs/spikes/G-vertical-slice.md`.
+
 ## Decisions after Spike F (2026-11-23)
 
 1. **`ISOTOPEGEN001`** (a record member with no Avalonia counterpart) **is a build error.** A silent drop is what it exists
    to catch.
 2. **Control pooling is ported later,** and only if a measurement shows it pays (#14).
-3. **Controlled values keep upstream's rule:** a value equal to the last render's isn't re-applied, so a rejected edit
-   stays in the box until the value changes. This matches Reactor, and #2 pins it with a test.
+3. **Controlled values keep upstream's rule:** a TextBox element equal to the last render's is skipped, so a rejected edit
+   stays in the box until the element changes; when it changes for any reason, the controlled value is written back if
+   the box has drifted from it (upstream spec 047 §8). #2 pins both halves.
 4. **Also kept as recommended:** TextBox's first-write suppression token, recording the element on every mounted
    control, and the generator project's `netstandard2.0` target (Roslyn requires it).
 

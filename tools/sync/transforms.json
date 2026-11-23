@@ -1000,6 +1000,79 @@
       ]
     },
     {
+      "id": "drop-test-UseColorScheme-NoApplication",
+      "drop": "public void UseColorScheme_When_NoApplication_Returns_Default_Without_Throwing\\(",
+      "why": "Tests UseColorScheme, a theme hook: tier 3 (dropped from RenderContext by drop-RenderContext-UseColorScheme).",
+      "files": [
+        "tests/Reactor.Tests/RenderContextHookOrderTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-UseIsDarkTheme-NoApplication",
+      "drop": "public void UseIsDarkTheme_When_NoApplication_Returns_False_Or_True_Without_Throwing\\(",
+      "why": "Tests UseIsDarkTheme, a theme hook: tier 3 (dropped from RenderContext by drop-RenderContext-UseIsDarkTheme).",
+      "files": [
+        "tests/Reactor.Tests/RenderContextHookOrderTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-UseMemoCells-FullCacheHit",
+      "drop": "public void UseMemoCells_Full_CacheHit_Returns_Prior_Array_Without_Building\\(",
+      "why": "Tests UseMemoCells, which the library does not compile yet (it needs the theme layer, tier 3).",
+      "files": [
+        "tests/Reactor.Tests/HookDelegateCachingTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-UseMemoCells-PartialChange",
+      "drop": "public void UseMemoCells_Partial_Change_After_CacheHit_Still_Rebuilds_Changed\\(",
+      "why": "Tests UseMemoCells, which the library does not compile yet (it needs the theme layer, tier 3).",
+      "files": [
+        "tests/Reactor.Tests/HookDelegateCachingTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-UseMemoCellsByKey-FullCacheHit",
+      "drop": "public void UseMemoCellsByKey_Full_CacheHit_Reuses_Element_References\\(",
+      "why": "Tests UseMemoCellsByKey, which the library does not compile yet (it needs the theme layer, tier 3).",
+      "files": [
+        "tests/Reactor.Tests/HookDelegateCachingTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-TextBlockElement-FontSize-equality",
+      "drop": "public void TextBlockElement_With_Same_Properties_Are_Equal\\(",
+      "why": "Uses TextBlockElement.FontSize, which the hand-written Avalonia record doesn't have yet (the element vocabulary grows with #13).",
+      "files": [
+        "tests/Reactor.Tests/ChildReconcilerTests.cs"
+      ]
+    },
+    {
+      "id": "test-winui-orientation",
+      "find": "\\bMicrosoft\\.UI\\.Xaml\\.Controls\\.Orientation\\b",
+      "replace": "global::Avalonia.Layout.Orientation",
+      "why": "StackElement takes Avalonia's Orientation (Avalonia value types on the seam).",
+      "files": [
+        "tests/Reactor.Tests/ChildReconcilerTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-ThemeBindings-not-theme-sensitive",
+      "drop": "public void IsThemeSensitive_False_For_ThemeBindings_SelfHealing\\(",
+      "why": "Uses TextBlockElement.ThemeBindings: theme bindings are tier 3.",
+      "files": [
+        "tests/Reactor.Tests/ChildDiffHintsTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-AnimationKind-curves",
+      "drop": "public void AnimationKind_Maps_To_NonNull_Curve_For_All_Active_Kinds\\(",
+      "why": "Ambient animations are tier 3: the Avalonia AnimationKindMap maps every kind to no curve, so this mapping test fails by design.",
+      "files": [
+        "tests/Reactor.Tests/Internal/KeyedListDiffAnimationTests.cs"
+      ]
+    },
+    {
       "id": "event-provider-isotope",
       "find": "Microsoft-UI-Reactor",
       "replace": "Isotope-UI",

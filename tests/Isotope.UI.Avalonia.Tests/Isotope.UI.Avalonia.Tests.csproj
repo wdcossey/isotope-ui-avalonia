@@ -8,13 +8,22 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <VendoredTests>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Upstream\tests\Reactor.Tests\'))</VendoredTests>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Upstream's own engine tests (#2), vendored by tools/sync (tiers.json; tier 2 drops in transforms.json), run against
+         the library. The Yoga tests are left out: tools/sync/verify/Upstream.Yoga.Tests runs them. -->
+    <Compile Include="$(VendoredTests)**\*.cs" Exclude="$(VendoredTests)Yoga*.cs;$(VendoredTests)YogaGenerated\**" LinkBase="Upstream\Tests" />
+  </ItemGroup>
   <ItemGroup>
     <!-- xunit.v3 3.2.x: the version Avalonia.Headless.XUnit 12.1.6 is built against (as in Spike D). -->
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.6" />
+    <!-- Skia and the Fluent theme, as in Spike D: headless windows render real frames, captured to PNG. -->
+    <PackageReference Include="Avalonia.Skia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />

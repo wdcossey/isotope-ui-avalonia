@@ -281,7 +281,12 @@ public class HooksTests
     }
 }
 
-/// <summary>Off-thread state setters, through the DispatcherQueue seam over Avalonia's dispatcher.</summary>
+/// <summary>
+/// Off-thread state setters, through the DispatcherQueue seam over Avalonia's dispatcher. These set the process-wide
+/// <see cref="ReactorApp.UIDispatcher"/>, which upstream's vendored hook tests read (they expect none), so they run
+/// alone.
+/// </summary>
+[Collection(ReactorAppGlobals.Name)]
 public class ThreadingTests
 {
     [AvaloniaFact]
@@ -379,6 +384,13 @@ public class ThreadingTests
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(Environment.CurrentManagedThreadId, ranOn);
     }
+}
+
+/// <summary>Tests that change <see cref="ReactorApp"/>'s process-wide state run alone, outside the parallel tests.</summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ReactorAppGlobals
+{
+    public const string Name = "ReactorAppGlobals";
 }
 
 /// <summary>Runs an action on a new thread (never inlined on the caller's), returning what it threw.</summary>

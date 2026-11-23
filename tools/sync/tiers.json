@@ -24,7 +24,7 @@
     {
       "path": "src/Reactor/Yoga/FlexPanel.cs",
       "tier": 3,
-      "note": "Spike D: hand port for Avalonia"
+      "note": "Spike D: hand port for Avalonia; in the library since #2 (src/Isotope.UI.Avalonia/Layout/FlexPanel.cs)"
     },
     {
       "glob": "src/Reactor/Yoga/*.cs",
@@ -670,6 +670,206 @@
       "glob": "tests/Reactor.Tests/YogaGenerated/*.cs",
       "tier": 1,
       "note": "upstream's generated Yoga tests (Spike D: pass unmodified)"
+    },
+    {
+      "path": "tests/Reactor.Tests/RenderContextHookOrderTests.cs",
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; drops the two theme-hook tests (UseColorScheme, UseIsDarkTheme: tier 3)"
+    },
+    {
+      "path": "tests/Reactor.Tests/HookDelegateCachingTests.cs",
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; drops the three UseMemoCells tests (UseMemoCells is vendored but not compiled: it needs the theme layer)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerTests.cs",
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; drops the FontSize equality test (the hand-written TextBlockElement has no FontSize yet); WinUI's Orientation becomes Avalonia's"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildDiffHintsTests.cs",
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; drops the ThemeBindings test (theme bindings are tier 3)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/KeyedListDiffAnimationTests.cs",
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; drops the ambient-animation curve test (animations are tier 3: every kind maps to no curve)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChangeEchoSuppressorStateTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerKeyedMiddleCoreTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerLisIntoTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ChildReconcilerLisTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ContextCaptureUnitTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ContextSystemSelfHostTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ContextSystemUnitTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/FocusRevalidationTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/PendingTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/RenderContextDependencyTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/ResourceDependencyIdentityTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseInfiniteResourceTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseInfiniteResourceThreadingTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseMutationTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseMutationThreadingTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseResourceTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Core/UseResourceThreadingTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Data/DataPageCacheParityTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/HookArityOverloadTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/HookStateRefactorTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/KeyedListDiffPoolingTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/KeyedListDiffTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/Internal/ReactorListStateTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/MemoizationPropagationTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/NavigationLifecycleTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ObservableHookTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ObservableTreeHookTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/PersistedStateScopeTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/PersistedStateTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/TestIsolationCollections.cs",
+      "tier": 1,
+      "note": "#2: upstream's xunit collection definitions (the vendored tests' isolation groups)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ThreadSafeHookTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/ThreadSafeNavigationTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/UseCommandTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+    },
+    {
+      "path": "tests/Reactor.Tests/UseNavigationTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
     },
     {
       "glob": "src/Reactor/Core/Element*.cs",
