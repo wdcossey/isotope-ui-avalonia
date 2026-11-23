@@ -84,17 +84,22 @@ public partial record TextBoxElement(
 
     internal override bool HasCallbacks => OnChanged is not null;
 
-    // Reports user edits. A write of the engine's own (the controlled Value) is dropped by its suppression token.
+    // Reports user edits. The echo of the engine's own write (the controlled Value) is recognized by its value and
+    // dropped (ShouldSuppressEcho: the value-diff channel, which also honours a WriteSuppressed token).
     private static readonly EventHandler<TextChangedEventArgs> __TextChangedTrampoline = (s, _) =>
     {
         var tb = (TextBox)s!;
         if (!Reconciler.TryGetReactorState(tb, out var state)) return;
-        if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
-        (state.Element as TextBoxElement)?.OnChanged?.Invoke(tb.Text ?? string.Empty);
+        var text = tb.Text ?? string.Empty;
+        if (ChangeEchoSuppressor.ShouldSuppressEcho(state, text)) return;
+        (state.Element as TextBoxElement)?.OnChanged?.Invoke(text);
     };
 
     // As upstream's: AcceptsReturn and TextWrapping are written before the text (a single-line box strips line
-    // breaks from the text it's given), and Value is a controlled value whose write is echo-suppressed.
+    // breaks from the text it's given), and Value is a controlled value whose write doesn't echo. Unlike upstream's
+    // TextBox, the write is armed by value, on mount too (valueDiffEcho, armOnMount: upstream's RichEditBox
+    // channel): Avalonia raises TextChanged after the write returns, even for the first write of a control not yet
+    // in a window, so that echo reaches the trampoline wired after the mount writes.
     private static partial ControlDescriptor<TextBoxElement, TextBox> Customize(ControlDescriptor<TextBoxElement, TextBox> d)
         => d.OneWayConditional(
                 get:         static e => e.AcceptsReturn,
@@ -112,7 +117,9 @@ public partial record TextBoxElement(
                 callback:    static e => e.OnChanged,
                 trampoline:  __TextChangedTrampoline,
                 slotIsNull:  static p => p.TextChangedTrampoline is null,
-                setSlot:     static (p, h) => p.TextChangedTrampoline = h);
+                setSlot:     static (p, h) => p.TextChangedTrampoline = h,
+                valueDiffEcho: true,
+                armOnMount:  true);
 }
 
 /// <summary>
