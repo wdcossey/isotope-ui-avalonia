@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -101,4 +101,51 @@ test('the import fails loudly when a rule matches nothing, and succeeds when eve
   const good = runTool('class C {}', [{ find: 'class C', replace: 'class D', why: 't' }]);
   assert.equal(good.status, 0);
   assert.match(good.manifest, /A\.cs\|.*A\.cs\|1/);
+});
+
+test('drop allows a trailing comment after the member, and skips operator names when finding the body', () => {
+  const src = [
+    'class C',
+    '{',
+    '    public int Gone() => 1; // tier 3',
+    '    public static bool operator ==(C a, C b) { return true; }',
+    '    public static bool operator !=(C a, C b) => false;',
+    '    int Kept;',
+    '}',
+  ].join('\n');
+  const { text } = applyRules('A.cs', src, [
+    rule({ drop: 'public int Gone\\(' }),
+    rule({ drop: 'public static bool operator ==' }),
+    rule({ drop: 'public static bool operator !=' }),
+  ]);
+  assert.deepEqual(text.split('\n'), ['class C', '{', '', '', '', '    int Kept;', '}']);
+});
+
+test('an unchanged rewrite keeps its file, and a failed import leaves no manifest', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'rewrite-upstream-'));
+  try {
+    mkdirSync(path.join(dir, 'src'));
+    writeFileSync(path.join(dir, 'src', 'A.cs'), 'class C {}');
+    writeFileSync(path.join(dir, 'files.props'), '<Compile Include="$(UpstreamSrc)A.cs" />');
+    const run = (rules) => {
+      writeFileSync(path.join(dir, 'rules.json'), JSON.stringify(rules));
+      try {
+        execFileSync(process.execPath, [tool, path.join(dir, 'files.props'), path.join(dir, 'rules.json'), path.join(dir, 'src'), path.join(dir, 'out')], { stdio: 'pipe' });
+        return 0;
+      } catch (e) {
+        return e.status;
+      }
+    };
+    const good = [{ find: 'class C', replace: 'class D', why: 't' }];
+    assert.equal(run(good), 0);
+    const out = path.join(dir, 'out', 'A.cs');
+    const stamp = new Date(2000, 0, 1);
+    utimesSync(out, stamp, stamp);
+    assert.equal(run(good), 0);
+    assert.equal(statSync(out).mtime.getTime(), stamp.getTime());
+    assert.equal(run([{ find: 'NotThere', replace: 'X', why: 't' }]), 1);
+    assert.equal(existsSync(path.join(dir, 'out', 'manifest.txt')), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

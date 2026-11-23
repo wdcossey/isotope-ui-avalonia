@@ -12,7 +12,7 @@
 //                    are left blank, so line numbers still match upstream's.
 // Every rule must match: a "find" rule at least once over its files, a "drop" rule exactly once in each of its files.
 // Otherwise the import fails (exit 1), so a rule upstream has outgrown can't pass silently.
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -129,13 +129,18 @@ function memberRange(text, code, at) {
       end = matchBrace(k);
       const j = nextCode(end + 1);
       if (text[j] === '=' && text[j + 1] !== '>') end = toSemicolon(j); // property initializer
-    } else if (paren === 0 && c === '=' ) end = toSemicolon(k);
+    } else if (paren === 0 && c === '=') {
+      // '==', '!=', '<=', '>=' (an operator declaration's name) are not the start of a body or initializer.
+      if (text[k + 1] === '=' || '=!<>'.includes(text[k - 1])) { if (text[k + 1] === '=') k++; continue; }
+      end = toSemicolon(k);
+    }
     else if (paren === 0 && c === ';') end = k;
   }
   if (end < 0) throw new Error('no end of member');
   let lineEnd = text.indexOf('\n', end);
   lineEnd = lineEnd < 0 ? n : lineEnd;
-  if (text.slice(end + 1, lineEnd).trim() !== '') throw new Error('code follows the member on its last line');
+  for (let k = end + 1; k < lineEnd; k++)
+    if (code[k] && !/\s/.test(text[k])) throw new Error('code follows the member on its last line');
   let start = text.lastIndexOf('\n', at - 1) + 1;
   if (text.slice(start, at).trim() !== '') throw new Error('code precedes the member on its first line');
   for (;;) {
@@ -184,31 +189,51 @@ export function loadRules(rulesFile) {
   }));
 }
 
+// Writes a file only when its content changed, so an unchanged rewrite keeps its timestamp and the compile
+// that reads it stays up to date.
+function writeIfChanged(file, content) {
+  if (existsSync(file) && readFileSync(file, 'utf8') === content) return;
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, content);
+}
+
+// Every file under dir, as absolute paths.
+function listFiles(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true, recursive: true })
+    .filter((e) => e.isFile())
+    .map((e) => path.resolve(e.parentPath ?? e.path, e.name));
+}
+
 function main() {
   const [propsFile, rulesFile, srcDir, outDir] = process.argv.slice(2);
   const props = readFileSync(propsFile, 'utf8');
   const rules = loadRules(rulesFile);
   const rels = [...props.matchAll(/Include="\$\(UpstreamSrc\)([^"]+)"/g)].map((m) => m[1].replace(/\\/g, '/'));
-  rmSync(outDir, { recursive: true, force: true });
-  mkdirSync(outDir, { recursive: true });
   const manifest = [];
+  const written = new Set();
   for (const rel of rels) {
     const src = path.join(srcDir, rel);
     const { text, hits } = applyRules(rel, readFileSync(src, 'utf8'), rules);
     if (!hits) continue;
-    const dst = path.join(outDir, rel);
-    mkdirSync(path.dirname(dst), { recursive: true });
+    const dst = path.resolve(outDir, rel);
     // #line maps compiler errors back to the upstream file and line, so rewritten and verbatim files report alike.
-    writeFileSync(dst, '// REWRITTEN from upstream src/Reactor/' + rel + ' by tools/rewrite-upstream.mjs. Do not edit.\n#line 1 "' + path.resolve(src) + '"\n' + text);
-    manifest.push([path.resolve(src), path.resolve(dst), hits].join('|'));
+    writeIfChanged(dst, '// REWRITTEN from upstream src/Reactor/' + rel + ' by tools/rewrite-upstream.mjs. Do not edit.\n#line 1 "' + path.resolve(src) + '"\n' + text);
+    written.add(dst);
+    manifest.push([path.resolve(src), dst, hits].join('|'));
   }
   const unmatched = rules.filter((r) => r.hits === 0 || (r.drop !== undefined && r.files && r.hits !== r.files.length));
   if (unmatched.length) {
     for (const r of unmatched) console.error('rewrite-upstream: rule did not match: ' + (r.drop ?? r.find));
+    // Leave no manifest behind, so a build can't go on with the previous run's rewritten files.
+    rmSync(path.join(outDir, 'manifest.txt'), { force: true });
     process.exit(1);
   }
-  writeFileSync(path.join(outDir, 'manifest.txt'), manifest.join('\n') + (manifest.length ? '\n' : ''));
+  const manifestFile = path.resolve(outDir, 'manifest.txt');
+  for (const stale of listFiles(outDir)) if (!written.has(stale) && stale !== manifestFile) rmSync(stale);
+  writeIfChanged(manifestFile, manifest.join('\n') + (manifest.length ? '\n' : ''));
   console.log('rewrote ' + manifest.length + ' files');
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+// Run as a script (compared as real paths: Node resolves the main module through junctions and symlinks).
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();
