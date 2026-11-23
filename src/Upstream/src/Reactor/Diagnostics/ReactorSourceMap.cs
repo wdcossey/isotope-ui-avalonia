@@ -1,0 +1,273 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.cs, last changed upstream in 587dd6ae6169. Do not edit: change the tools/sync rules.
+using Microsoft.UI.Reactor.Core;
+using Microsoft.UI.Reactor.Core.V1Protocol;
+using Microsoft.UI.Xaml;
+
+namespace Microsoft.UI.Reactor.Diagnostics;
+
+/// <summary>
+/// Spec 010 — runtime switch and read path for Reactor source mapping.
+///
+/// <para><b>Why a runtime flag at all.</b> Interceptors are baked in at compile
+/// time, so without a runtime gate every Debug build would pay the stamping cost
+/// whether or not anyone is inspecting. This flag is what the emitted interceptor
+/// checks before writing a location, so an un-inspected Debug session allocates
+/// nothing extra.</para>
+///
+/// <para><b>It does not change control tagging for leaves.</b> The reconciler attaches a
+/// <c>ReactorState</c> (the control → element back-pointer) only to controls that
+/// something will read back — callbacks, a key, extras, or reference modifiers
+/// (see <c>Reconciler.NeedsTag</c>), which is the allocation win PR #468 landed.
+/// <c>NeedsTag</c> has no arm for this flag on ordinary elements: a stamped element carries its
+/// <c>CallSite</c> in the <c>Extensions</c> bucket and so already satisfies the
+/// existing <c>Extensions is not null</c> test. Adding one would only tag
+/// <em>unstamped</em> elements, which have no location to return, while
+/// re-introducing the per-leaf allocation. Elements the generator does not reach
+/// (wrapper factories, bare-string children) therefore stay untagged and report
+/// no location rather than a wrong one. The one exception is component boundaries:
+/// while this flag is on, every component's Border wrapper is tagged so an inspector
+/// can find where each component starts — one allocation per component, never per
+/// leaf.</para>
+///
+/// <para><b>Who turns it on.</b> The devtools session switch. <c>ReactorApp</c>
+/// sets <see cref="Enabled"/> when the process was launched with
+/// <c>--devtools app</c> / <c>--devtools run</c>, so a retail session never
+/// pays. It is public-settable so a host that embeds its own inspector (or a
+/// test) can opt in without going through the CLI.</para>
+/// </summary>
+public static partial class ReactorSourceMap
+{
+    /// <summary>
+    /// Seeded from the <c>REACTOR_SOURCEMAP</c> environment variable so a
+    /// process that does not go through the devtools CLI (a benchmark host, a
+    /// harness, a one-off repro) can still turn source mapping on.
+    ///
+    /// <para>Deliberately a field INITIALIZER and not a static constructor:
+    /// declaring an explicit cctor would strip <c>beforefieldinit</c> from this
+    /// type, and <see cref="Enabled"/> is read by every generated factory
+    /// interceptor, where an unhoistable class-init check would show up.</para>
+    /// </summary>
+    private static int s_enabled =
+        IsEnabledAtStartup(
+            global::System.Environment.GetEnvironmentVariable("REACTOR_SOURCEMAP"),
+            // Guarded inline so a build without Reactor.DevtoolsSupport folds the read (and
+            // the variable's name) away.
+            global::Microsoft.UI.Reactor.Hosting.ReactorFeatures.DevtoolsSupported
+                ? global::System.Environment.GetEnvironmentVariable("REACTOR_DIAGNOSTICS")
+                : null) ? 1 : 0;
+
+    /// <summary>
+    /// The startup value of <see cref="Enabled"/>: <c>REACTOR_SOURCEMAP=1</c>, or the
+    /// diagnostics launch opt-in <c>REACTOR_DIAGNOSTICS=1</c> in a build with the
+    /// <c>Reactor.DevtoolsSupport</c> switch (diagnostics mode needs call sites, including on
+    /// elements an app builds before its first host exists, such as a page's field
+    /// initializers).
+    /// </summary>
+    internal static bool IsEnabledAtStartup(string? sourceMapValue, string? diagnosticsValue)
+        => IsEnabledByEnvironment(sourceMapValue)
+            || (global::Microsoft.UI.Reactor.Hosting.ReactorFeatures.DevtoolsSupported && IsEnabledByEnvironment(diagnosticsValue));
+
+    /// <summary>
+    /// The <c>REACTOR_SOURCEMAP</c> contract: exactly <c>"1"</c> enables, anything else
+    /// (including <c>"true"</c>, <c>"0"</c>, empty and unset) does not.
+    ///
+    /// <para>Factored out so the contract can be tested directly. Asserting it through
+    /// <see cref="Enabled"/> instead would be testing a mutable process-global that this
+    /// very environment variable is allowed to initialize to true — the test would fail
+    /// under its own supported opt-in, and could also observe another class's write.</para>
+    /// </summary>
+    internal static bool IsEnabledByEnvironment(string? value)
+        => string.Equals(value, "1", StringComparison.Ordinal);
+
+    /// <summary>
+    /// True when source mapping is active for this process. Read by every generated
+    /// factory interceptor before it stamps, so it is an <c>int</c> + <c>Volatile</c>
+    /// rather than a lock.
+    /// </summary>
+    public static bool Enabled
+    {
+        get => Volatile.Read(ref s_enabled) != 0;
+        set
+        {
+            var was = Interlocked.Exchange(ref s_enabled, value ? 1 : 0);
+            // Off → on: component boundaries mounted while mapping was off carry no tag, and
+            // a cached subtree may never be re-rendered to pick one up. Tag them now, on each
+            // host's UI thread, so an inspector that turns mapping on late still sees every
+            // component. A no-op before any host exists (startup) and on repeated sets.
+            if (was == 0 && value)
+                Core.Diagnostics.ReactorHostRegistry.TagComponentBoundariesInAllHosts();
+        }
+    }
+
+    /// <summary>
+    /// Resolves the DSL call site that produced <paramref name="control"/>.
+    ///
+    /// <para>This is the whole read chain, and it deliberately reuses the
+    /// back-pointer that already exists rather than adding a second attached
+    /// property: <c>UIElement</c> → <c>ReactorAttached.StateProperty</c> →
+    /// <c>ReactorState.Element</c> → <see cref="Element.CallSite"/>.</para>
+    ///
+    /// <para>Returns <c>null</c> when the control was not produced by Reactor, or when
+    /// the element behind it carries no <see cref="Element.CallSite"/> — because it was
+    /// built while <see cref="Enabled"/> was false, or because no provider reaches that
+    /// factory (see the known limitations in the source-mapping guide). Note this is a
+    /// property of the ELEMENT, not of tagging: a control can be tagged for unrelated
+    /// reasons (callbacks, a key, other extras) and still report no location, and an
+    /// element hand-stamped with a <c>CallSite</c> reports one even with the flag
+    /// off.</para>
+    /// <para>Target-wrapping decorators are resolved through. <c>Flyout</c>,
+    /// <c>MenuFlyout</c> and <c>CommandBarFlyout</c> mount their <c>Target</c>'s control
+    /// and then deliberately replace that control's tag with themselves, because their
+    /// Opened/Closed handlers read it back. The realized control is still the target's —
+    /// a <c>Button</c> inside a <c>Flyout(...)</c> was created by the <c>Button(</c>
+    /// line — so reporting the decorator's line would name the wrong creator, the same
+    /// misattribution the generator avoids for pass-through factories. The walk is a
+    /// loop so nested decorators resolve to the innermost target.</para>
+    /// <para>Native AOT in diagnostics mode does not tag a control whose element's only extra
+    /// is its call site (no managed inspector can load to read the tag); there the location
+    /// is resolved from the control's published <c>ReactorSource</c> value and is the same
+    /// <see cref="SourceLocation"/> the tag would give.</para>
+    /// <para>Menu and command-bar items a flyout, menu bar or command bar builds from item
+    /// records (<c>MenuItem(…)</c>, <c>AppBarButton(…)</c>) carry no element tag; in diagnostics
+    /// mode their location is resolved the same way, from their published value.</para>
+    /// </summary>
+    public static SourceLocation? GetSource(UIElement control)
+    {
+        var element = Reconciler.GetMountedElement(control);
+        if (element is not null)
+        {
+            // Native AOT diagnostics mode: a forwarding RegisterType registration that needs a
+            // tag (a key, an unmount callback) tags the control with itself, because the stamped
+            // child it forwarded to was not tagged; under JIT the child's tag stays and names the
+            // child. The published value still describes the child, so it answers instead.
+            if (Reconciler.SkipsCallSiteOnlyTags
+                && control.GetValue(global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics.SourceProperty) is string published
+                && global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.AtKey(published) is not null
+                && global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.DescribesAnotherElement(published, element))
+                return global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.ResolvePublishedSource(control);
+            return UnwrapDecorators(element)?.CallSite;
+        }
+        // No tag: Native AOT's call-site-only skip (above), or a menu / command-bar item a
+        // flyout built from an item record rather than an element (MenuItem(…), AppBarButton(…)).
+        // An item records its exact call site; otherwise the published value names it.
+        if (!global::Microsoft.UI.Reactor.Hosting.ReactorFeatures.DevtoolsSupported
+            || !global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.IsEnabled)
+            return null;
+        if (global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics.GetItemSite(control) is { } itemSite)
+            return itemSite;
+        return global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.ResolvePublishedSource(control);
+    }
+
+    /// <summary>
+    /// Walks a decorator chain to its innermost target, or returns null if the chain is
+    /// cyclic.
+    ///
+    /// <para>The walk has to be cycle-safe because <c>GetSourceTarget</c> is an
+    /// extension point: a third-party <see cref="IDecoratorElementHandler{TElement}"/>
+    /// can return its own element, or two decorators can point at each other. A naive
+    /// loop then spins forever — hanging the inspector here, and hanging RECONCILIATION
+    /// where <c>Reconciler.CallSiteChangedOnSkip</c> uses this on the shallow-skip path.
+    /// Both call sites share this helper so neither can regain that failure mode.</para>
+    ///
+    /// <para>Uses tortoise-and-hare rather than a visited set: this runs per element on
+    /// a hot path, so it must not allocate. A cycle means the resolver chain is
+    /// malformed and there is no meaningful creator to report, hence null rather than an
+    /// arbitrary participant.</para>
+    ///
+    /// <para>The depth cap is NOT redundant with the cycle check. Tortoise-and-hare only
+    /// detects repeated object IDENTITY, so a resolver that returns a fresh element each
+    /// call — <c>element with { }</c> is the easy way to write that by accident — builds
+    /// an unbounded chain in which no two nodes are ever reference-equal, and the walk
+    /// would never terminate. The cap bounds that case; the cycle check still earns its
+    /// place by catching true cycles immediately instead of after
+    /// <see cref="MaxDecoratorDepth"/> steps.</para>
+    /// </summary>
+    internal static Element? UnwrapDecorators(Element element)
+    {
+        var slow = element;
+        var fast = element;
+
+        for (var depth = 0; depth < MaxDecoratorDepth; depth++)
+        {
+            if (DecoratorTarget(fast) is not { } firstStep) return fast;
+            fast = firstStep;
+
+            if (DecoratorTarget(fast) is not { } secondStep) return fast;
+            fast = secondStep;
+
+            slow = DecoratorTarget(slow)!;
+
+            if (ReferenceEquals(slow, fast)) return null;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Depth ceiling for decorator traversal. Real decorator nesting is a
+    /// handful deep at most (a flyout wrapping a menu flyout wrapping its target), so
+    /// this is far above any legitimate chain while still bounding a malformed
+    /// third-party resolver that manufactures a new element on every call.
+    /// </summary>
+    internal const int MaxDecoratorDepth = 64;
+
+    /// <summary>
+    /// The decorator chain from <paramref name="element"/> (outermost) to its innermost target,
+    /// for diagnostics that must see every level: a decorator mounts its target and then applies
+    /// its own modifiers to the same control, so outer levels win. Stops at a repeated element
+    /// (a cyclic resolver) or after <see cref="MaxDecoratorDepth"/> steps. On-demand only — it
+    /// allocates, unlike <see cref="UnwrapDecorators"/>.
+    /// </summary>
+    internal static IReadOnlyList<Element> DecoratorChain(Element element)
+    {
+        var chain = new List<Element> { element };
+        for (var depth = 0; depth < MaxDecoratorDepth; depth++)
+        {
+            if (DecoratorTarget(chain[^1]) is not { } next) break;
+            foreach (var seen in chain)
+                if (ReferenceEquals(seen, next)) return chain;
+            chain.Add(next);
+        }
+        return chain;
+    }
+
+    /// <summary>
+    /// The wrapped element for a target-wrapping decorator, or null for anything else.
+    ///
+    /// <para>Globally registered decorator handlers can opt in through
+    /// <see cref="IDecoratorElementHandler{TElement}.GetSourceTarget(TElement)"/>. The
+    /// fallback covers built-in decorator records that may have been constructed
+    /// directly, before their factory-triggered registration latch ran.</para>
+    /// </summary>
+    internal static Element? DecoratorTarget(Element element)
+    {
+        // The built-in shapes below are only a FALLBACK for records constructed directly,
+        // before their factory-triggered registration latch has run. A registration, when
+        // one exists, owns the answer — including when it deliberately names no target,
+        // e.g. an app that registers its own ordinary handler for FlyoutElement and
+        // mounts its own control. Overriding that with the hard-coded Target unwrap would
+        // report the target factory's line instead of the factory that actually created
+        // the realized control.
+        //
+        // Consulting the registry is gated so ordinary elements stay off it entirely:
+        // this runs on the reconciler's shallow-skip path for every callback-free
+        // element. The built-in shapes are checked too, since those are exactly the types
+        // an app may have overridden even with no decorator of its own registered.
+        if ((ControlRegistry.HasDecoratorRegistrations || IsBuiltInDecoratorShape(element))
+            && ControlRegistry.TryGetSourceTarget(element, out var registered))
+        {
+            return registered;
+        }
+
+        return element switch
+        {
+            FlyoutElement f => f.Target,
+            MenuFlyoutElement m => m.Target,
+            CommandBarFlyoutElement c => c.Target,
+            _ => null,
+        };
+    }
+
+    private static bool IsBuiltInDecoratorShape(Element element)
+        => element is FlyoutElement or MenuFlyoutElement or CommandBarFlyoutElement;
+}

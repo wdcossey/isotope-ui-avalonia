@@ -1,0 +1,640 @@
+{
+  "$comment": [
+    "The tier map for tools/sync: ordered rules over upstream repo-relative paths, first match wins.",
+    "Each rule has \"path\" (exact) or \"glob\" (\"*\" within a segment, \"**\" any number of segments) and a tier:",
+    "1 vendored verbatim; 2 vendored with transforms.json; 3 rewritten for Avalonia and watched (the report lists PRs touching it);",
+    "\"none\" not imported. A rule that matches no file fails the sync. Seeded from spikes/A-engine/outcomes.json and the Spike A and D reports."
+  ],
+  "rules": [
+    {
+      "path": "LICENSE",
+      "tier": 1,
+      "note": "upstream's MIT licence, kept with the vendored code"
+    },
+    {
+      "path": "src/Reactor/ThirdPartyNoticeText.txt",
+      "tier": 2,
+      "note": "third-party notices: Yoga's MIT licence is kept; transform drop-winuiex-notice removes the WinUIEx section (see transforms.json)"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseAnnounce.cs",
+      "tier": 3,
+      "note": "Spike A: rewrite (a source-generated WinUI wrapper)"
+    },
+    {
+      "path": "src/Reactor/Yoga/FlexPanel.cs",
+      "tier": 3,
+      "note": "Spike D: hand port for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Yoga/*.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles (10 files); Spike D: runs under the Avalonia FlexPanel"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs",
+      "tier": 1,
+      "note": "Spike A: the [GenerateReactorDescriptor]/[WrapManual] attributes, compiled unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/RenderContext.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (12 edit lines); mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/ChildReconciler.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (5 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/KeyedListDiff.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Hooks/Pending.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (2 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Hooks/PendingScope.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseDevtools.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseElementFocus.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (1 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseElementRef.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseFocus.cs",
+      "tier": 2,
+      "note": "Spike A: shims; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseFocusTrap.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (4 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseInfiniteResource.cs",
+      "tier": 2,
+      "note": "Spike A: shims"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseMemoCells.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseMutation.cs",
+      "tier": 2,
+      "note": "Spike A: shims"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseResource.cs",
+      "tier": 2,
+      "note": "Spike A: shims"
+    },
+    {
+      "path": "src/Reactor/Data/DataPage.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/DataPageCache.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/DataRequest.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/DataSourceResourceExtensions.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Data/FieldDescriptor.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/FilterDescriptor.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/GridAttributes.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/IDataSource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/Providers/ListDataSource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/Providers/ObservableListDataSource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/RowKey.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Data/SortDescriptor.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ErrorStyling.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/FormField.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (4 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ImmediateExtensions.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/UseValidationContext.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidateExtensions.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationContext.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationMessage.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationReconciler.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationRenderScope.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationRule.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (2 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationVisualizer.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (3 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/Validators/BuiltInValidators.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/Validators/IValidator.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/Virtualization/VirtualListFactories.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (1 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/PropertyGridFactories.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (1 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Core/SourceLocation.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Context.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/QueryCache.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/AmbientAnimation.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/ContentOwner.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceTransparentAttribute.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/FocusRevalidationService.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Animation.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/PersistedStateScope.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Command.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceMap.StaticInfo.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceMap.RootMount.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/TypeMetadata.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/RenderError.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Optional.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/WindowPersistedScope.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/IItemViewSource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/PropertyGridElement.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/IReactorKeyed.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/ThemeResourceListeners.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/RenderPassRequests.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ComponentPerfTally.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorEventSource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Component.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (1 edit lines); mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/TypeRegistry.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (11 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/ReactorListState.cs",
+      "tier": 2,
+      "note": "Spike A: rewritten (mechanical), compiles; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/ChildCollection.cs",
+      "tier": 2,
+      "note": "Spike A: rewritten (mechanical), compiles; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/ContextScope.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/ColorScheme.cs",
+      "tier": 2,
+      "note": "Spike A: shims"
+    },
+    {
+      "path": "src/Reactor/Core/Pickers.cs",
+      "tier": 2,
+      "note": "Spike A: shims"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Components.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (2 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceMap.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (5 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/BackdropKind.cs",
+      "tier": 2,
+      "note": "Spike A: rewritten (mechanical), compiles; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/Theme.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (8 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Controls/Virtualization/VirtualListElement.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (5 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Core/IItemsRepeaterFactorySource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (21 edit lines); mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/V1HandlerRegistry.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/DragAttached.cs",
+      "tier": 2,
+      "note": "Spike A: needs edits (1 edit lines)"
+    },
+    {
+      "path": "src/Reactor/Core/RenderErrorDispatch.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs",
+      "tier": 2,
+      "note": "Spike A: rewritten (mechanical), compiles; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam; mechanical rewrite"
+    },
+    {
+      "path": "src/Reactor/Core/ReactorBinding.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/LruCache.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/DateFormatOptions.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/IStringResourceProvider.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/ListFormatType.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/LocaleContext.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/MessageCache.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/MessageKey.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/NumberFormatOptions.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/PseudoLocalizer.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/RtlHelper.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/ConnectedNavigationCompletion.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/DeepLinkMap.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationContext.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationDiagnostics.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationHandle.cs",
+      "tier": 2,
+      "note": "Spike A: verbatim given seam"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationLifecycle.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationStack.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationState.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/AsyncValue.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/InfiniteResource.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/Polyfills/ClosedTypeAttributes.cs",
+      "tier": 1,
+      "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaValueExtensionsTests.cs",
+      "tier": "none",
+      "note": "Spike D: also uses upstream's Markdown namespace"
+    },
+    {
+      "glob": "tests/Reactor.Tests/Yoga*.cs",
+      "tier": 1,
+      "note": "upstream's Yoga tests (Spike D: pass unmodified)"
+    },
+    {
+      "glob": "tests/Reactor.Tests/YogaGenerated/*.cs",
+      "tier": 1,
+      "note": "upstream's generated Yoga tests (Spike D: pass unmodified)"
+    },
+    {
+      "glob": "src/Reactor/Core/Element*.cs",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Core/Reconciler*.cs",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Core/V1Protocol/**",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Elements/**",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Hosting/**",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Animation/**",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Input/**",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/Reactor/Accessibility/**",
+      "tier": 3,
+      "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "glob": "src/**",
+      "tier": "none",
+      "note": "not imported yet; new files here are listed in the report"
+    },
+    {
+      "glob": "tests/**",
+      "tier": "none",
+      "note": "not imported yet; new files here are listed in the report"
+    }
+  ]
+}

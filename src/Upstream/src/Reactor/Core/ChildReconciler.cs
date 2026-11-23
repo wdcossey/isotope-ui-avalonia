@@ -1,0 +1,1455 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildReconciler.cs, last changed upstream in 7258869cc711. Do not edit: change the tools/sync rules.
+using System.Buffers;
+using System.Collections.Concurrent;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Reactor.Core.Internal;
+using WinUI = Microsoft.UI.Xaml.Controls;
+
+namespace Microsoft.UI.Reactor.Core;
+
+// AI-HINT: React-like child list diffing. Two strategies:
+//   Unkeyed: O(n) positional match by index — simple but can't detect reorders.
+//   Keyed:   4-phase algorithm — (1) common prefix, (2) common suffix,
+//            (3) pure insert/remove middle, (4) LIS-based minimal moves.
+//   LIS finds the longest subsequence of old children that are already in order
+//   in the new list; only children NOT in the LIS need to be moved.
+//   UnmountAndPool returns controls to ElementPool for reuse.
+
+/// <summary>
+/// Keyed child reconciliation using Longest Increasing Subsequence (LIS).
+///
+/// Strategies:
+///   1. Unkeyed children: positional reconciliation (match by index)
+///   2. Keyed children: prefix/suffix stripping + LIS for minimal moves
+/// </summary>
+internal static class ChildReconciler
+{
+    /// <summary>
+    /// Reconciles old and new child element arrays against a Panel's Children collection.
+    /// </summary>
+    // <snippet:child-diff>
+    internal static void Reconcile(
+        Element[] oldChildren,
+        Element[] newChildren,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        UIElement? parentControl = null)
+    {
+        // Filter out nulls and EmptyElements, keeping each kept child's slot (ChildSlots)
+        var oldFiltered = Filter(oldChildren, out var oldSlots);
+        var newFiltered = Filter(newChildren, out var newSlots);
+
+        bool hasKeys = HasAnyKeys(oldFiltered) || HasAnyKeys(newFiltered);
+
+        // Duplicate sibling keys are matched to the wrong controls by the keyed path below;
+        // report them (deduplicated per panel) rather than let that happen silently. Only when
+        // the key sequence changed: an unchanged one was already checked when it first
+        // appeared, here or at mount, so a stable keyed panel's re-render pays one compare
+        // per child (the prefix walk below does the same) rather than a duplicate scan.
+        if (hasKeys && newFiltered.Length > 1 && !SameKeys(oldFiltered, newFiltered))
+            KeyedListDiff.ReportDuplicateSiblingKeys(newFiltered, reconciler, parentControl);
+
+        // Spec 042 §6 — read the active Animations.Animate ambient once
+        // per reconcile so insert / move / unmount paths can apply the
+        // same kind without re-reading AsyncLocal for every child. Stays
+        // null in the overwhelmingly common no-ambient case.
+        var ambient = AnimationAmbient.Current;
+        AnimationKind? ambientKind = ambient is { HasEffect: true } ? ambient.Kind : null;
+
+        // Children that lead to a component which updated its own state. Their elements can be
+        // unchanged — a reused instance, a memoized wrapper, a reused children array — and the
+        // skip arms below must still descend into them, or the pass never reaches the
+        // component. Resolved once here (default when nothing in the pass self-triggered).
+        var dirty = reconciler.ResolveDirtyChildIndices(parentControl, children);
+
+        if (hasKeys)
+            ReconcileKeyed(oldFiltered, newFiltered, children, reconciler, requestRerender, ambientKind, dirty);
+        // The slot walk also steps past controls an earlier pass left playing an exit
+        // transition in this collection (they inflate its count); the index walk would pair
+        // every later child with the wrong control.
+        else if (!ChildSlots.AlignByIndex(oldSlots, oldFiltered.Length, newSlots, newFiltered.Length)
+            || HoldsExitingControls(children, reconciler))
+            ReconcileSlotted(oldFiltered, oldSlots, newFiltered, newSlots, children, reconciler, requestRerender, ambientKind, dirty);
+        else
+            ReconcilePositional(oldFiltered, newFiltered, children, reconciler, requestRerender, ambientKind, parentControl, dirty);
+    }
+    // </snippet:child-diff>
+
+    private static bool HoldsExitingControls(IChildCollection children, Reconciler reconciler) =>
+        reconciler.HoldsExitingControlIn(children);
+
+    /// <summary>
+    /// Unkeyed reconciliation when a conditional child (null / <see cref="EmptyElement"/> /
+    /// a resized <see cref="GroupElement"/>) shifted indices between renders: children are
+    /// matched by <see cref="ChildSlots">slot</see>, so the siblings after a toggled child
+    /// are updated in place instead of each being compared with the child that used to sit
+    /// at its index. Both arrays' slots increase, so this is one merge pass:
+    /// O(old + new), with no reorder. It also steps past controls still in the collection only
+    /// to play an exit transition, which belong to no old child.
+    /// </summary>
+    private static void ReconcileSlotted(
+        Element[] oldChildren,
+        long[]? oldSlots,
+        Element[] newChildren,
+        long[]? newSlots,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        AnimationKind? ambientKind,
+        in DirtyChildIndices dirty,
+        int start = 0,
+        int startLive = 0)
+    {
+        // `start`/`startLive`: where the positional walk hands over after an exit transition
+        // re-inserted a replaced control (the children before it are already reconciled).
+        int oi = start, ni = start;
+        // The live index the next old child sits at. It advances past every control the
+        // collection holds for a child just handled — including an old control an exit
+        // transition left in place (removal) or re-inserted after its replacement.
+        int live = startLive;
+        // The old child's index in the collection as it was when `dirty` was resolved: the
+        // old children plus any control an earlier pass left exiting.
+        int resolved = start;
+        bool skipExiting = HoldsExitingControls(children, reconciler);
+        while (oi < oldChildren.Length || ni < newChildren.Length)
+        {
+            if (skipExiting && oi < oldChildren.Length)
+            {
+                while (live < children.Count && reconciler.IsExiting(children.Get(live)))
+                {
+                    live++;
+                    resolved++;
+                }
+            }
+            long oldSlot = oi < oldChildren.Length ? ChildSlots.At(oldSlots, oi) : long.MaxValue;
+            long newSlot = ni < newChildren.Length ? ChildSlots.At(newSlots, ni) : long.MaxValue;
+            int before = children.Count;
+            if (oldSlot < newSlot)
+            {
+                // Old child whose slot is gone.
+                if (live < before)
+                {
+                    reconciler.RemoveChildWithExitTransition(children, live);
+                    live += 1 + (children.Count - before);
+                }
+                oi++;
+                resolved++;
+            }
+            else if (oldSlot == newSlot && live < before)
+            {
+                UpdateChildAt(oldChildren[oi], newChildren[ni], resolved, live, children, reconciler, requestRerender, dirty);
+                live += 1 + (children.Count - before);
+                oi++;
+                resolved++;
+                ni++;
+            }
+            else
+            {
+                // New slot — or a kept slot whose control the collection no longer holds
+                // (the positional walk stops there too), which mounts afresh.
+                if (oldSlot == newSlot)
+                {
+                    oi++;
+                    resolved++;
+                }
+                var newEl = newChildren[ni];
+                var ctrl = reconciler.Mount(newEl, requestRerender);
+                if (ctrl is not null)
+                {
+                    children.Insert(live, ctrl);
+                    ApplyAmbientEnterIfActive(ctrl, newEl, ambientKind);
+                    live++;
+                }
+                ni++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Positional reconciliation: match children by index.
+    /// O(max(old, new)) — no reorder detection, but simple and fast.
+    /// </summary>
+    private static void ReconcilePositional(
+        Element[] oldChildren,
+        Element[] newChildren,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        AnimationKind? ambientKind,
+        UIElement? parentControl,
+        in DirtyChildIndices dirty)
+    {
+        int childCount = children.Count; // cache to avoid repeated COM calls
+        int common = Math.Min(oldChildren.Length, newChildren.Length);
+
+        // PR-C (Spec 034 §C) — structural skip of untouched child ranges.
+        // When a memoizing producer (UseMemoCellsByIndex) publishes a hint, only
+        // the named indices differ (by reference) from the previous render; every
+        // other cell is provably reference-equal, so we update just those indices
+        // and skip the O(count) walk. Required gates (each preserves correctness):
+        //   • counts match on both element sides AND the live collection equals
+        //     that count (no in-flight exit/enter animation has inflated it) — so
+        //     every changed index maps 1:1 to an existing control;
+        //   • no animation ambient (insert / move / exit reshape the child list);
+        //   • a hint is present for THIS array — a CWT hit also proves Filter
+        //     returned the same reference (no null/EmptyElement shifted the index
+        //     space), so the hint's indices line up with both filtered arrays;
+        //   • no hot-reload force pass is active — else an untouched, reference-equal
+        //     WRAPPER cell (Component/Memo/Func) must still re-render through the
+        //     wrapper to pick up an edited method body; a structural skip would
+        //     swallow it (the full walk honours ForceRenderThroughWrapper per cell);
+        //   • the reconciler's OLD array IS the array the hint's indices were diffed
+        //     against — a cheap, self-documenting guard for the real invariant that
+        //     every unchanged index is reference-equal old↔new (holds in steady state
+        //     by construction; any defensive copy safely falls back to the full walk);
+        //   • no cell is theme-sensitive — else an untouched, reference-equal cell
+        //     could still need ApplyThemeBindings / ApplyResourceOverrides
+        //     re-resolved against an effective theme that a parent RequestedTheme
+        //     toggle changed without touching the element tree;
+        //   • no child of the container leads to a component that updated its own state
+        //     (the reconciler's dirty-ancestor path). Load-bearing: an untouched,
+        //     reference-equal cell holding such a component (e.g. a stateful memoized
+        //     cell) must be descended into, and only the full walk does that —
+        //     UpdateCommonChild declines its CanSkipUpdate skip for exactly the dirty
+        //     indices, while this fast path would skip the cell wholesale. It costs
+        //     nothing on the target workload: a memoized grid's cell panel is a
+        //     DESCENDANT of the self-triggered grid component, not an ancestor, so none
+        //     of its cells is on the ancestor-only dirty path and the fast path still
+        //     engages.
+        if (ambientKind is null
+            && oldChildren.Length == newChildren.Length
+            && childCount == newChildren.Length
+            && !reconciler.ForceFullRenderActive
+            && ChildDiffHints.TryGet(newChildren, out var hint)
+            && !hint.AnyThemeSensitive
+            && hint.PreviousChildren.TryGetTarget(out var hintPrev)
+            && ReferenceEquals(oldChildren, hintPrev)
+            && dirty.IsEmpty
+            && (parentControl is null || !reconciler.ShouldDeclineSkip(parentControl)))
+        {
+            var changed = hint.ChangedIndices;
+            int visited = 0;
+            for (int k = 0; k < changed.Length; k++)
+            {
+                int idx = changed[k];
+                if ((uint)idx >= (uint)common) continue; // defensive against a bad hint
+                if (UpdateCommonChild(idx, oldChildren, newChildren, children, reconciler, requestRerender, dirty))
+                {
+                    ReconcileSlotted(oldChildren, null, newChildren, null, children, reconciler, requestRerender,
+                        ambientKind, dirty, start: idx + 1, startLive: idx + 2);
+                    return;
+                }
+                visited++;
+            }
+            // Untouched indices are reference-equal and skipped wholesale. Base the
+            // skipped-element diagnostic on indices ACTUALLY visited (not the raw
+            // hint length) so a defensively-ignored out-of-range index can't skew it
+            // or drive it negative. The producer publishes deduped, in-range indices,
+            // so visited == the real changed count in steady state; this only hardens
+            // the directly-supplied-hint path.
+            // #721 — no gesture/drag dispatch-state refresh is needed for the skipped
+            // (untouched) indices: they are reference-equal old↔new, so their gesture/
+            // drag closures are the SAME instances already cached — there is no stale
+            // capture to refresh. Only the changed indices (handled by UpdateCommonChild
+            // above, which refreshes on its own skip arm) can carry a new closure.
+            reconciler.DebugElementsSkipped += common - visited;
+            return;
+        }
+
+        // Update common children in place
+        for (int i = 0; i < common; i++)
+        {
+            if (i >= childCount) break;
+            if (UpdateCommonChild(i, oldChildren, newChildren, children, reconciler, requestRerender, dirty))
+            {
+                // An exit transition re-inserted the replaced control right after its
+                // replacement, so every later child's control moved one index: finish with the
+                // slot walk, which steps past it.
+                ReconcileSlotted(oldChildren, null, newChildren, null, children, reconciler, requestRerender,
+                    ambientKind, dirty, start: i + 1, startLive: i + 2);
+                return;
+            }
+        }
+
+        // Remove excess old children (from end to start to keep indices stable).
+        // Use live children.Count — NOT the cached childCount — because
+        // ReplaceChildWithExitTransition in the common loop may have re-inserted
+        // elements for exit animation, increasing the actual count.
+        for (int i = children.Count - 1; i >= common; i--)
+        {
+            reconciler.RemoveChildWithExitTransition(children, i);
+        }
+
+        // Insert new children beyond old count
+        for (int i = common; i < newChildren.Length; i++)
+        {
+            var ctrl = reconciler.Mount(newChildren[i], requestRerender);
+            if (ctrl is not null)
+            {
+                children.Insert(children.Count, ctrl);
+                ApplyAmbientEnterIfActive(ctrl, newChildren[i], ambientKind);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reconciles a single common (overlapping) child position in place. Shared by
+    /// the full positional walk and the PR-C structural-skip fast path so both
+    /// honour identical skip / update / type-mismatch semantics.
+    /// </summary>
+    private static bool UpdateCommonChild(
+        int i,
+        Element[] oldChildren,
+        Element[] newChildren,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        in DirtyChildIndices dirty)
+        => UpdateChildAt(oldChildren[i], newChildren[i], i, i, children, reconciler, requestRerender, dirty);
+
+    /// <summary>
+    /// Reconciles one matched old/new child pair whose control sits at
+    /// <paramref name="i"/> in <paramref name="children"/>. <paramref name="dirtyIndex"/>
+    /// is the old child's index when <paramref name="dirty"/> was resolved — the same as
+    /// <paramref name="i"/> except in the slot-matched walk, which inserts and removes
+    /// around it. Returns true when an exit transition re-inserted the replaced control right
+    /// after its replacement, so the collection grew by one.
+    /// </summary>
+    private static bool UpdateChildAt(
+        Element oldEl,
+        Element newEl,
+        int dirtyIndex,
+        int i,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        in DirtyChildIndices dirty)
+    {
+        // Early skip: if the element is structurally identical (and carries no
+        // theme-reactive resources that need re-evaluation), we can avoid the
+        // expensive children.Get(i) COM call entirely. This saves ~2 COM roundtrips
+        // per unchanged child (IVector.GetAt + all the property diffing inside Update).
+        //
+        // Issue #675 — the skip contract lives entirely in Element.CanSkipUpdate
+        // (shared by the positional + keyed prefix/suffix arms): it declines the skip
+        // for any element carrying ThemeBindings OR ResourceOverrides.ThemeRefs, so a
+        // theme-sensitive child falls through to UpdateChild → Update, whose
+        // element-level shallow-skip re-resolves the themed value. Reconciler.Update
+        // is therefore the single place that performs skip-path theme re-resolution.
+        //
+        // A component that updated its own state is reached by a pass that starts at the
+        // root, so every child above it must be descended into. A parent that re-rendered
+        // hands its children fresh elements, which fail CanSkipUpdate on their own (every
+        // container arm of ShallowEquals compares children BY REFERENCE, and
+        // Component/Memo/Func wrappers return false). A child that is reference-equal across
+        // renders does not — a reused element instance, an explicitly memoized wrapper such
+        // as UseMemo(() => Border(Counter()), []), a reused children array — and skipping it
+        // would swallow the update (the component stayed self-triggered and its new state
+        // never rendered). The shared skip arms therefore decline for the children that
+        // lead to a self-triggered component: `dirty` names them, resolved once for the
+        // whole container from the reconciler's dirty-ancestor path. That keeps the skip floor free of
+        // a per-child COM read: membership is an integer compare, and when nothing in the
+        // pass self-triggered `dirty` is empty. A declined child goes through Update, whose
+        // own skip gate (IsOnDirtyAncestorPath) lets it descend the rest of the way.
+        UIElement? existingControl = null;
+        if (Element.CanSkipUpdate(oldEl, newEl)
+            && !reconciler.ForceRenderThroughWrapper(newEl)
+            && !dirty.Contains(dirtyIndex, i, children, reconciler, ref existingControl))
+        {
+            if (!reconciler.HasActiveContextValues
+                || !reconciler.ShouldDeclineSkip(existingControl ??= children.Get(i)))
+            {
+                reconciler.DebugElementsSkipped++;
+                // Refresh Tag when the element carries callbacks. The skip short-
+                // circuits Update, so without this the event trampoline keeps
+                // dispatching through the previous render's closure — stale state
+                // (e.g., Counter's `() => setCount(count + 1)` would keep capturing
+                // the initial count). Callback-free non-flyout elements still avoid
+                // the children.Get COM call.
+                // #721 — the gesture/drag slots are excluded from the skip predicate,
+                // so refresh their cached dispatch closures here too (same stale-closure
+                // hazard as Tag). Fetch the control once for either need.
+                if ((newEl.HasCallbacks
+                        || Reconciler.IsFlyoutDecorator(newEl)
+                        || Reconciler.HasGestureOrDragSlots(newEl.Modifiers)
+                        || Reconciler.HasGestureOrDragSlots(oldEl.Modifiers)
+                        || Reconciler.CallSiteChangedOnSkip(oldEl, newEl))
+                    && (existingControl ??= children.Get(i)) is FrameworkElement fe)
+                {
+                    reconciler.RefreshSkippedChildState(fe, oldEl, newEl);
+                }
+                return false;
+            }
+        }
+
+        if (reconciler.CanUpdate(oldEl, newEl))
+        {
+            existingControl ??= children.Get(i);
+            var replacement = reconciler.UpdateChildTracked(oldEl, newEl, existingControl, requestRerender, out var unmountedByUpdate);
+            if (replacement is not null)
+            {
+                // Child type changed at runtime — replace in place
+                if (!unmountedByUpdate) reconciler.UnmountChild(existingControl);
+                children.Replace(i, replacement);
+            }
+            return false;
+        }
+
+        // Type mismatch — mount new, replace old with exit transition support
+        var newControl = reconciler.Mount(newEl, requestRerender);
+        if (newControl is not null)
+            return reconciler.ReplaceChildWithExitTransition(children, i, newControl);
+        reconciler.UnmountChild(children.Get(i));
+        return false;
+    }
+
+    /// <summary>
+    /// Keyed reconciliation using prefix/suffix stripping + LIS.
+    /// Minimizes DOM operations for reordered lists.
+    /// </summary>
+    private static void ReconcileKeyed(
+        Element[] oldChildren,
+        Element[] newChildren,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        AnimationKind? ambientKind,
+        in DirtyChildIndices dirty)
+    {
+        var map = new KeyedPanelMap(oldChildren, children, reconciler);
+        try
+        {
+            ReconcileKeyedCore(oldChildren, newChildren, children, reconciler, requestRerender, ambientKind, dirty, ref map);
+        }
+        finally
+        {
+            map.Release();
+        }
+    }
+
+    /// <summary>
+    /// Old logical child index → physical index in the collection, for the keyed pass.
+    /// Logical children can include an unrealized transparent Memo and exclude retained
+    /// exits; when neither is present the two coincide and the map reads nothing. Otherwise
+    /// a forward cursor resolves it on demand, reading each physical child at most once and
+    /// keeping the control each slot claimed (<see cref="ControlAt"/>), so the prefix and
+    /// suffix walks read no more controls than the identity path does. A pass whose children
+    /// all skip without touching the collection never consults the map, so it neither
+    /// advances the cursor nor probes for exits.
+    /// Resolving ahead of a mutation is sound: the prefix and suffix walks only Replace
+    /// (count-neutral) a slot the cursor has already passed, after which that slot is never
+    /// looked up again, and every count-changing mutation follows <see cref="Resolve"/>.
+    /// </summary>
+    private struct KeyedPanelMap
+    {
+        private readonly Element[] _oldChildren;
+        private readonly IChildCollection _children;
+        private readonly Reconciler _reconciler;
+        private int[]? _map;
+        // The control each resolved slot claimed (null for an absent slot).
+        private UIElement?[]? _controls;
+        private Dictionary<string, int>? _siblingKeys;
+        // Logical children mapped so far; the next physical index to read; the control at
+        // that index when it has been read but not claimed.
+        private int _resolved;
+        private int _physical;
+        private UIElement? _pending;
+        // 0 = not yet decided, 1 = identity, 2 = mapped.
+        private byte _identity;
+
+        /// <summary>The collection's count when the pass began; also the absent-slot sentinel.</summary>
+        internal readonly int ChildCount;
+
+        internal KeyedPanelMap(Element[] oldChildren, IChildCollection children, Reconciler reconciler)
+        {
+            _oldChildren = oldChildren;
+            _children = children;
+            _reconciler = reconciler;
+            _map = null;
+            _controls = null;
+            _siblingKeys = null;
+            _resolved = 0;
+            _physical = 0;
+            _pending = null;
+            ChildCount = children.Count;
+            _identity = ChildCount == oldChildren.Length ? (byte)0 : (byte)2;
+        }
+
+        /// <summary>
+        /// Logical and physical indices coincide. Decided on first use, before the pass
+        /// mutates the collection, so a pass that never needs an index never probes for exits.
+        /// </summary>
+        private bool IsIdentity
+        {
+            get
+            {
+                if (_identity == 0)
+                    _identity = HoldsExitingControls(_children, _reconciler) ? (byte)2 : (byte)1;
+                return _identity == 1;
+            }
+        }
+
+        internal int At(int oldIndex)
+        {
+            if (IsIdentity) return oldIndex;
+            if (oldIndex >= _resolved) ResolveThrough(oldIndex + 1);
+            return _map![oldIndex];
+        }
+
+        /// <summary>
+        /// The control the cursor read for old child <paramref name="oldIndex"/> when it mapped
+        /// it, or <see langword="null"/> when it read none (identity map, or an absent slot).
+        /// </summary>
+        internal UIElement? MappedControl(int oldIndex)
+        {
+            At(oldIndex);
+            return _controls?[oldIndex];
+        }
+
+        /// <summary>
+        /// The realized control of old child <paramref name="oldIndex"/>, reusing the read the
+        /// cursor made to map it. Only for a child whose <see cref="At"/> is in range.
+        /// </summary>
+        internal UIElement ControlAt(int oldIndex) =>
+            MappedControl(oldIndex) ?? _children.Get(At(oldIndex));
+
+        /// <summary>The full map, or <see langword="null"/> when indices coincide.</summary>
+        internal int[]? Resolve()
+        {
+            if (IsIdentity) return null;
+            ResolveThrough(_oldChildren.Length);
+            return _map;
+        }
+
+        internal void Release()
+        {
+            if (_siblingKeys is not null) ReturnKeyIndexDict(_siblingKeys);
+            if (_map is not null) ArrayPool<int>.Shared.Return(_map);
+            // Cleared on return so the pool does not root the controls.
+            if (_controls is not null) ArrayPool<UIElement?>.Shared.Return(_controls, clearArray: true);
+            _siblingKeys = null;
+            _map = null;
+            _controls = null;
+            _pending = null;
+        }
+
+        private void ResolveThrough(int end)
+        {
+            var oldChildren = _oldChildren;
+            if (_map is null)
+            {
+                _map = ArrayPool<int>.Shared.Rent(oldChildren.Length);
+                _controls = ArrayPool<UIElement?>.Shared.Rent(oldChildren.Length);
+                _siblingKeys = RentKeyIndexDict(oldChildren.Length);
+                for (int i = 0; i < oldChildren.Length; i++)
+                    if (oldChildren[i].Key is { } siblingKey)
+                        _siblingKeys[siblingKey] = i;
+            }
+
+            // Keyed controls carry their owner's key, so an absent slot must not consume
+            // the next sibling: it leaves the control it read pending for the next one.
+            int count = ChildCount;
+            var controls = _controls!;
+            bool skipExiting = _reconciler.HasExitingControls;
+            for (; _resolved < end; _resolved++)
+            {
+                int logical = _resolved;
+                _map[logical] = count;
+                controls[logical] = null;
+                if (_physical >= count) continue;
+                var control = _pending ??= _children.Get(_physical);
+                while (skipExiting && _reconciler.IsExiting(control))
+                {
+                    _pending = null;
+                    if (++_physical >= count) break;
+                    control = _pending = _children.Get(_physical);
+                }
+                if (_physical >= count) continue;
+                if (control is FrameworkElement fe)
+                {
+                    var controlKey = Reconciler.GetMountedElement(fe)?.Key;
+                    // An unkeyed Memo must not claim a keyed sibling, but its own
+                    // realized output can carry a key that is not a sibling key.
+                    if (oldChildren[logical].Key is { } key
+                        ? controlKey != key
+                        : controlKey is not null && _siblingKeys!.ContainsKey(controlKey))
+                        continue;
+                }
+                _map[logical] = _physical++;
+                controls[logical] = control;
+                _pending = null;
+            }
+        }
+    }
+
+    // Seeds the control the map already read, so a ProbeEachChild check does not read it again.
+    private static bool DirtyContains(in DirtyChildIndices dirty, ref KeyedPanelMap map, int oldIndex,
+        IChildCollection children, Reconciler reconciler, ref UIElement? control)
+    {
+        if (dirty.IsEmpty) return false;
+        int panelIdx = map.At(oldIndex);
+        control ??= map.MappedControl(oldIndex);
+        return dirty.Contains(panelIdx, children, reconciler, ref control);
+    }
+
+    private static int OldPanelIndex(int oldIndex, int[]? oldToPanel) =>
+        oldToPanel is null ? oldIndex : oldToPanel[oldIndex];
+
+    private static int InsertionPanelIndex(int oldIndex, int oldLen, int[]? oldToPanel, int childCount)
+    {
+        if (oldToPanel is null) return oldIndex < oldLen ? oldIndex : childCount;
+        for (int i = oldIndex; i < oldLen; i++)
+            if (oldToPanel[i] < childCount) return oldToPanel[i];
+        return childCount;
+    }
+
+    private static void ReconcileKeyedCore(
+        Element[] oldChildren,
+        Element[] newChildren,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        AnimationKind? ambientKind,
+        in DirtyChildIndices dirty,
+        ref KeyedPanelMap map)
+    {
+        int oldLen = oldChildren.Length;
+        int newLen = newChildren.Length;
+
+        // Cache the child count once (#37). Both the prefix and suffix loops
+        // only ever Replace (RemoveAt+Insert — count-neutral) or skip, so the
+        // panel count is stable across them. This avoids re-reading the COM
+        // IVector.get_Size on every iteration of the suffix loop.
+        int childCount = map.ChildCount;
+
+        // Phase 1: Common prefix
+        int prefixLen = 0;
+        while (prefixLen < oldLen && prefixLen < newLen &&
+               KeyMatch(oldChildren[prefixLen], newChildren[prefixLen]) &&
+               reconciler.CanUpdate(oldChildren[prefixLen], newChildren[prefixLen]))
+        {
+            var oldEl = oldChildren[prefixLen];
+            var newEl = newChildren[prefixLen];
+
+            // Early skip (#30): when the element is structurally identical we
+            // can avoid the children.Get COM call and the full property diff
+            // inside UpdateChild — exactly mirroring the positional path. The
+            // keyed prefix is the steady-state path for stable lists (e.g. grid
+            // rows whose keys never change), so without this they re-diff every
+            // tick.
+            // Issue #675 — shares Element.CanSkipUpdate with the positional arm, so a
+            // ThemeBindings/ResourceOverrides.ThemeRefs child likewise declines the
+            // skip and re-resolves through Update (see UpdateCommonChild's contract note).
+            // So does a child leading to a self-triggered component (`dirty`; same note).
+            // The panel index is resolved only where the skip reads the collection, so a
+            // skip that never touches it never advances the map's cursor.
+            UIElement? existingControl = null;
+            if (Element.CanSkipUpdate(oldEl, newEl)
+                && !reconciler.ForceRenderThroughWrapper(newEl)
+                && !DirtyContains(dirty, ref map, prefixLen, children, reconciler, ref existingControl)
+                && (!reconciler.HasActiveContextValues
+                    || map.At(prefixLen) >= childCount
+                    || !reconciler.ShouldDeclineSkip(existingControl ??= map.ControlAt(prefixLen))))
+            {
+                reconciler.DebugElementsSkipped++;
+                // Refresh the Tag when the element carries callbacks so the
+                // event trampoline dispatches through the latest closure.
+                // #721 — likewise refresh the cached gesture/drag dispatch closures
+                // (excluded from the skip predicate). Fetch the control once.
+                if ((newEl.HasCallbacks
+                        || Reconciler.IsFlyoutDecorator(newEl)
+                        || Reconciler.HasGestureOrDragSlots(newEl.Modifiers)
+                        || Reconciler.HasGestureOrDragSlots(oldEl.Modifiers)
+                        || Reconciler.CallSiteChangedOnSkip(oldEl, newEl))
+                    && map.At(prefixLen) < childCount
+                    && (existingControl ??= map.ControlAt(prefixLen)) is FrameworkElement fe)
+                {
+                    reconciler.RefreshSkippedChildState(fe, oldEl, newEl);
+                }
+                prefixLen++;
+                continue;
+            }
+
+            // Update in place
+            int panelIdx = map.At(prefixLen);
+            if (panelIdx < childCount)
+            {
+                existingControl ??= map.ControlAt(prefixLen);
+                var replacement = reconciler.UpdateChildTracked(oldEl, newEl, existingControl, requestRerender, out var unmountedByUpdate);
+                if (replacement is not null)
+                {
+                    if (!unmountedByUpdate) reconciler.UnmountChild(existingControl);
+                    children.Replace(panelIdx, replacement);
+                }
+            }
+            prefixLen++;
+        }
+
+        // Phase 2: Common suffix
+        int suffixLen = 0;
+        while (suffixLen < (oldLen - prefixLen) && suffixLen < (newLen - prefixLen) &&
+               KeyMatch(oldChildren[oldLen - 1 - suffixLen], newChildren[newLen - 1 - suffixLen]) &&
+               reconciler.CanUpdate(oldChildren[oldLen - 1 - suffixLen], newChildren[newLen - 1 - suffixLen]))
+        {
+            // Update in place (from end)
+            int oldIdx = oldLen - 1 - suffixLen;
+            int newIdx = newLen - 1 - suffixLen;
+            var oldEl = oldChildren[oldIdx];
+            var newEl = newChildren[newIdx];
+
+            // Early skip (#30): same fast-path as the prefix loop, applied from
+            // the end of the list. Identity maps oldIdx to childCount - 1 - suffixLen.
+            UIElement? existingControl = null;
+            if (Element.CanSkipUpdate(oldEl, newEl)
+                && !reconciler.ForceRenderThroughWrapper(newEl)
+                && !DirtyContains(dirty, ref map, oldIdx, children, reconciler, ref existingControl)
+                && (!reconciler.HasActiveContextValues
+                    || map.At(oldIdx) < 0
+                    || map.At(oldIdx) >= childCount
+                    || !reconciler.ShouldDeclineSkip(existingControl ??= map.ControlAt(oldIdx))))
+            {
+                reconciler.DebugElementsSkipped++;
+                // #721 — refresh Tag + cached gesture/drag dispatch closures on skip.
+                if ((newEl.HasCallbacks
+                        || Reconciler.IsFlyoutDecorator(newEl)
+                        || Reconciler.HasGestureOrDragSlots(newEl.Modifiers)
+                        || Reconciler.HasGestureOrDragSlots(oldEl.Modifiers)
+                        || Reconciler.CallSiteChangedOnSkip(oldEl, newEl))
+                    && map.At(oldIdx) >= 0
+                    && map.At(oldIdx) < childCount
+                    && (existingControl ??= map.ControlAt(oldIdx)) is FrameworkElement fe)
+                {
+                    reconciler.RefreshSkippedChildState(fe, oldEl, newEl);
+                }
+                suffixLen++;
+                continue;
+            }
+
+            int panelIdx = map.At(oldIdx);
+            if (panelIdx >= 0 && panelIdx < childCount)
+            {
+                existingControl ??= map.ControlAt(oldIdx);
+                var replacement = reconciler.UpdateChildTracked(oldEl, newEl, existingControl, requestRerender, out var unmountedByUpdate);
+                if (replacement is not null)
+                {
+                    if (!unmountedByUpdate) reconciler.UnmountChild(existingControl);
+                    children.Replace(panelIdx, replacement);
+                }
+            }
+            suffixLen++;
+        }
+
+        // Phase 3: Middle section
+        int oldStart = prefixLen;
+        int oldEnd = oldLen - suffixLen;
+        int newStart = prefixLen;
+        int newEnd = newLen - suffixLen;
+
+        int oldMidLen = oldEnd - oldStart;
+        int newMidLen = newEnd - newStart;
+
+        if (oldMidLen == 0 && newMidLen == 0)
+            return; // Prefix + suffix covered everything
+
+        // Every branch below positions against the old children, before its first mutation.
+        int[]? oldToPanel = map.Resolve();
+
+        if (oldMidLen == 0)
+        {
+            // Only insertions
+            int panelIndex = InsertionPanelIndex(oldStart, oldLen, oldToPanel, childCount);
+            for (int i = 0; i < newMidLen; i++)
+            {
+                var ctrl = reconciler.Mount(newChildren[newStart + i], requestRerender);
+                if (ctrl is not null)
+                {
+                    children.Insert(panelIndex++, ctrl);
+                    ApplyAmbientEnterIfActive(ctrl, newChildren[newStart + i], ambientKind);
+                }
+            }
+            return;
+        }
+
+        if (newMidLen == 0)
+        {
+            // Only removals (from end to start)
+            for (int i = oldMidLen - 1; i >= 0; i--)
+            {
+                int panelIdx = OldPanelIndex(oldStart + i, oldToPanel);
+                if (panelIdx < children.Count)
+                {
+                    reconciler.RemoveChildWithExitTransition(children, panelIdx);
+                }
+            }
+            return;
+        }
+
+        // Middle section requires key mapping + LIS
+        ReconcileKeyedMiddle(oldChildren, newChildren, oldStart, oldMidLen, newStart, newMidLen,
+            suffixLen, children, reconciler, requestRerender, ambientKind, oldToPanel);
+    }
+
+    /// <summary>
+    /// Keyed middle section reconciliation using LIS for minimal moves.
+    /// </summary>
+    private static void ReconcileKeyedMiddle(
+        Element[] oldChildren, Element[] newChildren,
+        int oldStart, int oldMidLen, int newStart, int newMidLen,
+        int suffixLen,
+        IChildCollection children,
+        Reconciler reconciler,
+        Action requestRerender,
+        AnimationKind? ambientKind,
+        int[]? oldToPanel)
+    {
+        // Pool the per-call working buffers (#33). ChildReconciler recurses
+        // via UpdateChild below, so each (re-entrant) call must own distinct
+        // buffers — ArrayPool and the dict pool guarantee that, whereas a
+        // single ThreadStatic scratch would corrupt the outer diff.
+        var intPool = ArrayPool<int>.Shared;
+        var boolPool = ArrayPool<bool>.Shared;
+        var oldKeyMap = RentKeyIndexDict(oldMidLen);
+        int[] newToOld = intPool.Rent(newMidLen);
+        bool[] matched = boolPool.Rent(oldMidLen);
+        bool[] inLis = boolPool.Rent(newMidLen);
+        // Live panel index of each surviving old item, keyed by old-relative
+        // index (-1 when absent). Replaces the second pooled key→index dict
+        // (#33): positions are tracked here and mutated in lock-step with every
+        // Insert/Move so a survivor's current control is always resolvable
+        // without a COM re-scan — and never patched by a not-yet-reached final
+        // index (bug C1).
+        int[] oldRelToPanel = intPool.Rent(oldMidLen);
+        int originalChildCount = children.Count;
+        try
+        {
+            // A rented bool array can carry stale `true` markers; `matched`
+            // must default to false for the unmatched-removal pass below.
+            global::System.Array.Clear(matched, 0, oldMidLen);
+
+            // Unkeyed children match by absolute position; they need no synthetic string
+            // unless an explicit key can collide with the legacy fallback namespace.
+            bool legacyFallback = false;
+            for (int i = 0; i < oldMidLen; i++)
+            {
+                var key = oldChildren[oldStart + i].Key;
+                if (key is null) continue;
+                oldKeyMap[key] = i;
+                legacyFallback |= key.StartsWith("__pos_", StringComparison.Ordinal);
+            }
+            if (legacyFallback)
+            {
+                // Preserve last-wins shadowing even though CanUpdate later rejects
+                // keyed/unkeyed and runtime-type mismatches.
+                oldKeyMap.Clear();
+                for (int i = 0; i < oldMidLen; i++)
+                    oldKeyMap[GetKey(oldChildren[oldStart + i], oldStart + i)] = i;
+            }
+
+            // Map new keys to old indices
+            for (int i = 0; i < newMidLen; i++)
+            {
+                var newChild = newChildren[newStart + i];
+                var key = legacyFallback ? GetKey(newChild, newStart + i) : newChild.Key;
+                int oldIdx = newStart + i - oldStart;
+                bool found = key is not null
+                    ? oldKeyMap.TryGetValue(key, out oldIdx)
+                    : (uint)oldIdx < (uint)oldMidLen;
+                if (found && reconciler.CanUpdate(oldChildren[oldStart + oldIdx], newChild))
+                {
+                    newToOld[i] = oldIdx;
+                    matched[oldIdx] = true;
+                }
+                else
+                {
+                    newToOld[i] = -1;
+                }
+            }
+
+            // Compute LIS on newToOld into a pooled membership mask — avoids
+            // the HashSet allocation and the redundant identical-set copy that
+            // the old `new HashSet<int>(ComputeLIS(...))` pair did (#31/#32).
+            ComputeLISInto(newToOld, newMidLen, inLis);
+
+            // Step 1: Remove unmatched old items (reverse order for stable indices)
+            for (int i = oldMidLen - 1; i >= 0; i--)
+            {
+                if (!matched[i])
+                {
+                    int panelIdx = OldPanelIndex(oldStart + i, oldToPanel);
+                    int before = children.Count;
+                    oldRelToPanel[i] = 0;
+                    if (panelIdx < before)
+                    {
+                        reconciler.RemoveChildWithExitTransition(children, panelIdx);
+                        oldRelToPanel[i] = before - children.Count;
+                    }
+                }
+            }
+
+            // Only completed removals compact the collection; a deferred exit keeps its
+            // physical slot. Derive survivor positions from the pre-pass mapping instead
+            // of tags: an exiting control can share a key with its live replacement, and
+            // an unkeyed child's fallback key is its logical index, not its physical one.
+            int removed = 0;
+            for (int i = 0; i < oldMidLen; i++)
+            {
+                if (!matched[i])
+                {
+                    removed += oldRelToPanel[i];
+                    oldRelToPanel[i] = -1;
+                }
+                else
+                {
+                    int panelIdx = OldPanelIndex(oldStart + i, oldToPanel);
+                    oldRelToPanel[i] = panelIdx < originalChildCount ? panelIdx - removed : -1;
+                }
+            }
+
+            // Step 2: position + patch via the canonical right-to-left LIS walk.
+            // `initialAnchor` is the start of the suffix (end of the middle);
+            // each item is placed immediately before its already-positioned
+            // right neighbour, and every survivor is patched at its CURRENT live
+            // position resolved from the model — never at a final index the panel
+            // has not yet been rearranged into (bug C1) — with the model kept
+            // exact across every Insert/Move (bug H1).
+            int initialAnchor = oldToPanel is null ? children.Count - suffixLen
+                : InsertionPanelIndex(oldStart + oldMidLen, oldChildren.Length, oldToPanel, originalChildCount) - removed;
+            var sink = new RealKeyedMiddleSink(
+                oldChildren, newChildren, oldStart, newStart,
+                children, reconciler, requestRerender, ambientKind);
+            RunKeyedMiddleCore(ref sink, newToOld, inLis, newMidLen, oldMidLen, initialAnchor, oldRelToPanel);
+        }
+        finally
+        {
+            // Return every pooled buffer on all exits (including exceptions).
+            // The dict pool clears entries on return (ReturnKeyIndexDict), so
+            // element-key references never leak across frames. The int/bool
+            // buffers hold no references and have their used range fully
+            // (re)initialized before any read — `matched` via the Array.Clear
+            // above, `inLis` via ComputeLISInto's leading clear, `newToOld`
+            // written in full for [0,newMidLen), and `oldRelToPanel` reset to -1
+            // for [0,oldMidLen) — so they return dirty (clearArray:false) and
+            // skip an avoidable O(rented-capacity) wipe on this hot path.
+            // (Reference-typed pooled buffers elsewhere — e.g. the
+            // string[]/ReactorRow[] in KeyedListDiff — DO clear, to avoid pinning
+            // objects across frames.)
+            ReturnKeyIndexDict(oldKeyMap);
+            intPool.Return(newToOld);
+            intPool.Return(oldRelToPanel);
+            boolPool.Return(matched);
+            boolPool.Return(inLis);
+        }
+    }
+
+    /// <summary>
+    /// Side-effect surface for <see cref="RunKeyedMiddleCore{TSink}"/>. The
+    /// keyed-middle positioning algorithm is expressed once against this
+    /// interface so the production reconciler (real WinUI Mount/Update/Move) and
+    /// the headless correctness oracle in the test suite drive the identical
+    /// index logic. Implemented as a <c>struct</c> behind a generic constraint
+    /// so the JIT devirtualizes the calls with no boxing on the hot path (and it
+    /// stays AOT/trim-clean — no reflection).
+    /// </summary>
+    internal interface IKeyedMiddleSink
+    {
+        /// <summary>Mount new child <paramref name="newIdx"/> and insert it at
+        /// <paramref name="panelIdx"/>. Returns <c>false</c> when nothing was
+        /// inserted (mount produced no control) so the caller skips the model
+        /// shift.</summary>
+        bool MountInsert(int newIdx, int panelIdx);
+
+        /// <summary>Move the existing control at <paramref name="fromIdx"/> to
+        /// <paramref name="toIdx"/> using final-position semantics (matching
+        /// <see cref="IChildCollection.Move"/>).</summary>
+        void MoveExisting(int fromIdx, int toIdx);
+
+        /// <summary>Patch the surviving control for old-relative index
+        /// <paramref name="oldRelIdx"/> — currently located at
+        /// <paramref name="panelIdx"/> — against new child
+        /// <paramref name="newIdx"/>.</summary>
+        void Patch(int oldRelIdx, int newIdx, int panelIdx);
+    }
+
+    /// <summary>
+    /// Canonical LIS-based keyed reconciliation of the middle section, processed
+    /// right-to-left so each item is positioned immediately before its
+    /// already-placed right neighbour (the live "anchor"). LIS members are left
+    /// in place; only out-of-LIS movers are relocated, giving the minimal move
+    /// count. Every survivor is patched at its CURRENT live position (resolved
+    /// from <paramref name="oldRelToPanel"/>, which is kept exact across every
+    /// structural mutation) rather than a final index the panel has not yet been
+    /// rearranged into — the invariant that fixes the keyed-identity corruption
+    /// (C1) and the stale-index moves (H1).
+    /// </summary>
+    /// <typeparam name="TSink">Concrete sink struct; a generic constraint keeps
+    /// the calls devirtualized and allocation-free.</typeparam>
+    /// <param name="sink">Side-effect surface that applies the mount/move/patch
+    /// operations the walk decides on.</param>
+    /// <param name="newToOld">For each new-middle slot, the old-relative index it
+    /// reuses, or -1 for a freshly-mounted item.</param>
+    /// <param name="inLis">LIS membership mask over <paramref name="newToOld"/>.</param>
+    /// <param name="newMidLen">Number of items in the new middle section.</param>
+    /// <param name="oldMidLen">Number of items in the old middle section.</param>
+    /// <param name="initialAnchor">Live panel index of the start of the suffix
+    /// (end of the middle) — where right-most items are placed.</param>
+    /// <param name="oldRelToPanel">Live panel index of each surviving old item by
+    /// old-relative index (-1 if absent). Mutated in place to stay exact.</param>
+    internal static void RunKeyedMiddleCore<TSink>(
+        ref TSink sink,
+        int[] newToOld, bool[] inLis,
+        int newMidLen, int oldMidLen,
+        int initialAnchor, int[] oldRelToPanel)
+        where TSink : struct, IKeyedMiddleSink
+    {
+        int anchor = initialAnchor;
+        for (int i = newMidLen - 1; i >= 0; i--)
+        {
+            int oldRel = newToOld[i];
+            if (oldRel < 0)
+            {
+                // New item: mount + insert immediately before the anchor.
+                if (sink.MountInsert(i, anchor))
+                {
+                    // Insertion at `anchor` shifts every tracked survivor at an
+                    // index >= anchor one slot to the right.
+                    for (int r = 0; r < oldMidLen; r++)
+                        if (oldRelToPanel[r] >= anchor) oldRelToPanel[r]++;
+                    // The new control now occupies `anchor` and is the anchor for
+                    // the next (left) item, so `anchor` itself is unchanged.
+                }
+                continue;
+            }
+
+            int cur = oldRelToPanel[oldRel];
+            if (cur < 0) continue; // Defensive: survivor not realized (skip).
+
+            if (!inLis[i])
+            {
+                // Out-of-LIS mover: relocate immediately before the anchor. With
+                // Move's final-position semantics, the destination is anchor-1
+                // when the control currently sits left of the anchor, else
+                // anchor itself.
+                int to = cur < anchor ? anchor - 1 : anchor;
+                if (cur != to)
+                {
+                    sink.MoveExisting(cur, to);
+                    // Keep the model exact: a Move shifts the half-open range
+                    // between the two endpoints by one slot.
+                    if (cur < to)
+                    {
+                        for (int r = 0; r < oldMidLen; r++)
+                        {
+                            int p = oldRelToPanel[r];
+                            if (p > cur && p <= to) oldRelToPanel[r] = p - 1;
+                        }
+                    }
+                    else
+                    {
+                        for (int r = 0; r < oldMidLen; r++)
+                        {
+                            int p = oldRelToPanel[r];
+                            if (p >= to && p < cur) oldRelToPanel[r] = p + 1;
+                        }
+                    }
+                    oldRelToPanel[oldRel] = to;
+                    cur = to;
+                }
+            }
+
+            sink.Patch(oldRel, i, cur);
+            anchor = cur;
+        }
+    }
+
+    /// <summary>
+    /// Production <see cref="IKeyedMiddleSink"/> — drives real WinUI controls
+    /// through the reconciler. A <c>readonly struct</c> so
+    /// <see cref="RunKeyedMiddleCore{TSink}"/> stays allocation- and
+    /// virtual-dispatch-free.
+    /// </summary>
+    private readonly struct RealKeyedMiddleSink : IKeyedMiddleSink
+    {
+        private readonly Element[] _oldChildren;
+        private readonly Element[] _newChildren;
+        private readonly int _oldStart;
+        private readonly int _newStart;
+        private readonly IChildCollection _children;
+        private readonly Reconciler _reconciler;
+        private readonly Action _requestRerender;
+        private readonly AnimationKind? _ambientKind;
+
+        public RealKeyedMiddleSink(
+            Element[] oldChildren, Element[] newChildren, int oldStart, int newStart,
+            IChildCollection children, Reconciler reconciler, Action requestRerender,
+            AnimationKind? ambientKind)
+        {
+            _oldChildren = oldChildren;
+            _newChildren = newChildren;
+            _oldStart = oldStart;
+            _newStart = newStart;
+            _children = children;
+            _reconciler = reconciler;
+            _requestRerender = requestRerender;
+            _ambientKind = ambientKind;
+        }
+
+        public bool MountInsert(int newIdx, int panelIdx)
+        {
+            var ctrl = _reconciler.Mount(_newChildren[_newStart + newIdx], _requestRerender);
+            if (ctrl is null) return false;
+            _children.Insert(panelIdx, ctrl);
+            ApplyAmbientEnterIfActive(ctrl, _newChildren[_newStart + newIdx], _ambientKind);
+            return true;
+        }
+
+        public void MoveExisting(int fromIdx, int toIdx)
+        {
+            var moved = _children.Get(fromIdx);
+            _children.Move(fromIdx, toIdx);
+            // Spec 042 §6 — implicit Offset animation on the moved child so the
+            // reorder reads visually under an ambient transaction.
+            if (_ambientKind is { } k)
+                ApplyAmbientMove(moved, k);
+        }
+
+        public void Patch(int oldRelIdx, int newIdx, int panelIdx)
+        {
+            if (panelIdx >= _children.Count) return;
+            // Issue #701 (theme-correctness audit) — the keyed-MIDDLE patch intentionally has NO
+            // CanSkipUpdate early-skip arm (unlike the positional / keyed prefix+suffix arms): it
+            // unconditionally routes every reordered survivor through UpdateChild → Update, whose
+            // element-level shallow-skip is the single place that re-resolves ThemeBindings /
+            // ThemeRef ResourceOverrides against the current effective theme. This is what keeps a
+            // themed survivor's fe.Resources[key] fresh across a LIS reorder. A future optimization
+            // that adds a CanSkipUpdate fast-path here MUST mirror Reconciler.Update's skip arm
+            // (ApplyThemeBindings + ApplyResourceOverrides) or it will re-introduce the #701/#675
+            // staleness — see Issue675ResourceOverrideSkipFixtures.KeyedMiddleReorderReResolves.
+            var existing = _children.Get(panelIdx);
+            var replacement = _reconciler.UpdateChildTracked(
+                _oldChildren[_oldStart + oldRelIdx],
+                _newChildren[_newStart + newIdx],
+                existing,
+                _requestRerender,
+                out var unmountedByUpdate);
+            if (replacement is not null)
+            {
+                if (!unmountedByUpdate) _reconciler.UnmountChild(existing);
+                _children.Replace(panelIdx, replacement);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Compute the Longest Increasing Subsequence over the first
+    /// <paramref name="length"/> entries of <paramref name="arr"/>, writing the
+    /// membership mask into <paramref name="inLis"/> (<c>inLis[i] == true</c> iff
+    /// index <c>i</c> participates in the LIS). Entries with value -1 are skipped
+    /// (unmapped items). O(n log n) patience sorting. All working buffers are
+    /// rented from <see cref="ArrayPool{T}"/>, so the hot reconcile path pays no
+    /// per-call heap allocation (#32).
+    /// </summary>
+    internal static void ComputeLISInto(int[] arr, int length, bool[] inLis)
+    {
+        if (length > 0) Array.Clear(inLis, 0, length);
+        if (length == 0) return;
+
+        var pool = ArrayPool<int>.Shared;
+        int[] tails = pool.Rent(length);        // Smallest tail values
+        int[] tailIndices = pool.Rent(length);  // arr indices matching tails
+        int[] predecessors = pool.Rent(length); // back-pointers for reconstruction
+        try
+        {
+            int tailsCount = 0;
+            for (int i = 0; i < length; i++)
+            {
+                if (arr[i] == -1) continue; // Skip unmapped
+
+                int val = arr[i];
+
+                // Binary search for insertion position in tails[0..tailsCount).
+                int lo = 0, hi = tailsCount;
+                while (lo < hi)
+                {
+                    int mid = (lo + hi) / 2;
+                    if (tails[mid] < val) lo = mid + 1;
+                    else hi = mid;
+                }
+
+                // Predecessor is the previous tail's arr-index (read before the
+                // tails[lo] write — index lo-1 is unaffected by it).
+                predecessors[i] = lo > 0 ? tailIndices[lo - 1] : -1;
+
+                if (lo == tailsCount)
+                {
+                    tails[tailsCount] = val;
+                    tailIndices[tailsCount] = i;
+                    tailsCount++;
+                }
+                else
+                {
+                    tails[lo] = val;
+                    tailIndices[lo] = i;
+                }
+            }
+
+            // Backtrack from the last tail to mark LIS membership. Only
+            // non-skipped indices ever enter the chain, so unwritten
+            // predecessor slots for skipped entries are never read.
+            if (tailsCount == 0) return;
+            int idx = tailIndices[tailsCount - 1];
+            while (idx != -1)
+            {
+                inLis[idx] = true;
+                idx = predecessors[idx];
+            }
+        }
+        finally
+        {
+            pool.Return(tails);
+            pool.Return(tailIndices);
+            pool.Return(predecessors);
+        }
+    }
+
+    /// <summary>
+    /// Compute Longest Increasing Subsequence, returning the set of
+    /// participating indices. Convenience wrapper over
+    /// <see cref="ComputeLISInto"/> for tests and set-shaped callers; the hot
+    /// reconcile path uses the allocation-free <see cref="ComputeLISInto"/>.
+    /// </summary>
+    internal static HashSet<int> ComputeLIS(int[] arr)
+    {
+        var result = new HashSet<int>();
+        if (arr.Length == 0) return result;
+
+        var pool = ArrayPool<bool>.Shared;
+        bool[] mask = pool.Rent(arr.Length);
+        try
+        {
+            ComputeLISInto(arr, arr.Length, mask);
+            for (int i = 0; i < arr.Length; i++)
+                if (mask[i]) result.Add(i);
+        }
+        finally
+        {
+            pool.Return(mask, clearArray: true);
+        }
+        return result;
+    }
+
+    internal static Element[] Filter(Element[] elements, out long[]? slots)
+    {
+        // The DSL container factories already dropped null / EmptyElement and
+        // registered the slots they came from; a hand-built children array that
+        // still holds them gets its slots from the raw indices here.
+        var registered = ChildSlots.Get(elements);
+
+        // Single count pass; the result array is then sized exactly and filled
+        // in one more pass — no intermediate List + ToArray double-allocation
+        // (#36). The common no-null case still returns the input untouched.
+        int keep = 0;
+        for (int i = 0; i < elements.Length; i++)
+        {
+            if (elements[i] is not null and not EmptyElement) keep++;
+        }
+        if (keep == elements.Length)
+        {
+            slots = registered;
+            return elements;
+        }
+
+        var result = new Element[keep];
+        slots = new long[keep];
+        int j = 0;
+        for (int i = 0; i < elements.Length; i++)
+        {
+            if (elements[i] is not null and not EmptyElement)
+            {
+                slots[j] = registered?[i] ?? ChildSlots.ForIndex(i);
+                result[j++] = elements[i];
+            }
+        }
+        return result;
+    }
+
+    private static bool HasAnyKeys(Element[] elements)
+    {
+        for (int i = 0; i < elements.Length; i++)
+        {
+            if (elements[i].Key is not null) return true;
+        }
+        return false;
+    }
+
+    private static bool SameKeys(Element[] oldElements, Element[] newElements)
+    {
+        if (ReferenceEquals(oldElements, newElements)) return true;
+        if (oldElements.Length != newElements.Length) return false;
+        for (int i = 0; i < newElements.Length; i++)
+        {
+            if (!string.Equals(oldElements[i].Key, newElements[i].Key, StringComparison.Ordinal)) return false;
+        }
+        return true;
+    }
+
+    private static bool KeyMatch(Element a, Element b)
+    {
+        // Both must have the same key (or both null) AND same type
+        if (a.GetType() != b.GetType()) return false;
+        return a.Key == b.Key;
+    }
+
+    // Cache the per-Type display name used by the unkeyed GetKey fallback so we
+    // don't reflect over the runtime type on every diff (#38). Explicit keys
+    // are strongly preferred and bypass this path entirely.
+    private static readonly ConcurrentDictionary<Type, string> _typeNameCache = new();
+
+    private static string GetKey(Element element, int positionalIndex)
+    {
+        // Use explicit key if available, otherwise fall back to type+position
+        if (element.Key is not null) return element.Key;
+        var typeName = _typeNameCache.GetOrAdd(element.GetType(), static t => t.Name);
+        return $"__pos_{positionalIndex}_{typeName}";
+    }
+
+    // ── Re-entrancy-safe Dictionary&lt;string,int&gt; pool ────────────────────
+    // ReconcileKeyedMiddle needs a transient key→index map per call, and it
+    // recurses through UpdateChild. A per-thread stack hands each (nested) call
+    // its own instance: rented dicts are not in the pool, so an inner call can
+    // never grab a buffer the outer call is still using. Pool size is capped so
+    // deep trees don't retain an unbounded number of dictionaries.
+    [ThreadStatic] private static Stack<Dictionary<string, int>>? _keyIndexDictPool;
+    private const int KeyIndexDictPoolCap = 16;
+
+    private static Dictionary<string, int> RentKeyIndexDict(int capacity)
+    {
+        var pool = _keyIndexDictPool;
+        if (pool is { Count: > 0 })
+        {
+            var d = pool.Pop();
+            if (capacity > 0) d.EnsureCapacity(capacity);
+            return d;
+        }
+        return new Dictionary<string, int>(capacity > 0 ? capacity : 0, StringComparer.Ordinal);
+    }
+
+    private static void ReturnKeyIndexDict(Dictionary<string, int> dict)
+    {
+        dict.Clear();
+        var pool = _keyIndexDictPool ??= new Stack<Dictionary<string, int>>();
+        if (pool.Count < KeyIndexDictPoolCap) pool.Push(dict);
+    }
+
+    /// <summary>
+    /// Spec 042 §6 — when an <see cref="Animations.Animate"/> transaction
+    /// is active and the newly-mounted child has no explicit
+    /// <c>.Transition(...)</c> modifier, apply the default fade-up enter
+    /// so the structural change reads visually. Per-element transitions
+    /// continue to win when set; this is purely a default for the
+    /// transactional case.
+    /// </summary>
+    private static void ApplyAmbientEnterIfActive(UIElement ctrl, Element element, AnimationKind? ambientKind)
+    {
+        if (ambientKind is not { } kind) return;
+        if (element.ElementTransition is not null) return;
+        Reconciler.ApplyAmbientEnterAnimation(ctrl, kind);
+    }
+
+    /// <summary>
+    /// Spec 042 §6 — implicit Offset animation on a moved child so the
+    /// reorder reads visually. Mirrors the per-container offset animation
+    /// in <c>Reconciler.Update.cs:StartMoveOffsetAnimation</c> for the
+    /// templated-list path; same curve resolution by kind.
+    /// </summary>
+    private static void ApplyAmbientMove(UIElement ctrl, AnimationKind kind)
+    {
+        var curve = AnimationKindMap.ToCurve(kind);
+        if (curve is null) return;
+        try
+        {
+            var visual = Animation.AnimationHelper.GetElementVisual(ctrl);
+            var compositor = visual.Compositor;
+            var anim = Animation.AnimationHelper.CreateVector3ImplicitAnimation(compositor, "Offset", curve);
+            var coll = compositor.CreateImplicitAnimationCollection();
+            coll["Offset"] = anim;
+            visual.ImplicitAnimations = coll;
+        }
+        catch
+        {
+            // Composition can throw in headless / disposing contexts.
+            // Animation is non-critical — correctness is preserved.
+        }
+    }
+}
+
+/// <summary>
+/// The panel indices of a container's children that lead to a component which updated its own
+/// state, resolved once per container reconcile by
+/// <see cref="Reconciler.ResolveDirtyChildIndices"/>. The child-skip arms in
+/// <see cref="ChildReconciler"/> must descend into these even when their elements are unchanged.
+/// <c>default</c> is the common case: no such child.
+/// </summary>
+internal readonly struct DirtyChildIndices
+{
+    // The single dirty index plus one, so that default(DirtyChildIndices) names no index.
+    private readonly int _indexPlusOne;
+    private readonly int[]? _indices;
+    private readonly bool _probeEachChild;
+
+    private DirtyChildIndices(int indexPlusOne, int[]? indices, bool probeEachChild)
+    {
+        _indexPlusOne = indexPlusOne;
+        _indices = indices;
+        _probeEachChild = probeEachChild;
+    }
+
+    /// <summary>
+    /// The dirty children could not be located by index, so each skip-eligible child's control
+    /// has to be checked against the dirty-ancestor path instead.
+    /// </summary>
+    internal static DirtyChildIndices ProbeEachChild => new(0, null, probeEachChild: true);
+
+    internal static DirtyChildIndices At(int index) => new(index + 1, null, probeEachChild: false);
+
+    /// <summary>Several dirty children. Sorts <paramref name="indices"/> in place so
+    /// <see cref="Contains(int, int, IChildCollection, Reconciler, ref UIElement?)"/> can binary-search them.</summary>
+    internal static DirtyChildIndices AtAll(int[] indices)
+    {
+        Array.Sort(indices);
+        return new(0, indices, probeEachChild: false);
+    }
+
+    /// <summary>True when no child of the container leads to pending work.</summary>
+    internal bool IsEmpty => _indexPlusOne == 0 && _indices is null && !_probeEachChild;
+
+    /// <summary>
+    /// Whether the child at <paramref name="panelIndex"/> leads to a self-triggered component.
+    /// Only <see cref="ProbeEachChild"/> reads the child's control; it stores it in
+    /// <paramref name="control"/> so the caller does not read it twice.
+    /// </summary>
+    internal bool Contains(int panelIndex, IChildCollection children, Reconciler reconciler, ref UIElement? control)
+        => Contains(panelIndex, panelIndex, children, reconciler, ref control);
+
+    /// <summary>
+    /// As <see cref="Contains(int, IChildCollection, Reconciler, ref UIElement?)"/>, for a
+    /// child whose index when this was resolved (<paramref name="resolvedIndex"/>) differs
+    /// from where its control sits now (<paramref name="liveIndex"/>).
+    /// </summary>
+    internal bool Contains(int resolvedIndex, int liveIndex, IChildCollection children, Reconciler reconciler, ref UIElement? control)
+    {
+        if (_indexPlusOne != 0)
+            return resolvedIndex == _indexPlusOne - 1;
+        if (_indices is not null)
+            return Array.BinarySearch(_indices, resolvedIndex) >= 0;
+        if (!_probeEachChild || (uint)liveIndex >= (uint)children.Count)
+            return false;
+        return reconciler.IsOnDirtyAncestorPath(control ??= children.Get(liveIndex));
+    }
+
+    public override string ToString() =>
+        _indexPlusOne != 0 ? $"At({_indexPlusOne - 1})"
+        : _indices is not null ? $"AtAll({string.Join(",", _indices)})"
+        : _probeEachChild ? nameof(ProbeEachChild)
+        : "None";
+}

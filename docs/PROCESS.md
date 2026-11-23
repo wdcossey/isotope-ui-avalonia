@@ -28,6 +28,8 @@ Issue text follows the no-personal-data rule (CLAUDE.md).
 
 Upstream files we take are **vendored and regenerated**: `tools/sync` copies them from the git-ignored `upstream/` cache at the
 commit in `UPSTREAM.lock`, applying the transform rules (see #3).
+- Run `node tools/sync/sync.mjs [<commit>]` (default: `main` of the cache's upstream remote). `--dry-run` writes
+  nothing; `--check` regenerates from `UPSTREAM.lock` and fails on any difference. The cache needs full history.
 - **Never hand-edit a vendored file.** Change a transform rule, or move the file to tier 3.
 - CI's `tools/sync --check` fails on any difference.
 - Upstream itself is treated as locked: nothing is sent upstream.

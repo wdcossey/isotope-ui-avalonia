@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- tools/sync step 5: upstream's own Yoga tests, run against the vendored Yoga sources. Both come from the vendored
+       tree (src/Upstream by default; the sync passes -p:VendoredRoot=<tree>/ for a tree it has just generated), never
+       from upstream/. Package versions as in spikes/D-flex. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>15</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <VendoredRoot Condition="'$(VendoredRoot)' == ''">$(MSBuildThisFileDirectory)../../../../src/Upstream/</VendoredRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(VendoredRoot)src/Reactor/Yoga/*.cs" LinkBase="Upstream/Yoga" />
+    <Compile Include="$(VendoredRoot)src/Reactor/Core/Polyfills/ClosedTypeAttributes.cs" Link="Upstream/Core/Polyfills/ClosedTypeAttributes.cs" />
+    <Compile Include="$(VendoredRoot)tests/Reactor.Tests/Yoga*.cs;$(VendoredRoot)tests/Reactor.Tests/YogaGenerated/*.cs" LinkBase="Upstream/Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+  </ItemGroup>
+</Project>
