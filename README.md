@@ -8,9 +8,33 @@ React-style function components and hooks for **Avalonia 12**, built on the engi
 
 ## What it is
 
-Microsoft.UI.Reactor brings a React-style model to WinUI 3: immutable element records, hooks (`UseState`, `UseEffect`, …),
-keyed child diffing and a Yoga flexbox layout. It only targets WinUI. Isotope takes its platform-neutral engine and puts an
-Avalonia 12 element, reconciler and hosting layer under it, using Avalonia's own types and vocabulary in the public API.
+**Your UI is a function of state.** No XAML, no data binding, no view models. You write C# functions that return a
+description of the UI. Hooks hold the state, and Isotope keeps the screen in sync on every platform Avalonia runs on.
+
+```csharp
+// Illustrative: the element factories will use Avalonia's vocabulary.
+Element Counter(RenderContext ctx)
+{
+    var (count, setCount) = ctx.UseState(0);
+    return StackPanel(
+        TextBlock($"Clicked {count} times"),
+        Button("Click", () => setCount(count + 1)));
+}
+```
+
+This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12:
+
+- **Hooks for state management:** `UseState`, `UseReducer`, `UseEffect`, `UseMemo`, `UseCallback`, `UseRef`,
+  `UseContext`, plus async data (`UseResource`, `UseMutation`, `UseInfiniteResource`). These come from Reactor's own
+  engine, vendored unchanged or through deterministic transforms, so their semantics and fixes track upstream.
+- **Platform hooks** keep Reactor's names but are written for Avalonia: theme and colour scheme, high contrast and
+  reduced motion, windows, displays, DPI and the tray icon.
+- **An Avalonia-native element vocabulary and layout:** Avalonia's controls and types, and flexbox through Reactor's Yoga
+  port.
+
+Avalonia's mainstream model is XAML with MVVM. Its declarative options either use F# (Avalonia.FuncUI) or stay with
+classes and bindings in C# (Avalonia.Markup.Declarative). Isotope brings Reactor's C# function components and hooks to
+Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobile.
 
 Package IDs use the `Isotope.` prefix, because `Avalonia.` is reserved on NuGet.
 

@@ -1,7 +1,8 @@
 # Isotope.UI.Avalonia: notes for Claude
 
-An Avalonia 12 version of microsoft/microsoft-ui-reactor (React-style hooks and function components for C#), with an
-Avalonia-native public API. Read in this order: `README.md`, `docs/PROCESS.md` (how work runs), `FINDINGS.md` (results
+An Avalonia 12 version of microsoft/microsoft-ui-reactor, with an Avalonia-native public API. **The premise, and the
+main draw:** UI as a function of state, written as C# function components with React-style hooks (`UseState`,
+`UseReducer`, `UseEffect`…), with no XAML, no bindings and no view models. Judge work by how well it serves that. Read in this order: `README.md`, `docs/PROCESS.md` (how work runs), `FINDINGS.md` (results
 and decisions), then the open GitHub Issues (`gh issue list`): they are the task list. This file holds the rules that
 must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.local.md`.
 
