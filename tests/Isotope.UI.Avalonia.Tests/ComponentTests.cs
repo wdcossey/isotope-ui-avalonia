@@ -77,6 +77,36 @@ public class ComponentTests
         Assert.Equal("Hello Grace (1)", host.Texts()[0]);
     }
 
+    private static readonly Context<string> Label = new("default");
+
+    private sealed class Labelled : Component
+    {
+        public override Element Render() => Text("label " + UseContext(Label));
+    }
+
+    [AvaloniaFact]
+    public void A_class_component_with_unchanged_props_renders_a_context_change()
+    {
+        var value = "one";
+        var host = new TestHost(() => VStack(new ComponentElement(typeof(Labelled))).Provide(Label, value));
+        Assert.Equal(["label one"], host.Texts());
+
+        value = "two";
+        host.Render();
+
+        Assert.Equal(["label two"], host.Texts());
+    }
+
+    [AvaloniaFact]
+    public void A_component_whose_first_render_throws_leaves_no_node_behind()
+    {
+        var host = new TestHost(() => VStack(Text("ok")));
+        Assert.Throws<InvalidOperationException>(() =>
+            host.Reconciler.Mount(Component(_ => throw new InvalidOperationException("boom")), () => { }));
+
+        Assert.Equal(0, host.Reconciler.ComponentNodeCount);
+    }
+
     [AvaloniaFact]
     public void Unmounting_runs_a_component_cleanup_before_its_children()
     {

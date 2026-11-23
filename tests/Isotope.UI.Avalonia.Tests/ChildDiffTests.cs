@@ -157,6 +157,76 @@ public class ChildDiffTests
     }
 
     [AvaloniaFact]
+    public void Nested_modified_elements_merge_every_level_and_provide_their_values()
+    {
+        var ctx = new Context<string>("default");
+        var inner = Component(c => Text(c.UseContext(ctx))).WithModifiers(m => m with { Width = 10 });
+        var nested = new ModifiedElement(new ModifiedElement(inner, new ElementModifiers { Width = 99, Height = 20 }),
+            new ElementModifiers { Height = 77, Opacity = 0.5 }).Provide(ctx, "provided");
+        var host = new TestHost(() => VStack(nested));
+
+        var wrapper = Assert.IsType<Border>(Assert.IsType<StackPanel>(host.Root.Child).Children[0]);
+        Assert.Equal(10, wrapper.Width);
+        Assert.Equal(20, wrapper.Height);
+        Assert.Equal(0.5, wrapper.Opacity);
+        Assert.Equal(["provided"], host.Texts());
+    }
+
+    [AvaloniaFact]
+    public void Keyed_modified_elements_keep_their_controls_when_reordered()
+    {
+        string[] items = ["a", "b", "c"];
+        var mods = new ElementModifiers { Width = 40 };
+        var host = new TestHost(() => VStack(items.Select(i => (Element)new ModifiedElement(Text(i), mods) { Key = i }).ToArray()));
+        var before = host.All<TextBlock>().ToDictionary(t => t.Text!);
+
+        items = ["c", "b", "a"];
+        host.Render();
+
+        var after = host.All<TextBlock>();
+        Assert.Equal(["c", "b", "a"], after.Select(t => t.Text));
+        Assert.All(after, t => Assert.Same(before[t.Text!], t));
+    }
+
+    [AvaloniaFact]
+    public void A_button_disabled_by_either_source_stays_disabled_across_updates()
+    {
+        var label = "one";
+        var withModifier = true;
+        var host = new TestHost(() => VStack(
+            Button(label).WithModifiers(m => m with { IsEnabled = false }),
+            withModifier
+                ? (Button("two") with { IsEnabled = false }).WithModifiers(m => m with { IsEnabled = true })
+                : Button("two") with { IsEnabled = false }));
+        var buttons = host.All<Button>();
+        Assert.All(buttons, b => Assert.False(b.IsEnabled));
+
+        label = "changed";
+        withModifier = false;
+        host.Render();
+
+        Assert.Same(buttons[0], host.All<Button>()[0]);
+        Assert.All(host.All<Button>(), b => Assert.False(b.IsEnabled));
+    }
+
+    [AvaloniaFact]
+    public void Reconcile_with_no_old_element_tears_down_the_control_it_is_given()
+    {
+        var log = new List<string>();
+        var reconciler = new Reconciler();
+        var first = reconciler.Mount(Component(ctx =>
+        {
+            ctx.UseEffect(() => () => log.Add("cleanup"), Array.Empty<object>());
+            return Text("old");
+        }), () => { });
+
+        var next = reconciler.Reconcile(null, Text("new"), first, () => { });
+
+        Assert.Equal(["cleanup"], log);
+        Assert.Equal("new", Assert.IsType<TextBlock>(next).Text);
+    }
+
+    [AvaloniaFact]
     public void A_skipped_button_dispatches_to_the_current_render_closure()
     {
         var host = new TestHost(() => Component(ctx =>

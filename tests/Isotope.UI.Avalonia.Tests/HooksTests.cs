@@ -164,6 +164,36 @@ public class HooksTests
     }
 
     [AvaloniaFact]
+    public void A_removed_provider_sends_a_reused_consumer_back_to_the_default()
+    {
+        var provide = true;
+        var consumer = VStack(Component(ctx => Text(ctx.UseContext(Theme))));
+        var host = new TestHost(() => provide ? VStack(consumer).Provide(Theme, "one") : VStack(consumer));
+        Assert.Equal(["one"], host.Texts());
+
+        provide = false;
+        host.Render();
+
+        Assert.Equal(["default"], host.Texts());
+    }
+
+    [AvaloniaFact]
+    public void A_provider_change_reaches_memo_components_and_what_they_render()
+    {
+        var value = "one";
+        Element Inner(RenderContext ctx) => Text("inner " + ctx.UseContext(Theme));
+        var host = new TestHost(() => VStack(
+            new MemoElement(ctx => Text("memo " + ctx.UseContext(Theme))),
+            new MemoElement(_ => VStack(new FuncElement(Inner)))).Provide(Theme, value));
+        Assert.Equal(["memo one", "inner one"], host.Texts());
+
+        value = "two";
+        host.Render();
+
+        Assert.Equal(["memo two", "inner two"], host.Texts());
+    }
+
+    [AvaloniaFact]
     public void Changing_the_hook_order_throws_HookOrderException()
     {
         var useRefFirst = false;

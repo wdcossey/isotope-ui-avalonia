@@ -78,7 +78,7 @@ public abstract record Element
         if (!ModifiersEqual(a.Modifiers, b.Modifiers)) return false;
         if (!ReferenceEquals(a.ElementTransition, b.ElementTransition) && !Equals(a.ElementTransition, b.ElementTransition)) return false;
         if (!Equals(a.ResourceOverrides, b.ResourceOverrides)) return false;
-        if (!DictionariesEqual(a.ContextValues, b.ContextValues)) return false;
+        if (!ContextValuesEqual(a.ContextValues, b.ContextValues)) return false;
         if (!DictionariesEqual(a.Attached, b.Attached)) return false;
         return (a, b) switch
         {
@@ -94,6 +94,10 @@ public abstract record Element
     /// <summary>Value equality of two modifier records (null equals an empty record).</summary>
     internal static bool ModifiersEqual(ElementModifiers? a, ElementModifiers? b)
         => ReferenceEquals(a, b) || (a ?? ElementModifiers.Empty).Equals(b ?? ElementModifiers.Empty);
+
+    /// <summary>Whether two sets of provided context values are equal.</summary>
+    internal static bool ContextValuesEqual(IReadOnlyDictionary<ContextBase, object?>? a, IReadOnlyDictionary<ContextBase, object?>? b)
+        => DictionariesEqual(a, b);
 
     private static bool DictionariesEqual<TKey, TValue>(IReadOnlyDictionary<TKey, TValue>? a, IReadOnlyDictionary<TKey, TValue>? b)
     {

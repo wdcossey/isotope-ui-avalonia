@@ -143,15 +143,52 @@ public sealed partial class Reconciler
     /// <summary>Whether a force pass must render through this wrapper. Hot reload is tier 3: never.</summary>
     internal bool ForceRenderThroughWrapper(Element el) => false;
 
-    /// <summary>True while any provided context value is in scope.</summary>
-    internal bool HasActiveContextValues => _contextScope.HasActiveValues;
+    // Depth of subtrees being reconciled under an element whose provided values changed since the last
+    // pass (a provider added, removed or re-valued). A removed provider leaves the scope empty, so this is
+    // what keeps the context checks on for its subtree.
+    private int _providerChangeDepth;
+
+    /// <summary>True while any provided context value is in scope, or a provider above changed.</summary>
+    internal bool HasActiveContextValues => _contextScope.HasActiveValues || _providerChangeDepth > 0;
 
     /// <summary>
-    /// Whether a structurally unchanged child must still be reconciled because a context it reads may have
-    /// changed. Conservative: declines every skip while a context value is in scope (upstream narrows this
-    /// to subtrees that consumed a changed context).
+    /// Whether a structurally unchanged child must still be reconciled because a component under it read a
+    /// context value that has changed since.
     /// </summary>
-    internal bool ShouldDeclineSkip(UIElement control) => HasActiveContextValues;
+    internal bool ShouldDeclineSkip(UIElement control)
+        => HasActiveContextValues && HasConsumedContextChangedInSubtree(control);
+
+    /// <summary>Whether a context value <paramref name="node"/> read in its last render has changed since.</summary>
+    private bool HasConsumedContextChanged(ComponentNode node)
+    {
+        var renderCtx = node.Component?.Context ?? node.Context;
+        if (renderCtx is null) return false;
+        foreach (var ctxHook in renderCtx.ContextHooks)
+        {
+            if (!Equals(_contextScope.Read(ctxHook.Context), ctxHook.LastValue))
+                return true;
+        }
+        return false;
+    }
+
+    internal bool HasConsumedContextChangedInSubtree(UIElement control)
+    {
+        if (_componentNodes.TryGetValue(control, out var node) && HasConsumedContextChanged(node))
+            return true;
+        switch (control)
+        {
+            case Avalonia.Controls.Panel panel:
+                foreach (var child in panel.Children)
+                    if (HasConsumedContextChangedInSubtree(child)) return true;
+                return false;
+            case Decorator { Child: { } child }:
+                return HasConsumedContextChangedInSubtree(child);
+            case ContentControl { Content: Control content }:
+                return HasConsumedContextChangedInSubtree(content);
+            default:
+                return false;
+        }
+    }
 
     /// <summary>Flyout decorators are tier 3: none.</summary>
     internal static bool IsFlyoutDecorator(Element element) => false;
@@ -309,6 +346,7 @@ public sealed partial class Reconciler
             if (control is not null)
             {
                 ApplyModifiers(control, null, modifiers);
+                ApplyEnabled(control, element, modifiers);
                 GetOrCreateReactorState(control).Element = element;
             }
             return control;
@@ -321,7 +359,7 @@ public sealed partial class Reconciler
 
     private Button MountButton(ButtonElement element)
     {
-        var button = new Button { Content = element.Label, IsEnabled = element.IsEnabled };
+        var button = new Button { Content = element.Label };
         // Dispatch through the mounted element, so a skipped update's refreshed closure is the one called.
         button.Click += static (sender, _) =>
         {
@@ -355,6 +393,8 @@ public sealed partial class Reconciler
         var oldInner = Unwrap(oldEl, out var oldModifiers);
         var newInner = Unwrap(newEl, out var newModifiers);
         int pushed = PushContext(newInner);
+        bool providerChanged = !Element.ContextValuesEqual(oldInner.ContextValues, newInner.ContextValues);
+        if (providerChanged) _providerChangeDepth++;
         try
         {
             if (Element.CanSkipUpdate(oldInner, newInner) && Element.ModifiersEqual(oldModifiers, newModifiers)
@@ -382,7 +422,6 @@ public sealed partial class Reconciler
                 case ButtonElement button:
                     var b = (Button)control;
                     if (!Equals(b.Content, button.Label)) b.Content = button.Label;
-                    if (b.IsEnabled != button.IsEnabled) b.IsEnabled = button.IsEnabled;
                     break;
                 case StackElement stack:
                     var panel = (StackPanel)control;
@@ -393,11 +432,13 @@ public sealed partial class Reconciler
                     break;
             }
             ApplyModifiers(control, oldModifiers, newModifiers);
+            ApplyEnabled(control, newInner, newModifiers);
             GetOrCreateReactorState(control).Element = newInner;
             return null;
         }
         finally
         {
+            if (providerChanged) _providerChangeDepth--;
             PopContext(pushed);
         }
     }
@@ -408,8 +449,14 @@ public sealed partial class Reconciler
     /// </summary>
     private UIElement? ReconcileSlot(Element? oldElement, Element newElement, UIElement? existing, Action requestRerender)
     {
-        if (existing is null || oldElement is null)
+        if (existing is null)
             return Mount(newElement, requestRerender);
+        if (oldElement is null)
+        {
+            // A control with no element to diff against: tear it down and start afresh.
+            UnmountChild(existing);
+            return Mount(newElement, requestRerender);
+        }
         if (newElement is EmptyElement)
         {
             UnmountChild(existing);
@@ -427,17 +474,41 @@ public sealed partial class Reconciler
         return fresh;
     }
 
+    /// <summary>
+    /// The element a (possibly nested) legacy <see cref="ModifiedElement"/> chain wraps, and the modifiers that
+    /// apply to its control: each wrapper's, with inner ones winning, as upstream merges them. The result
+    /// carries the outermost key and every wrapper's provided context values, since the child diff and the
+    /// context scope see the wrapper, not what it wraps.
+    /// </summary>
     private static Element Unwrap(Element element, out ElementModifiers? modifiers)
     {
-        modifiers = element.Modifiers;
-        if (element is ModifiedElement mod)
+        if (element is not ModifiedElement)
         {
-            modifiers = mod.WrappedModifiers;
-            if (mod.Inner.Modifiers is not null)
-                modifiers = modifiers.Merge(mod.Inner.Modifiers);
-            return mod.Inner;
+            modifiers = element.Modifiers;
+            return element;
         }
+        var outerKey = element.Key;
+        ElementModifiers? wrapped = null;
+        Dictionary<ContextBase, object?>? provided = null;
+        while (element is ModifiedElement mod)
+        {
+            wrapped = wrapped is null ? mod.WrappedModifiers : wrapped.Merge(mod.WrappedModifiers);
+            AddProvided(ref provided, mod.ContextValues);
+            element = mod.Inner;
+        }
+        modifiers = element.Modifiers is null ? wrapped : wrapped!.Merge(element.Modifiers);
+        if (provided is not null) AddProvided(ref provided, element.ContextValues);
+        if (outerKey != element.Key || provided is not null)
+            element = element with { Key = outerKey, ContextValues = provided ?? element.ContextValues };
         return element;
+    }
+
+    // Inner values shadow outer ones, as nested providers do.
+    private static void AddProvided(ref Dictionary<ContextBase, object?>? into, IReadOnlyDictionary<ContextBase, object?>? values)
+    {
+        if (values is not { Count: > 0 }) return;
+        into ??= new Dictionary<ContextBase, object?>();
+        foreach (var (k, v) in values) into[k] = v;
     }
 
     private int PushContext(Element element)
@@ -465,10 +536,23 @@ public sealed partial class Reconciler
         Set(control, Layoutable.HorizontalAlignmentProperty, oldM?.HorizontalAlignment, newM?.HorizontalAlignment);
         Set(control, Layoutable.VerticalAlignmentProperty, oldM?.VerticalAlignment, newM?.VerticalAlignment);
         Set(control, Visual.OpacityProperty, oldM?.Opacity, newM?.Opacity);
-        Set(control, InputElement.IsEnabledProperty, oldM?.IsEnabled, newM?.IsEnabled);
         if (BackgroundProperty(control) is { } background)
             SetRef(control, background, oldM?.Background, newM?.Background);
         SetRef(control, AutomationProperties.NameProperty, oldM?.AutomationName, newM?.AutomationName);
+    }
+
+    // IsEnabled has two sources, the element's own (ButtonElement.IsEnabled) and the modifier: either one
+    // disables. Written as one value so neither overwrites the other.
+    private static void ApplyEnabled(UIElement control, Element element, ElementModifiers? modifiers)
+    {
+        bool? enabled = element is ButtonElement { IsEnabled: false } ? false : modifiers?.IsEnabled;
+        if (enabled is { } value)
+        {
+            if (control.IsEnabled != value || !control.IsSet(InputElement.IsEnabledProperty))
+                control.SetValue(InputElement.IsEnabledProperty, value);
+        }
+        else if (control.IsSet(InputElement.IsEnabledProperty))
+            control.ClearValue(InputElement.IsEnabledProperty);
     }
 
     private static AvaloniaProperty<Avalonia.Media.IBrush?>? BackgroundProperty(UIElement control) => control switch
@@ -528,6 +612,9 @@ public sealed partial class Reconciler
         public string? PerfName { get; set; }
     }
 
+    /// <summary>The number of mounted components (diagnostics and tests).</summary>
+    internal int ComponentNodeCount => _componentNodes.Count;
+
     /// <summary>Tries to find the component node a wrapper control belongs to.</summary>
     internal bool TryFindComponentNode(UIElement control, [NotNullWhen(true)] out ComponentNode? node)
         => _componentNodes.TryGetValue(control, out node);
@@ -551,7 +638,6 @@ public sealed partial class Reconciler
     private Border MountNode(ComponentNode node, RenderContext ctx, Action requestRerender, Func<Element> render)
     {
         var wrapper = new Border();
-        _componentNodes[wrapper] = node;
         var componentRerender = CreateComponentRerender(node, requestRerender);
         _renderStack.Add(node);
         try
@@ -564,6 +650,10 @@ public sealed partial class Reconciler
         {
             _renderStack.RemoveAt(_renderStack.Count - 1);
         }
+        // Registered once the subtree mounted: a render that throws leaves no node behind. (A descendant that
+        // throws still leaves the nodes of siblings mounted before it; recovering from render errors is the
+        // error boundaries' job, tier 3.)
+        _componentNodes[wrapper] = node;
         return wrapper;
     }
 
@@ -612,7 +702,8 @@ public sealed partial class Reconciler
     // without re-running this one.
     private void DescendOnly(ComponentNode node, Border wrapper, Action requestRerender)
     {
-        if (node.RenderedElement is { } rendered && wrapper.Child is { } child && IsOnDirtyAncestorPath(wrapper))
+        if (node.RenderedElement is { } rendered && wrapper.Child is { } child
+            && (IsOnDirtyAncestorPath(wrapper) || ShouldDeclineSkip(child)))
             ReconcileSlot(rendered, rendered, child, CreateComponentRerender(node, requestRerender));
     }
 
@@ -636,7 +727,7 @@ public sealed partial class Reconciler
         bool depsChanged = oldDeps is null && newDeps is null
             ? false // both null: render once, never re-render from the parent
             : oldDeps is null || newDeps is null || !RenderContext.DepsEqual(oldDeps, newDeps);
-        if (!selfTriggered && !depsChanged)
+        if (!selfTriggered && !depsChanged && !HasConsumedContextChanged(node))
         {
             DescendOnly(node, wrapper, requestRerender);
             return;
@@ -658,7 +749,7 @@ public sealed partial class Reconciler
             bool propsChanged = component is IPropsComparable comparable
                 ? comparable.CompareProps(node.PreviousProps, comp.Props)
                 : component.ShouldUpdate();
-            if (!propsChanged)
+            if (!propsChanged && !HasConsumedContextChanged(node))
             {
                 // Refresh live props so handlers that read Props at dispatch time see the current ones.
                 if (component is IPropsReceiver skipReceiver && comp.Props is not null)
