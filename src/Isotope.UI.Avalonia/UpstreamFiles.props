@@ -93,6 +93,15 @@
     <Compile Include="$(UpstreamSrc)Core\V1Protocol\ReportedUnmountFailureException.cs" Link="Upstream\Core\V1Protocol\ReportedUnmountFailureException.cs" />
     <Compile Include="$(UpstreamAbstractions)WrapperAttributes.cs" Link="Upstream\Reactor.Wrappers.Abstractions\WrapperAttributes.cs" />
     <!-- Yoga (tier 1), under our FlexPanel (Layout/FlexPanel.cs, tier 3; upstream's FlexPanel.cs isn't vendored). -->
-    <Compile Include="$(UpstreamSrc)Yoga\*.cs" LinkBase="Upstream\Yoga" />
+    <Compile Include="$(UpstreamSrc)Yoga\AlgorithmUtils.cs" Link="Upstream\Yoga\AlgorithmUtils.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\FlexDirectionHelper.cs" Link="Upstream\Yoga\FlexDirectionHelper.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\FlexEnums.cs" Link="Upstream\Yoga\FlexEnums.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\LayoutResults.cs" Link="Upstream\Yoga\LayoutResults.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\YogaAlgorithm.cs" Link="Upstream\Yoga\YogaAlgorithm.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\YogaConfig.cs" Link="Upstream\Yoga\YogaConfig.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\YogaEnums.cs" Link="Upstream\Yoga\YogaEnums.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\YogaNode.cs" Link="Upstream\Yoga\YogaNode.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\YogaStyle.cs" Link="Upstream\Yoga\YogaStyle.cs" />
+    <Compile Include="$(UpstreamSrc)Yoga\YogaValue.cs" Link="Upstream\Yoga\YogaValue.cs" />
   </ItemGroup>
 </Project>
