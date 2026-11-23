@@ -54,6 +54,10 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A test of an update path needs an element that changes,** or the update is skipped and the test passes with the
   behaviour broken (found while proving a test). (2026-11-23)
 
+- **A regex scan can be quadratic on one long line, and ASCII in UTF-16 is valid UTF-8.** The first personal-data scan
+  took 1.1 s on a 40k-character line (an unanchored email pattern), and read UTF-16 text as UTF-8 with NULs, finding
+  nothing. Anchor patterns with a lookbehind, test a long line, and treat NUL bytes as binary. (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

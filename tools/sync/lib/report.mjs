@@ -1,7 +1,31 @@
 // The sync report: what changed upstream, what was regenerated, and the tier 3 PRs to port by hand.
 // No personal data: no author names (none are read), merge subjects lose their source branch, handles and
-// email addresses in subjects are removed.
+// email addresses in subjects are removed, and so do branch names and repo owners inside a subject.
 import { classify, isVendored } from './tiers.mjs';
+import { scanText } from './personal.mjs';
+
+// A slash token inside a subject can be a branch ("user/<alias>/topic", "someone/fix-thing") or a GitHub owner/repo
+// ("someone/tool@v2", "bump someone/action"), and either can carry a username. Tokens of three or more parts are
+// omitted (a branch can't be told from a folder or a type list there), except file paths with a known file extension
+// and numbers (dates). Two-part tokens lose their first part where the shape or the words around them say branch or repo.
+// Ordinary slashes stay: type pairs ("ListView/GridView"), alternatives ("min/max"), paths that start with "/".
+// A two-part token in no such context ("someone/feature") can't be told from "cell/row", so it stays: a known gap.
+const SLASH_TOKEN = /(?<![\w./@\\-])[A-Za-z0-9][\w.-]*(?:\/[\w.-]+)+/g;
+const FILE_EXT = /\.(?:cs|csproj|props|targets|sln|slnx|xaml|axaml|md|txt|json|ya?ml|xml|config|ps1|sh|cmd|m?js|ts|tsx|py|html|css|svg|png|toml)$/i;
+const BRANCH_CONTEXT = /\b(?:bump|branch|from|into|port|cherry-pick|merge|merged|revert)\s+$/i;
+function maskSlashToken(tok, offset, s) {
+  const segs = tok.split('/');
+  const before = s.slice(0, offset);
+  const after = s.slice(offset + tok.length);
+  if (/^users?$/i.test(segs[0])) return '(branch name omitted)';
+  if (segs.every((x) => /^\d+$/.test(x))) return tok;
+  if (segs.length >= 3) return FILE_EXT.test(segs.at(-1)) ? tok : '(name omitted)';
+  const owner = '(owner omitted)/' + segs[1];
+  if (/^[@#!]\w/.test(after) || BRANCH_CONTEXT.test(before)) return owner;
+  if (/^[A-Z]/.test(segs[0]) && /^[A-Z]/.test(segs[1])) return tok;
+  if (/^[a-z0-9][\w.]*-/.test(segs[1])) return owner;
+  return tok;
+}
 
 export function sanitizeSubject(s) {
   // A squash subject that is just a branch name ("someone/feature (#12)") can carry a username.
@@ -10,8 +34,14 @@ export function sanitizeSubject(s) {
   return s
     .replace(/(Merge pull request #\d+) from [^\s"']+/g, '$1')
     .replace(/Merge (remote-tracking )?branch '[^']*'( of \S+)?( into \S+)?/g, 'Merge $1branch (source branch omitted)')
+    // A URL keeps its scheme and host; user info and the path can name a person. So does an scp-style git remote.
+    .replace(/\b([a-z][\w+.-]*):\/\/(?:[^\s/@]*@)?([^\s/@]+)(\/[^\s)\]>"']*)?/gi, (_, scheme, host, rest) => scheme + '://' + host + (rest ? '/(path omitted)' : ''))
+    .replace(/(?<![\w.-])[\w.-]+@([\w-]+(?:\.[\w-]+)+):[^\s)\]>"']+/g, '$1:(path omitted)')
+    .replace(SLASH_TOKEN, maskSlashToken)
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '(email removed)')
     .replace(/(^|[^\w])@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/g, '$1(handle removed)')
+    // Last, whatever the personal-data check (personal.mjs) still finds: a local path, or an email the rule above missed.
+    .replace(/\S+/g, (tok) => (scanText(tok).length ? '(local path or email removed)' : tok))
     .replace(/\|/g, '\\|');
 }
 

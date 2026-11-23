@@ -16,11 +16,12 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   Scan files and commit messages before pushing:
   `git grep -n -I -i -E '<your username>|\b[A-Z]:[\\/]|Users[\\/]' HEAD -- . ':!src/Upstream'` and
   `git log origin/main..HEAD --format=%B | grep -i -E '<your username>|\b[A-Z]:[\\/]|Users[\\/]'` (both must print nothing).
-  Vendored files (`src/Upstream/`) are left out of that scan: upstream's doc comments contain example paths, and
-  personal data in vendored files is removed by a transform rule in `tools/sync/transforms.json`, never by hand.
-  Until `tools/sync` checks generated files itself (#10), also run
-  `git grep -n -I -i -E '<your username>' -- src/Upstream` (must print nothing), and read the sync report's list of
-  new and changed vendored files for names, emails and user folders.
+  Vendored files (`src/Upstream/`) are left out of that scan: `tools/sync` checks every generated file itself on
+  each sync and `--check` (emails, user-folder and drive-letter paths, and the sync report), genuine upstream
+  examples are allowlisted by line hash in `tools/sync/personal-data.json`, and personal data in vendored files is
+  removed by a transform rule in `tools/sync/transforms.json`, never by hand. The check can't recognise people's
+  names or bare usernames, so after a sync also run `git grep -n -I -i -E '<your username>' -- src/Upstream`
+  (must print nothing) and read the sync report's list of new and changed vendored files for names.
   Commit author identity comes from the machine's git config: the developer chose to keep their own; see
   `CLAUDE.local.md` on each machine, and never add other names or emails.
 - **Upstream is read-only.** Never edit, commit or build inside `upstream/`. Read-only git, `git fetch`, and checking

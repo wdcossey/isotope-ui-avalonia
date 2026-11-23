@@ -1,0 +1,25 @@
+{
+  "$comment": [
+    "Personal-data check of generated files (tools/sync/lib/personal.mjs, issue #10): genuine examples that are not personal data.",
+    "Each entry: the vendored (upstream) path, the sha256 of the exact line text with surrounding whitespace trimmed, and why it is",
+    "an example. A hash, so this file doesn't itself carry the paths the repo-wide scan in CLAUDE.md looks for. The sync prints the",
+    "entry for a new hit; personal data itself is removed with a transform rule (transforms.json), never allowlisted."
+  ],
+  "allow": [
+    {
+      "file": "src/Reactor/Core/Diagnostics/ReactorEventSource.cs",
+      "sha256": "f397ebf4013ce71d3a2ae71086a94051521b490cc620d6f82ecbf435b5e579d1",
+      "why": "Comment on the navigation event: a route template with an {id} placeholder, given as the safe form to log. A URL route, not a user folder."
+    },
+    {
+      "file": "src/Reactor/Core/SourceLocation.cs",
+      "sha256": "27b19fcef8761ffc668cb036371ad6b68d1ed593f049b0a53d649b4461772f7f",
+      "why": "Doc comment showing the full source-location form with a made-up project file on drive C; no user folder or name."
+    },
+    {
+      "file": "src/Reactor/Diagnostics/ReactorSourceMap.StaticInfo.cs",
+      "sha256": "9e486d1b78224d355170075056095ebfb6380100e8d4c8c131c1ef41a6b5f3f0",
+      "why": "Comment on IsAbsolutePath: an example of a path rooted on the current drive, with the placeholder user name 'me'."
+    }
+  ]
+}

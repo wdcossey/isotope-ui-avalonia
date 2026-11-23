@@ -31,6 +31,8 @@ commit in `UPSTREAM.lock`, applying the transform rules (see #3).
 - Run `node tools/sync/sync.mjs [<commit>]` (default: `main` of the cache's upstream remote). `--dry-run` writes
   nothing; `--check` regenerates from `UPSTREAM.lock` and fails on any difference. The cache needs full history.
 - **Never hand-edit a vendored file.** Change a transform rule, or move the file to tier 3.
+- The sync and `--check` fail on personal data in a generated file: fix it with a transform rule, or allowlist a genuine
+  example in `tools/sync/personal-data.json` (CLAUDE.md).
 - CI's `tools/sync --check` fails on any difference.
 - Upstream itself is treated as locked: nothing is sent upstream.
 

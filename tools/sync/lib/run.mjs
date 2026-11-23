@@ -5,6 +5,7 @@ import path from 'node:path';
 import { git, tryGit, revParse, isAncestor, diffNameStatus, commitsBetween, remotes } from './git.mjs';
 import { loadTierMap } from './tiers.mjs';
 import { loadTransforms } from './transforms.mjs';
+import { loadAllowlist, scanText } from './personal.mjs';
 import { generate, MANIFEST } from './vendor.mjs';
 import { pathChanges, includeHints } from './changes.mjs';
 import { renderReport, vendoredDelta, prNumber } from './report.mjs';
@@ -70,10 +71,13 @@ function sync(opts, log, err, defaultRepo) {
   const upstreamDir = path.resolve(opts.upstream ?? path.join(repo, 'upstream'));
   const here = path.join(repo, 'tools', 'sync');
   const cfg = readJson(path.join(here, 'sync.json'));
-  let tierMap, transforms;
+  let tierMap, transforms, allow;
   try {
     tierMap = loadTierMap(readJson(path.join(here, 'tiers.json')));
     transforms = loadTransforms(readJson(path.join(here, 'transforms.json')));
+    // Optional: with no allowlist, every hit fails.
+    const allowPath = path.join(here, 'personal-data.json');
+    allow = existsSync(allowPath) ? loadAllowlist(readJson(allowPath)) : [];
   } catch (e) { throw new Fail(e.message); }
   const lockPath = path.join(repo, 'UPSTREAM.lock');
   const lockText = readFileSync(lockPath, 'utf8');
@@ -103,7 +107,7 @@ function sync(opts, log, err, defaultRepo) {
     log('fetching ' + remote + ' in the upstream cache');
     git(upstreamDir, ['fetch', '--quiet', remote]);
   };
-  const gen = (sha) => generate({ upstreamDir, commit: sha, tierMap, transforms, repoName, repoUrl });
+  const gen = (sha) => generate({ upstreamDir, commit: sha, tierMap, transforms, repoName, repoUrl, allow });
   const failWith = (head, errors) => { throw new Fail(head + '\n  ' + errors.join('\n  ')); };
 
   // --check: regenerate from the pinned commit and compare.
@@ -156,6 +160,10 @@ function sync(opts, log, err, defaultRepo) {
     const delta = vendoredDelta(before, g.manifest);
     const report = renderReport({ repoUrl, old: info(oldSha), new: info(newSha), commits, changes, unclassified, delta,
       manifest: g.manifest, map: tierMap, verify });
+    // A backstop: subjects are sanitised, but the report is committed, so it gets the same check as vendored files.
+    const reportHits = [...new Map(scanText(report).map((h) => [h.line, h])).values()];
+    if (reportHits.length) failWith('the sync report has personal data; nothing was written. Fix sanitizeSubject in tools/sync/lib/report.mjs:',
+      reportHits.map((h) => 'report line ' + h.line + ' (' + h.kind + ')'));
     const summary = g.manifest.files.length + ' vendored files; ' + delta.changed.length + ' changed, ' + delta.added.length + ' added, ' +
       delta.removed.length + ' removed; ' + changes.length + ' paths to classify; ' + unclassified.length + ' unclassified';
     if (has('dry-run')) {
