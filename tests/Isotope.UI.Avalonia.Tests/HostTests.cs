@@ -331,7 +331,9 @@ public sealed class HostTests : IDisposable
         // When it's no longer needed: unmounts the tree and runs the effects' cleanups.
         host.Dispose();
         #endregion
+        Dispatcher.UIThread.RunJobs(); // the pass Mount asked for finds the host disposed
         Assert.Null(host.Child);
+        Assert.True(host.IsIdle);
         window.Close();
     }
 
