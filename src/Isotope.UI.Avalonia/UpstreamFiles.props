@@ -1,0 +1,75 @@
+<Project>
+  <!-- The upstream files this library compiles, from upstream's src/Reactor/ at the commit in UPSTREAM.lock.
+       Today they are linked from the git-ignored upstream/ cache; when the vendoring harness (#3) lands, point
+       UpstreamSrc at the vendored copies instead. tools/rewrite-upstream.mjs reads the Include paths below. -->
+  <PropertyGroup>
+    <UpstreamSrc Condition="'$(UpstreamSrc)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor\'))</UpstreamSrc>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UpstreamSrc)Core\RenderContext.cs" Link="Upstream\Core\RenderContext.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ChildReconciler.cs" Link="Upstream\Core\ChildReconciler.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Internal\KeyedListDiff.cs" Link="Upstream\Core\Internal\KeyedListDiff.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Polyfills\ClosedTypeAttributes.cs" Link="Upstream\Core\Polyfills\ClosedTypeAttributes.cs" />
+    <Compile Include="$(UpstreamSrc)Core\SourceLocation.cs" Link="Upstream\Core\SourceLocation.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ContentOwner.cs" Link="Upstream\Core\ContentOwner.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ChildCollection.cs" Link="Upstream\Core\ChildCollection.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ContextScope.cs" Link="Upstream\Core\ContextScope.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Internal\AmbientAnimation.cs" Link="Upstream\Core\Internal\AmbientAnimation.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Internal\ReactorListState.cs" Link="Upstream\Core\Internal\ReactorListState.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Animation.cs" Link="Upstream\Core\Animation.cs" />
+    <Compile Include="$(UpstreamSrc)Core\PersistedStateScope.cs" Link="Upstream\Core\PersistedStateScope.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Context.cs" Link="Upstream\Core\Context.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Command.cs" Link="Upstream\Core\Command.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ChildSlots.cs" Link="Upstream\Core\ChildSlots.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ChildDiffHints.cs" Link="Upstream\Core\ChildDiffHints.cs" />
+    <Compile Include="$(UpstreamSrc)Core\HookOrderException.cs" Link="Upstream\Core\HookOrderException.cs" />
+    <Compile Include="$(UpstreamSrc)Core\UIThreadMarshal.cs" Link="Upstream\Core\UIThreadMarshal.cs" />
+    <Compile Include="$(UpstreamSrc)Core\WindowPersistedScope.cs" Link="Upstream\Core\WindowPersistedScope.cs" />
+    <Compile Include="$(UpstreamSrc)Hosting\WindowKey.cs" Link="Upstream\Hosting\WindowKey.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\ReactorPerfTrace.cs" Link="Upstream\Core\Diagnostics\ReactorPerfTrace.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\ReactorEventSource.cs" Link="Upstream\Core\Diagnostics\ReactorEventSource.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\ComponentPerfTally.cs" Link="Upstream\Core\Diagnostics\ComponentPerfTally.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\RenderPassRequests.cs" Link="Upstream\Core\Diagnostics\RenderPassRequests.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\ComponentRenderTrace.cs" Link="Upstream\Core\Diagnostics\ComponentRenderTrace.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\ReactorDiagnostics.cs" Link="Upstream\Core\Diagnostics\ReactorDiagnostics.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Internal\LruCache.cs" Link="Upstream\Core\Internal\LruCache.cs" />
+    <Compile Include="$(UpstreamSrc)Hooks\PendingScope.cs" Link="Upstream\Hooks\PendingScope.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\ConnectedNavigationCompletion.cs" Link="Upstream\Core\Navigation\ConnectedNavigationCompletion.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\DeepLinkMap.cs" Link="Upstream\Core\Navigation\DeepLinkMap.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationContext.cs" Link="Upstream\Core\Navigation\NavigationContext.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationDiagnostics.cs" Link="Upstream\Core\Navigation\NavigationDiagnostics.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationHandle.cs" Link="Upstream\Core\Navigation\NavigationHandle.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationLifecycle.cs" Link="Upstream\Core\Navigation\NavigationLifecycle.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationStack.cs" Link="Upstream\Core\Navigation\NavigationStack.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationState.cs" Link="Upstream\Core\Navigation\NavigationState.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Component.cs" Link="Upstream\Core\Component.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Navigation\NavigationTransition.cs" Link="Upstream\Core\Navigation\NavigationTransition.cs" />
+    <Compile Include="$(UpstreamSrc)Hooks\UseResource.cs" Link="Upstream\Hooks\UseResource.cs" />
+    <Compile Include="$(UpstreamSrc)Hooks\UseMutation.cs" Link="Upstream\Hooks\UseMutation.cs" />
+    <Compile Include="$(UpstreamSrc)Hooks\UseInfiniteResource.cs" Link="Upstream\Hooks\UseInfiniteResource.cs" />
+    <Compile Include="$(UpstreamSrc)Core\AsyncValue.cs" Link="Upstream\Core\AsyncValue.cs" />
+    <Compile Include="$(UpstreamSrc)Core\InfiniteResource.cs" Link="Upstream\Core\InfiniteResource.cs" />
+    <Compile Include="$(UpstreamSrc)Core\QueryCache.cs" Link="Upstream\Core\QueryCache.cs" />
+    <Compile Include="$(UpstreamSrc)Core\FocusRevalidationService.cs" Link="Upstream\Core\FocusRevalidationService.cs" />
+    <Compile Include="$(UpstreamSrc)Data\DataPage.cs" Link="Upstream\Data\DataPage.cs" />
+    <Compile Include="$(UpstreamSrc)Data\DataPageCache.cs" Link="Upstream\Data\DataPageCache.cs" />
+    <Compile Include="$(UpstreamSrc)Data\DataRequest.cs" Link="Upstream\Data\DataRequest.cs" />
+    <Compile Include="$(UpstreamSrc)Data\DataSourceResourceExtensions.cs" Link="Upstream\Data\DataSourceResourceExtensions.cs" />
+    <Compile Include="$(UpstreamSrc)Data\FieldDescriptor.cs" Link="Upstream\Data\FieldDescriptor.cs" />
+    <Compile Include="$(UpstreamSrc)Data\FilterDescriptor.cs" Link="Upstream\Data\FilterDescriptor.cs" />
+    <Compile Include="$(UpstreamSrc)Data\GridAttributes.cs" Link="Upstream\Data\GridAttributes.cs" />
+    <Compile Include="$(UpstreamSrc)Data\IDataSource.cs" Link="Upstream\Data\IDataSource.cs" />
+    <Compile Include="$(UpstreamSrc)Data\RowKey.cs" Link="Upstream\Data\RowKey.cs" />
+    <Compile Include="$(UpstreamSrc)Data\SortDescriptor.cs" Link="Upstream\Data\SortDescriptor.cs" />
+    <Compile Include="$(UpstreamSrc)Data\Providers\ListDataSource.cs" Link="Upstream\Data\Providers\ListDataSource.cs" />
+    <Compile Include="$(UpstreamSrc)Data\Providers\ObservableListDataSource.cs" Link="Upstream\Data\Providers\ObservableListDataSource.cs" />
+    <Compile Include="$(UpstreamSrc)Controls\Validation\Validators\IValidator.cs" Link="Upstream\Controls\Validation\Validators\IValidator.cs" />
+    <Compile Include="$(UpstreamSrc)Controls\Validation\ValidationMessage.cs" Link="Upstream\Controls\Validation\ValidationMessage.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\LogCategory.cs" Link="Upstream\Core\Diagnostics\LogCategory.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\DiagnosticLog.cs" Link="Upstream\Core\Diagnostics\DiagnosticLog.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\ComponentNames.cs" Link="Upstream\Core\Diagnostics\ComponentNames.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ObservableTreeTracker.cs" Link="Upstream\Core\ObservableTreeTracker.cs" />
+    <Compile Include="$(UpstreamSrc)Core\PersistedStateCache.cs" Link="Upstream\Core\PersistedStateCache.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Diagnostics\DiagnosticText.cs" Link="Upstream\Core\Diagnostics\DiagnosticText.cs" />
+  </ItemGroup>
+</Project>
