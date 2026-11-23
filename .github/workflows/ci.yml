@@ -63,15 +63,6 @@ jobs:
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
 
-      - name: Library tests (seam, hooks core), count unchanged
-        shell: bash
-        run: |
-          dotnet test tests/Isotope.UI.Avalonia.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee lib.log
-          total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' lib.log | tail -1)"
-          expected="$(cat tests/Isotope.UI.Avalonia.Tests/expected-total.txt)"
-          echo "total=$total expected=$expected"
-          test "$total" = "$expected"
-
       - name: Rewrite tool tests
         shell: bash
         run: node --test tools/rewrite-upstream.test.mjs
@@ -84,6 +75,37 @@ jobs:
           if grep -q "not understood" <<<"$out"; then echo "build-errors could not parse some error lines"; exit 1; fi
           total="$(sed -n 's/^total //p' <<<"$out")"
           expected="$(cat spikes/A-engine/expected-total.txt)"
+          echo "total=$total expected=$expected"
+          test "$total" = "$expected"
+
+  library:
+    # The library compiles the vendored files in src/Upstream, so this job has no upstream/ checkout: it proves the
+    # library builds without one.
+    name: library (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+
+      - name: No upstream/ checkout
+        shell: bash
+        run: test ! -e upstream
+
+      - name: Library tests (seam, hooks core), count unchanged
+        shell: bash
+        run: |
+          dotnet test tests/Isotope.UI.Avalonia.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee lib.log
+          total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' lib.log | tail -1)"
+          expected="$(cat tests/Isotope.UI.Avalonia.Tests/expected-total.txt)"
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
 
