@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.Layout;
 using Avalonia.Media;
 using Isotope.UI;
 using Isotope.UI.Core;
@@ -10,11 +9,12 @@ namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
 /// End-to-end examples (#2): UI as a function of state, written as function components with hooks, on Avalonia 12.
-/// ExampleTests drive them headless and render them to PNG.
+/// ExampleTests drive them headless and render them to PNG. The regions are the README's and the guide's snippets
+/// (DocSnippetTests checks they match).
 /// </summary>
 internal static class Examples
 {
-    /// <summary>The README's counter.</summary>
+    #region counter
     public static Element Counter(RenderContext ctx)
     {
         var (count, setCount) = ctx.UseState(0);
@@ -22,7 +22,9 @@ internal static class Examples
             TextBlock($"Clicked {count} times"),
             Button("Click", () => setCount(count + 1)));
     }
+    #endregion
 
+    #region todo
     public sealed record Todo(int Id, string Title, bool Done);
 
     private enum TodoAction { Add, Toggle, Remove, Reverse }
@@ -40,17 +42,14 @@ internal static class Examples
         _ => s,
     };
 
-    /// <summary>
-    /// A todo list: a controlled TextBox (UseState), the list in a reducer (UseReducer, two-argument form), keyed rows
-    /// (each a component with its own state), a derived count (UseMemo), a theme from a context (UseContext), and a
-    /// Flex layout.
-    /// </summary>
+    /// <summary>The accent behind the title, provided by the app.</summary>
+    public static readonly Context<IBrush> Accent = new(Brushes.Transparent);
+
     public static Element TodoApp(RenderContext ctx)
     {
         var (draft, setDraft) = ctx.UseState("");
         var (state, dispatch) = ctx.UseReducer<TodoState, TodoCommand>(Reduce, new TodoState([], 1));
-        // One dependency, the array, compared by reference: the reducer returns a new array on every change. (Passed as
-        // a Todo[], upstream would compare the array element by element, as a dependency list.)
+        // One dependency, the array, compared by reference: the reducer returns a new array on every change.
         var left = ctx.UseMemo(() => state.Items.Count(t => !t.Done), (object)state.Items);
         var accent = ctx.UseContext(Accent);
 
@@ -61,35 +60,26 @@ internal static class Examples
             setDraft("");
         }
 
-        return new FlexElement([
-            TextBlock("Todos").WithModifiers(m => m with { Background = accent }),
-            new FlexElement([
-                new TextBoxElement(draft, setDraft, PlaceholderText: "What needs doing?").Flex(grow: 1),
-                Button("Add", Add),
-            ]) { ColumnGap = 8 },
-            new StackElement(Orientation.Vertical,
-                state.Items.Select(t => (Element)new FuncElement(c => TodoRow(c, t, dispatch)) { Key = "todo-" + t.Id }).ToArray())
-            { Spacing = 4 }.Flex(grow: 1),
-            new FlexElement([
+        return FlexColumn(
+            TextBlock("Todos").Background(accent),
+            FlexRow(
+                TextBox(draft, setDraft, placeholderText: "What needs doing?").Flex(grow: 1),
+                Button("Add", Add)) with { ColumnGap = 8 },
+            VStack(4, state.Items
+                .Select(t => (Element)Component(c => TodoRow(c, t, dispatch)).WithKey("todo-" + t.Id))
+                .ToArray()).Flex(grow: 1),
+            FlexRow(
                 TextBlock($"{left} of {state.Items.Length} left").Flex(grow: 1),
-                Button("Reverse", () => dispatch(new TodoCommand(TodoAction.Reverse))),
-            ]) { ColumnGap = 8, AlignItems = FlexAlign.Center },
-        ])
-        {
-            Direction = FlexDirection.Column,
-            RowGap = 8,
-            FlexPadding = new Thickness(12),
-        };
+                Button("Reverse", () => dispatch(new TodoCommand(TodoAction.Reverse))))
+                with { ColumnGap = 8, AlignItems = FlexAlign.Center })
+            with { RowGap = 8, FlexPadding = new Thickness(12) };
     }
-
-    /// <summary>The accent behind the title, provided by the app.</summary>
-    public static readonly Context<IBrush?> Accent = new(null);
 
     // One row: its own hook state (how many times it was toggled), which stays with the row when the list reorders.
     private static Element TodoRow(RenderContext ctx, Todo todo, Action<TodoCommand> dispatch)
     {
         var (toggles, setToggles) = ctx.UseState(0);
-        return new FlexElement([
+        return FlexRow(
             TextBlock((todo.Done ? "[x] " : "[ ] ") + todo.Title).Flex(grow: 1),
             TextBlock($"toggled {toggles}"),
             Button(todo.Done ? "Undo" : "Done", () =>
@@ -97,7 +87,8 @@ internal static class Examples
                 setToggles(toggles + 1);
                 dispatch(new TodoCommand(TodoAction.Toggle, todo.Id));
             }),
-            Button("Remove", () => dispatch(new TodoCommand(TodoAction.Remove, todo.Id))),
-        ]) { ColumnGap = 8, AlignItems = FlexAlign.Center };
+            Button("Remove", () => dispatch(new TodoCommand(TodoAction.Remove, todo.Id))))
+            with { ColumnGap = 8, AlignItems = FlexAlign.Center };
     }
+    #endregion
 }
