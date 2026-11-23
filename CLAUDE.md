@@ -1,11 +1,64 @@
-# Isotope.UI.Avalonia
+# Isotope.UI.Avalonia: notes for Claude
 
-An Avalonia 12 version of microsoft/microsoft-ui-reactor. Private GitHub repo (`origin`). Package prefix: `Isotope.` (`Avalonia.` is reserved on NuGet). Machine-specific notes live in `CLAUDE.local.md` (git-ignored).
+An Avalonia 12 version of microsoft/microsoft-ui-reactor (React-style hooks and function components for C#), with an
+Avalonia-native public API. Read in this order: `README.md`, `docs/PROCESS.md` (how work runs), `FINDINGS.md` (results
+and decisions), then the open GitHub Issues (`gh issue list`): they are the task list. This file holds the rules that
+must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.local.md`.
 
-Read `docs/PROCESS.md` first: it is how work runs here. Then `FINDINGS.md`. **GitHub Issues are the task list** (`gh issue list`); a local `HANDOVER.md`, if any, is a historical brief and never committed.
+## Hard rules
 
-- Private GitHub remote `origin` since 2026-11-23. Until the PR-based process is adopted: one branch per spike or unit of work, self-reviewed, merged into `main` locally, then `main` pushed. No issues, PRs, CI or branch protection yet.
-- `upstream/` is a read-only reference clone of microsoft/microsoft-ui-reactor, git-ignored, pinned in `UPSTREAM.lock`. Only read-only git commands run in it (log, show, diff, grep). Never edit, check out or commit there.
-- `global.json` pins the .NET 11 SDK (11.0.100, installed 2026-11-22) for the C# 15 compiler only; projects target `net10.0` because .NET 10 is the LTS release (user's decision, 2026-11-23). Move a target to `net11.0` only if something needs the .NET 11 runtime, and ask first. Projects that compile upstream files use `LangVersion 15` (upstream's `closed` hierarchies) and link upstream's `Core/Polyfills/ClosedTypeAttributes.cs`.
-- Use absolute paths from the repo root and give every build/test command an explicit working directory: the harness tends to move the shell into `upstream/`, whose `global.json` changes the SDK and the test runner.
-- **No personal data in the repo:** no names, emails, usernames, machine paths or upstream contributors' names in files, outputs or screenshots. Scripts write hashes or counts instead. Commit author identity: see `CLAUDE.local.md`.
+- **No personal data in the repo**, in files, generated outputs, screenshots, issues, PRs or commit messages:
+  - no names, emails or usernames;
+  - no local paths (drive letters, user folders, temp or scratch folders);
+  - no upstream contributors' names or usernames, including inside branch names in merge subjects.
+  Scripts write hashes or counts instead. Session briefs (`HANDOVER.md`) and `CLAUDE.local.md` are git-ignored.
+  Scan files and commit messages before pushing:
+  `git grep -n -I -i -E '<your username>|\b[A-Z]:[\\/]|Users[\\/]' HEAD` and
+  `git log origin/main..HEAD --format=%B | grep -i -E '<your username>|\b[A-Z]:[\\/]|Users[\\/]'` (both must print nothing).
+  Commit author identity comes from the machine's git config: the developer chose to keep their own; see
+  `CLAUDE.local.md` on each machine, and never add other names or emails.
+- **Upstream is read-only.** Never edit, commit or build inside `upstream/`. Read-only git, `git fetch`, and checking
+  out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are the only writes allowed. Send
+  nothing upstream: no issues, PRs or comments. Plans must not depend on upstream changing.
+- **Vendored upstream files are never edited by hand.** Differences come only from transform rules applied by
+  `tools/sync`, and CI regenerates them and fails on drift (both once built: #3, #6). If a file can't be expressed that way, it moves to tier 3.
+- **Ask first** for anything in `docs/PROCESS.md` §2. Examples: real windows or UI automation (screenshots are rendered
+  headless), installs, repo settings or branch protection, force-pushes or history rewrites, new remotes, and
+  publishing packages.
+
+## Decisions already made (don't reopen)
+
+- **Public API:** Avalonia-native types and vocabulary. On the seam the engine calls, we keep upstream's *member
+  names*, with Avalonia *value types*.
+- **Upstream model:** three tiers, vendor and regenerate. No fork and no submodule. `UPSTREAM.lock` pins the commit;
+  `upstream/` is only a cache.
+- **Toolchain:** .NET 11 SDK (11.0.100, `global.json`) for the C# 15 compiler only. Every project targets `net10.0`
+  (LTS). Projects that compile upstream files set `LangVersion 15` and link upstream's
+  `Core/Polyfills/ClosedTypeAttributes.cs`. Retargeting to `net11.0` needs the developer's go-ahead.
+- **Name:** Isotope.UI.Avalonia, with package prefix `Isotope.`.
+
+## Environment traps
+
+- **The working directory drifts into `upstream/`.** Use absolute paths, and give every `dotnet` call an explicit
+  working directory (`.cwd()` / `cd <repo> &&`). Upstream's `global.json` switches `dotnet test` to
+  Microsoft.Testing.Platform, which prints "Passed!" with no counts and rejects `--filter`/`--logger`.
+- **A Windows checkout turns line endings into CRLF.** Scripted find/replace on checked-out files must allow for `\r\n`.
+- **A git worktree or temp clone needs `upstream/`.** Link it with a directory junction or symlink, and **delete the
+  link itself before deleting the folder.** A recursive delete can follow the link into the real upstream.
+- **Avalonia 12 lays out on the render tick.** Headless tests pump with `Dispatcher.UIThread.RunJobs()`.
+
+## How work runs (summary; details in docs/PROCESS.md)
+
+- **Pick** the highest-priority `self-drive` issue whose blockers are closed.
+- **Branch** `<type>/<issue>-<slug>` (types: feat, fix, chore, docs, research, spike) and use a worktree for parallel work. Commit small, and stage files by name.
+- **Self-review** with the `code-review` skill. Always name the branch and the level:
+  - behaviour changes get two passes: `high main...<branch> --max-findings all`, then `medium` (same form). A small
+    one-area fix may use `medium` for pass 1;
+  - docs and chores get one pass: `medium main...<branch> --max-findings all`.
+  - Check each finding before acting; findings can be wrong.
+- **Prove each new test fails** with its behaviour broken (on committed work), then run clean from a fresh clone.
+- **Merge** into `main` (`--no-ff`; the message records the review levels, tokens, findings fixed or waived, and
+  `Closes #n`). Check there are no conflict markers, then push `main`. This becomes PR-based once issue #7 lands.
+- **Report numbers that were measured, never estimated.** Say how each was measured.
+- **Lessons:** `docs/LESSONS.md`. Add one when a new trap is hit.
+- **Parallel agents** get `docs/agent-brief.md` and an explicit model.
