@@ -130,4 +130,3 @@ internal sealed class YogaConfig
         return true;
     }
 }
-// hand edit: CI red-check, reverted next
