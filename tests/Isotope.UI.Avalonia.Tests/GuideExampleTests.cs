@@ -89,11 +89,12 @@ public class GuideExampleTests
     public void UseCallback_save_keeps_its_delegate_until_the_draft_changes()
     {
         var saved = new List<string>();
+        Action<string> save = saved.Add; // one delegate: a new one would be a new dependency
         var draft = "a";
         var clicks = new List<Action?>();
         var host = new TestHost(() => Component(ctx =>
         {
-            var button = (ButtonElement)GuideExamples.SaveButton(ctx, draft, saved.Add);
+            var button = (ButtonElement)GuideExamples.SaveButton(ctx, draft, save);
             clicks.Add(button.OnClick);
             return button;
         }));

@@ -10,7 +10,14 @@ namespace Isotope.UI.Avalonia.Tests;
 /// </summary>
 public class DocSnippetTests
 {
-    public static TheoryData<string> Docs => new() { "README.md", "docs/guide/writing-components.md" };
+    // The README and every page of the guide.
+    public static TheoryData<string> Docs()
+    {
+        var data = new TheoryData<string> { "README.md" };
+        foreach (var page in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "docs", "guide"), "*.md").Order(StringComparer.Ordinal))
+            data.Add("docs/guide/" + Path.GetFileName(page));
+        return data;
+    }
 
     [Theory]
     [MemberData(nameof(Docs))]
@@ -29,12 +36,13 @@ public class DocSnippetTests
         Assert.Empty(Check("<!-- snippet: a -->\n```csharp\nint x = 1;\n```\n", regions));
         Assert.Single(Check("<!-- snippet: a -->\n```csharp\nint x = 2;\n```\n", regions));
         Assert.Single(Check("```csharp\nint x = 1;\n```\n", regions));
+        Assert.Single(Check("```C# \nint x = 1;\n```\n", regions));
         Assert.Single(Check("<!-- snippet: b -->\n```csharp\nint x = 1;\n```\n", regions));
     }
 
     // Each fenced C# block, with the marker line just before it (if any).
-    private static readonly Regex Block = new(@"(?:<!-- snippet: (?<name>[\w-]+) -->\n)?```(?:csharp|cs)\n(?<code>.*?)\n```",
-        RegexOptions.Singleline);
+    private static readonly Regex Block = new(@"(?:<!-- snippet: (?<name>[\w-]+) -->\n)?```(?:csharp|cs|c\#)[ \t]*\n(?<code>.*?)\n```",
+        RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
     private static List<string> Check(string markdown, IReadOnlyDictionary<string, string> regions)
     {

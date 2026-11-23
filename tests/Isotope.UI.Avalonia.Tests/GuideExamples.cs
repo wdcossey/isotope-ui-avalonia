@@ -66,7 +66,7 @@ internal static class GuideExamples
     public static Element SaveButton(RenderContext ctx, string draft, Action<string> save)
     {
         // The same delegate on every render until draft changes, so a memoized child that takes it can skip.
-        var onSave = ctx.UseCallback(() => save(draft), draft);
+        var onSave = ctx.UseCallback(() => save(draft), draft, save);
         return Button("Save", onSave);
     }
     #endregion

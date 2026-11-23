@@ -82,7 +82,7 @@ private static TodoState Reduce(TodoState s, TodoCommand c) => c.Action switch
 };
 
 /// <summary>The accent behind the title, provided by the app.</summary>
-public static readonly Context<IBrush> Accent = new(Brushes.Transparent);
+public static readonly Context<IBrush?> Accent = new(null);
 
 public static Element TodoApp(RenderContext ctx)
 {
@@ -210,14 +210,15 @@ public static Element Search(RenderContext ctx, string[] names)
 
 ### UseCallback
 
-A delegate that stays the same object until a dependency changes.
+A delegate that stays the same object until a dependency changes. Everything it captures that can change is a
+dependency.
 
 <!-- snippet: use-callback -->
 ```csharp
 public static Element SaveButton(RenderContext ctx, string draft, Action<string> save)
 {
     // The same delegate on every render until draft changes, so a memoized child that takes it can skip.
-    var onSave = ctx.UseCallback(() => save(draft), draft);
+    var onSave = ctx.UseCallback(() => save(draft), draft, save);
     return Button("Save", onSave);
 }
 ```

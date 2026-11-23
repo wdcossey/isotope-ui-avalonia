@@ -202,6 +202,9 @@ public class FactoryTests
         Assert.Same(Brushes.Red, TextBlock("a").Background(Brushes.Red).Modifiers!.Background);
         Assert.Equal(Colors.Red, Assert.IsAssignableFrom<ISolidColorBrush>(TextBlock("a").Background("#FF0000").Modifiers!.Background).Color);
         Assert.Equal("Save", Button("a").AutomationName("Save").Modifiers!.AutomationName);
+        // A colour string parses to an equal brush each render, so an unchanged element can still be skipped.
+        Assert.True(Element.ModifiersEqual(TextBlock("a").Background("#FF0000").Modifiers, TextBlock("a").Background("#FF0000").Modifiers));
+        Assert.True(Element.ModifiersEqual(TextBlock("a").Background("LightGray").Modifiers, TextBlock("a").Background("LightGray").Modifiers));
     }
 
     [Fact]

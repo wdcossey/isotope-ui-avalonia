@@ -43,7 +43,7 @@ internal static class Examples
     };
 
     /// <summary>The accent behind the title, provided by the app.</summary>
-    public static readonly Context<IBrush> Accent = new(Brushes.Transparent);
+    public static readonly Context<IBrush?> Accent = new(null);
 
     public static Element TodoApp(RenderContext ctx)
     {
