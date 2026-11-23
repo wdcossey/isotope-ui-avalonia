@@ -4,6 +4,8 @@
        Nothing is rewritten at build time and upstream/ isn't needed; tools/sync's check mode keeps them honest. -->
   <PropertyGroup>
     <UpstreamSrc>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor\'))</UpstreamSrc>
+    <!-- The wrappers' attributes ([GenerateReactorDescriptor], [WrapAlias], …), which the element records carry. -->
+    <UpstreamAbstractions>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor.Wrappers.Abstractions\'))</UpstreamAbstractions>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(UpstreamSrc)Core\RenderContext.cs" Link="Upstream\Core\RenderContext.cs" />
@@ -71,5 +73,24 @@
     <Compile Include="$(UpstreamSrc)Core\ObservableTreeTracker.cs" Link="Upstream\Core\ObservableTreeTracker.cs" />
     <Compile Include="$(UpstreamSrc)Core\PersistedStateCache.cs" Link="Upstream\Core\PersistedStateCache.cs" />
     <Compile Include="$(UpstreamSrc)Core\Diagnostics\DiagnosticText.cs" Link="Upstream\Core\Diagnostics\DiagnosticText.cs" />
+    <!-- The descriptor runtime (#12, Spike F) and the files it needs. -->
+    <Compile Include="$(UpstreamSrc)Core\Optional.cs" Link="Upstream\Core\Optional.cs" />
+    <Compile Include="$(UpstreamSrc)Core\Internal\IItemViewSource.cs" Link="Upstream\Core\Internal\IItemViewSource.cs" />
+    <Compile Include="$(UpstreamSrc)Core\PoolPolicy.cs" Link="Upstream\Core\PoolPolicy.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ChangeEchoSuppressor.cs" Link="Upstream\Core\ChangeEchoSuppressor.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ReactorBinding.cs" Link="Upstream\Core\ReactorBinding.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1HandlerRegistry.cs" Link="Upstream\Core\V1HandlerRegistry.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\Descriptor\ControlDescriptor.cs" Link="Upstream\Core\V1Protocol\Descriptor\ControlDescriptor.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\Descriptor\PropEntry.cs" Link="Upstream\Core\V1Protocol\Descriptor\PropEntry.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\ChildrenStrategy.cs" Link="Upstream\Core\V1Protocol\ChildrenStrategy.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\ControlRegistry.cs" Link="Upstream\Core\V1Protocol\ControlRegistry.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\Descriptor\DescriptorHandler.cs" Link="Upstream\Core\V1Protocol\Descriptor\DescriptorHandler.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\MountContext.cs" Link="Upstream\Core\V1Protocol\MountContext.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\IElementHandler.cs" Link="Upstream\Core\V1Protocol\IElementHandler.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\IDecoratorElementHandler.cs" Link="Upstream\Core\V1Protocol\IDecoratorElementHandler.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\V1HandlerAdapter.cs" Link="Upstream\Core\V1Protocol\V1HandlerAdapter.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\ItemsHostReconciliation.cs" Link="Upstream\Core\V1Protocol\ItemsHostReconciliation.cs" />
+    <Compile Include="$(UpstreamSrc)Core\V1Protocol\ReportedUnmountFailureException.cs" Link="Upstream\Core\V1Protocol\ReportedUnmountFailureException.cs" />
+    <Compile Include="$(UpstreamAbstractions)WrapperAttributes.cs" Link="Upstream\Reactor.Wrappers.Abstractions\WrapperAttributes.cs" />
   </ItemGroup>
 </Project>

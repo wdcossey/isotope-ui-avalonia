@@ -11,6 +11,15 @@
       "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
     },
     {
+      "path": "src/Reactor.SourceMap.Generator/SourceMapShared.cs",
+      "tier": 1,
+      "lastChanged": "e8825993408bbe4c6ae3ce36eec368f2f16598f0",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b4faba5b122372db18fd168db5a2d8cac367c3662260f5507752dc3e083aa78c"
+    },
+    {
       "path": "src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs",
       "tier": 1,
       "lastChanged": "91540bb61ea6918b411bd738ff6070004594099f",
@@ -18,6 +27,151 @@
         "namespace-isotope"
       ],
       "sha256": "429863cf2532bd1e9c8ed159cd340ddebae25ad5bdb48a431615c99a756e7241"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/IsExternalInit.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [],
+      "sha256": "aecf40813162e69bd870225344d0b32149dce9fca55225e10db97d023d51c9be"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapAliasAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "67b0f68628ac7e0cc421445b24a55588b288b9d774182827d68a10ef6d572582"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapContentAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "32d7bd434a06e00b8e84e421008f89fa0860efc73be51dc1ec253a5f1c8f1404"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapControlledAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "70c321a8da68926eb0f78910722263a6c7d4dc2d6a9c2ae7908502f89c97010e"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapConvertAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "c1886fbb436a957069ea593d411163bb7fe2f1b2cc6fac675a1cf25ea4aa96de"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapElementSlotAnalyzer.cs",
+      "tier": 2,
+      "lastChanged": "b69ec14add5022efa8c3b67bedcc6946497f79fe",
+      "transforms": [
+        "gen-uielement",
+        "namespace-isotope"
+      ],
+      "sha256": "27624cc8f356e50af6718d769fcf1a36b0c599d100553254d0672d80ca0e500a"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapEventAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1d185e03a9593505aab193dc9385245e68a99fc8c8d1fdc50e4ba470e7537b9d"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapLifecycleAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "4804d0c8e71530a8e2e58cbd8a5bb0ea603da206b458fff9dc98f63b8902bd0d"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapOneWayAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "7a483925f4225f29117edb2d91ebb6bef3b9c353edbf930fdcb82eaf655dad60"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.Controlled.cs",
+      "tier": 2,
+      "lastChanged": "df815e2ce69757f342f4d284b2182720b25cbc03",
+      "transforms": [
+        "gen-attached-controlled-state",
+        "gen-attached-event-owner",
+        "namespace-isotope"
+      ],
+      "sha256": "8ed365c8f96faaa93e8349bf7ab43d190fdf7d8c0e817f9b19e4ef9a191c4cd3"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.Metadata.cs",
+      "tier": 1,
+      "lastChanged": "24cf929536ce80f93868e6cd66c3e3008c933f32",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "c1a635463eacee6f2f3028fc2be8a27efa4b2b6ebaacf98b1eec8c1b8a8061ea"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.SourceMap.cs",
+      "tier": 1,
+      "lastChanged": "e8825993408bbe4c6ae3ce36eec368f2f16598f0",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "b712f261cd6224497a115ee477528698cb94d76183b200347b3d1859f0980bbb"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.cs",
+      "tier": 2,
+      "lastChanged": "df815e2ce69757f342f4d284b2182720b25cbc03",
+      "transforms": [
+        "gen-target-base",
+        "gen-target-message",
+        "gen-uielement",
+        "gen-member-walk-cutoff",
+        "gen-full-wrapper-cutoffs",
+        "gen-routed-event-handler",
+        "gen-routed-event-args",
+        "gen-panel-children",
+        "gen-template-exclusions",
+        "gen-polymorphic-textblock",
+        "gen-avalonia-property-lookup",
+        "gen-avalonia-content-attribute",
+        "gen-obsolete-filter",
+        "gen-items-host-ilist",
+        "gen-items-host-adapter",
+        "gen-missing-counterpart-check",
+        "gen-missing-counterpart-report",
+        "gen-drop-try-register-assembly",
+        "namespace-isotope"
+      ],
+      "sha256": "4d75695434c12733365a22e3fc6355b9c03d321b734127b397a1215abdeb467c"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",
+      "tier": 1,
+      "lastChanged": "222a299a43e3b8cfbf04a9f6780abd21cc37db10",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "1038f97a01a70d09a2726c49447c467a079d9f7ae83a1ff334734d3ca61b6715"
     },
     {
       "path": "src/Reactor/Controls/PropertyGrid/PropertyGridElement.cs",
@@ -218,6 +372,16 @@
         "namespace-isotope"
       ],
       "sha256": "a26d2156a51a6844aa3e5bbf33097e879dc058410bd6f23bc073a8f2bb4b46ba"
+    },
+    {
+      "path": "src/Reactor/Core/ChangeEchoSuppressor.cs",
+      "tier": 2,
+      "lastChanged": "a60545539ed3f71eea584dd86db786b22bd57f53",
+      "transforms": [
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "37811b453ba52d4e3e1e04f079ff6f3c63ff309d244e2021640c59765189de18"
     },
     {
       "path": "src/Reactor/Core/ChildCollection.cs",
@@ -793,6 +957,15 @@
       "sha256": "10d7a4426169bf59b22f8b24b399db974bab834545875dc210b446af70ead624"
     },
     {
+      "path": "src/Reactor/Core/PoolPolicy.cs",
+      "tier": 1,
+      "lastChanged": "56a79400f8927a44a2946b530d362a74762d765c",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "d72e4aec420e4a933ae64c4548a9dcb570ce03ca8590ed17efdf321c39ec2e37"
+    },
+    {
       "path": "src/Reactor/Core/QueryCache.cs",
       "tier": 1,
       "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
@@ -926,6 +1099,136 @@
         "namespace-isotope"
       ],
       "sha256": "8a1dd8e81c106303e8b86cfc49916719ae5805e033548c98e99b8a85c36a7038"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs",
+      "tier": 2,
+      "lastChanged": "7fc29f65931de3a7aca1fd7e80e7064ecbb3c4de",
+      "transforms": [
+        "winui-usings",
+        "drop-ChildrenStrategy-TemplatedItemsErased",
+        "drop-ChildrenStrategy-TemplatedItems",
+        "drop-ChildrenStrategy-TreeChildren",
+        "winui-alias-content-control",
+        "namespace-isotope"
+      ],
+      "sha256": "deb81d4c2635a323bec67197f0c0ea9e0e5078b2214adc6e4b641ee8557d99c9"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ControlRegistry.cs",
+      "tier": 2,
+      "lastChanged": "262488ee5f92dad3d8ccdfb952a3c7cd52993bdf",
+      "transforms": [
+        "winui-usings",
+        "drop-ControlRegistry-RegisterDecorator",
+        "drop-ControlRegistry-RegisterDecoratorForDerivedTypes",
+        "namespace-isotope"
+      ],
+      "sha256": "d0fd33c157c0b218bff583b0360164a20a00864f580711deabb8a187eb621f4a"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs",
+      "tier": 2,
+      "lastChanged": "db2cf25e805c01a6e8d3ba51944ee17bfeebe092",
+      "transforms": [
+        "winui-usings",
+        "routed-event-handler",
+        "drop-ControlDescriptor-Reference",
+        "drop-ControlDescriptor-ReferenceUntyped",
+        "drop-ControlDescriptor-ReferenceList",
+        "drop-ControlDescriptor-Immediate",
+        "namespace-isotope"
+      ],
+      "sha256": "c27659bf83764d28e0e47390c2a55cf32c17ad24e1e34434297019f42cd2893c"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/Descriptor/DescriptorHandler.cs",
+      "tier": 2,
+      "lastChanged": "a60545539ed3f71eea584dd86db786b22bd57f53",
+      "transforms": [
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "b9393f9744ab2d50efb0939d94833b3a365125159ec7993fcde52f43067e635e"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs",
+      "tier": 2,
+      "lastChanged": "a60545539ed3f71eea584dd86db786b22bd57f53",
+      "transforms": [
+        "winui-usings",
+        "routed-event-handler",
+        "descriptor-clearvalue-isset",
+        "drop-PropEntry-ReferencePropEntry",
+        "drop-PropEntry-UntypedReferencePropEntry",
+        "drop-PropEntry-ReferenceListPropEntry",
+        "drop-PropEntry-ImmediatePropEntry",
+        "namespace-isotope"
+      ],
+      "sha256": "641782e1e3ab46e3ca44c1fca70ffccc3040a12916eb9a0b18d7d0efa33da9a2"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/IDecoratorElementHandler.cs",
+      "tier": 2,
+      "lastChanged": "33a35999279f093aa4b3c4fa08f745986ac0e2ee",
+      "transforms": [
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "d9f52082070c9b77b723f9a817f1c049ad0e427eb0ec14c16ee8ea2c418c8467"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/IElementHandler.cs",
+      "tier": 2,
+      "lastChanged": "21d2b2d07403c133655f1ca798ebc33898af5466",
+      "transforms": [
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "8c47b45ac03483ab0a26c3797d3f8921e47a5541cf20d38467c25dbdfa4dd346"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ItemsHostReconciliation.cs",
+      "tier": 2,
+      "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
+      "transforms": [
+        "winui-usings",
+        "drop-winrt-exposed-type",
+        "namespace-isotope"
+      ],
+      "sha256": "d00604eedc71a576489fbc684406fe541267e66a29a885f9f4988a520c5c74d6"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/MountContext.cs",
+      "tier": 2,
+      "lastChanged": "10dc04081369baec3221f724d5206c7bbddf15f8",
+      "transforms": [
+        "winui-usings",
+        "add-handler-routing",
+        "namespace-isotope"
+      ],
+      "sha256": "5fbe009a124ff34bbaa33fd121581307687151c773639c53ca56106f7d0900f8"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ReportedUnmountFailureException.cs",
+      "tier": 1,
+      "lastChanged": "59541d3f6af130bf050a0995ce05887fdb893ce9",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "ce114f1132a63b15cae0c908f69ff0366403abc26837c4e314f35381175a1798"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs",
+      "tier": 2,
+      "lastChanged": "7fc29f65931de3a7aca1fd7e80e7064ecbb3c4de",
+      "transforms": [
+        "winui-usings",
+        "winui-alias-panel",
+        "winui-qualified-panel",
+        "namespace-isotope"
+      ],
+      "sha256": "4e3d47fc6ba64212be5ecd5cb81b9ce4e28bd2de32e7a07083b61c066b9eebfa"
     },
     {
       "path": "src/Reactor/Core/WindowPersistedScope.cs",

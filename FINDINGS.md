@@ -149,8 +149,26 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Upstream's generator ports to Avalonia** in descriptor-only mode, which upstream itself uses for 74 built-in elements. A patched copy (36 added and 33 removed lines, after the rename) generated descriptors for Button, TextBox and Slider from Avalonia 12.1.6 metadata.
 - **Its WinUI coupling is small:** 52 code lines in 3,920, and 45 of them are inside string literals.
 - **Coverage [J]:** 45 of upstream's 69 generated WinUI controls have an Avalonia counterpart. About 17 to 20 of those would be fully generated, and about 25 to 28 generated with a hand-written `Customize`.
-- **The runtime it targets** (6 files, 3,522 lines) isn't ported yet: #12.
+- **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
+
+## Spike F: descriptor runtime and generated controls (issue #12, 2026-11-23)
+
+- **The runtime compiles on Avalonia through transform rules only.** Upstream's 6 descriptor-runtime files (3,522 lines) are
+  all tier 2: 13 member drops, 633 lines blanked and 18 rewritten. None is tier 3.
+  - 7 files they depend on are vendored too (1,354 lines).
+  - Two are rewritten for Avalonia in 67 lines (`ReactorBindingT.cs`, `ControlEventPayloads.cs`).
+  - The reconciler gains 17 members under upstream's names.
+- **Declaration errors** before the port: 75 at step 0, 72 at step 1 (`spikes/F-descriptors/run-spike.mjs`).
+- **The generator is vendored:** 15 files, 4,411 lines. Our 20 `gen-*` rules (36 lines added, 41 removed, in 3 files) sit on
+  top of the rename.
+- **Button, TextBlock, StackPanel, TextBox and Slider now mount through generated descriptors:** 219 generated lines in 5
+  files, against 35 hand-written `Customize` lines.
+- **Tests:** the seam's 48 tests pass unchanged, plus 14 new: TextBox echo suppression, Slider pairing and bounds, records,
+  and the generator diagnostic `ISOTOPEGEN001` for a member with no Avalonia counterpart. 62 in all.
+- **Avalonia difference:** `TextBox` raises `TextChanged` after a write, even outside a window. The first controlled write
+  therefore carries a suppression token too.
+- **Report:** `docs/spikes/F-descriptor-runtime.md`.
 
 ## Decisions after the seam (2026-11-23)
 

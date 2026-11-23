@@ -6,3 +6,6 @@ global using Panel = Avalonia.Controls.Panel;
 global using UIElementCollection = Avalonia.Controls.Controls;
 global using ElementTheme = Avalonia.Styling.ThemeVariant;
 global using CompositionEasingFunction = Avalonia.Animation.Easings.Easing;
+global using DependencyProperty = Avalonia.AvaloniaProperty;
+global using DependencyObject = Avalonia.AvaloniaObject;
+global using RoutedEvent = Avalonia.Interactivity.RoutedEvent;

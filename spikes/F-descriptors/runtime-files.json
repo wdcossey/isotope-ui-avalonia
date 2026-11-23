@@ -1,0 +1,14 @@
+{
+  "$comment": [
+    "Spike F: upstream's descriptor runtime (issue #12), as Spike E listed it. Paths are upstream repo-relative."
+  ],
+  "base": "b175b37",
+  "files": [
+    "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs",
+    "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs",
+    "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs",
+    "src/Reactor/Core/V1Protocol/ControlRegistry.cs",
+    "src/Reactor/Core/V1Protocol/Descriptor/DescriptorHandler.cs",
+    "src/Reactor/Core/V1Protocol/MountContext.cs"
+  ]
+}

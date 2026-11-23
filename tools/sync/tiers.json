@@ -37,6 +37,31 @@
       "note": "Spike A: the [GenerateReactorDescriptor]/[WrapManual] attributes, compiled unmodified"
     },
     {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.cs",
+      "tier": 2,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; Avalonia name table, the two logic hunks, and our rules (see transforms.json, gen-*)"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapperGenerator.Controlled.cs",
+      "tier": 2,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; attached state through AvaloniaProperty.RegisterAttached"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Generator/WrapElementSlotAnalyzer.cs",
+      "tier": 2,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; the slot type check names Avalonia Control"
+    },
+    {
+      "glob": "src/Reactor.Wrappers.Generator/*.cs",
+      "tier": 1,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; the analyzers and helpers compile unmodified"
+    },
+    {
+      "path": "src/Reactor.SourceMap.Generator/SourceMapShared.cs",
+      "tier": 1,
+      "note": "Spike F (#12): the wrappers generator, built for Avalonia; shared with the source-map generator, linked by the wrappers generator"
+    },
+    {
       "path": "src/Reactor/Core/RenderContext.cs",
       "tier": 2,
       "note": "Spike A: needs edits (12 edit lines); mechanical rewrite"
@@ -655,6 +680,71 @@
       "glob": "src/Reactor/Core/Reconciler*.cs",
       "tier": 3,
       "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime; drops the reference and Immediate builders (tier 3: element refs, DP observation)"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime; drops the reference and Immediate entries; ClearValue channel reads IsSet"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime; drops the templated-list and TreeView strategies (tier 3)"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ControlRegistry.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime; drops the decorator registrations (tier 3: flyouts, decorators)"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/Descriptor/DescriptorHandler.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/MountContext.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime; raw routed handlers take Avalonia AddHandler arguments"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/IElementHandler.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime (closure): the handler contract"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/IDecoratorElementHandler.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime (closure): V1UnmountDisposition"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime (closure): the dispatch shell over a handler and its children strategy"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ItemsHostReconciliation.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime (closure): the items-host strategy"
+    },
+    {
+      "path": "src/Reactor/Core/V1Protocol/ReportedUnmountFailureException.cs",
+      "tier": 1,
+      "note": "Spike F (#12): descriptor runtime (closure)"
+    },
+    {
+      "path": "src/Reactor/Core/ChangeEchoSuppressor.cs",
+      "tier": 2,
+      "note": "Spike F (#12): descriptor runtime (closure): echo suppression on ReactorState"
+    },
+    {
+      "path": "src/Reactor/Core/PoolPolicy.cs",
+      "tier": 1,
+      "note": "Spike F (#12): descriptor runtime (closure)"
     },
     {
       "glob": "src/Reactor/Core/V1Protocol/**",

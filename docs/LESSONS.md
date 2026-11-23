@@ -46,6 +46,14 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   unlisted file" guard fire. Check the text as transformed so far, and run repo-wide (glob) rules last so they can't hide
   new code from the guard. (2026-11-23)
 
+- **Avalonia raises `TextBox.TextChanged` after the write, even outside a window.** A controlled write's echo arrives
+  late, so each write needs its own suppression token, and headless tests pump the dispatcher. (2026-11-23)
+- **Rules for newly vendored files must come before broader existing rules.** The "matches an unlisted file" guard sees
+  the text as transformed so far, so a broader rule that runs first can consume what a new file-specific rule expects.
+  (2026-11-23)
+- **A test of an update path needs an element that changes,** or the update is skipped and the test passes with the
+  behaviour broken (found while proving a test). (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

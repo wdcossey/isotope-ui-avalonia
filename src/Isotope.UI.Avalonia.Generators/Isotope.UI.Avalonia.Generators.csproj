@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Upstream's wrappers generator (src/Reactor.Wrappers.Generator), built for Avalonia: tools/sync vendors it into
+       src/Upstream/ with the transform rules in tools/sync/transforms.json (gen-*), and this project compiles that copy
+       plus our own partial (WrapperGenerator.Avalonia.cs). The library references it as an analyzer. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <!-- C# 15, as the other projects that compile upstream files. No `closed` hierarchies here, so no polyfill. -->
+    <LangVersion>15</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <AssemblyName>Isotope.UI.Avalonia.Generators</AssemblyName>
+    <RootNamespace>Isotope.UI.Wrappers.Generator</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsPackable>false</IsPackable>
+    <!-- Roslyn loads generators into the compiler process, so the assembly is architecture-neutral (as upstream's). -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <!-- RS2008: analyzer release tracking; RS1035/RS1036: banned-API and analyzer-rule checks, not run here. -->
+    <NoWarn>$(NoWarn);RS2008;RS1035;RS1036</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <UpstreamGenerator>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor.Wrappers.Generator\'))</UpstreamGenerator>
+    <UpstreamSourceMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor.SourceMap.Generator\'))</UpstreamSourceMap>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(UpstreamGenerator)*.cs" LinkBase="Upstream\Reactor.Wrappers.Generator" />
+    <Compile Include="$(UpstreamSourceMap)SourceMapShared.cs" Link="Upstream\Reactor.SourceMap.Generator\SourceMapShared.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 4.14: no newer than the compiler of the pinned .NET 11 SDK; upstream pins 5.0.0. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,455 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1Protocol/ControlRegistry.cs, last changed upstream in 262488ee5f92; transforms: winui-usings, drop-ControlRegistry-RegisterDecorator, drop-ControlRegistry-RegisterDecoratorForDerivedTypes, namespace-isotope. Do not edit: change the tools/sync rules.
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+
+
+namespace Isotope.UI.Core.V1Protocol;
+
+/// <summary>
+/// Spec 048 §8 — the global, lazy, lock-free control registry that backs the
+/// factory-as-registration pattern. Holds <see cref="Type"/> → factory-of-
+/// <see cref="IV1HandlerEntry"/> entries; never roots a handler or WinUI
+/// control type by itself. Every static reference to a handler/control type
+/// lives in the <i>callers</i> of <see cref="Register{TElement,TControl}"/> —
+/// per-control factory cctors (Pattern A) or <c>Reg&lt;…&gt;</c> static-field
+/// initializers (Pattern B), each on a per-control rooted path. The trimmer
+/// therefore keeps a control iff its factory is reachable from the app entry
+/// point.
+///
+/// <para><b>Idempotent first-wins.</b> Repeat <see cref="Register{TElement,TControl}"/>
+/// calls for the same element type are a silent no-op (spec §12.1). Multiple
+/// factories legitimately map to the same element type — e.g. <c>TextBlock()</c>,
+/// <c>Heading()</c>, and <c>Subheading()</c> all produce
+/// <c>TextBlockElement</c> (spec §10.3) — and a throw from a cctor would
+/// surface as a non-deterministic <c>TypeInitializationException</c> at the
+/// first-use point. The strict throw-on-duplicate policy from spec 047
+/// §13 Q17 is preserved on the explicit per-host
+/// <see cref="Reconciler.RegisterHandler{TElement,TControl}"/> path.</para>
+///
+/// <para><b>Hot path.</b> Per spec §9, <see cref="Register{TElement,TControl}"/>
+/// runs at most once per element type per process, on the cold first-use
+/// path. The steady-state per-host dispatch lookup short-circuits in the
+/// per-host <c>_v1Handlers</c> cache populated on the first registry hit;
+/// the registry itself is consulted at most once per (host, element type)
+/// pair.</para>
+///
+/// <para><b>AOT.</b> No reflection, no <see cref="Type.MakeGenericType"/>;
+/// the closed-type capture happens inside the generic
+/// <see cref="Register{TElement,TControl}"/> entry point so the AOT compiler
+/// can see the closed types statically. The internal map is keyed by
+/// <see cref="Type"/> and stores <see cref="Func{TResult}"/> delegates only —
+/// no MakeGenericType, no runtime type construction.</para>
+/// </summary>
+public static class ControlRegistry
+{
+    // Spec §8 — backed by ConcurrentDictionary<Type, Func<IV1HandlerEntry>>.
+    // The value is a *factory of the type-erased adapter* so the dispatcher
+    // can produce a fresh adapter on first per-host hit without re-running
+    // the generic dance. The factory itself is allocated once, inside the
+    // generic Register<E,C> below, and never references the handler/control
+    // type from any path the trimmer can see outside that generic frame.
+    private static readonly ConcurrentDictionary<Type, Func<IV1HandlerEntry>> s_entries = new();
+
+    // Spec 048 §3.4 — base-derived global path. Mirrors V1HandlerRegistry's
+    // _baseEntries / _baseCache pair so a single registration on a non-generic
+    // intermediate base routes every closed-T variant (the T-erasure pattern
+    // used by TemplatedListElementBase, LazyStackElementBase, ItemsRepeater,
+    // and ItemsView). Lookup falls back to a BaseType walk after exact-match
+    // miss; results are memoised (including null markers) so steady-state is
+    // O(1) per derived type.
+    private static readonly ConcurrentDictionary<Type, Func<IV1HandlerEntry>> s_baseEntries = new();
+    private static readonly ConcurrentDictionary<Type, Func<IV1HandlerEntry>?> s_baseCache = new();
+    private static readonly ConcurrentDictionary<Type, (int Generation, IV1SourceTargetResolver? Resolver)> s_sourceTargetResolvers = new();
+
+    /// <summary>
+    /// True once any decorator registration has been made. Latched, never cleared on
+    /// unregister — a stale <c>true</c> only costs the slower path, while a stale
+    /// <c>false</c> would lose source attribution, so the safe direction is one-way.
+    ///
+    /// <para>This exists so the common case can skip the registry entirely.
+    /// <c>ReactorSourceMap.DecoratorTarget</c> runs on the reconciler's shallow-skip
+    /// path for EVERY callback-free element, and most apps register no decorators of
+    /// their own, so an unguarded <see cref="TryGetSourceTarget"/> call added a
+    /// <see cref="ConcurrentDictionary{TKey,TValue}"/> lookup (and a handler-factory
+    /// invocation on first touch) to every skip.</para>
+    /// </summary>
+    internal static bool HasDecoratorRegistrations => s_hasDecoratorRegistrations;
+
+    private static volatile bool s_hasDecoratorRegistrations;
+
+    /// <summary>
+    /// Bumped whenever a registration invalidates <see cref="s_sourceTargetResolvers"/>.
+    /// <see cref="TryGetSourceTarget"/> reads it before resolving and publishes only if it is
+    /// unchanged, so a resolve that raced an invalidation is discarded rather than
+    /// cached forever.
+    /// </summary>
+    private static volatile int s_registryGeneration;
+
+    /// <summary>
+    /// Spec §8 — register a handler factory for <typeparamref name="TElement"/>.
+    /// Idempotent first-wins: if an entry already exists for
+    /// <c>typeof(TElement)</c>, this call is a silent no-op. The handler
+    /// factory is invoked at most once per (host, element type) — on the
+    /// first dispatch hit — and the resulting adapter is cached into the
+    /// host's <c>_v1Handlers</c> map so steady-state dispatch is the
+    /// existing fast per-host lookup.
+    ///
+    /// <para>The <paramref name="handlerFactory"/> delegate <b>should</b> be
+    /// a <c>static</c> lambda (no captures) — Pattern A / Pattern B both
+    /// rely on the single allocation being interned in a static field at
+    /// the call site. A capturing lambda is functionally correct but
+    /// allocates a closure on every <c>Reg&lt;&gt;.Init</c> / cctor run,
+    /// undoing the cost-model claim in spec §9.</para>
+    ///
+    /// <para><b>Echo suppression for value-bearing controls (issue #206).</b> A
+    /// custom <see cref="IElementHandler{TElement,TControl}"/> registered here
+    /// that writes a value-bearing property in <c>Update</c> must guard that
+    /// write with the supported public primitive
+    /// <see cref="ReactorBinding{TElement}"/>'s <c>WriteSuppressed</c> method
+    /// (or the static <see cref="Isotope.UI.Core.ReactorBinding"/>) so
+    /// the control's own echo does not flow back as a spurious user edit. Never
+    /// reach into the internal <c>ChangeEchoSuppressor</c>. Descriptor authors
+    /// get this through <c>.Controlled</c> / <c>.HandCodedControlled</c>. See
+    /// <c>docs/guide/extending-reactor-controls.md</c>.</para>
+    /// </summary>
+    /// <typeparam name="TElement">The element record type the handler
+    /// dispatches against. Used as the dispatch key (<see cref="Type"/>).</typeparam>
+    /// <typeparam name="TControl">The WinUI control the handler mounts.</typeparam>
+    /// <param name="handlerFactory">A factory that, when invoked, returns a
+    /// fresh handler. Strongly recommended to be a <c>static</c> lambda
+    /// (e.g. <c>static () =&gt; new MarqueeHandler()</c>) so the delegate is
+    /// cached in a static field and no closure is allocated.</param>
+    public static void Register<TElement, TControl>(
+        Func<IElementHandler<TElement, TControl>> handlerFactory)
+        where TElement : Element
+        where TControl : UIElement
+    {
+        ArgumentNullException.ThrowIfNull(handlerFactory);
+
+        // Wrap the handler factory in an adapter factory. The closure
+        // captures `handlerFactory` only; the closed generic types
+        // TElement/TControl are seen statically by the JIT/AOT compiler
+        // because this method's frame is itself closed-generic at every
+        // call site. Allocated once per (element type) on registration,
+        // not per dispatch.
+        Func<IV1HandlerEntry> adapterFactory = () =>
+            new V1HandlerAdapter<TElement, TControl>(handlerFactory());
+
+        // First-wins: TryAdd silently no-ops on repeat. Lock-free — relies on
+        // ConcurrentDictionary's per-bucket fine-grained locking, not a
+        // process-wide monitor.
+        if (s_entries.TryAdd(typeof(TElement), adapterFactory))
+        {
+            // Invalidate + bump: a new registration changes what TryResolve returns for
+            // this type, so any cached source-target resolution for it is stale.
+            //
+            // The decorator latch is deliberately NOT set here. This registers an
+            // ORDINARY control, and every built-in factory reaches this method, so
+            // latching would make HasDecoratorRegistrations true in every app and
+            // defeat the fast path that keeps the registry off the shallow-skip path.
+            s_sourceTargetResolvers.TryRemove(typeof(TElement), out _);
+            global::System.Threading.Interlocked.Increment(ref s_registryGeneration);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// Spec 048 §3.4 — base-derived sibling of <see cref="Register{TElement,TControl}"/>.
+    /// Registers a handler for <typeparamref name="TBase"/> that also catches
+    /// every concrete element type whose runtime <see cref="Type"/> derives
+    /// from <typeparamref name="TBase"/>. Exact-type registrations (via
+    /// <see cref="Register{TElement,TControl}"/> /
+    /// <see cref="RegisterDecorator{TElement}"/>) take precedence over a
+    /// base-derived registration, matching the per-host
+    /// <c>V1HandlerRegistry.TryGet</c> precedence.
+    ///
+    /// <para>Used for the four cases that registered through
+    /// <c>Reconciler.RegisterDescriptorForDerivedTypes</c> on the per-host
+    /// path: <c>TemplatedListElementBase</c>, <c>LazyStackElementBase</c>,
+    /// <c>ItemsRepeaterElement</c>, and <c>ItemsViewElement</c> — each is a
+    /// non-generic intermediate base whose closed-T variants
+    /// (<c>TemplatedListViewElement&lt;Person&gt;</c>, etc.) should all share
+    /// the same handler.</para>
+    /// </summary>
+    public static void RegisterForDerivedTypes<TBase, TControl>(
+        Func<IElementHandler<TBase, TControl>> handlerFactory)
+        where TBase : Element
+        where TControl : UIElement
+    {
+        ArgumentNullException.ThrowIfNull(handlerFactory);
+
+        Func<IV1HandlerEntry> adapterFactory = () =>
+            new V1HandlerAdapter<TBase, TControl>(handlerFactory());
+
+        if (s_baseEntries.TryAdd(typeof(TBase), adapterFactory))
+        {
+            // Invalidate any prior "no base match" cache entries so a
+            // derived type that previously missed will pick this base up
+            // on its next dispatch. Exact-match cache entries don't apply
+            // here (s_entries is consulted before s_baseCache).
+            s_baseCache.Clear();
+            s_sourceTargetResolvers.Clear();
+            global::System.Threading.Interlocked.Increment(ref s_registryGeneration);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// Spec §8 — internal resolution hatch the <see cref="Reconciler"/>
+    /// consults when its per-host <c>_v1Handlers</c> and per-host
+    /// <c>_typeRegistry</c> both miss. On a hit, the caller is responsible
+    /// for invoking the returned factory <i>once</i> and caching the result
+    /// into its per-host <c>_v1Handlers</c> so subsequent dispatches on the
+    /// same host short-circuit before this lookup.
+    /// </summary>
+    /// <param name="elementType">The exact runtime element type from
+    /// <c>element.GetType()</c>.</param>
+    /// <param name="entry">When this method returns <see langword="true"/>,
+    /// the adapter factory that, when invoked, produces a fresh
+    /// <see cref="IV1HandlerEntry"/>. The caller invokes the factory and
+    /// caches the result; this method never invokes it itself (callers may
+    /// race; the per-host cache handles the de-dup deterministically).</param>
+    internal static bool TryResolve(
+        Type elementType,
+        [NotNullWhen(true)] out Func<IV1HandlerEntry>? entry)
+    {
+        if (s_entries.TryGetValue(elementType, out entry)) return true;
+        // §3.4 base-derived fallback. Skip the walk fast-path when no
+        // base-derived entries have ever been registered.
+        if (s_baseEntries.IsEmpty) { entry = null; return false; }
+        if (s_baseCache.TryGetValue(elementType, out var cached))
+        {
+            entry = cached;
+            return cached is not null;
+        }
+        for (var t = elementType.BaseType; t is not null && t != typeof(object); t = t.BaseType)
+        {
+            if (s_baseEntries.TryGetValue(t, out var found))
+            {
+                if (!elementType.IsCollectible)
+                    s_baseCache.TryAdd(elementType, found);
+                entry = found;
+                return true;
+            }
+        }
+        // Cache the negative result so subsequent dispatches don't walk
+        // the inheritance chain again. Never for a collectible plug-in's type: this cache
+        // lives for the process and would keep its load context from unloading.
+        if (!elementType.IsCollectible)
+            s_baseCache.TryAdd(elementType, null);
+        entry = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Resolves the source-map target for a globally registered decorator
+    /// element, if its handler provides one.
+    /// </summary>
+    /// <summary>
+    /// Resolves the source-map target for a globally registered element.
+    ///
+    /// <para>Tri-state on purpose. The return value answers "is there a registration for
+    /// this element type at all", which is different from "did that registration name a
+    /// target". An app can register its own ordinary handler for <c>FlyoutElement</c> and
+    /// mount its own control, or register a decorator whose <c>GetSourceTarget</c>
+    /// deliberately returns null; in both cases the registration OWNS the answer and
+    /// <c>ReactorSourceMap</c>'s built-in unwrap must not override it with
+    /// <c>Target</c>. Collapsing those onto a plain <c>Element?</c> made a registered
+    /// override silently report the target factory's line instead of the factory that
+    /// actually created the realized control.</para>
+    /// </summary>
+    /// <param name="element">The element whose source target is being resolved.</param>
+    /// <param name="target">The registration's source target, which may legitimately be
+    /// null when the registration exists but names no target.</param>
+    /// <returns>True if a registration exists for the element's type.</returns>
+    internal static bool TryGetSourceTarget(Element element, out Element? target)
+    {
+        target = null;
+
+        var elementType = element.GetType();
+        var generation = s_registryGeneration;
+
+        // The generation is stored WITH the entry and validated on lookup, rather than
+        // checked just before publishing. A check-then-publish is not atomic: a
+        // registration can invalidate and bump between the check and the assignment, so
+        // the stale entry would be reinserted and then used forever, and a concurrently
+        // registered decorator would never expose its source target. Validating on READ
+        // makes a stale entry self-correcting — it is ignored and re-resolved.
+        if (!s_sourceTargetResolvers.TryGetValue(elementType, out var cached)
+            || cached.Generation != generation)
+        {
+            var resolver = TryResolve(elementType, out var factory)
+                ? factory() as IV1SourceTargetResolver ?? NullSourceTargetResolver.Instance
+                : null;
+
+            cached = (generation, resolver);
+            // This cache lives for the process: a collectible plug-in's element type is
+            // resolved every time instead, so the cache never keeps its load context alive.
+            if (!elementType.IsCollectible)
+                s_sourceTargetResolvers[elementType] = cached;
+        }
+
+        if (cached.Resolver is null) return false;
+
+        target = cached.Resolver.GetSourceTarget(element);
+        return true;
+    }
+
+    private sealed class NullSourceTargetResolver : IV1SourceTargetResolver
+    {
+        internal static readonly NullSourceTargetResolver Instance = new();
+
+        private NullSourceTargetResolver() { }
+
+        public Element? GetSourceTarget(Element element) => null;
+    }
+
+    /// <summary>
+    /// Spec §8 — true if a global registration exists for the given element
+    /// type. Used by diagnostics; the Reconciler's dispatch path uses
+    /// <see cref="TryResolve"/> directly. Reports <i>exact-type</i> entries
+    /// only — for the §3.4 base-derived effective-dispatch check use
+    /// <see cref="ContainsForType"/>.
+    /// </summary>
+    internal static bool Contains(Type elementType) => s_entries.ContainsKey(elementType);
+
+    /// <summary>
+    /// Spec 048 §3.4 — true if dispatch is wired for <paramref name="elementType"/>
+    /// either by an exact-type registration OR by a base-derived registration
+    /// on one of its ancestors. Test/diagnostic surface mirroring the
+    /// effective behaviour of <see cref="TryResolve"/>.
+    /// </summary>
+    internal static bool ContainsForType(Type elementType)
+        => TryResolve(elementType, out _);
+
+    /// <summary>
+    /// Spec 048 §3.4 — true if <paramref name="baseType"/> itself was
+    /// registered via <see cref="RegisterForDerivedTypes{TBase,TControl}"/> /
+    /// <see cref="RegisterDecoratorForDerivedTypes{TBase}"/>.
+    /// </summary>
+    internal static bool ContainsBase(Type baseType) => s_baseEntries.ContainsKey(baseType);
+
+    /// <summary>
+    /// Spec 048 §3.4 — snapshot of every element type registered via an
+    /// exact-type entry (<see cref="Register{TElement,TControl}"/> /
+    /// <see cref="RegisterDecorator{TElement}"/>). Test/diagnostic surface; the
+    /// catalog-drift guard for <c>ReactorApp.RegisterAllBuiltIns()</c> compares
+    /// this against its expected built-in set.
+    /// </summary>
+    internal static IReadOnlyCollection<Type> RegisteredElementTypes => s_entries.Keys.ToArray();
+
+    /// <summary>
+    /// Spec 048 §3.4 — snapshot of every base type registered via a base-derived
+    /// entry (<see cref="RegisterForDerivedTypes{TBase,TControl}"/> /
+    /// <see cref="RegisterDecoratorForDerivedTypes{TBase}"/>). Test/diagnostic
+    /// surface; companion to <see cref="RegisteredElementTypes"/>.
+    /// </summary>
+    internal static IReadOnlyCollection<Type> RegisteredBaseElementTypes => s_baseEntries.Keys.ToArray();
+
+}

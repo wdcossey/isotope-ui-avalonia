@@ -1,0 +1,536 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs, last changed upstream in 7fc29f65931d; transforms: winui-usings, winui-alias-panel, winui-qualified-panel, namespace-isotope. Do not edit: change the tools/sync rules.
+using Microsoft.Extensions.Logging;
+
+
+
+namespace Isotope.UI.Core.V1Protocol;
+
+/// <summary>
+/// Spec 047 §14 Phase 1 (1.6) — adapter that bridges
+/// <see cref="IElementHandler{TElement,TControl}"/> to the type-erased
+/// <see cref="IV1HandlerEntry"/> dispatch table on
+/// <see cref="V1HandlerRegistry"/>. Closes over a single
+/// <c>IElementHandler&lt;TElement,TControl&gt;</c> instance; downcasts at
+/// the dispatch boundary so the hot path is dictionary lookup + interface
+/// call + cast (the cast is JIT-folded for monomorphic call sites).
+/// </summary>
+internal sealed class V1HandlerAdapter<TElement, TControl> : IV1HandlerEntry, IV1ChildEnumerator, IV1TeardownOwner
+    where TElement : Element
+    where TControl : UIElement
+{
+    private readonly IElementHandler<TElement, TControl> _handler;
+
+    public V1HandlerAdapter(IElementHandler<TElement, TControl> handler)
+    {
+        _handler = handler;
+    }
+
+    public bool HasUnmount => true; // the default-body call is cheap; no point branching.
+
+    /// <summary>
+    /// Whether unmount must reach this handler for teardown the generic unmount walk does not
+    /// do: child slots it does not reach (named slots, item hosts, imperative children, or a
+    /// single-content strategy, or a panel strategy whose collection that walk does not visit), or, for a
+    /// hand-written handler, an <c>Unmount</c> body (NavigationHost detaches its route
+    /// subscription and clears its page cache there). A descriptor's own <c>OnUnmount</c>
+    /// already forces its tag at mount. Only consulted in the Native AOT diagnostics mode that
+    /// skips call-site-only tags, where it keeps the tag unmount dispatch goes through.
+    /// <para>The only strategy the walk is proven to cover is a panel strategy whose collection
+    /// is the control's own <see cref="Panel.Children"/>, the
+    /// collection the walk visits. A single-content strategy writes through an opaque setter,
+    /// and this runs before its child is mounted, so it always keeps the tag.</para>
+    /// </summary>
+    public bool OwnsTeardown(UIElement control)
+        => Reconciler.SkipsCallSiteOnlyTags
+            && (_handler is not Descriptor.IDescriptorBackedHandler
+                || (_handler.ChildrenForUnmount is { } strategy
+                    && strategy is not None<TElement, TControl>
+                    && !(strategy is Panel<TElement, TControl> panel
+                        && control is Panel host and TControl typed
+                        && ReferenceEquals(panel.GetCollection(typed), host.Children))));
+
+    /// <summary>
+    /// The live children this handler's strategy hosts, the ones its unmount tears down
+    /// (single content, named slots, panel children, item-host items). For diagnostics walks that must reach
+    /// Reactor content a control template has not realized yet.
+    /// </summary>
+    public void VisitLiveChildren(UIElement control, Action<UIElement> visit)
+    {
+        if (control is not TControl typed) return;
+        switch (_handler.ChildrenForUnmount)
+        {
+            case SingleContent<TElement, TControl> { GetCurrentChild: { } getCurrent }:
+                if (getCurrent(typed) is UIElement single) visit(single);
+                return;
+            case NamedSlots<TElement, TControl> ns:
+                for (int i = 0; i < ns.Slots.Count; i++)
+                {
+                    if (ns.Slots[i].GetCurrentChild is { } getSlot && getSlot(typed) is UIElement slotChild)
+                        visit(slotChild);
+                }
+                return;
+            case Panel<TElement, TControl> panel:
+            {
+                // The collection can belong to an inner panel the host's template has not
+                // attached yet, outside the visual and logical walks.
+                var panelChildren = panel.GetCollection(typed);
+                for (int i = 0; i < panelChildren.Count; i++)
+                    visit(panelChildren[i]);
+                return;
+            }
+            case ItemsHost<TElement, TControl> host:
+                var collection = host.GetCollection(typed);
+                for (int i = 0; i < collection.Count; i++)
+                {
+                    if (collection[i] is UIElement item) visit(item);
+                }
+                return;
+        }
+    }
+
+    // <snippet:adapter-mount>
+    public UIElement Mount(Element element, Action requestRerender, Reconciler reconciler)
+    {
+        var typedEl = (TElement)element;
+        var ctx = new MountContext(reconciler, requestRerender);
+        var control = _handler.Mount(ctx, typedEl);
+
+        // Anchor element identity on the control via the attached state DP so
+        // event trampolines can re-fetch the live element on each fire.
+        // Gated: callback-free leaves never dispatch into Reactor code, so we
+        // skip the ReactorState allocation for them (§4.4 follow-up).
+        // <snippet:element-tag-refresh-mount>
+        if (control is FrameworkElement fe)
+            Reconciler.SetElementTagIfNeeded(fe, typedEl, OwnsTeardown(control));
+        // </snippet:element-tag-refresh-mount>
+
+        // Strategy dispatch — only when the handler declares a non-None Children strategy.
+        var strategy = _handler.Children;
+        if (strategy is not null)
+            DispatchChildrenMount(strategy, ctx, typedEl, control);
+
+        // Post-children mount hook. Fires after every child has mounted
+        // (whether via the strategy switch above or an items-binder strategy
+        // the handler dispatched inline before returning). Lets handlers
+        // subscribe events that must wire after children-add. Default no-op
+        // for handlers that don't override it.
+        _handler.AfterChildrenMount(ctx, typedEl, control);
+
+        return control;
+    }
+    // </snippet:adapter-mount>
+
+    public UIElement Update(Element oldEl, Element newEl, UIElement control, Action requestRerender, Reconciler reconciler)
+    {
+        var typedOld = (TElement)oldEl;
+        var typedNew = (TElement)newEl;
+
+        // Issue #919 — defense in depth. The engine only routes here when
+        // Reconciler.CanUpdate matched the element types, which normally implies the realized
+        // control is a TControl. A bookkeeping desync (historically: a virtualized row whose
+        // realized container could not be swapped) could pair a TElement with a foreign control,
+        // and the previous hard `(TControl)control` cast turned that into an app-crashing
+        // InvalidCastException mid-render. Remount instead: returning a control that differs from
+        // `control` is already part of the update contract — Reconciler.ReconcileImperative
+        // unmounts the stale control and the caller installs the replacement in the parent slot.
+        if (control is not TControl typedControl)
+        {
+            reconciler._logger?.LogWarning(
+                "Reconciler: {Element} was paired with a {Actual}, expected {Expected} — remounting the subtree.",
+                typeof(TElement).Name, control.GetType().Name, typeof(TControl).Name);
+            // Mount only returns null for empty elements, which CanUpdate never routes here;
+            // keep the stale control in the slot rather than breaking the non-null contract.
+            return reconciler.Mount(typedNew, requestRerender) ?? control;
+        }
+
+        var ctx = new UpdateContext(reconciler, requestRerender);
+        _handler.Update(ctx, typedOld, typedNew, typedControl);
+
+        // <snippet:element-tag-refresh-update>
+        if (control is FrameworkElement fe)
+            Reconciler.SetElementTagIfNeeded(fe, typedNew, OwnsTeardown(control));
+        // </snippet:element-tag-refresh-update>
+
+        var strategy = _handler.Children;
+        if (strategy is not null)
+            DispatchChildrenUpdate(strategy, reconciler, requestRerender, typedOld, typedNew, typedControl);
+
+        // §13 Q12 — standard handlers never substitute the control on
+        // update; identity is preserved across updates.
+        return control;
+    }
+
+    public V1UnmountDisposition Unmount(UIElement control, Reconciler reconciler)
+    {
+        var typedControl = (TControl)control;
+        var ctx = new UnmountContext(reconciler);
+        // Inside a teardown that must finish (IsolateUnmountCleanupFailures), a throwing unmount
+        // hook still lets the strategy tear the control's children down (a named slot is out of
+        // the engine's generic child walk); the failure is rethrown afterwards for the engine
+        // to report once and to keep the half-torn-down control out of the pool.
+        global::System.Runtime.ExceptionServices.ExceptionDispatchInfo? hookFailure = null;
+        try
+        {
+            _handler.Unmount(ctx, typedControl);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException
+            && reconciler.IsolatesUnmountCleanupFailures)
+        {
+            hookFailure = global::System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex);
+        }
+
+        // Spec 047 §14 — panel-strategy handlers do NOT own child teardown
+        // (their Unmount is a no-op; descriptors never recurse into children).
+        // Returning ContinueDefaultTraversal lets the engine's existing
+        // `control is Panel` recursion run in BOTH unmount paths
+        // (UnmountRecursive + UnmountAndCollect), tearing down + pooling each
+        // child — byte-identical to the legacy decorator panel handlers, which
+        // also return ContinueDefaultTraversal. Without this, CollectSelf would
+        // early-return before the panel-child recursion and leak child Component
+        // effect cleanups.
+        if (_handler.ChildrenForUnmount is Panel<TElement, TControl>)
+        {
+            hookFailure?.Throw();
+            return V1UnmountDisposition.ContinueDefaultTraversal;
+        }
+
+        // Issue #375 — strategy-driven child teardown on Unmount. Without
+        // this, a Component nested under a SingleContent / NamedSlots /
+        // ItemsHost / IItemsBinderStrategy parent (e.g. Border, SplitView,
+        // ListBox, TabView) leaks its UseEffect cleanups when the parent
+        // unmounts: the engine's V1 arm early-returns on CollectSelf before
+        // the legacy `border.Child` / `cc.Content` recursion can reach the
+        // component wrapper Border that anchors the component-node lookup
+        // in _componentNodes. Walk the strategy's live children and run
+        // UnmountChild on each — the recursive UnmountRecursive call
+        // surfaces every nested component wrapper and fires RunCleanups.
+        //
+        // We consult ChildrenForUnmount (not Children) because descriptor
+        // handlers hide ItemsHost / IItemsBinderStrategy strategies from
+        // Children (they dispatch those inline during Mount/Update so the
+        // collection is populated before SelectedIndex initial writes
+        // land); on Unmount the ordering constraint doesn't apply, so the
+        // descriptor exposes the real strategy here for the teardown walk.
+        var strategy = _handler.ChildrenForUnmount;
+        if (strategy is not null)
+        {
+            if (hookFailure is null)
+                DispatchChildrenUnmount(strategy, reconciler, typedControl);
+            else
+                // The failed hook may have torn some children down already: skip those.
+                reconciler.SkippingIsolatedTornDown((strategy, reconciler, typedControl),
+                    static s => DispatchChildrenUnmount(s.strategy, s.reconciler, s.typedControl));
+        }
+        hookFailure?.Throw();
+
+        // Standard handlers always opt into pool collection — matches
+        // the pre-Phase-3-completion behavior.
+        return V1UnmountDisposition.CollectSelf;
+    }
+
+    // ── Strategy dispatch ────────────────────────────────────────────
+
+    private static void DispatchChildrenMount(
+        ChildrenStrategy<TElement, TControl> strategy,
+        MountContext ctx, TElement element, TControl control)
+    {
+        // §14 Phase 3 finish — consolidated dispatch arm. Every items-
+        // binder strategy variant (templated/erased today; tree/tab/pivot
+        // when they arrive) implements IItemsBinderStrategy, so the cost
+        // here is one is-check + one interface call. Reconciler.BindKeyed*
+        // owns the realization plumbing (ReactorListState + KeyedListDiff
+        // + per-control realization channel).
+        if (strategy is IItemsBinderStrategy binder && control is FrameworkElement feBinder)
+        {
+            binder.Bind(feBinder, oldElement: null, element, ctx.Reconciler, ctx.RequestRerender, isMount: true);
+            return;
+        }
+        switch (strategy)
+        {
+            case None<TElement, TControl>:
+                return;
+
+            case SingleContent<TElement, TControl> single:
+            {
+                var child = single.GetChild(element);
+                // No declared child: leave setter-supplied native content alone.
+                // Empty() is non-null and still clears the slot intentionally.
+                if (child is null) return;
+                var mounted = ctx.MountChild(child);
+                single.SetChild(control, mounted);
+                return;
+            }
+
+            case Panel<TElement, TControl> panel:
+            {
+                var collection = panel.GetCollection(control);
+                var children = panel.GetChildren(element);
+                // An update reports duplicated sibling keys from the keyed reconcile; a panel
+                // that never re-renders is reported here instead.
+                if (children.Count > 1)
+                    Internal.KeyedListDiff.ReportDuplicateSiblingKeys(children, ctx.Reconciler, control);
+                var attached = panel.PerChildAttached;
+                var afterAll = panel.PerChildAttachedAfterAll;
+                var pairs = afterAll is null
+                    ? null
+                    : new List<(UIElement, Element)>(children.Count);
+                // Phase 1: append-only (no keyed reconcile). Phase 3 integrates with spec-042.
+                for (int i = 0; i < children.Count; i++)
+                {
+                    var childEl = children[i];
+                    var mounted = ctx.MountChild(childEl);
+                    if (mounted is not null)
+                    {
+                        collection.Add(mounted);
+                        attached?.Invoke(control, mounted, childEl);
+                        pairs?.Add((mounted, childEl));
+                    }
+                }
+                // pairs is non-null exactly when afterAll is non-null (see
+                // the conditional allocation above), so the afterAll guard
+                // alone is sufficient.
+                if (afterAll is not null)
+                    afterAll(control, pairs!);
+                return;
+            }
+
+            case NamedSlots<TElement, TControl> ns:
+            {
+                for (int i = 0; i < ns.Slots.Count; i++)
+                {
+                    var slot = ns.Slots[i];
+                    var childEl = slot.GetChild(element);
+                    var mounted = childEl is null ? null : ctx.MountChild(childEl);
+                    slot.SetChild(control, mounted);
+                }
+                return;
+            }
+
+            case Imperative<TElement, TControl> imp:
+                imp.Reconcile(ctx, element, element, control);
+                return;
+
+            case ItemsHost<TElement, TControl> ih:
+                ItemsHostReconciliation.Bind(ih, element, control, ctx.Reconciler, ctx.RequestRerender, isMount: true);
+                return;
+        }
+    }
+
+    private static void DispatchChildrenUpdate(
+        ChildrenStrategy<TElement, TControl> strategy,
+        Reconciler reconciler, Action requestRerender,
+        TElement oldEl, TElement newEl, TControl control)
+    {
+        // §14 Phase 3 finish — consolidated dispatch arm (see Mount path).
+        // isMount: false so the bind runs the keyed-diff branch.
+        if (strategy is IItemsBinderStrategy binder && control is FrameworkElement feBinder)
+        {
+            binder.Bind(feBinder, oldEl, newEl, reconciler, requestRerender, isMount: false);
+            return;
+        }
+        switch (strategy)
+        {
+            case None<TElement, TControl>:
+                return;
+
+            case SingleContent<TElement, TControl> single:
+            {
+                // Structural reconcile against the existing slot — keeps
+                // descendant component state across re-renders. When the
+                // strategy doesn't expose GetCurrentChild we fall back to
+                // remount (the original Phase 1 behavior), which is correct
+                // but discards descendant state.
+                var oldChild = single.GetChild(oldEl);
+                var newChild = single.GetChild(newEl);
+                if (oldChild is null && newChild is null) return;
+                if (single.GetCurrentChild is { } getCur)
+                {
+                    var existing = getCur(control);
+                    var next = reconciler.ReconcileV1Child(oldChild, newChild, existing, requestRerender);
+                    if (!ReferenceEquals(existing, next))
+                        single.SetChild(control, next);
+                }
+                else if (!ReferenceEquals(oldChild, newChild))
+                {
+                    var mounted = newChild is null ? null : reconciler.Mount(newChild, requestRerender);
+                    single.SetChild(control, mounted);
+                }
+                return;
+            }
+
+            case Panel<TElement, TControl> panel:
+            {
+                // Spec 047 §14 — keyed reconcile via spec-042's ChildReconciler,
+                // mirroring the legacy hand-coded panel Update* methods exactly
+                // (e.g. UpdateFlex: ReconcileChildren then a physical-index
+                // post-pass that re-applies attached props). This preserves
+                // WinUI control identity across keyed reorder/reverse/swap/
+                // remove-middle — the gap the legacy decorator handlers existed
+                // to cover.
+                var collection = panel.GetCollection(control);
+                var newList = panel.GetChildren(newEl);
+                var oldList = panel.GetChildren(oldEl);
+                // ChildReconciler.Reconcile takes Element[]; avoid a copy when
+                // the descriptor already exposes the backing array.
+                var newChildren = newList as Element[] ?? global::System.Linq.Enumerable.ToArray(newList);
+                var oldChildren = oldList as Element[] ?? global::System.Linq.Enumerable.ToArray(oldList);
+
+                reconciler.ReconcilePanelChildrenInto(oldChildren, newChildren, collection, requestRerender, control);
+
+                // Re-apply per-child attached props by walking filtered-new
+                // children (null / EmptyElement skipped) in lockstep with the
+                // live collection — ChildReconciler leaves the collection in
+                // filtered-new order. Identical to the legacy Update* post-pass.
+                var attached = panel.PerChildAttached;
+                var afterAll = panel.PerChildAttachedAfterAll;
+                if (attached is not null || afterAll is not null)
+                {
+                    var pairs = afterAll is null
+                        ? null
+                        : new List<(UIElement, Element)>(newChildren.Length);
+                    // A control still in the collection only to play its exit transition belongs
+                    // to no new child; step past it, or every later child gets its neighbour's
+                    // attached props (a Grid cell's column) and keeps them after the fade.
+                    bool skipExiting = reconciler.HasExitingControls;
+                    int panelIdx = 0;
+                    for (int i = 0; i < newChildren.Length && panelIdx < collection.Count; i++)
+                    {
+                        var childEl = newChildren[i];
+                        if (childEl is null or EmptyElement) continue;
+                        var live = collection[panelIdx];
+                        while (skipExiting && reconciler.IsExiting(live) && ++panelIdx < collection.Count)
+                            live = collection[panelIdx];
+                        if (panelIdx >= collection.Count) break;
+                        attached?.Invoke(control, live, childEl);
+                        pairs?.Add((live, childEl));
+                        panelIdx++;
+                    }
+                    // pairs is non-null exactly when afterAll is non-null.
+                    if (afterAll is not null)
+                        afterAll(control, pairs!);
+                }
+                return;
+            }
+
+            case NamedSlots<TElement, TControl> ns:
+            {
+                for (int i = 0; i < ns.Slots.Count; i++)
+                {
+                    var slot = ns.Slots[i];
+                    var oldChild = slot.GetChild(oldEl);
+                    var newChild = slot.GetChild(newEl);
+                    if (slot.GetCurrentChild is { } getCur)
+                    {
+                        var existing = getCur(control);
+                        var next = reconciler.ReconcileV1Child(oldChild, newChild, existing, requestRerender);
+                        if (!ReferenceEquals(existing, next))
+                            slot.SetChild(control, next);
+                    }
+                    else if (!ReferenceEquals(oldChild, newChild))
+                    {
+                        var mounted = newChild is null ? null : reconciler.Mount(newChild, requestRerender);
+                        slot.SetChild(control, mounted);
+                    }
+                }
+                return;
+            }
+
+            case Imperative<TElement, TControl> imp:
+                imp.Reconcile(new MountContext(reconciler, requestRerender), oldEl, newEl, control);
+                return;
+
+            case ItemsHost<TElement, TControl> ih:
+                ItemsHostReconciliation.Bind(ih, newEl, control, reconciler, requestRerender, isMount: false);
+                return;
+        }
+    }
+
+    // ── Unmount strategy dispatch (issue #375) ───────────────────────
+    //
+    // When a parent control is unmounted, walk its children strategy and
+    // tear down the live child(ren) so descendant Component UseEffect
+    // cleanups run. Before this dispatch existed, only Panel strategy
+    // was covered (via ContinueDefaultTraversal + the legacy
+    // `control is Panel` recursion); SingleContent / NamedSlots /
+    // ItemsHost / IItemsBinderStrategy parents silently leaked any
+    // nested component cleanups because CollectSelf early-returned in
+    // the engine's V1 arm before the legacy `border.Child` / `cc.Content`
+    // recursion could reach the inner component wrapper.
+    //
+    // The teardown delegates to <c>reconciler.UnmountChild</c> (which
+    // runs the full <c>UnmountRecursive</c> path on each child), so any
+    // depth of nesting is handled — including a component nested deep
+    // under multiple Border / SplitView / TabView layers.
+    private static void DispatchChildrenUnmount(
+        ChildrenStrategy<TElement, TControl> strategy,
+        Reconciler reconciler, TControl control)
+    {
+        // IItemsBinderStrategy covers templated lists (keyed item realization
+        // owned by the reconciler-side BindKeyedItemsSource pipeline) plus
+        // TabItemsHost / PreMountedItems (positional containers whose
+        // realized content lives in TabViewItem / PivotItem / FlipViewItem
+        // ContentControl slots). Keyed-templated strategies tear down their
+        // realized containers via the reconciler-side pipeline; the
+        // positional binder strategies need explicit per-container teardown.
+        //
+        // Issue #375 — dispatch through the strategy's own Unbind hook
+        // rather than iterating ItemsControl.Items. TabView populates
+        // TabItems (not Items), so a blanket .Items walk would miss tabs
+        // entirely. Each concrete strategy reaches its real collection via
+        // GetCollection (TabView.TabItems / FlipView.Items / etc).
+        if (strategy is IItemsBinderStrategy binder)
+        {
+            if (strategy is ITemplatedItemsStrategy or IErasedTemplatedItemsStrategy)
+            {
+                // Keyed templated strategies — reconciler-side teardown of
+                // the realization channel runs out-of-band on container
+                // recycle; nothing to do here.
+                return;
+            }
+            if (control is FrameworkElement fe)
+                binder.Unbind(fe, reconciler);
+            return;
+        }
+
+        switch (strategy)
+        {
+            case None<TElement, TControl>:
+                return;
+
+            case SingleContent<TElement, TControl> single:
+            {
+                if (single.GetCurrentChild is { } getCur
+                    && getCur(control) is UIElement child)
+                {
+                    reconciler.UnmountChild(child);
+                }
+                return;
+            }
+
+            case NamedSlots<TElement, TControl> ns:
+            {
+                for (int i = 0; i < ns.Slots.Count; i++)
+                {
+                    var slot = ns.Slots[i];
+                    if (slot.GetCurrentChild is { } getCur
+                        && getCur(control) is UIElement child)
+                    {
+                        reconciler.UnmountChild(child);
+                    }
+                }
+                return;
+            }
+
+            case ItemsHost<TElement, TControl> ih:
+                ItemsHostReconciliation.Unbind(ih, control, reconciler);
+                return;
+
+            case Imperative<TElement, TControl> imp:
+                // The handler owns reconciliation and child identity for an
+                // Imperative strategy, so it also owns teardown: the engine has
+                // no view onto the slots and runs the strategy's Unmount, if any.
+                imp.Unmount?.Invoke(new UnmountContext(reconciler), control);
+                return;
+        }
+    }
+}

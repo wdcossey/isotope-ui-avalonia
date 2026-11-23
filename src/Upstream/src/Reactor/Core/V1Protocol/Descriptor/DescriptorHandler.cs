@@ -1,0 +1,249 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1Protocol/Descriptor/DescriptorHandler.cs, last changed upstream in a60545539ed3; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+using System.Diagnostics.CodeAnalysis;
+
+
+namespace Isotope.UI.Core.V1Protocol.Descriptor;
+
+/// <summary>
+/// Spec 047 §6 / §14 Phase 2 (Q1 spike) — interpreter that drives a
+/// <see cref="ControlDescriptor{TElement,TControl}"/> against the v1
+/// protocol surface.
+///
+/// <para>Implemented as a regular
+/// <see cref="IElementHandler{TElement,TControl}"/> so the
+/// <see cref="V1HandlerAdapter{TElement,TControl}"/> dispatch shell is
+/// identical between the descriptor and hand-coded handler paths — the only
+/// thing that differs between the Q1 A|B variants is the body of Mount /
+/// Update. Any measured delta is the interpreter's tax, not a different
+/// dispatch shape.</para>
+///
+/// <para><b>Mount sequence</b> (matches the hand-coded handlers' KD-1b
+/// ordering):
+/// <list type="number">
+///   <item>Rent the control via <see cref="MountContext.RentControl{T}"/>.</item>
+///   <item>Iterate <see cref="ControlDescriptor{TElement,TControl}.Properties"/>
+///   and invoke <see cref="PropEntry{TElement,TControl}.Mount(TControl, TElement)"/> on each —
+///   all bare initial writes happen first.</item>
+///   <item>Iterate again and invoke
+///   <see cref="PropEntry{TElement,TControl}.EnsureSubscribed"/> — controlled
+///   entries wire their change-event trampolines now (no echo on the just-
+///   written values because nothing is listening yet).</item>
+///   <item>Apply setters.</item>
+/// </list></para>
+/// </summary>
+/// <remarks>
+/// Spec 048 §7 — <b>unsealed</b> so the built-in catalog can expose a thin,
+/// <c>new()</c>-constructible registration subclass per descriptor (e.g.
+/// <c>TextBlockDescriptorHandler() : DescriptorHandler&lt;…&gt;(TextBlockDescriptor.Descriptor)</c>).
+/// That subclass is what the <see cref="Reg{TElement,TControl,THandler}"/> shim
+/// instantiates via its <c>static () =&gt; new THandler()</c> lambda, so the
+/// descriptor path registers through the exact same zero-closure mechanism as a
+/// hand-coded handler. The base interpreter has no virtual members the subclass
+/// overrides; unsealing carries no dispatch cost (calls already route through the
+/// <see cref="IElementHandler{TElement,TControl}"/> interface via the adapter).
+/// </remarks>
+public class DescriptorHandler<TElement, TControl> : IElementHandler<TElement, TControl>, IDescriptorBackedHandler
+    where TElement : Element
+    where TControl : FrameworkElement, new()
+{
+    private readonly ControlDescriptor<TElement, TControl> _descriptor;
+    private readonly bool _hasPropUnmount;
+
+    public DescriptorHandler(ControlDescriptor<TElement, TControl> descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        _descriptor = descriptor;
+        for (int i = 0; i < descriptor.Properties.Count; i++)
+            if (descriptor.Properties[i].HasUnmount) { _hasPropUnmount = true; break; }
+    }
+
+    /// <summary>The descriptor this handler interprets. Exposed for tests
+    /// and bench harnesses — not part of the steady-state author API.</summary>
+    public ControlDescriptor<TElement, TControl> Descriptor => _descriptor;
+
+    /// <summary>
+    /// Children strategy surfaced to <see cref="V1HandlerAdapter{TElement,TControl}"/>.
+    /// Returns the descriptor's strategy except when it's an
+    /// <see cref="ItemsHost{TElement,TControl}"/> — that one is dispatched
+    /// inline by <see cref="Mount"/> / <see cref="Update"/> before the prop
+    /// loop runs so initial writes like <c>SelectedIndex</c> land against a
+    /// populated collection (matches legacy mount ordering).
+    /// </summary>
+    public ChildrenStrategy<TElement, TControl>? Children =>
+        _descriptor.Children switch
+        {
+            ItemsHost<TElement, TControl> => null,
+            // §14 Phase 3 finish — every items-binder strategy (templated /
+            // erased today; tree / tab / pivot when they arrive) implements
+            // IItemsBinderStrategy and needs the same "bind-before-props"
+            // ordering as ItemsHost — SelectedIndex initial writes need a
+            // populated ItemsSource; otherwise WinUI silently clamps against
+            // the empty collection.
+            IItemsBinderStrategy => null,
+            _ => _descriptor.Children,
+        };
+
+    /// <summary>Issue #375 — on Unmount the bind-before-props ordering
+    /// constraint that motivates hiding <see cref="ItemsHost{TElement,TControl}"/>
+    /// / <see cref="IItemsBinderStrategy"/> strategies from
+    /// <see cref="Children"/> no longer applies, so expose the descriptor's
+    /// real strategy here. Lets <c>V1HandlerAdapter</c>'s unmount-side
+    /// dispatch walk descendant items (e.g. <c>TabView</c> tabs whose
+    /// content holds Components) and fire their <c>UseEffect</c>
+    /// cleanups.</summary>
+    public ChildrenStrategy<TElement, TControl>? ChildrenForUnmount => _descriptor.Children;
+
+    // <snippet:descriptor-mount>
+    public TControl Mount(MountContext ctx, TElement el)
+    {
+        var ctrl = ctx.RentControl(_descriptor.PoolPolicy, _descriptor.Factory);
+
+        // A descriptor that declares teardown must actually receive it. The engine's unmount
+        // dispatch is tag-gated (Reconciler.UnmountRecursive only reaches the V1 handler when
+        // GetElementTag returns an element), and SetElementTagIfNeeded allocates ReactorState
+        // only for elements that carry callbacks, a key, extensions, or reference modifiers.
+        // Without this, OnUnmount would fire for some elements of a type and silently not for
+        // others — the callback-free ones — which is not a contract an author can reason about.
+        if (_descriptor.OnUnmount is not null || _hasPropUnmount)
+            Reconciler.GetOrCreateReactorState(ctrl);
+
+        // §14 Phase 3-final: when the descriptor declares an ItemsHost,
+        // populate the items collection BEFORE the prop loop. Initial writes
+        // for selection-tracking props (SelectedIndex/SelectedItem) need the
+        // collection populated first — WinUI silently clamps selection
+        // against an empty collection.
+        if (_descriptor.Children is ItemsHost<TElement, TControl> ih)
+            DispatchItemsHostMount(in ctx, el, ctrl, ih);
+        // §14 Phase 3 finish — consolidated dispatch arm: every items-
+        // binder variant uses the same "bind before prop loop" ordering so
+        // SelectedIndex initial writes land against a populated list.
+        else if (_descriptor.Children is IItemsBinderStrategy binder && ctrl is FrameworkElement feBinder)
+            binder.Bind(feBinder, oldElement: null, el, ctx.Reconciler, ctx.RequestRerender, isMount: true);
+
+        // Phase 1: all initial writes, bare (a synchronous echo has no live
+        // subscription to reach). A deferred echo lands after phase 2, so
+        // entries for such controls arm their write (HandCodedControlled
+        // armOnMount). §14 Phase 3-final: dispatch through the
+        // context-carrying overload so OneWayBridged entries can reach the
+        // reconciler/rerender helpers; existing entries forward to the
+        // parameterless overload via the virtual default on PropEntry.
+        var props = _descriptor.Properties;
+        for (int i = 0; i < props.Count; i++)
+            props[i].Mount(in ctx, ctrl, el);
+
+        // Phase 2: subscribe controlled entries.
+        var binding = ctx.BindFor(ctrl, el);
+        for (int i = 0; i < props.Count; i++)
+            props[i].EnsureSubscribed(binding, ctrl, el);
+
+        var getSetters = _descriptor.GetSetters;
+        if (getSetters is not null)
+            ctx.ApplySetters(getSetters(el), ctrl);
+        return ctrl;
+    }
+    // </snippet:descriptor-mount>
+
+    /// <summary>§14 Phase 3 prelude (Engine A1) — forwards to the descriptor's
+    /// optional <see cref="ControlDescriptor{TElement,TControl}.AfterChildrenMount"/>
+    /// callback. The adapter invokes this after every child has mounted.</summary>
+    public void AfterChildrenMount(MountContext ctx, TElement element, TControl control)
+        => _descriptor.AfterChildrenMount?.Invoke(in ctx, element, control);
+
+    /// <summary>Forwards to the descriptor's optional
+    /// <see cref="ControlDescriptor{TElement,TControl}.OnUnmount"/> hook. Without this the
+    /// descriptor path had no teardown seam at all, so control-scoped state a descriptor set up
+    /// during mount — most notably a one-shot <c>Loaded</c> subscription carrying a deferred
+    /// write — could outlive the mount that created it.</summary>
+    public void Unmount(UnmountContext ctx, TControl control)
+    {
+        if (ctx.Reconciler.IsolatesUnmountCleanupFailures)
+        {
+            UnmountIsolated(ctx, control);
+            return;
+        }
+        if (_hasPropUnmount)
+            for (int i = 0; i < _descriptor.Properties.Count; i++)
+                _descriptor.Properties[i].Unmount(in ctx, control);
+        _descriptor.OnUnmount?.Invoke(in ctx, control);
+    }
+
+    // Inside a teardown that must finish (IsolateUnmountCleanupFailures): every property's
+    // unmount callback and the hook run even when an earlier one throws (each may own a
+    // secondary slot no other walk reaches). Each failure is reported as it happens, so the
+    // isolation sink sees them in order; afterwards an already-reported marker tells the adapter
+    // and the engine the teardown failed (strategy teardown, recovery, no pooling) without
+    // reporting anything twice.
+    private void UnmountIsolated(UnmountContext ctx, TControl control)
+    {
+        bool failed = false;
+        if (_hasPropUnmount)
+            for (int i = 0; i < _descriptor.Properties.Count; i++)
+            {
+                try { _descriptor.Properties[i].Unmount(in ctx, control); }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    ctx.Reconciler.ReportIsolatedUnmountFailure(ex);
+                    failed = true;
+                }
+            }
+        try { _descriptor.OnUnmount?.Invoke(in ctx, control); }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        {
+            ctx.Reconciler.ReportIsolatedUnmountFailure(ex);
+            failed = true;
+        }
+        if (failed) throw new ReportedUnmountFailureException();
+    }
+
+    public void Update(UpdateContext ctx, TElement oldEl, TElement newEl, TControl ctrl)
+    {
+        // §14 Phase 3-final: ItemsHost diff BEFORE prop Update loop, same
+        // ordering rationale as Mount — selection-tracking writes need the
+        // collection in its post-diff shape first.
+        if (_descriptor.Children is ItemsHost<TElement, TControl> ih)
+            DispatchItemsHostUpdate(in ctx, oldEl, newEl, ctrl, ih);
+        // §14 Phase 3 finish — consolidated dispatch arm.
+        else if (_descriptor.Children is IItemsBinderStrategy binder && ctrl is FrameworkElement feBinder)
+            binder.Bind(feBinder, oldEl, newEl, ctx.Reconciler, ctx.RequestRerender, isMount: false);
+
+        var props = _descriptor.Properties;
+
+        // Spec 050: wire trampolines BEFORE the prop Update loop so a
+        // controlled write that triggers a DEFERRED change event (TextBox /
+        // PasswordBox / NumberBox / AutoSuggest / RichEdit text writes,
+        // certain selection writes) has a live subscriber when the engine
+        // pumps the dispatcher. Wiring late stranded the WriteSuppressed
+        // counter token: the deferred echo had no trampoline to call
+        // ShouldSuppress on, so the token sat at +1 and swallowed the user's
+        // next real input. The per-entry CWT gate (slot-is-null) makes the
+        // steady-state no-op case cheap.
+        var binding = ctx.BindFor(ctrl, newEl);
+        for (int i = 0; i < props.Count; i++)
+            props[i].EnsureSubscribed(binding, ctrl, newEl);
+
+        for (int i = 0; i < props.Count; i++)
+            props[i].Update(in ctx, ctrl, oldEl, newEl);
+
+        var getSetters = _descriptor.GetSetters;
+        if (getSetters is not null)
+            ctx.ApplySetters(getSetters(newEl), ctrl);
+    }
+
+    private static void DispatchItemsHostMount(
+        in MountContext ctx, TElement el, TControl ctrl,
+        ItemsHost<TElement, TControl> ih)
+        => ItemsHostReconciliation.Bind(ih, el, ctrl, ctx.Reconciler, ctx.RequestRerender, isMount: true);
+
+    private static void DispatchItemsHostUpdate(
+        in UpdateContext ctx, TElement oldEl, TElement newEl, TControl ctrl,
+        ItemsHost<TElement, TControl> ih)
+        => ItemsHostReconciliation.Bind(ih, newEl, ctrl, ctx.Reconciler, ctx.RequestRerender, isMount: false);
+}
+
+/// <summary>
+/// Marks a handler whose unmount behaviour is the descriptor's: no hand-written teardown,
+/// only the declared <c>OnUnmount</c> (which forces its own tag) and the children strategy.
+/// </summary>
+internal interface IDescriptorBackedHandler
+{
+}

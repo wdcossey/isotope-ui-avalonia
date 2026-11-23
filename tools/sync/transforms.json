@@ -18,6 +18,187 @@
       ]
     },
     {
+      "id": "gen-target-base",
+      "find": "GetTypeByMetadataName\\(\"Microsoft\\.UI\\.Xaml\\.FrameworkElement\"\\)",
+      "replace": "GetTypeByMetadataName(\"Avalonia.Controls.Control\")",
+      "why": "Generator name table: a wrapper target must derive from Avalonia's Control (WinUI: FrameworkElement).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-target-message",
+      "find": "deriving from Microsoft\\.UI\\.Xaml\\.FrameworkElement with",
+      "replace": "deriving from Avalonia.Controls.Control with",
+      "why": "Generator name table: the unsupported-target message names the Avalonia base.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-uielement",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.UIElement\"",
+      "replace": "\"global::Avalonia.Controls.Control\"",
+      "why": "Generator name table: WinUI's UIElement (content slots, the mounted child's type) is Avalonia's Control.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapElementSlotAnalyzer.cs",
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-member-walk-cutoff",
+      "find": "fq == \"global::Microsoft\\.UI\\.Xaml\\.Controls\\.Control\"",
+      "replace": "fq == \"global::Avalonia.Controls.Primitives.TemplatedControl\"",
+      "why": "Generator name table: the member walk stops at the templated-control base (WinUI's Control, Avalonia's TemplatedControl), above which the layout plumbing is modelled by modifiers.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-full-wrapper-cutoffs",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.FrameworkElement\" or(\\r?\\n\\s*)\"global::Microsoft\\.UI\\.Xaml\\.Controls\\.ContentPresenter\" or(\\r?\\n\\s*)\"global::Microsoft\\.UI\\.Xaml\\.Controls\\.Panel\"",
+      "replace": "\"global::Avalonia.Controls.Control\" or$1\"global::Avalonia.Controls.Presenters.ContentPresenter\" or$2\"global::Avalonia.Controls.Panel\"",
+      "why": "Generator name table: full-wrapper mode's other cut-offs, as Avalonia names them.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-routed-event-handler",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.RoutedEventHandler\"",
+      "replace": "\"global::System.EventHandler<global::Avalonia.Interactivity.RoutedEventArgs>\"",
+      "why": "Generator name table: Avalonia's routed CLR events (Button.Click) are EventHandler<RoutedEventArgs>.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-routed-event-args",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.RoutedEventArgs\"",
+      "replace": "\"global::Avalonia.Interactivity.RoutedEventArgs\"",
+      "why": "Generator name table: argument types not worth surfacing.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-panel-children",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.Controls\\.UIElementCollection\"",
+      "replace": "\"global::Avalonia.Controls.Controls\"",
+      "why": "Generator name table: a panel's Children collection type.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-template-exclusions",
+      "find": "case \"global::Microsoft\\.UI\\.Xaml\\.DataTemplate\":(\\r?\\n\\s*)case \"global::Microsoft\\.UI\\.Xaml\\.Controls\\.ControlTemplate\":(\\r?\\n\\s*)case \"global::Microsoft\\.UI\\.Xaml\\.ResourceDictionary\":(\\r?\\n\\s*)case \"global::Microsoft\\.UI\\.Xaml\\.Controls\\.DataTemplateSelector\":",
+      "replace": "case \"global::Avalonia.Controls.Templates.IDataTemplate\":$1case \"global::Avalonia.Controls.Templates.IControlTemplate\":$2case \"global::Avalonia.Controls.IResourceDictionary\":$3case \"global::Avalonia.Controls.ITemplate<global::Avalonia.Controls.Panel>\":",
+      "why": "Generator name table: template and resource properties aren't value props (Avalonia's template interfaces and items-panel template).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-polymorphic-textblock",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.Controls\\.TextBlock\"",
+      "replace": "\"global::Avalonia.Controls.TextBlock\"",
+      "why": "Generator name table: a polymorphic element's empty placeholder.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-avalonia-property-lookup",
+      "find": "(\\w+(?:\\.Type)?)\\.ToDisplayString\\(SymbolDisplayFormat\\.FullyQualifiedFormat\\) == \"global::Microsoft\\.UI\\.Xaml\\.DependencyProperty\"",
+      "replace": "IsAvaloniaPropertyType($1)",
+      "why": "Generator logic hunk 1: the {Prop}Property member is any static AvaloniaProperty (StyledProperty, DirectProperty, AttachedProperty), not a WinUI DependencyProperty. Helper in the generator project's WrapperGenerator.Avalonia.cs.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-avalonia-content-attribute",
+      "find": "for \\(INamedTypeSymbol\\? t = control; t is not null; t = t\\.BaseType\\)\\r?\\n\\s*foreach \\(var a in t\\.GetAttributes\\(\\)\\)\\r?\\n\\s*if \\(a\\.AttributeClass\\?\\.ToDisplayString\\(SymbolDisplayFormat\\.FullyQualifiedFormat\\)\\r?\\n\\s*== \"global::Microsoft\\.UI\\.Xaml\\.Markup\\.ContentPropertyAttribute\"\\)(\\r?\\n\\s*)\\{\\r?\\n\\s*var name = a\\.NamedArguments\\.FirstOrDefault\\(na => na\\.Key == \"Name\"\\)\\.Value\\.Value as string\\r?\\n\\s*\\?\\? \\(a\\.ConstructorArguments\\.Length > 0 \\? a\\.ConstructorArguments\\[0\\]\\.Value as string : null\\);\\r?\\n\\s*if \\(name is null\\) continue;",
+      "replace": "if (AvaloniaContentProperty(control) is { } name)$1{",
+      "why": "Generator logic hunk 2: WinUI names the content property in a class-level [ContentProperty(Name=...)]; Avalonia marks the property itself with [Content]. Helper in WrapperGenerator.Avalonia.cs.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-attached-controlled-state",
+      "find": "\"global::Microsoft\\.UI\\.Xaml\\.DependencyProperty\";([\\s\\S]{0,400}?)\\{dp\\}\\.RegisterAttached\\(([\\s\\S]{0,200}?)\\\\\"ControlledState\\\\\", typeof\\(object\\), typeof\\(__ControlledState\\), new global::Microsoft\\.UI\\.Xaml\\.PropertyMetadata\\(null\\)\\)",
+      "replace": "\"global::Avalonia.AttachedProperty<object?>\";$1global::Avalonia.AvaloniaProperty.RegisterAttached<__ControlledState, global::Avalonia.AvaloniaObject, object?>($2\\\"ControlledState\\\")",
+      "why": "Generator logic hunk 3a: grouped controlled bindings keep their per-control state in an Avalonia attached property (WinUI: DependencyProperty.RegisterAttached).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.Controlled.cs"
+      ]
+    },
+    {
+      "id": "gen-attached-event-owner",
+      "find": "global::Microsoft\\.UI\\.Xaml\\.DependencyProperty Property =([\\s\\S]{0,200}?)global::Microsoft\\.UI\\.Xaml\\.DependencyProperty\\.RegisterAttached\\(([\\s\\S]{0,200}?)\\\\\"EventOwner\\\\\", typeof\\(object\\), typeof\\(__EventOwner\\), new global::Microsoft\\.UI\\.Xaml\\.PropertyMetadata\\(null\\)\\)",
+      "replace": "global::Avalonia.AttachedProperty<object?> Property =$1global::Avalonia.AvaloniaProperty.RegisterAttached<__EventOwner, global::Avalonia.AvaloniaObject, object?>($2\\\"EventOwner\\\")",
+      "why": "Generator logic hunk 3b: the event owner gate is an Avalonia attached property too.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.Controlled.cs"
+      ]
+    },
+    {
+      "id": "gen-obsolete-filter",
+      "find": "if \\(!seen\\.Add\\(prop\\.Name\\)\\) continue;",
+      "replace": "if (IsObsolete(prop) || !seen.Add(prop.Name)) continue;",
+      "why": "Our rule: [Obsolete] control properties aren't surfaced (Avalonia 12's TextBox keeps Watermark, WatermarkForeground and UseFloatingWatermark as obsolete aliases).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-items-host-ilist",
+      "find": "(\\s)ImplementsIListOfObject\\(p\\.Type\\)\\)",
+      "replace": "$1(ImplementsIListOfObject(p.Type) || ImplementsNonGenericIList(p.Type)))",
+      "why": "Our rule: Avalonia's ItemCollection implements IList and IReadOnlyList<object?>, not IList<object>, so items controls (ListBox, ComboBox, TabControl, Carousel, TreeView) qualify for the items-host strategy through IList too.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-items-host-adapter",
+      "find": "GetCollection: static c => c\\.Items\\),",
+      "replace": "GetCollection: static c => global::Isotope.UI.Core.V1Protocol.ItemsList.Of(c.Items)),",
+      "why": "Our rule: the items-host strategy takes an IList<object>; ItemsList.Of passes one through and adapts a non-generic IList (the library's Seam/V1Protocol/ItemsList.cs).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-missing-counterpart-check",
+      "find": "(\\r?\\n)(        var ns = element\\.ContainingNamespace\\.IsGlobalNamespace)",
+      "replace": "$1        var missingCounterpart = descriptorOnly ? MissingCounterparts(element, control, props, contentProp is null ? null : contentElementName, panelChildren, items, exclude) : null;$1$2",
+      "why": "Our rule: in descriptor-only mode a record member with no same-name control property the generator can map was silently dropped; now it's reported (ISOTOPEGEN001, WrapperGenerator.Avalonia.cs).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-missing-counterpart-report",
+      "find": "MetadataRegistrationDiagnostic = metadataDiagnostic \\};",
+      "replace": "MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart };",
+      "why": "Our rule: the descriptor-only output reports the missing-counterpart diagnostic with its source.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-drop-try-register-assembly",
+      "find": "sb\\.AppendLine\\(\\$\"        global::Microsoft\\.UI\\.Reactor\\.ReactorApp\\.TryRegisterControlAssembly\\(typeof\\(\\{controlFqn\\}\\)\\.Assembly\\);\"\\);",
+      "replace": "{ } // Avalonia: no XAML metadata provider to register",
+      "why": "Our rule: full-wrapper mode registered the control assembly's WinUI XAML metadata provider (ReactorApp.TryRegisterControlAssembly); Avalonia has none, so nothing is emitted.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
       "id": "winui-usings",
       "find": "^using (?:WinUI = )?Microsoft\\.UI\\.(?:Xaml|Composition)(?:\\.[A-Za-z]+)*;\\r?$",
       "flags": "m",
@@ -26,6 +207,7 @@
       "files": [
         "src/Reactor/Controls/Virtualization/VirtualListElement.cs",
         "src/Reactor/Core/BackdropKind.cs",
+        "src/Reactor/Core/ChangeEchoSuppressor.cs",
         "src/Reactor/Core/ChildCollection.cs",
         "src/Reactor/Core/ChildReconciler.cs",
         "src/Reactor/Core/ColorScheme.cs",
@@ -40,6 +222,16 @@
         "src/Reactor/Core/RenderErrorDispatch.cs",
         "src/Reactor/Core/Theme.cs",
         "src/Reactor/Core/V1HandlerRegistry.cs",
+        "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs",
+        "src/Reactor/Core/V1Protocol/ControlRegistry.cs",
+        "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs",
+        "src/Reactor/Core/V1Protocol/Descriptor/DescriptorHandler.cs",
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs",
+        "src/Reactor/Core/V1Protocol/IDecoratorElementHandler.cs",
+        "src/Reactor/Core/V1Protocol/IElementHandler.cs",
+        "src/Reactor/Core/V1Protocol/ItemsHostReconciliation.cs",
+        "src/Reactor/Core/V1Protocol/MountContext.cs",
+        "src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs",
         "src/Reactor/Diagnostics/ReactorSourceMap.cs",
         "src/Reactor/Hooks/UseElementFocus.cs",
         "src/Reactor/Hooks/UseElementRef.cs",
@@ -54,7 +246,8 @@
       "why": "WinUI types named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias: use the bare name, which the global aliases map to Avalonia.",
       "files": [
         "src/Reactor/Core/ChildCollection.cs",
-        "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs"
+        "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs",
+        "src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs"
       ]
     },
     {
@@ -73,6 +266,8 @@
       "why": "WinUI's Loaded handler shape, as Avalonia's Control.Loaded declares it.",
       "files": [
         "src/Reactor/Core/Internal/ReactorListState.cs",
+        "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs",
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs",
         "src/Reactor/Hooks/UseFocus.cs"
       ]
     },
@@ -652,6 +847,156 @@
       "why": "RenderContext is partial, so our Avalonia versions of the tier 3 hooks (theme, windows, displays…) can be written as our own partial part with access to its state (decided 2026-11-23).",
       "files": [
         "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "descriptor-clearvalue-isset",
+      "find": "!ReferenceEquals\\(ctrl\\.ReadLocalValue\\(_dp\\), DependencyProperty\\.UnsetValue\\)",
+      "replace": "ctrl.IsSet(_dp)",
+      "why": "The descriptor's ClearValue channel asks whether the control holds a local value: WinUI compares ReadLocalValue with UnsetValue, Avalonia answers with AvaloniaObject.IsSet.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs"
+      ]
+    },
+    {
+      "id": "drop-ControlDescriptor-Reference",
+      "drop": "public ControlDescriptor<TElement, TControl> Reference<TTarget>\\(",
+      "why": "Reference properties need element refs wired by the reconciler (ElementRef<T>, reference edges): tier 3 (rewritten for Avalonia later).",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs"
+      ]
+    },
+    {
+      "id": "drop-ControlDescriptor-ReferenceUntyped",
+      "drop": "public ControlDescriptor<TElement, TControl> Reference\\(",
+      "why": "Untyped reference properties: tier 3 (rewritten for Avalonia later), as above.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs"
+      ]
+    },
+    {
+      "id": "drop-ControlDescriptor-ReferenceList",
+      "drop": "public ControlDescriptor<TElement, TControl> ReferenceList<TTarget>\\(",
+      "why": "List-valued reference properties: tier 3 (rewritten for Avalonia later), as above.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs"
+      ]
+    },
+    {
+      "id": "drop-ControlDescriptor-Immediate",
+      "drop": "public ControlDescriptor<TElement, TControl> Immediate<TPayload>\\(",
+      "why": "The Immediate entry observes a WinUI dependency property per instance (RegisterPropertyChangedCallback) and walks a template on Loaded (NumberBox): tier 3 (rewritten for Avalonia later).",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs"
+      ]
+    },
+    {
+      "id": "drop-PropEntry-ReferencePropEntry",
+      "drop": "internal sealed class ReferencePropEntry<",
+      "why": "The entry behind the dropped Reference builder.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs"
+      ]
+    },
+    {
+      "id": "drop-PropEntry-UntypedReferencePropEntry",
+      "drop": "internal sealed class UntypedReferencePropEntry<",
+      "why": "The entry behind the dropped untyped Reference builder.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs"
+      ]
+    },
+    {
+      "id": "drop-PropEntry-ReferenceListPropEntry",
+      "drop": "internal sealed class ReferenceListPropEntry<",
+      "why": "The entry behind the dropped ReferenceList builder.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs"
+      ]
+    },
+    {
+      "id": "drop-PropEntry-ImmediatePropEntry",
+      "drop": "internal sealed class ImmediatePropEntry<",
+      "why": "The entry behind the dropped Immediate builder.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/Descriptor/PropEntry.cs"
+      ]
+    },
+    {
+      "id": "drop-ChildrenStrategy-TemplatedItemsErased",
+      "drop": "public sealed record TemplatedItemsErased<",
+      "why": "Keyed templated lists realize containers through the reconciler's ListView pipeline (BindErasedKeyedItemsSource): tier 3 (rewritten for Avalonia later).",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs"
+      ]
+    },
+    {
+      "id": "drop-ChildrenStrategy-TemplatedItems",
+      "drop": "public sealed record TemplatedItems<",
+      "why": "Keyed templated lists (BindKeyedItemsSource): tier 3 (rewritten for Avalonia later).",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs"
+      ]
+    },
+    {
+      "id": "drop-ChildrenStrategy-TreeChildren",
+      "drop": "public sealed record TreeChildren<",
+      "why": "Builds WinUI TreeViewNode trees; Avalonia's TreeView has no node objects: tier 3 (rewritten for Avalonia later).",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs"
+      ]
+    },
+    {
+      "id": "winui-alias-content-control",
+      "find": "\\bWinUI\\.(ContentControl)\\b",
+      "replace": "Avalonia.Controls.$1",
+      "why": "Item containers (TabViewItem, PivotItem) are content controls; Avalonia's ContentControl has the same Content property.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ChildrenStrategy.cs"
+      ]
+    },
+    {
+      "id": "drop-ControlRegistry-RegisterDecorator",
+      "drop": "public static void RegisterDecorator<TElement>\\(",
+      "why": "Decorator handlers (flyouts, polymorphic and modal wrappers) go through V1DecoratorHandlerAdapter, which needs the reconciler's flyout and modifier capture: tier 3 (rewritten for Avalonia later).",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ControlRegistry.cs"
+      ]
+    },
+    {
+      "id": "drop-ControlRegistry-RegisterDecoratorForDerivedTypes",
+      "drop": "public static void RegisterDecoratorForDerivedTypes<TBase>\\(",
+      "why": "Base-derived decorator registrations: tier 3 (rewritten for Avalonia later), as above.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ControlRegistry.cs"
+      ]
+    },
+    {
+      "id": "add-handler-routing",
+      "find": "\\.AddHandler\\(re, h, handledEventsToo\\)",
+      "replace": ".AddHandler(re, h, handledEventsToo: handledEventsToo)",
+      "why": "Avalonia's Interactive.AddHandler takes the routing strategies third, so handledEventsToo is passed by name.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/MountContext.cs"
+      ]
+    },
+    {
+      "id": "winui-qualified-panel",
+      "find": "\\bMicrosoft\\.UI\\.Xaml\\.Controls\\.(Panel)\\b",
+      "replace": "$1",
+      "why": "Fully qualified WinUI Panel: the bare name is the global alias onto Avalonia.Controls.Panel.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs"
+      ]
+    },
+    {
+      "id": "drop-winrt-exposed-type",
+      "find": "^\\[assembly: WinRT\\.GeneratedWinRTExposedExternalType\\([^\\r\\n]*\\)\\]",
+      "flags": "m",
+      "replace": "",
+      "why": "A CsWinRT marshalling hint for native ItemsRepeater hosts; there is no WinRT projection on Avalonia.",
+      "files": [
+        "src/Reactor/Core/V1Protocol/ItemsHostReconciliation.cs"
       ]
     },
     {
