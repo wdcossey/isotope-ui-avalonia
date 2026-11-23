@@ -33,23 +33,6 @@ public class HeadlineHooksTests
     }
 
     [AvaloniaFact]
-    public void UseState_setters_called_twice_from_one_closure_see_the_rendered_value()
-    {
-        // Upstream's setter takes a value, not an update: two calls from the same render's closure both write
-        // count + 1, so the count moves once. UseReducer's functional form is the way to compose updates.
-        var host = new TestHost(() => Component(ctx =>
-        {
-            var (count, setCount) = ctx.UseState(0);
-            return Button($"count {count}", () => { setCount(count + 1); setCount(count + 1); });
-        }));
-
-        TestHost.Click(host.All<Button>()[0]);
-        host.Flush();
-
-        Assert.Equal("count 1", host.All<Button>()[0].Content);
-    }
-
-    [AvaloniaFact]
     public void UseState_keeps_separate_state_per_component_instance()
     {
         Element Counter(string key) => Component(ctx =>

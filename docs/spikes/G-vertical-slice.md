@@ -10,12 +10,13 @@ targets `net10.0`. Measured 2026-11-23 by an agent (Opus). Every number says how
   keyboard input, and render to PNG (below).
 - **Upstream's own engine tests run against the library:** 605 tests from 39 upstream files. 548 of them (34 files) are
   linked unchanged; 57 (5 files) come through rules that drop 8 tests of tier 3 pieces. All pass.
-- **The headline hooks are pinned to upstream's semantics** by 15 new tests through the reconciler, on top of the 14
+- **The headline hooks are pinned to upstream's semantics** by 14 new tests through the reconciler, on top of the 14
   from #1 and upstream's own.
 - **The controlled TextBox keeps upstream's rule,** and two tests pin it. Upstream's rule is more precise than FINDINGS
   states it (see "Where the abstraction leaked", 3).
-- **FlexPanel is in the library** (tier 3, over the vendored Yoga), with a `FlexElement` that mirrors upstream's.
-- **The tests:** 712 in `tests/Isotope.UI.Avalonia.Tests` (62 before this issue), in about 3 s.
+- **FlexPanel is in the library** (tier 3, over the vendored Yoga), with a `FlexElement` that mirrors upstream's. Its CSS
+  automatic minimum size doesn't work on Avalonia (leak 8).
+- **The tests:** 711 in `tests/Isotope.UI.Avalonia.Tests` (62 before this issue), in about 3 s.
 
 ## Upstream's engine tests
 
@@ -48,11 +49,11 @@ against the library (namespace rename only), dropping files with errors until th
 
 ## What works, and the tests that pin it
 
-The library's own tests, counted per class with `dotnet test --list-tests` and the run totals: 107 (62 before).
+The library's own tests, counted per class with `dotnet test --list-tests` and the run totals: 106 (62 before).
 
 | Area | New tests | What they pin |
 |---|---|---|
-| Headline hooks (`HeadlineHooksTests`) | 15 | `UseState`: the setter is the same delegate every render; two calls from one closure both write the rendered value + 1; state per instance. `UseReducer` (functional form): updates queued before a render compose, one render; an equal result asks for no render. `UseReducer` (reducer form): `Dispatch` is stable and runs the current render's reducer; an equal state asks for no render. `UseEffect`: runs after the render function; an empty dependency list runs once and cleans up on unmount; every pending cleanup runs before any new effect, in hook order; a parent's effect runs before its child mounts and its cleanup runs first; an effect's state change renders again. `UseCallback` identity until a dependency changes. `UseMemo` with no dependencies computes once. `UseRef` per instance. `UseContext` from a provider inside a stateful component. |
+| Headline hooks (`HeadlineHooksTests`) | 14 | `UseState`: the setter is the same delegate every render; state per instance. `UseReducer` (functional form): updates queued before a render compose, one render; an equal result asks for no render. `UseReducer` (reducer form): `Dispatch` is stable and runs the current render's reducer; an equal state asks for no render. `UseEffect`: runs after the render function; an empty dependency list runs once and cleans up on unmount; every pending cleanup runs before any new effect, in hook order; a parent's effect runs before its child mounts and its cleanup runs first; an effect's state change renders again. `UseCallback` identity until a dependency changes. `UseMemo` with no dependencies computes once. `UseRef` per instance. `UseContext` from a provider inside a stateful component. |
 | Controlled TextBox (`ControlTests`) | 2 | A rejected edit stays while the TextBox element is skipped, until the value changes; an element updated for another member writes a drifted value back. Neither write echoes. |
 | Keyed list (`KeyedListTests`) | 5 | Rows that are components with their own state, effect and uncontrolled TextBox: reorder, reverse, insert, remove, and all three at once keep each surviving row's controls (`Assert.Same`), state and typed text, and unmount only removed rows. |
 | FlexPanel (`FlexPanelTests`) | 14 | Spike D's tests, moved with the port. |
@@ -134,20 +135,31 @@ in any run, whose control is the same object after the change.
 7. **FlexPanel's minimum-size attached properties are `FlexMinWidth`/`FlexMinHeight`** (Spike D: Avalonia's
    `Layoutable` already has `MinWidth`/`MinHeight`). `FlexAttached` and `.Flex(minWidth:)` keep upstream's names; only
    the panel's static setters differ, in `ApplyFlexChildAttached`.
-8. **There is no app host yet.** Upstream's `ReactorHost`/`ReactorHostControl` are tier 3. The examples use a 40-line
+8. **FlexPanel's CSS automatic minimum size is lost on Avalonia.** Upstream's port measures each main-axis child at a
+   width of 0 and reads `DesiredSize` as its min-content width: on WinUI that "returns the widest unbreakable content"
+   (upstream's comment). Avalonia clamps `DesiredSize` to the size offered, so the probe always reads 0 and a flex child
+   can shrink below its content. Measured headless (review pass 2 predicted it): a TextBlock whose natural width is 119
+   measures 0 at width 0, and two such non-wrapping TextBlocks in a 100-wide row are laid out 50 and 50, where CSS keeps
+   each at its min-content and overflows. Spike D's tests don't cover it. A fix needs a min-content measure that Avalonia
+   doesn't offer in general [J: a follow-up issue; text could use its `TextLayout`].
+9. **There is no app host yet.** Upstream's `ReactorHost`/`ReactorHostControl` are tier 3. The examples use a 40-line
    test host that posts root passes on the dispatcher.
 
 ## Not done
 
 - **No real window.** Everything is headless (a real-window run is ask-first).
-- **No app host in the library** (8 above).
+- **No app host in the library** (9 above).
 - **The 29 upstream test files** that need tier 3 types.
 - **Keyed moves through Avalonia's `Move`** (5 above).
+- **FlexPanel's automatic minimum size** (8 above), and two FlexPanel findings inherited from upstream's design: nested
+  panels measure each child again at a zero-width probe, and `[ThreadStatic]` `_outerYogaHeightMode` is visible to the
+  probe and the final measure loop (the ambient-mode family of #9). Not changed, to keep the port diffing cleanly against
+  upstream.
 
 ## Reproduce
 
 ```sh
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # 712 (needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # 711 (needs no upstream/)
 dotnet run -c Release --project spikes/G-slice/Measure      # the timings ([-- <rows> <runs>], default 1000 7)
 node tools/sync/sync.mjs --check --no-fetch                 # the vendored tests match upstream + rules
 node tools/measure-transforms.mjs src/Isotope.UI.Avalonia/UpstreamFiles.props

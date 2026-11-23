@@ -49,7 +49,9 @@ internal static class Examples
     {
         var (draft, setDraft) = ctx.UseState("");
         var (state, dispatch) = ctx.UseReducer<TodoState, TodoCommand>(Reduce, new TodoState([], 1));
-        var left = ctx.UseMemo(() => state.Items.Count(t => !t.Done), state.Items);
+        // One dependency, the array, compared by reference: the reducer returns a new array on every change. (Passed as
+        // a Todo[], upstream would compare the array element by element, as a dependency list.)
+        var left = ctx.UseMemo(() => state.Items.Count(t => !t.Done), (object)state.Items);
         var accent = ctx.UseContext(Accent);
 
         void Add()
