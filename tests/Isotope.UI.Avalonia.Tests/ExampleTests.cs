@@ -101,18 +101,18 @@ public sealed class ExampleTests : IDisposable
         Assert.Same(box, All<TextBox>(host)[0]);
         Assert.Equal(["[ ] Buy milk", "[ ] Walk the dog", "[ ] Write the report"], RowTitles(host));
 
-        Click(window, ButtonLabelled(host, "Done", 1)); // Walk the dog
-        Assert.Equal("[x] Walk the dog", RowTitles(host)[1]);
+        Click(window, ButtonLabelled(host, "Done", 0)); // Buy milk
+        Assert.Equal("[x] Buy milk", RowTitles(host)[0]);
         Assert.Contains("2 of 3 left", Texts(host));
-        var walkRow = RowOf(host, "Walk the dog");
+        var milkRow = RowOf(host, "Buy milk");
 
         Click(window, ButtonLabelled(host, "Reverse"));
-        Assert.Equal(["[ ] Write the report", "[x] Walk the dog", "[ ] Buy milk"], RowTitles(host));
-        Assert.Same(walkRow, RowOf(host, "Walk the dog")); // the keyed row moved, with its controls
-        Assert.Equal("toggled 1", RowTexts(walkRow)[1]); // and its own state
+        Assert.Equal(["[ ] Write the report", "[ ] Walk the dog", "[x] Buy milk"], RowTitles(host));
+        Assert.Same(milkRow, RowOf(host, "Buy milk")); // the keyed row moved from first to last, with its controls
+        Assert.Equal("toggled 1", RowTexts(milkRow)[1]); // and its own state
 
-        Click(window, ButtonLabelled(host, "Remove", 2)); // Buy milk
-        Assert.Equal(["[ ] Write the report", "[x] Walk the dog"], RowTitles(host));
+        Click(window, ButtonLabelled(host, "Remove", 1)); // Walk the dog
+        Assert.Equal(["[ ] Write the report", "[x] Buy milk"], RowTitles(host));
         Assert.Contains("1 of 2 left", Texts(host));
 
         Type(window, box, "Call the plumber"); // a draft, shown in the capture

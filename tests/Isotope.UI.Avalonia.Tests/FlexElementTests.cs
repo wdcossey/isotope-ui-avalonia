@@ -145,18 +145,24 @@ public sealed class FlexElementTests : IDisposable
     [AvaloniaFact]
     public void An_equal_FlexElement_is_skipped_and_a_changed_one_is_not()
     {
+        // A skipped element is never applied, so the panel keeps the element it was last updated with.
         var children = new Element[] { Text("a") };
         var gap = 3.0;
-        var host = new TestHost(() => VStack(new FlexElement(children) { ColumnGap = gap }));
+        var rendered = new List<FlexElement>();
+        var host = new TestHost(() =>
+        {
+            var flex = new FlexElement(children) { ColumnGap = gap };
+            rendered.Add(flex);
+            return VStack(flex);
+        });
         var panel = host.All<FlexPanel>()[0];
 
-        var skipped = host.Reconciler.DebugElementsSkipped;
         host.Render(); // a new, equal FlexElement
-        Assert.Equal(skipped + 1, host.Reconciler.DebugElementsSkipped);
+        Assert.Same(rendered[0], Reconciler.GetMountedElement(panel));
 
         gap = 4;
         host.Render();
-        Assert.Equal(skipped + 2, host.Reconciler.DebugElementsSkipped); // the panel updates; only its unchanged child skips
+        Assert.Same(rendered[2], Reconciler.GetMountedElement(panel));
         Assert.Same(panel, host.All<FlexPanel>()[0]);
         Assert.Equal(4, panel.ColumnGap);
     }

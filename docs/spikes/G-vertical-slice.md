@@ -70,7 +70,7 @@ would (`DispatcherHost`). The counter renders once per click (4 renders for 3 cl
 
 ![The counter after three clicks](img/G-counter.png)
 
-![The todo app after adding three items, completing one, reversing and removing one](img/G-todo.png)
+![The todo app after adding three items, completing the first, reversing and removing one](img/G-todo.png)
 
 The PNGs are the tests' captures, copied from the test output folder.
 
