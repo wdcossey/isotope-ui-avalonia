@@ -34,8 +34,8 @@ const rule = (r) => ({ hits: 0, ...r, re: new RegExp(r.drop ?? r.find, 'g' + (r.
 const codeText = (s) => { const m = codeMask(s); return [...s].filter((_, i) => m[i]).join(''); };
 
 test('codeMask skips comments, strings, chars and verbatim strings', () => {
-  const src = 'a // x {\n b /* { */ c "{\\"" d @"{""}" e \'{\' f';
-  assert.equal(codeText(src).replace(/\s+/g, ''), 'abcdef');
+  const src = 'a // x {\n b /* { */ c "{\\"" d @"{""}" e \'{\' f @"\\" g';
+  assert.equal(codeText(src).replace(/\s+/g, ''), 'abcdefg');
 });
 
 test('codeMask keeps interpolation holes as code, nested strings inside them as strings', () => {
