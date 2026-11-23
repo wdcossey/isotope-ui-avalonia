@@ -37,7 +37,7 @@ Detailed reports:
   - Uno compiles 83% of `src/Reactor` with 5 patched files *because* it keeps WinUI's API.
   - With an Avalonia-native API, our tier 3 is a rewrite, and a merge-based fork would conflict on every upstream change to it.
   - Even Uno's best case is 13 days behind and has been stuck 11 days on 2 conflicts, one of them upstream's .NET 11 SDK bump.
-- **A hard fork throws away about 380 engine lines a week** (Spike B): keyed-child fixes, a validation rework (#1270, the largest single share), and allocation, diagnostics and picker changes in RenderContext. We would be re-deriving those fixes ourselves.
+- **A hard fork throws away about 380 engine lines a week** (Spike B): keyed-child fixes, a validation rework (#12 (done 2026-11-23)70, the largest single share), and allocation, diagnostics and picker changes in RenderContext. We would be re-deriving those fixes ourselves.
 - **Proposing a core/platform split upstream isn't realistic** (Spike C).
   - Upstream's specs reject an abstractions layer (062) and make anything but Win32 a non-goal (036).
   - Uno's port was sent off to be hosted elsewhere.
@@ -151,6 +151,24 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Coverage [J]:** 45 of upstream's 69 generated WinUI controls have an Avalonia counterpart. About 17 to 20 of those would be fully generated, and about 25 to 28 generated with a hand-written `Customize`.
 - **The runtime it targets** (6 files, 3,522 lines) isn't ported yet: #12.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
+
+## Spike F: descriptor runtime and generated controls (issue #12, 2026-11-23)
+
+- **The runtime compiles on Avalonia through transform rules only.** Upstream's 6 descriptor-runtime files (3,522 lines) are
+  all tier 2: 13 member drops, 633 lines blanked and 18 rewritten. None is tier 3.
+  - 7 files they depend on are vendored too (1,354 lines).
+  - Two are rewritten for Avalonia in 67 lines (`ReactorBindingT.cs`, `ControlEventPayloads.cs`).
+  - The reconciler gains 17 members under upstream's names.
+- **Declaration errors** before the port: 75 at step 0, 72 at step 1 (`spikes/F-descriptors/run-spike.mjs`).
+- **The generator is vendored:** 15 files, 4,411 lines. Our 20 `gen-*` rules (36 lines added, 41 removed, in 3 files) sit on
+  top of the rename.
+- **Button, TextBlock, StackPanel, TextBox and Slider now mount through generated descriptors:** 219 generated lines in 5
+  files, against 35 hand-written `Customize` lines.
+- **Tests:** the seam's 48 tests pass unchanged, plus 14 new: TextBox echo suppression, Slider pairing and bounds, records,
+  and the generator diagnostic `ISOTOPEGEN001` for a member with no Avalonia counterpart. 62 in all.
+- **Avalonia difference:** `TextBox` raises `TextChanged` after a write, even outside a window. The first controlled write
+  therefore carries a suppression token too.
+- **Report:** `docs/spikes/F-descriptor-runtime.md`.
 
 ## Decisions after the seam (2026-11-23)
 
