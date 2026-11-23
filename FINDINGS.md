@@ -130,6 +130,13 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
    - The two inherited FlexPanel ambient-mode bugs get fixed in our port (tier 3) if we hit them, and are noted as a divergence from upstream.
    - The earlier list of upstream-change candidates is withdrawn.
 6. **Targets stay `net10.0` (LTS);** the .NET 11 SDK is installed for the C# 15 compiler only.
+7. **Upstream model: vendor and regenerate.** There is no private fork and no submodule.
+   - `upstream/` is a git-ignored cache.
+   - Tier 1 and tier 2 files are vendored into our repo after transforms, and never edited by hand. CI regenerates them from the pinned commit and fails on any difference.
+   - A sync is a regeneration, not a merge. A transform that stops matching fails loudly, and the tier 3 paths get a report of the upstream PRs that touched them.
+   - Why not a fork: a fork of a public repo can't be private on GitHub, and a merge-based fork only fits a tree that mirrors upstream's (Uno's case, not ours).
+   - Why not a submodule: `UPSTREAM.lock` already pins the commit, and a submodule adds friction and keeps builds dependent on upstream.
+   - The harness is #3, and #6 runs the regeneration check.
 
 ## Repo state at the end of the session
 

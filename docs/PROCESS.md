@@ -24,6 +24,14 @@ The developer approves the triage. **Pick:** the highest-priority `self-drive` i
 issue in the branch name (`feat/<n>-<slug>`) and in the merge commit (`Closes #n`, which closes it when `main` is pushed).
 Issue text follows the no-personal-data rule (CLAUDE.md).
 
+### Upstream code
+
+Upstream files we take are **vendored and regenerated**: `tools/sync` copies them from the git-ignored `upstream/` cache at the
+commit in `UPSTREAM.lock`, applying the transform rules (see #3).
+- **Never hand-edit a vendored file.** Change a transform rule, or move the file to tier 3.
+- CI's `tools/sync --check` fails on any difference.
+- Upstream itself is treated as locked: nothing is sent upstream.
+
 ## 2. Ask first, always
 
 Never without the developer's go-ahead in the conversation:
