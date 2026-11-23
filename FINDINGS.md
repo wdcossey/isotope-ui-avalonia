@@ -41,7 +41,7 @@ Detailed reports:
 - **Proposing a core/platform split upstream isn't realistic** (Spike C).
   - Upstream's specs reject an abstractions layer (062) and make anything but Win32 a non-goal (036).
   - Uno's port was sent off to be hosted elsewhere.
-  - At most, small behaviour-neutral fixes might be accepted, which could shrink our transforms. That means contacting upstream, which is out of scope until you decide.
+  - Decided 2026-11-23: we treat upstream as locked and send nothing upstream.
 - **Paths are stable enough for path-based import:** no engine file has been renamed, moved, split or deleted since 2026-04-17 (Spike B). The import script still has to flag new and renamed files, and fail on includes that silently match nothing (a trap Uno hit: 74 files dropped with a green build).
 
 **The price of tiers 1 and 2:** our Avalonia layer has to present upstream's *member names* to the engine: 226 members on 55 types, mostly `ElementModifiers` (54), `Reconciler` (33), `ReactorWindow` (16) and `Element` (10) (Spike A, `spikes/A-engine/seam.json`). The *value types* can be Avalonia's (`Thickness`, `IBrush`), so this fits decision 2 (Avalonia-native API) everywhere except RenderContext's public WinUI-typed hooks, which go to tier 3.
@@ -125,14 +125,10 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 2. **Upstream's member names on the engine-facing seam, with Avalonia value types: adopted.**
 3. **Next session:** the engine half of Spike D (a minimal Avalonia `Reconciler`/`Element`/`ElementModifiers` implementing the seam, then `UseState` plus a button, a controlled `TextBox` and a keyed list) and a `tools/sync` import script. Agreed.
 4. **GitHub remote:** you will create a private repo; then add it as `origin` and push.
-5. **Contacting upstream:** nothing is required, since the pipeline works around every gap. Candidate changes that would shrink our transforms, in order of payoff:
-   - Split `RenderContext.cs`'s WinUI hooks into a partial file.
-   - Split the base records out of `Element.cs`.
-   - Two inherited FlexPanel ambient-mode bugs (to reproduce on WinUI first).
-   - Short names instead of fully qualified WinUI names.
-   - `YogaValueExtensionsTests.cs`'s Markdown dependency.
-
-   Revisit once the import script shows the real transform list; nothing goes upstream without your go-ahead.
+5. **Upstream is treated as locked (user, 2026-11-23):** substantial changes are unlikely to be accepted, so we plan as if we can't change upstream at all. We send no contributions or issues.
+   - Every gap is ours to absorb: transforms on import, the tier 3 rewrite, or fixes in our own port.
+   - The two inherited FlexPanel ambient-mode bugs get fixed in our port (tier 3) if we hit them, and are noted as a divergence from upstream.
+   - The earlier list of upstream-change candidates is withdrawn.
 6. **Targets stay `net10.0` (LTS);** the .NET 11 SDK is installed for the C# 15 compiler only.
 
 ## Repo state at the end of the session
