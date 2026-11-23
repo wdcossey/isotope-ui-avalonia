@@ -228,7 +228,10 @@ public sealed partial class Reconciler
     /// <summary>Counts UI changes for the perf provider's tally.</summary>
     internal static void CountPerfChanges(uint count = 1) => Interlocked.Add(ref s_perfChanges, count);
 
-    /// <summary>The name of the component being rendered, for diagnostics; null outside a render.</summary>
+    /// <summary>
+    /// The component whose render output is being rendered or reconciled, for diagnostics that name it
+    /// (keyed-list warnings); null outside one. Upstream names it only while devtools publish sources.
+    /// </summary>
     internal string? DiagnosticComponent =>
         _renderStack.Count == 0 ? null : Diagnostics.ComponentNames.For(_renderStack[^1].Component, _renderStack[^1].Element);
 
@@ -537,20 +540,12 @@ public sealed partial class Reconciler
         requestRerender();
     };
 
-    private Element Render(ComponentNode node, RenderContext ctx, Action componentRerender, Func<Element> render)
+    private Element Render(RenderContext ctx, Action componentRerender, Func<Element> render)
     {
-        _renderStack.Add(node);
-        try
-        {
-            ctx.BeginRender(componentRerender, _contextScope, Owner);
-            var element = render() ?? EmptyElement.Instance;
-            ctx.FlushEffects();
-            return element;
-        }
-        finally
-        {
-            _renderStack.RemoveAt(_renderStack.Count - 1);
-        }
+        ctx.BeginRender(componentRerender, _contextScope, Owner);
+        var element = render() ?? EmptyElement.Instance;
+        ctx.FlushEffects();
+        return element;
     }
 
     private Border MountNode(ComponentNode node, RenderContext ctx, Action requestRerender, Func<Element> render)
@@ -558,9 +553,17 @@ public sealed partial class Reconciler
         var wrapper = new Border();
         _componentNodes[wrapper] = node;
         var componentRerender = CreateComponentRerender(node, requestRerender);
-        var child = Render(node, ctx, componentRerender, render);
-        wrapper.Child = Mount(child, componentRerender);
-        node.RenderedElement = child;
+        _renderStack.Add(node);
+        try
+        {
+            var child = Render(ctx, componentRerender, render);
+            wrapper.Child = Mount(child, componentRerender);
+            node.RenderedElement = child;
+        }
+        finally
+        {
+            _renderStack.RemoveAt(_renderStack.Count - 1);
+        }
         return wrapper;
     }
 
@@ -590,11 +593,19 @@ public sealed partial class Reconciler
     private void RerenderNode(ComponentNode node, RenderContext ctx, Border wrapper, Action requestRerender, Func<Element> render)
     {
         var componentRerender = CreateComponentRerender(node, requestRerender);
-        var child = Render(node, ctx, componentRerender, render);
-        var existing = wrapper.Child;
-        var next = ReconcileSlot(node.RenderedElement, child, existing, componentRerender);
-        if (!ReferenceEquals(next, existing)) wrapper.Child = next;
-        node.RenderedElement = child;
+        _renderStack.Add(node);
+        try
+        {
+            var child = Render(ctx, componentRerender, render);
+            var existing = wrapper.Child;
+            var next = ReconcileSlot(node.RenderedElement, child, existing, componentRerender);
+            if (!ReferenceEquals(next, existing)) wrapper.Child = next;
+            node.RenderedElement = child;
+        }
+        finally
+        {
+            _renderStack.RemoveAt(_renderStack.Count - 1);
+        }
     }
 
     // The node's previous output, walked against itself: reaches a self-triggered component further down

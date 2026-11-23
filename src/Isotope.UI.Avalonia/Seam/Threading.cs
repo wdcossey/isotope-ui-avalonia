@@ -19,8 +19,21 @@ internal sealed class DispatcherQueue
         dispatcher.ShutdownStarted += (_, _) => _shutdownStarted = true;
     }
 
-    /// <summary>The queue of Avalonia's UI thread.</summary>
-    internal static DispatcherQueue ForUIThread => s_uiThread ??= new DispatcherQueue(Dispatcher.UIThread);
+    /// <summary>
+    /// The queue of Avalonia's current UI-thread dispatcher. Re-created when that dispatcher changes (a headless
+    /// test session gets its own), so a queue is never left pointing at a dispatcher nothing pumps.
+    /// </summary>
+    internal static DispatcherQueue ForUIThread
+    {
+        get
+        {
+            var ui = Dispatcher.UIThread;
+            var queue = s_uiThread;
+            if (queue is null || !ReferenceEquals(queue._dispatcher, ui))
+                s_uiThread = queue = new DispatcherQueue(ui);
+            return queue;
+        }
+    }
 
     /// <summary>The Avalonia dispatcher this queue posts to.</summary>
     internal Dispatcher Dispatcher => _dispatcher;
