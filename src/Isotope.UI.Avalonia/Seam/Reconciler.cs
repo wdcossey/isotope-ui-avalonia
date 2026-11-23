@@ -45,7 +45,7 @@ public sealed partial class Reconciler
 
     public Reconciler(ILogger? logger = null) => _logger = logger;
 
-    /// <summary>The host that renders this reconciler's content (tier 3: no Avalonia host sets it yet).</summary>
+    /// <summary>The host that renders this reconciler's content (a <c>ReactorHostControl</c> sets itself), or null.</summary>
     internal IContentOwner? Owner { get; init; }
 
     /// <summary>
