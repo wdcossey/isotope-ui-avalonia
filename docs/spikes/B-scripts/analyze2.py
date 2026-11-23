@@ -4,7 +4,8 @@ sys.path.insert(0, sys.argv[2])
 from areas import area, AREAS
 cs=json.load(open(sys.argv[1],encoding='utf-8'))
 OUT=sys.argv[3]
-U=r'<repo root>/upstream'
+import os
+U = os.environ.get('UPSTREAM') or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'upstream'))
 def git(*a): return subprocess.run(['git','-C',U,'-c','core.quotepath=off','-c','diff.renameLimit=50000']+list(a),capture_output=True,check=True).stdout.decode('utf-8','replace')
 EXCL=[r'(^|/)package-lock\.json$', r'/traces/', r'\.(etl|nettrace)$', r'/Monaco/Assets/', r'\.api\.txt$',
       r'(Md4cGenerated|YogaGenerated)/', r'Md4cFixtures/spec\.txt$', r'reactor-search-index\.json$', r'/Baselines/.*\.json$', r'^docs/specs/tasks/.*\.json$']
@@ -66,7 +67,7 @@ def landing(commits,label):
       ['median lines changed per commit (excl. bulk)',statistics.median(sizes)],['p75 / p90 lines',f'{q(sizes,.75)} / {q(sizes,.9)}'],['mean lines',round(statistics.mean(sizes))],
       ['median files per commit',statistics.median(nf)],['commits touching src/Reactor',len(srcR_nz)],['median src/Reactor lines in those',statistics.median(srcR_nz) if srcR_nz else '-'],
       ['calendar days',span],['days with >=1 commit',len(days)],['commits per calendar day',round(len(commits)/span,2)],['max commits in a day',max(days.values())],
-      ['distinct authors',len(authors)],['top authors (commits)','; '.join(f'{a} {n}' for a,n in authors.most_common(5))]])
+      ['distinct authors',len(authors)]])
 landing(win,'window 2026-08-22..11-22'); landing(cs,'whole history')
 # PR numbers range in window
 nums=[int(m.group(1)) for c in win for m in [re.search(r'\(#(\d+)\)\s*$',c['subject'])] if m]

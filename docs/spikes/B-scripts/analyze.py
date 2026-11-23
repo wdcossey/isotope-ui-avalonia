@@ -4,7 +4,8 @@ sys.path.insert(0, sys.argv[2])
 from areas import area, AREAS
 cs=json.load(open(sys.argv[1],encoding='utf-8'))  # newest first, first-parent
 OUT=sys.argv[3]
-U=r'<repo root>/upstream'
+import os
+U = os.environ.get('UPSTREAM') or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'upstream'))
 def git(*a): return subprocess.run(['git','-C',U,'-c','core.quotepath=off']+list(a),capture_output=True,check=True).stdout.decode('utf-8','replace')
 EXCL=[r'(^|/)package-lock\.json$', r'/traces/', r'\.(etl|nettrace)$', r'/Monaco/Assets/', r'\.api\.txt$',
       r'(Md4cGenerated|YogaGenerated)/', r'Md4cFixtures/spec\.txt$', r'reactor-search-index\.json$', r'/Baselines/.*\.json$', r'^docs/specs/tasks/.*\.json$']

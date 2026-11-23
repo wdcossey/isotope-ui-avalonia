@@ -1,6 +1,7 @@
 
 import sys, re, subprocess, datetime, json
-U=r'<repo root>/upstream'
+import os
+U = os.environ.get('UPSTREAM') or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'upstream'))
 def git(*a): return subprocess.run(['git','-C',U,'-c','core.quotepath=off']+list(a),capture_output=True,check=True).stdout.decode('utf-8','replace')
 pat=re.compile(open(sys.argv[1]+'/winui_regex.txt').read())
 EPATHS=['src/Reactor/Core/RenderContext.cs','src/Reactor/Core/ChildReconciler.cs','src/Reactor/Core/Internal/KeyedListDiff.cs','src/Reactor/Yoga','src/Reactor/Hooks','src/Reactor/Data','src/Reactor/Controls/Validation']

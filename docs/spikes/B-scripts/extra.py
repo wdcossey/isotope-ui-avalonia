@@ -3,7 +3,8 @@ import json, sys, re, subprocess, collections
 sys.path.insert(0, sys.argv[2])
 from areas import area
 cs=json.load(open(sys.argv[1],encoding='utf-8'))
-U=r'<repo root>/upstream'
+import os
+U = os.environ.get('UPSTREAM') or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'upstream'))
 def git(*a): return subprocess.run(['git','-C',U,'-c','core.quotepath=off']+list(a),capture_output=True,check=True).stdout.decode('utf-8','replace')
 out=[]
 # partial files added in src/Reactor (Name.Part.cs) over history, with whether base Name.cs existed
