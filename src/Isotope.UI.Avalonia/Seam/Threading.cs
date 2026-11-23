@@ -45,8 +45,16 @@ internal sealed class DispatcherQueue
     /// The queue of the calling thread when it is Avalonia's UI thread, else <c>null</c>
     /// (WinUI returns null on a thread without a queue).
     /// </summary>
+    /// <remarks>
+    /// Asks <see cref="Dispatcher.FromThread"/> first: Avalonia 12 binds <see cref="Dispatcher.UIThread"/> to the first
+    /// thread that reads it, so reading it from a thread with no dispatcher would make that thread the UI thread, and
+    /// a caller that only wanted to know (upstream's hooks, capturing "the current dispatcher") would then post to a
+    /// queue nothing pumps.
+    /// </remarks>
     internal static DispatcherQueue? GetForCurrentThread()
-        => Dispatcher.UIThread.CheckAccess() ? ForUIThread : null;
+        => Dispatcher.FromThread(Thread.CurrentThread) is { } current && ReferenceEquals(current, Dispatcher.UIThread)
+            ? ForUIThread
+            : null;
 
     /// <summary>
     /// Posts <paramref name="callback"/> to the UI thread. Returns <c>false</c> once the dispatcher
