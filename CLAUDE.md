@@ -55,6 +55,9 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   Avalonia-only controls use Avalonia's. An Avalonia-named API and a Reactor migration tool may come later (#13).
 - **Controls behave as upstream's:** a controlled value equal to the last render's isn't re-applied; `ISOTOPEGEN001`
   (a record member with no Avalonia counterpart) is a build error; no control pooling until #14 measures it.
+- **Element factories and modifiers** are our own tier 3 version of upstream's `Dsl.cs`/`ElementExtensions.cs` (#17),
+  with upstream's names; add a factory when its control arrives. Doc C# blocks must be `#region`s of the test project
+  (`DocSnippetTests`).
 - **Member drops stay text-based** (the lexer in `tools/sync/lib/csharp.mjs`, shared with Spike A's
   `tools/rewrite-upstream.mjs`) until #4 decides on Roslyn.
 
