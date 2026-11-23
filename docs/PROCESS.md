@@ -10,8 +10,19 @@ are merged locally and `main` is pushed after each merge. The loop is otherwise 
 
 ## 1. The task list
 
-The spikes and work in `HANDOVER.md` are the task list, done in its order. A task that needs the developer stops
-at that step, and the rest goes on.
+**GitHub Issues are the task list** (since 2026-11-23). Labels:
+
+| Label | Meaning |
+|---|---|
+| `P0`…`P3` | priority |
+| `feature` / `bug` / `chore` / `research` | type |
+| `self-drive` | can be taken from issue to merge without a hands-on step |
+| `hands-on` | needs the developer; the reason is in an issue comment |
+| `blocked` | waiting on another issue ("Blocked by #n" in the body) or an answer |
+
+The developer approves the triage. **Pick:** the highest-priority `self-drive` issue whose blockers are closed. Reference the
+issue in the branch name (`feat/<n>-<slug>`) and in the merge commit (`Closes #n`, which closes it when `main` is pushed).
+Issue text follows the no-personal-data rule (CLAUDE.md).
 
 ## 2. Ask first, always
 
