@@ -55,7 +55,7 @@ Python 3 is optional, needed only for the Spike B scripts.
 git clone <this repo> isotope && cd isotope
 # Upstream cache, full history (Spike B needs it), checked out at the pinned commit:
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
-git -C upstream checkout "$(sed -n 's/^baseline=//p' UPSTREAM.lock)"
+git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (567 recorded)

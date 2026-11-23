@@ -43,13 +43,15 @@ Never without the developer's go-ahead in the conversation:
   maintainers, opening issues or PRs anywhere.
 - **Commands that change the system:** installing SDKs or workloads (the .NET 11 SDK is the developer's to install),
   global tools, registry, stopping processes Claude didn't start.
-- **Changes inside `upstream/`:** none. Read-only git only (log, show, diff, grep, rev-parse). No checkout, reset,
-  edits, or `global.json` changes there.
-- **Decisions that aren't Claude's:** those listed under "Decisions already made" in `HANDOVER.md` are not reopened.
+- **Changes inside `upstream/`:** none, beyond keeping the cache current. Read-only git (log, show, diff, grep,
+  rev-parse), `git fetch`, and checking out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are fine. No other
+  checkouts, no resets, no edits, no builds there.
+- **Decisions that aren't Claude's:** those under "Decisions already made (don't reopen)" in `CLAUDE.md` are not reopened.
 
 ## 3. Build
 
-1. **Branch** from `main`: `spike/<letter>-<slug>`, `feat/<slug>`, `chore/<slug>`. Parallel work that changes code
+1. **Branch** from `main`: `<type>/<issue>-<slug>`, where the type is `feat`, `fix`, `chore`, `docs`, `research` or
+   `spike` (for example `feat/3-sync-harness`). Leave out `<issue>-` only for work with no issue. Parallel work that changes code
    gets its own worktree under `../<repo folder>.worktrees/<slug>` (a sibling, so nothing scans it):
    `git worktree add ../<repo folder>.worktrees/<slug> -b <branch> main`.
 2. **Build** in small commits. Before every commit: `dotnet build` and `dotnet test` for the projects touched.
@@ -78,11 +80,11 @@ branch and its worktree.
 
 ## 6. Batches
 
-Two or three agents at once, each on **Opus set explicitly**, briefed from `~/.claude/ways-of-working/agent-brief.md`
-adapted to this file, each with its own temp folder under the session scratchpad. Research agents (no code) write
-their report to their temp folder and never touch the repo; the coordinator folds results into FINDINGS.md.
-**Shared files** agents never change: `CLAUDE.md`, `docs/`, `HANDOVER.md`, `FINDINGS.md`, `global.json`,
-`UPSTREAM.lock`, `.gitignore`, `Directory.*.props`.
+Two or three agents at once, each on **Opus set explicitly**, briefed with `docs/agent-brief.md`, each with its own
+temp folder. Agents never merge or push `main`. Research agents (no code) **return their report in their reply**, since
+they can be blocked from writing report files; the coordinator commits it under `docs/` and folds the results into
+FINDINGS.md. **Shared files** agents change only when their issue can't be done without it (and say so):
+`CLAUDE.md`, `README.md`, `docs/PROCESS.md`, `docs/agent-brief.md`, `docs/LESSONS.md`, `FINDINGS.md`, `UPSTREAM.lock`, `global.json`, `.gitignore`, `.gitattributes`, `Directory.*.props`, CI workflows.
 
 ## 7. End of session
 

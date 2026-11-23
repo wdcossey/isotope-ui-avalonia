@@ -20,7 +20,7 @@ Closes #
 ## Checks
 
 - [ ] Build and tests pass, with counts: _n_ tests
-- [ ] `tools/sync --check` passes (vendored upstream files unchanged by hand)
+- [ ] `tools/sync --check` passes, vendored upstream files unchanged by hand (once #3 lands; until then, n/a)
 - [ ] No personal data (scan in CLAUDE.md)
 - [ ] No conflict markers
 

@@ -1,0 +1,3 @@
+# Files scripts parse line by line: always LF, so a Windows checkout doesn't add \r.
+UPSTREAM.lock text eol=lf
+*.sh text eol=lf

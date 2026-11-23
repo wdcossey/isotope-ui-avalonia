@@ -4,7 +4,8 @@ Give each agent this file, its issue number, its worktree, its own temp folder a
 Keep this brief current as mistakes are found.
 
 You're building one Isotope.UI.Avalonia issue, possibly while other agents build others. Read `CLAUDE.md`, `README.md`
-and `docs/PROCESS.md` first. Then follow PROCESS §3 to §5. **You never merge into `main` and never push `main`.**
+and `docs/PROCESS.md` first. Then follow PROCESS §3 (build) and §4 (self-review). **You never merge into `main` and never push `main`:** the
+coordinator merges (§5).
 
 ## Setup
 
@@ -17,8 +18,7 @@ and `docs/PROCESS.md` first. Then follow PROCESS §3 to §5. **You never merge i
 ## Rules, because others work at the same time
 
 - **Stage your issue's files by name.** Never `git add -A` or `git add .`.
-- **Shared files:** `CLAUDE.md`, `README.md`, `docs/PROCESS.md`, this brief, `docs/LESSONS.md`, `FINDINGS.md`,
-  `UPSTREAM.lock`, `global.json`, `.gitignore`, `Directory.*.props`, CI workflows.
+- **Shared files:** `CLAUDE.md`, `README.md`, `docs/PROCESS.md`, `docs/agent-brief.md`, `docs/LESSONS.md`, `FINDINGS.md`, `UPSTREAM.lock`, `global.json`, `.gitignore`, `.gitattributes`, `Directory.*.props`, CI workflows.
   - Change them only if your issue can't be done without it, and say so.
   - A change you'd merely like goes under **Proposed for shared files** in your report, with the exact text.
 - **Temp files go in your own temp folder,** never in the repo.
