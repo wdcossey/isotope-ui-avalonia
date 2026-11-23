@@ -111,6 +111,75 @@ public class ControlTests
     }
 
     [AvaloniaFact]
+    public void TextBox_rejected_edit_stays_until_the_controlled_value_changes()
+    {
+        // Upstream's rule (kept, 2026-11-23): a TextBox element equal to the last render's is skipped (ShallowEquals),
+        // so an edit the handler rejects stays in the box across renders until the value changes.
+        Action<string>? setValue = null;
+        Action? bump = null;
+        var reported = new List<string>();
+        var host = new TestHost(() => Component(ctx =>
+        {
+            var (value, set) = ctx.UseState("123");
+            var (n, setN) = ctx.UseState(0);
+            setValue = set;
+            bump = () => setN(n + 1);
+            // Digits only: anything else is rejected by not setting the state.
+            return VStack(Text("render " + n),
+                new TextBoxElement(value, v => { reported.Add(v); if (v.All(char.IsDigit)) set(v); }));
+        }));
+        var box = host.All<TextBox>()[0];
+        Dispatcher.UIThread.RunJobs();
+
+        box.Text = "123x"; // rejected
+        Dispatcher.UIThread.RunJobs();
+        host.Flush();
+        Assert.Equal(["123x"], reported);
+        Assert.Equal("123x", box.Text);
+
+        bump!(); // the component renders again, with the same controlled value
+        host.Flush();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(["render 1"], host.Texts());
+        Assert.Equal("123x", box.Text);
+
+        setValue!("456"); // the value changes: it is written
+        host.Flush();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal("456", box.Text);
+        Assert.Equal(["123x"], reported); // and the write doesn't echo
+        Assert.Same(box, host.All<TextBox>()[0]);
+    }
+
+    [AvaloniaFact]
+    public void TextBox_updated_for_another_member_writes_back_a_controlled_value_the_box_drifted_from()
+    {
+        // The other half of upstream's rule: when the element does change (here its placeholder), the controlled
+        // entry compares the box's text with the value (Spec 047 §8, "write only on real drift") and writes the value
+        // back, so the rejected edit goes.
+        Action? bump = null;
+        var reported = new List<string>();
+        var host = new TestHost(() => Component(ctx =>
+        {
+            var (n, setN) = ctx.UseState(0);
+            bump = () => setN(n + 1);
+            return new TextBoxElement("123", reported.Add, PlaceholderText: "render " + n);
+        }));
+        var box = host.All<TextBox>()[0];
+        Dispatcher.UIThread.RunJobs();
+        box.Text = "123x";
+        Dispatcher.UIThread.RunJobs();
+
+        bump!();
+        host.Flush();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("render 1", box.PlaceholderText);
+        Assert.Equal("123", box.Text);
+        Assert.Equal(["123x"], reported); // the write back doesn't echo
+    }
+
+    [AvaloniaFact]
     public void TextBox_nullable_members_set_back_to_null_return_to_the_defaults()
     {
         var set = true;
