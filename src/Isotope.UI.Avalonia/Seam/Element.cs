@@ -88,6 +88,10 @@ public abstract record Element
                 && ReferenceEquals(x.Setters, y.Setters),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
+            (FlexElement x, FlexElement y) => x.Direction == y.Direction && x.JustifyContent == y.JustifyContent
+                && x.AlignItems == y.AlignItems && x.AlignContent == y.AlignContent && x.Wrap == y.Wrap
+                && x.ColumnGap == y.ColumnGap && x.RowGap == y.RowGap && x.FlexPadding == y.FlexPadding
+                && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
             (TextBoxElement x, TextBoxElement y) => x.Value.Equals(y.Value) && x.PlaceholderText == y.PlaceholderText
                 && x.IsReadOnly == y.IsReadOnly && x.AcceptsReturn == y.AcceptsReturn && x.TextWrapping == y.TextWrapping
                 && x.MaxLength == y.MaxLength && ReferenceEquals(x.Setters, y.Setters),

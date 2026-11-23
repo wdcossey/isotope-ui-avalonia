@@ -24,7 +24,7 @@
     {
       "path": "src/Reactor/Yoga/FlexPanel.cs",
       "tier": 3,
-      "note": "Spike D: hand port for Avalonia"
+      "note": "Spike D: hand port for Avalonia; in the library since #2 (src/Isotope.UI.Avalonia/Layout/FlexPanel.cs)"
     },
     {
       "glob": "src/Reactor/Yoga/*.cs",

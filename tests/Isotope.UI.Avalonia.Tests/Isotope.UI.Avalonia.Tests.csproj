@@ -21,6 +21,9 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.6" />
+    <!-- Skia and the Fluent theme, as in Spike D: headless windows render real frames, captured to PNG. -->
+    <PackageReference Include="Avalonia.Skia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
