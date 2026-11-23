@@ -88,3 +88,16 @@ their report to their temp folder and never touch the repo; the coordinator fold
 
 Update the project memory with what's in flight (branches, worktrees, agents) and what's next. Check
 `git branch` and `git worktree list` before trusting a note.
+
+## Decisions this project made once
+
+| Decision | Choice |
+|---|---|
+| Task list | GitHub Issues, labels `P0`…`P3`, type, `self-drive`/`hands-on`/`blocked` (2026-11-23) |
+| Who merges | Claude, after the gate in §4. PRs and branch protection come with #7 |
+| Batch size | 2 or 3 agents, each on an explicit model (`opus`), briefed with `docs/agent-brief.md` |
+| Screenshots | Rendered headless; a real window is ask-first |
+| Away mode | Only when the developer says so; decisions are logged in FINDINGS or the issue |
+| Review depth | Behaviour changes: `high` then `medium`. Docs and chores: one `medium` pass. Never `max`/`ultra` unless asked |
+| Upstream | Read-only; vendor and regenerate (#3); nothing sent upstream |
+| Personal data | None in the repo, issues or PRs (CLAUDE.md, hard rules) |
