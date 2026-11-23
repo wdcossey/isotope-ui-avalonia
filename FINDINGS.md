@@ -144,9 +144,26 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Seam (issue #1, 2026-11-23)
+
+- **Upstream's `ChildReconciler.cs`, `Internal/KeyedListDiff.cs` and `RenderContext.cs` compile against our Avalonia
+  seam with transforms only:**
+  - Spike A's edit lines for them went from 12 + 5 + 0 to **0 + 0 + 0**.
+  - `KeyedListDiff` needs no rule.
+  - `ChildReconciler` needs one rule (two `using` lines).
+  - `RenderContext` needs 37 member drops: 889 lines of tier 3 hooks, while the hooks core is untouched.
+- **The library** `src/Isotope.UI.Avalonia` links 65 upstream files (16,062 lines) with 74 rules: 7 find/replace and 67
+  member drops. Measured with `node tools/measure-transforms.mjs src/Isotope.UI.Avalonia/UpstreamFiles.props
+  src/Isotope.UI.Avalonia/upstream-transforms.json upstream/src/Reactor`.
+- **Tests:** 48 headless tests of the seam and the hooks core (render, state, effects, context, memo, keyed reorder, the
+  render-loop guard, off-thread re-renders) and 12 tests of the rewrite tool. All 60 were proven to fail with their
+  behaviour broken.
+- **Still to come:** the library links upstream at build time with its own rule file, while `tools/sync` vendors with
+  another. Unifying them is #11.
+
 ## Tracking
 
-Open work is tracked in GitHub Issues (since 2026-11-23): #1 seam types, #2 vertical slice, #3 `tools/sync` (done 2026-11-23: 155 files vendored, first sync to `14172dce`), #4 Roslyn transforms, #5 first real sync, #6 CI, #7 PR process (hands-on), #8 wrappers-generator research, #9 FlexPanel ambient-mode divergence.
+Open work is tracked in GitHub Issues (since 2026-11-23): #1 seam types (done 2026-11-23), #2 vertical slice, #3 `tools/sync` (done 2026-11-23: 155 files vendored, first sync to `14172dce`), #4 Roslyn transforms, #5 first real sync, #6 CI, #7 PR process (hands-on), #8 wrappers-generator research, #9 FlexPanel ambient-mode divergence.
 
 ## Not done
 
