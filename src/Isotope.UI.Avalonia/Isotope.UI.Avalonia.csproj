@@ -19,6 +19,7 @@
     <Compile Include="Seam/**/*.cs" />
     <!-- Tier 3 controls written for Avalonia (FlexPanel, over the vendored Yoga). -->
     <Compile Include="Layout/**/*.cs" />
+    <Compile Include="Elements/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.6" />
