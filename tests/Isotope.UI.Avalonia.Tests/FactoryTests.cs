@@ -140,6 +140,7 @@ public class FactoryTests
         Element a = TextBlock("a"), b = TextBlock("b"), c = TextBlock("c");
         Assert.Equal([a, b, c], VStack(a, null, Empty(), Group(b, c)).Children);
         Assert.Equal([a, b], Flex(null, a, Group(b)).Children);
+        Assert.Equal([a], HStack(a, Empty()).Children); // an empty child alone is dropped too
         Element?[] kept = [a, b];
         Assert.Same(kept, VStack(kept).Children); // nothing dropped: the caller's array, as upstream's
     }
