@@ -12,11 +12,11 @@ Measured 2026-11-23 by an agent (Opus). Every number says how it was measured. J
   - All 6 runtime files (3,522 lines) are tier 2. Their only changes are 18 rewritten lines and 633 blanked ones: the WinUI `using` lines and 13 member drops.
   - 7 more upstream files they need are vendored too (1,354 lines). 4 files already vendored, but not compiled, now compile (401 lines).
   - Two upstream files are rewritten as tier 3 in 67 lines: `ReactorBindingT.cs` (284 lines upstream) and `ControlEventPayloads.cs` (495).
-  - The reconciler gains 17 members under upstream's names, and `ReactorState` gains 5 fields (`Seam/Reconciler.V1.cs`, 199 lines).
+  - The reconciler gains 17 members under upstream's names, and `ReactorState` gains 5 fields (`Seam/Reconciler.V1.cs`, 211 lines).
 - **The wrappers generator is vendored by `tools/sync` and built for Avalonia.** 15 files (4,411 lines) with 20 rules of ours on top of the namespace rename. They add 36 lines and remove 41, in 3 files.
 - **The seam's hand-written mounts are gone.** Button, TextBlock, StackPanel, TextBox and Slider mount and update through generated descriptors (219 generated lines).
   - The seam's 48 tests pass unchanged, which is the equivalence gate.
-  - 9 new tests cover TextBox, Slider and the generator: 57 tests in all.
+  - 12 new tests cover TextBox, Slider, a derived record and the generator: 60 tests in all.
 
 ## Half 1: the runtime port
 
@@ -74,7 +74,7 @@ Measured by `tools/measure-transforms.mjs` over the vendored files: line counts 
 |---|---|---|---|---|
 | `V1Protocol/ReactorBindingT.cs` | 284 | `Seam/V1Protocol/ReactorBinding.cs` | 56 | Most of it is the typed WinUI input families (pointer, tap, key, focus) and reference edges. The runtime calls only `Control`, `OnCustomEvent` and `WriteSuppressed`, which keep upstream's names. |
 | `V1Protocol/ControlEventPayloads.cs` | 495 | `Seam/V1Protocol/ControlEventPayloads.cs` | 11 | Its payloads hold WinUI delegate types. Only TextBox's is needed so far. |
-| (the reconciler) | | `Seam/Reconciler.V1.cs` | 199 | The 17 members the runtime calls, plus the dispatch through `ControlRegistry` |
+| (the reconciler) | | `Seam/Reconciler.V1.cs` | 211 | The 17 members the runtime calls, plus the dispatch through `ControlRegistry` |
 | | | `Seam/V1Protocol/ItemsList.cs` | 43 | The items-host adapter our generator rule emits (see below) |
 
 - **The 17 reconciler members:**
@@ -117,7 +117,7 @@ The 20 rules (all `gen-*` in `tools/sync/transforms.json`):
 
 ### Records and descriptors
 
-- **The records are hand-written, in `Seam/ControlElements.cs` (160 lines).** They carry Reactor's member names, Avalonia's value types, and `[GenerateReactorDescriptor(typeof(Avalonia.Controls.X))]`.
+- **The records are hand-written, in `Seam/ControlElements.cs` (166 lines).** They carry Reactor's member names, Avalonia's value types, and `[GenerateReactorDescriptor(typeof(Avalonia.Controls.X))]`.
   - TextBlock maps `Content`→`Text` with `[WrapAlias]`.
   - Button maps `Label`→`Content` and keeps `IsEnabled` manual.
   - StackPanel's record is unchanged.
@@ -125,11 +125,12 @@ The 20 rules (all `gen-*` in `tools/sync/transforms.json`):
 - **Generated:** 5 files, 219 lines (Button 74, Slider 66, TextBox 29, StackPanel 27, TextBlock 23).
 - **Hand-written descriptor code:** 3 `Customize` bodies, 30 lines.
   - Button's is empty, because the reconciler merges `IsEnabled`.
-  - TextBox's has `AcceptsReturn` and `TextWrapping` before the controlled `Value`, as upstream's does.
+  - TextBox's has `AcceptsReturn` and `TextWrapping` before the controlled `Value`, as upstream's does. Unlike upstream's, they and the generated nullable members (`ClearValueOnUnset`) go through the ClearValue channel, so setting one back to null restores the control's default.
   - Slider's has Min and Max as `CoercingOneWay`, as upstream's does.
-- **The reconciler** dispatches mount, update and unmount to the handler `ControlRegistry` resolves for the element type. `MountButton`, `MountStack` and the inline TextBlock arms are gone (`Reconciler.cs` −36 +31).
-- **Tests:** the 48 seam tests pass unchanged (`tests/` diff: 2 new files, the csproj and `expected-total.txt` only). 9 new tests make 57:
-  - TextBox: a controlled value written and edits reported; no echo of a write and the next edit still reported; an unset value keeps typed text;
+- **The reconciler** dispatches mount, update and unmount to the handler `ControlRegistry` resolves for the element type, or for its nearest base type: a record derived from a control's record mounts as its base, as the seam's type patterns allowed (upstream's registry matches the exact type). `MountButton`, `MountStack` and the inline TextBlock arms are gone (`Reconciler.cs` −36 +31).
+- **Tests:** the 48 seam tests pass unchanged (`tests/` diff: 2 new files, the csproj and `expected-total.txt` only). 12 new tests make 60:
+  - TextBox: a controlled value written and edits reported; no echo of a write and the next edit still reported; no echo of two writes pending together; nullable members set back to null restore the defaults; an unset value keeps typed text;
+  - a record derived from TextBlock's mounts and updates as its base;
   - Slider: value pairing without echo; Min and Max written first, and a coercing bound that doesn't echo;
   - generator, through Roslyn's driver: a member with no Avalonia counterpart is reported; mapped members and callbacks aren't; an obsolete property isn't mapped; ListBox gets the items host and its generated code compiles.
 
@@ -138,6 +139,8 @@ The 20 rules (all `gen-*` in `tools/sync/transforms.json`):
 1. **TextBox raises `TextChanged` after the write returns, and does so for a control that isn't in a window yet.**
    - Upstream's TextBox descriptor uses the counter channel (`WriteSuppressed`). Here that reported the mount write as a user edit, and let a stale token swallow a real one.
    - The TextBox record uses upstream's value-diff channel with `armOnMount` instead (upstream uses it for RichEditBox), and its trampoline calls `ShouldSuppressEcho`. Tests pump the dispatcher, as a host's render tick would.
+   - The value-diff arm holds one write. Two renders that write before the dispatcher runs leave two events that both read the latest text; the trampoline also drops a text equal to the element's controlled value (review pass 1 found this).
+   - Not covered: a write a `Setters` action makes. `ApplySetters`' suppression scope has closed when the posted event arrives. `Setters` is internal and nothing sets it yet.
 2. **The panel strategy mounts the children it is given.** Upstream's container factories flatten `GroupElement`s; the seam flattened them in `MountStack`. `StackElement.Children` now flattens on init, so slots and reference equality behave as before.
 3. **`IsEnabled` has two sources** (the element's and the modifier). The reconciler already writes them as one value, so Button's descriptor leaves it alone. Upstream folds it into the descriptor.
 4. **Slider behaves as upstream.** Coercing `Value` raises `ValueChanged` synchronously, and `CoercingOneWay`'s token drops it unchanged.
@@ -166,7 +169,9 @@ The 20 rules (all `gen-*` in `tools/sync/transforms.json`):
 | `ReactorBindingT.cs` | 13+ drop rules / tier 3 | **tier 3, 56 lines** | the dropped part is WinUI input, which is rewritten with Avalonia's input vocabulary anyway |
 | Decorator registrations, reference and `Immediate` entries, templated and TreeView strategies | seam stubs / drop rules | **drop rules** | they need reconciler machinery that doesn't exist yet; a drop fails loudly if upstream changes the declaration |
 | TextBox echo channel | upstream's counter / value-diff with `armOnMount` | **value-diff** | the counter fails on Avalonia (leak 1) |
-| Generator tests | new test project and CI job / the library's test project | **library tests** (57) | no CI change (a shared file); the test project references the generator as a plain assembly |
+| Generator tests | new test project and CI job / the library's test project | **library tests** (60 in all) | no CI change (a shared file); the test project references the generator as a plain assembly |
+| Records derived from a control's record | exact type, as upstream / nearest registered base | **nearest base** | keeps what the seam's type patterns did |
+| TextBox's nullable members | skip the write when null, as upstream / ClearValue channel | **ClearValue** | null then restores the control's default instead of leaving the old value |
 | Roslyn for the generator | 5.0.0 (upstream) / 4.14.0 | **4.14.0** | not newer than the pinned SDK's compiler; Spike E's proof used it |
 | Spike F's build | the library as it is / as it was before (`b175b37`) | **before** | the counts stay reproducible after the swap |
 
@@ -176,6 +181,8 @@ The 20 rules (all `gen-*` in `tools/sync/transforms.json`):
 2. **Tagging every control** (leak 5). Keep it (simpler, recommended for now), or port upstream's `NeedsTag` gate when performance work starts.
 3. **`ISOTOPEGEN001` severity.** Warning (now) or error. [J] An error would stop a record silently losing members on a future sync.
 4. **Pooling.** `RentControl`/`ReturnControl` don't pool. Port upstream's pool, or leave it until measured.
+5. **A controlled value equal to the previous render's is skipped,** as upstream's `ShallowEquals` does. A box whose `OnChanged` ignores the user's text keeps that text until the value changes. Keep upstream's behaviour (as now), or decline the skip for a controlled value that has a value.
+6. **The generator project targets netstandard2.0,** which Roslyn requires of analyzers, while CLAUDE.md says every project targets `net10.0`. Record the exception (see Proposed for shared files in the report back).
 
 ## Not done
 
