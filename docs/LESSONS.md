@@ -63,6 +63,8 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   `Dispatcher.UIThread.CheckAccess()`. A vendored upstream test found it as a 10 s timeout. (2026-11-23)
 - **Avalonia clamps `DesiredSize` to the size offered; WinUI doesn't,** so ported code that measures at 0 to find
   min-content reads 0. (2026-11-23)
+- **Avalonia's TextBlock lays out nothing at a width of 0** (its text layout is 0 wide, one line), so probe min-content
+  at a width of 1 and add the Padding back. (2026-11-23)
 - **A reorder test must move the row it checks:** a 3-item reverse leaves the middle row in place, so a positional diff
   passed it. (2026-11-23)
 - **Plain `[Fact]` and `[AvaloniaFact]` tests share process-wide engine state** (`ReactorApp.UIDispatcher`); tests that
