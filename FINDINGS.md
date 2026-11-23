@@ -144,6 +144,14 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Spike E: wrappers generator (issue #8, 2026-11-23)
+
+- **Upstream's generator ports to Avalonia** in descriptor-only mode, which upstream itself uses for 74 built-in elements. A patched copy (36 added and 33 removed lines, after the rename) generated descriptors for Button, TextBox and Slider from Avalonia 12.1.6 metadata.
+- **Its WinUI coupling is small:** 52 code lines in 3,920, and 45 of them are inside string literals.
+- **Coverage [J]:** 45 of upstream's 69 generated WinUI controls have an Avalonia counterpart. About 17 to 20 of those would be fully generated, and about 25 to 28 generated with a hand-written `Customize`.
+- **The runtime it targets** (6 files, 3,522 lines) isn't ported yet: #12.
+- **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
+
 ## Decisions after the seam (2026-11-23)
 
 1. **Namespaces are `Isotope.UI.*`.** One transform rule renames upstream's `Microsoft.UI.Reactor.*`, so the package ID and the
@@ -151,6 +159,10 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 2. **`RenderContext` is made `partial` by a rule**, for our implementation of the tier 3 hooks.
 3. **Text-based member drops stay** until #4.
 4. **Merged branches are deleted from the remote**; only `main` remains.
+5. **Control layer (from Spike E):**
+   - Descriptors are **generated** by a vendored copy of upstream's wrappers generator, and our changes to it are carried as **transform rules**.
+   - Element records are **hand-written** for now; projecting them from upstream's `Element.cs` is decided with #4.
+   - Records that mirror upstream's use **Reactor's member names** (mapped with `[WrapAlias]`), and Avalonia-only controls use Avalonia's. Avalonia's names everywhere, with a migration tool from Reactor, may come later (#13).
 
 ## Seam (issue #1, 2026-11-23)
 
