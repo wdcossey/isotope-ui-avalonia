@@ -53,6 +53,8 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   (`gen-*` rules; our helpers in `WrapperGenerator.Avalonia.cs`); the descriptor runtime is tier 2 (13 member drops);
   element records are hand-written for now. Records mirroring upstream's use Reactor's member names (via `[WrapAlias]`);
   Avalonia-only controls use Avalonia's. An Avalonia-named API and a Reactor migration tool may come later (#13).
+- **Controls behave as upstream's:** a controlled value equal to the last render's isn't re-applied; `ISOTOPEGEN001`
+  (a record member with no Avalonia counterpart) is a build error; no control pooling until #14 measures it.
 - **Member drops stay text-based** (the lexer in `tools/sync/lib/csharp.mjs`, shared with Spike A's
   `tools/rewrite-upstream.mjs`) until #4 decides on Roslyn.
 
