@@ -76,7 +76,14 @@ let genTotal = 0;
 for (const f of generated) { const n = lines(readFileSync(f, 'utf8')); genTotal += n; console.log('generated ' + path.basename(f) + ': ' + n + ' lines'); }
 console.log('generated, ' + generated.length + ' files: ' + genTotal + ' lines');
 const records = readFileSync(path.join(repo, 'src', 'Isotope.UI.Avalonia', 'Seam', 'ControlElements.cs'), 'utf8');
-const customize = [...records.replace(/\r\n/g, '\n').matchAll(/\n( *)private static partial ControlDescriptor[\s\S]*?;\n/g)].map((m) => lines(m[0].trim()));
+// A Customize body runs from its declaration to the blank line or the record's closing brace after it.
+const recordLines = records.replace(/\r\n/g, '\n').split('\n');
+const customize = recordLines.flatMap((l, i) => {
+  if (!/^\s*private static partial ControlDescriptor/.test(l)) return [];
+  let j = i + 1;
+  while (j < recordLines.length && recordLines[j].trim() !== '' && recordLines[j] !== '}') j++;
+  return [j - i];
+});
 console.log('hand-written records (Seam/ControlElements.cs): ' + lines(records) + ' lines, of which ' + customize.length + ' Customize bodies: ' +
   customize.reduce((s, n) => s + n, 0) + ' lines (' + customize.join(', ') + ')');
 const tier3 = ['src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs', 'src/Isotope.UI.Avalonia/Seam/V1Protocol/ReactorBinding.cs',
