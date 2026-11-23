@@ -41,7 +41,12 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
 - **Toolchain:** .NET 11 SDK (11.0.100, `global.json`) for the C# 15 compiler only. Every project targets `net10.0`
   (LTS). Projects that compile upstream files set `LangVersion 15` and link upstream's
   `Core/Polyfills/ClosedTypeAttributes.cs`. Retargeting to `net11.0` needs the developer's go-ahead.
-- **Name:** Isotope.UI.Avalonia, with package prefix `Isotope.`.
+- **Name:** Isotope.UI.Avalonia, with package prefix `Isotope.`. **Namespaces are `Isotope.UI.*`** (2026-11-23):
+  upstream's `Microsoft.UI.Reactor.*` is renamed by one transform rule, so package and namespaces match and nothing reads
+  as Microsoft's. Upstream's *member* names stay.
+- **`RenderContext` is made `partial` by a transform rule** (2026-11-23), so our Avalonia versions of the tier 3 hooks
+  (theme, windows, displays…) are written as our own partial part, with access to its state.
+- **Member drops stay text-based** (the lexer in `tools/rewrite-upstream.mjs`) until #4 decides on Roslyn.
 
 ## Environment traps
 

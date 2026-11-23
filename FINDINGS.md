@@ -144,6 +144,14 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Decisions after the seam (2026-11-23)
+
+1. **Namespaces are `Isotope.UI.*`.** One transform rule renames upstream's `Microsoft.UI.Reactor.*`, so the package ID and the
+   namespaces match. `Avalonia.UI.Isotope` was considered but rejected, because the package ID can't start with `Avalonia.`.
+2. **`RenderContext` is made `partial` by a rule**, for our implementation of the tier 3 hooks.
+3. **Text-based member drops stay** until #4.
+4. **Merged branches are deleted from the remote**; only `main` remains.
+
 ## Seam (issue #1, 2026-11-23)
 
 - **Upstream's `ChildReconciler.cs`, `Internal/KeyedListDiff.cs` and `RenderContext.cs` compile against our Avalonia
