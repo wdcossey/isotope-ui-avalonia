@@ -1,0 +1,1117 @@
+{
+  "generatedBy": "tools/sync",
+  "repo": "https://github.com/microsoft/microsoft-ui-reactor",
+  "commit": "14172dce0af5887c13493a0e345d76e09241cd33",
+  "files": [
+    {
+      "path": "LICENSE",
+      "tier": 1,
+      "lastChanged": "0423ede3e24ddf438fe755e0d4bead2c05b07f16",
+      "transforms": [],
+      "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+    },
+    {
+      "path": "src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs",
+      "tier": 1,
+      "lastChanged": "91540bb61ea6918b411bd738ff6070004594099f",
+      "transforms": [],
+      "sha256": "b785f0ab260f4caec5ae9d5fe6b94590faf9142dafccd440d093ba1bb83cc621"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/PropertyGridElement.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "9ffd2fb9b41dc23e71a010c1518b052869c0a876791000842da597f9a7ff6a5a"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/PropertyGridFactories.cs",
+      "tier": 2,
+      "lastChanged": "43bec45c7c9f761120a7d687a6ef26e4443a11e1",
+      "transforms": [],
+      "sha256": "7fd513dfa8111a53bbc0cb10c940e4b55a8cbae37d9ebbf8b8f8392f1096b142"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/TypeMetadata.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "4b7fb31807c3325772d804e0a8d70ceac24c5fd3dbc2314da38e7374be9fb3ff"
+    },
+    {
+      "path": "src/Reactor/Controls/PropertyGrid/TypeRegistry.cs",
+      "tier": 2,
+      "lastChanged": "7d4caf7ec83f1f2eb642571ca01f6736564bba9c",
+      "transforms": [],
+      "sha256": "3c100d359753b3d227375cd82e11abe551fdbd13bb659606c3e340ac924b4bb5"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ErrorStyling.cs",
+      "tier": 2,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "61d114c5731aa061c9ad00addcfd95c82016d50260f3cb5021567b1b5022a64a"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/FormField.cs",
+      "tier": 2,
+      "lastChanged": "e1fa2b6e380707e974b0a03c639c3a5ad186f662",
+      "transforms": [],
+      "sha256": "b86d10bc4aad832922848583dca274f7f4a39c7a417747d0468c63755abd3b37"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ImmediateExtensions.cs",
+      "tier": 2,
+      "lastChanged": "5d4e81b5d7b234d56e9e9b675fd62220a23b6d06",
+      "transforms": [],
+      "sha256": "87bda8aa040c547e68bfc131c39398c2eb4f8d8eb0199cf8437198bdba1a8956"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/UseValidationContext.cs",
+      "tier": 1,
+      "lastChanged": "e5a3edc2d3220c5b57117b4977e645f11c06778e",
+      "transforms": [],
+      "sha256": "d1910169c263c7f2a71114fa742cd9ba5ee76d9545742977e463f845183cddd2"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidateExtensions.cs",
+      "tier": 2,
+      "lastChanged": "e5a3edc2d3220c5b57117b4977e645f11c06778e",
+      "transforms": [],
+      "sha256": "07fc778d668f1eb2fa6c4eb1701a39534051a163af05079ea092bfca9a60e6ef"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationContext.cs",
+      "tier": 2,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "a6595570f5b07c8f0dfab50387da34af8ed339ed6a2f801885a8dd054f59d01f"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationMessage.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "7d45852d658d83fbf09631a8384000ccee0d1b210cdb0e3a3e5bb84a9f12fa1f"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationReconciler.cs",
+      "tier": 1,
+      "lastChanged": "e5a3edc2d3220c5b57117b4977e645f11c06778e",
+      "transforms": [],
+      "sha256": "0b9e9052708da5873420b6695ff96aa3efbb5da78be8b7d2198a54f1eb8b2b44"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationRenderScope.cs",
+      "tier": 2,
+      "lastChanged": "e5a3edc2d3220c5b57117b4977e645f11c06778e",
+      "transforms": [],
+      "sha256": "c2791d4a7df7c38eb902435d0898c32e52b17953f65c178493a2748415bf17e5"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationRule.cs",
+      "tier": 2,
+      "lastChanged": "e5a3edc2d3220c5b57117b4977e645f11c06778e",
+      "transforms": [],
+      "sha256": "b404d27490fa6c21d154384f9ae9d7239745f0e6595e539f05da65eaf38a2936"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/ValidationVisualizer.cs",
+      "tier": 2,
+      "lastChanged": "e1fa2b6e380707e974b0a03c639c3a5ad186f662",
+      "transforms": [],
+      "sha256": "11185a20d3e92d9b148765db94aca4528810a1cd0863e92775eddff2f944070e"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/Validators/BuiltInValidators.cs",
+      "tier": 1,
+      "lastChanged": "c4ab2bb5f25178e1076f5820ce44022e5cb2cea7",
+      "transforms": [],
+      "sha256": "5f4b9eab2eabe9694bcdef6065fe8bbb2bdd58c93ad0361e9a42d024bb3ce930"
+    },
+    {
+      "path": "src/Reactor/Controls/Validation/Validators/IValidator.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "ff028a425099726ea24de932a71cb5af73b0323e64ef38333f19c4deb08ec155"
+    },
+    {
+      "path": "src/Reactor/Controls/Virtualization/VirtualListElement.cs",
+      "tier": 2,
+      "lastChanged": "b0d9d31776213760461e1d3e1493da57658f3cf6",
+      "transforms": [],
+      "sha256": "34cbe616b3d45355fba4c93db788f3c7092dca2fa2edb42215b368305ee56a66"
+    },
+    {
+      "path": "src/Reactor/Controls/Virtualization/VirtualListFactories.cs",
+      "tier": 2,
+      "lastChanged": "43bec45c7c9f761120a7d687a6ef26e4443a11e1",
+      "transforms": [],
+      "sha256": "8d7c01531e064a4d1caa42adb99a5dbbfd47e1cf6942c8af18ee69eb35d61ae4"
+    },
+    {
+      "path": "src/Reactor/Core/Animation.cs",
+      "tier": 1,
+      "lastChanged": "ffe1de4d884d09f54a3938f04904620f8137ce9c",
+      "transforms": [],
+      "sha256": "d88251dcdb9085e3c005749f374a2741e9499358bd23372ed455c8fe04b4d5a9"
+    },
+    {
+      "path": "src/Reactor/Core/AsyncValue.cs",
+      "tier": 1,
+      "lastChanged": "73644fe63f37318038101e3d51216ab49727790f",
+      "transforms": [],
+      "sha256": "70b5b18118825ff63226c778e44156531452c0793653c9d62f9f2e38177613e6"
+    },
+    {
+      "path": "src/Reactor/Core/BackdropKind.cs",
+      "tier": 2,
+      "lastChanged": "7d1929ea8d2e3cdafd90c5d18e030e9047d3973c",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "0a2730d8533f2eb861c2f2b60156d36045fec2776194577b2133274015ac31d7"
+    },
+    {
+      "path": "src/Reactor/Core/ChildCollection.cs",
+      "tier": 2,
+      "lastChanged": "0cdc78ad040d2b6b8c50c2899f6c10ce1d2849d1",
+      "transforms": [
+        "winui-alias-identity-types"
+      ],
+      "sha256": "b2b72a30d8110521982961168351f09fa892b9e362ff3a8815e9589aa9183272"
+    },
+    {
+      "path": "src/Reactor/Core/ChildReconciler.cs",
+      "tier": 2,
+      "lastChanged": "7258869cc7116d9a7508e5c60d12d599ee720e4f",
+      "transforms": [],
+      "sha256": "b7164e0f66af1c777accec16e679b2f50cb98e5a9f60c1864e13629a82cff553"
+    },
+    {
+      "path": "src/Reactor/Core/ColorScheme.cs",
+      "tier": 2,
+      "lastChanged": "ffe1de4d884d09f54a3938f04904620f8137ce9c",
+      "transforms": [],
+      "sha256": "a0f49a66b5ee0f4493ea53a486ac19354aa5b1f7f903f87daf8307c4f06d842b"
+    },
+    {
+      "path": "src/Reactor/Core/Command.cs",
+      "tier": 1,
+      "lastChanged": "085e74b3691f705156ba4ad6c7361384607693be",
+      "transforms": [],
+      "sha256": "6db6fc125b5f8149bbfa593d5de4198e2bd87c02fbcca44586065d47f3482e5d"
+    },
+    {
+      "path": "src/Reactor/Core/Component.cs",
+      "tier": 2,
+      "lastChanged": "aa7fd62817e4fb18f2bbf7b28901e84a120d3cfe",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "1fd963a69f5eaac2ca5de7d59f96ce716ebfad58c0728e1c9b9aa08bbeaee521"
+    },
+    {
+      "path": "src/Reactor/Core/ContentOwner.cs",
+      "tier": 1,
+      "lastChanged": "5ba98bf79841073b044241778e927168d36adcc4",
+      "transforms": [],
+      "sha256": "e5a6887c2d2fadaa44f2079ce273f180d2e3b5c3d2969c54841464749a2ecf41"
+    },
+    {
+      "path": "src/Reactor/Core/Context.cs",
+      "tier": 1,
+      "lastChanged": "73328ebabb6cacb86f29e08892a97074ab25dd74",
+      "transforms": [],
+      "sha256": "a5e3c8d11938d882c77cfe61e6e878fd8fa37d524be656afa6d906a59de26c89"
+    },
+    {
+      "path": "src/Reactor/Core/ContextScope.cs",
+      "tier": 1,
+      "lastChanged": "dfd553ee3416d34aeadc991c88cf95b8e6f171cb",
+      "transforms": [],
+      "sha256": "94559be037734ddb7f773255c724ae4236008198f8abb747e30fe15e0f4bb0aa"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs",
+      "tier": 2,
+      "lastChanged": "1dff529a7f116595ed7c88f5029dff62638059ed",
+      "transforms": [
+        "winui-alias-identity-types"
+      ],
+      "sha256": "bfcd215b123763c935fc566e5336907b9ef5d26d1377a38bdd5f015360536e01"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ComponentPerfTally.cs",
+      "tier": 1,
+      "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
+      "transforms": [],
+      "sha256": "37a252354b1642a2a58f4a0d927728bab9544bc04db1b9116cbb25fb0c666ede"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs",
+      "tier": 2,
+      "lastChanged": "1b9fbc3b6093fa0786ae4c6e0a09fe5cc7855c9c",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "5b94c8496a351c8f23d7b9c9bc051f89630744ff43e3d63ad76bb371aa7a5fe6"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Components.cs",
+      "tier": 2,
+      "lastChanged": "587dd6ae61699a11cd5e7fe5be123c8d8e0f1812",
+      "transforms": [],
+      "sha256": "2a395b96304bbcb68e70f651f3f19be0f21d8fe6b6c580c244083d7812c8fc1b"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs",
+      "tier": 2,
+      "lastChanged": "73328ebabb6cacb86f29e08892a97074ab25dd74",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "aef2da51efc28720e2da0313db985a3597c82380392dad92bc5caeeb2bcf939a"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs",
+      "tier": 2,
+      "lastChanged": "74791562c11792f7c0e2dd875f1e82b94d70b397",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "790612c9c60dcc686eac8bde83d18ab70ec950d2fbe58157af2517d9527e7521"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorEventSource.cs",
+      "tier": 1,
+      "lastChanged": "0cdc78ad040d2b6b8c50c2899f6c10ce1d2849d1",
+      "transforms": [],
+      "sha256": "d822adeb6f94512120ef60e99c5edc6d74b0f68a37caf989af0c1507a6f987a4"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs",
+      "tier": 1,
+      "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
+      "transforms": [],
+      "sha256": "6dc3ff6bf9b70f0793dde213159f5f798834bb168be7d2d21767e4c7ad7bd486"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/RenderPassRequests.cs",
+      "tier": 1,
+      "lastChanged": "1b9fbc3b6093fa0786ae4c6e0a09fe5cc7855c9c",
+      "transforms": [],
+      "sha256": "48f2257a2608912c08de8ed156b3bf91a3f09705fce875fab7f1d0f397082c3a"
+    },
+    {
+      "path": "src/Reactor/Core/DragAttached.cs",
+      "tier": 2,
+      "lastChanged": "7d1929ea8d2e3cdafd90c5d18e030e9047d3973c",
+      "transforms": [],
+      "sha256": "9c2a3efc370b08993ae3123e178d04559adf0ae02baabf9c7b9f971371882cc0"
+    },
+    {
+      "path": "src/Reactor/Core/FocusRevalidationService.cs",
+      "tier": 1,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "b7a720f122f58576f4a2a5054087432cba23d86203cf4156a1d5d5f251c545a6"
+    },
+    {
+      "path": "src/Reactor/Core/IItemsRepeaterFactorySource.cs",
+      "tier": 1,
+      "lastChanged": "dfd553ee3416d34aeadc991c88cf95b8e6f171cb",
+      "transforms": [],
+      "sha256": "4fd5ae4307c8fce4d1e25d2960d96ede18509b3e91439a590b35e0cea2c1e10c"
+    },
+    {
+      "path": "src/Reactor/Core/IReactorKeyed.cs",
+      "tier": 1,
+      "lastChanged": "516aa2db0ceb526f741fbac701cf033c4a7c7bf1",
+      "transforms": [],
+      "sha256": "5923f1be503ec18729312257e5fbbd3db8b9133a7c879b686bd1afd01dab0367"
+    },
+    {
+      "path": "src/Reactor/Core/InfiniteResource.cs",
+      "tier": 1,
+      "lastChanged": "73644fe63f37318038101e3d51216ab49727790f",
+      "transforms": [],
+      "sha256": "713fa67210588228e3b7396f6c27dee6b653541a7749a7f5d5b6e2bb734ad367"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/AmbientAnimation.cs",
+      "tier": 1,
+      "lastChanged": "7fa5c61116ea25ee7e20dcb3e88b249a6a9db1c3",
+      "transforms": [],
+      "sha256": "5b96d0a0549cb308713666a17b7f1788d53b756d6b23c55bb31b16da0d48da62"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/IItemViewSource.cs",
+      "tier": 1,
+      "lastChanged": "56a79400f8927a44a2946b530d362a74762d765c",
+      "transforms": [],
+      "sha256": "e672596f11b79c79dcc57890f8cad641f7dbffdd09704ffa6e5bd9a1a60512a7"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/KeyedListDiff.cs",
+      "tier": 2,
+      "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
+      "transforms": [],
+      "sha256": "3c1cfc021777c20bf0b02bf7d7d9267038afcb297502ac15e9941941cf98ffe3"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/LruCache.cs",
+      "tier": 1,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "1e295dd70e85a250730e67c8106b4b9836dbfaffe6e327b6e83c36618ec067d7"
+    },
+    {
+      "path": "src/Reactor/Core/Internal/ReactorListState.cs",
+      "tier": 2,
+      "lastChanged": "cc7af728527205133ff59b9ab06b460404adf177",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "549532760e865f6aa05c9b0d643175108e762485da17e6870474baddd1a37bb7"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/DateFormatOptions.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "08e0e9c9860769f8b8737c04106c94b5e6c4d38ff33ed89609e0531f10e3454d"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/IStringResourceProvider.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "78e37580b9dbcce6b01e86ea1075c284a39711d16bcc99894e362f9d3ed20391"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/ListFormatType.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "42598da9b8383f27369b461f56c1e8e9cf54d22a4bd50be610c1378e6c95bfa2"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/LocaleContext.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "739fce2ff6b1cbebf2be784de8c0761c6941e9f6e897d1755dab350e1bda86db"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/MessageCache.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "416d4a94388c185b731f38cfc0a12225da0f046eb299fafec989be90e911f61d"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/MessageKey.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "4caf8b85fef566771fbe0cf94a428af63b5984a1a168b9e53e7786cecabab55e"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/NumberFormatOptions.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "732b7f5010128945822a7e421e307f4c1afa61afe0ff8c84f4840f44805c2174"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/PseudoLocalizer.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "823fa4ffc5fcc0f45397143f885e40486363c863d197ccebf078a72259866ed9"
+    },
+    {
+      "path": "src/Reactor/Core/Localization/RtlHelper.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "de557972767ecdcca1f843af0c0f11a7a73b9b1576c4642ddc3d4e75bd7512a8"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/ConnectedNavigationCompletion.cs",
+      "tier": 1,
+      "lastChanged": "6f5e15275f194c521f06bdc087b5c0610f62bef5",
+      "transforms": [],
+      "sha256": "3c1b1610b690a670e59121186b8aa89084272586eac7147030d3a72693322e52"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/DeepLinkMap.cs",
+      "tier": 1,
+      "lastChanged": "c53ab496183b38fbcd1a82cbabdf13765d2f17d3",
+      "transforms": [],
+      "sha256": "c24cc665f7e65ba97c10c6ea2076ed3db02d909f55adf766b3cda7fa6c8736f8"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationContext.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "03ca77f8146f711dff9e31c83009fb378ad769f3d1e75c8ae6fa433d6dba49ff"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationDiagnostics.cs",
+      "tier": 1,
+      "lastChanged": "aad55a4075ac2e37d5ee18af0560af9e69558198",
+      "transforms": [],
+      "sha256": "efe21154fbbaa7bdb873a0fd5f51f6b0f157b25ff3975d7ab16c0205646ddb68"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationHandle.cs",
+      "tier": 2,
+      "lastChanged": "6f5e15275f194c521f06bdc087b5c0610f62bef5",
+      "transforms": [],
+      "sha256": "4e6d58dfe425c2b6cdc56b7c3759a37a293fd3c7ff703f96ac64a5d48a264331"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationLifecycle.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "8e39860664e843b6fb5997f750de439dee4571dffe4b7877279d33f9e1ab0059"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationStack.cs",
+      "tier": 1,
+      "lastChanged": "9cb6898e7b73352f1d49fbbefe415e331f9275d0",
+      "transforms": [],
+      "sha256": "07368b7bb3d1b14071d0f4490c68820271ac979e71b3e4b7f41d192c958e9244"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationState.cs",
+      "tier": 1,
+      "lastChanged": "9cb6898e7b73352f1d49fbbefe415e331f9275d0",
+      "transforms": [],
+      "sha256": "a34b3c528799c21dcd8e535011fb9a97ffe5101996b032c0a6d62f19a2ece37b"
+    },
+    {
+      "path": "src/Reactor/Core/Optional.cs",
+      "tier": 1,
+      "lastChanged": "ffe1de4d884d09f54a3938f04904620f8137ce9c",
+      "transforms": [],
+      "sha256": "48e59184bd6fb51638c515885bdc6134901f5d2756c160e324628cf5c3200a32"
+    },
+    {
+      "path": "src/Reactor/Core/PersistedStateScope.cs",
+      "tier": 1,
+      "lastChanged": "cffd97503ac58c52f0d25757119dc4e84cb03a62",
+      "transforms": [],
+      "sha256": "1bb2a934ba5007a140c24bc56feed9818484e9498e778407e0567e85feaed076"
+    },
+    {
+      "path": "src/Reactor/Core/Pickers.cs",
+      "tier": 2,
+      "lastChanged": "713ecc95e6543a92b3e980c537a279880aabe137",
+      "transforms": [],
+      "sha256": "1c05bf55d8dc5169a25d455fd32ccb245dfeb69d85b7c69d64e52aa4a3dfc6ad"
+    },
+    {
+      "path": "src/Reactor/Core/Polyfills/ClosedTypeAttributes.cs",
+      "tier": 1,
+      "lastChanged": "73644fe63f37318038101e3d51216ab49727790f",
+      "transforms": [],
+      "sha256": "10d7a4426169bf59b22f8b24b399db974bab834545875dc210b446af70ead624"
+    },
+    {
+      "path": "src/Reactor/Core/QueryCache.cs",
+      "tier": 1,
+      "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
+      "transforms": [],
+      "sha256": "f42ea836357e5240feceec0cf83c6e9a4a42e7ee1c80a2c5043426a97dfe6b82"
+    },
+    {
+      "path": "src/Reactor/Core/ReactorBinding.cs",
+      "tier": 2,
+      "lastChanged": "a60545539ed3f71eea584dd86db786b22bd57f53",
+      "transforms": [],
+      "sha256": "e46335c30a4a9f5de6a7cfbe8fd6052635f982f0ddaecbdb878ab6416b56336a"
+    },
+    {
+      "path": "src/Reactor/Core/RenderContext.cs",
+      "tier": 2,
+      "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
+      "transforms": [
+        "winui-qualified-identity-types"
+      ],
+      "sha256": "08bbaa3f9b4c1dc4a386014fc5d8bf1272ba80b50401d751c624c3e5aaf007f7"
+    },
+    {
+      "path": "src/Reactor/Core/RenderError.cs",
+      "tier": 1,
+      "lastChanged": "00cd489208b18f3884fdb8922bdabf322ec2267d",
+      "transforms": [],
+      "sha256": "70a711fd63037b8c2f985294833889fcb908068404d3ce7b331be5c07d5d0e82"
+    },
+    {
+      "path": "src/Reactor/Core/RenderErrorDispatch.cs",
+      "tier": 2,
+      "lastChanged": "0f84736ee949bed941c6f16f598337bba75c0429",
+      "transforms": [],
+      "sha256": "c88834389c9d1fbb4336c4b7107c24f401d99b0f92312096f36d3a0c0c3d998c"
+    },
+    {
+      "path": "src/Reactor/Core/SourceLocation.cs",
+      "tier": 1,
+      "lastChanged": "262488ee5f92dad3d8ccdfb952a3c7cd52993bdf",
+      "transforms": [],
+      "sha256": "c23d54f6e8e9ddc26520db22c2e8a2dd255867b2cef55568ee7cc169acf4c7d0"
+    },
+    {
+      "path": "src/Reactor/Core/Theme.cs",
+      "tier": 2,
+      "lastChanged": "1265b8653d15334c3d2c60314a63d08381cf006a",
+      "transforms": [],
+      "sha256": "bad864bdc60b960cab6cdc96c43d046c15bed4b7dfe199df8b5dbad4928d78fb"
+    },
+    {
+      "path": "src/Reactor/Core/ThemeResourceListeners.cs",
+      "tier": 1,
+      "lastChanged": "fb618d7edf9eac3782604d81fa6881d5d7e4d783",
+      "transforms": [],
+      "sha256": "668d69d42b5aaba26ecbc4a3d50dce2ae77818cbfac75736c2aa2ace5bb4e19c"
+    },
+    {
+      "path": "src/Reactor/Core/V1HandlerRegistry.cs",
+      "tier": 1,
+      "lastChanged": "10415415934856cd3d7ca69d4795bf13e19025c1",
+      "transforms": [],
+      "sha256": "9a364da55725ca1d56726bbff1ce8a547db3d12380dc6865e64565291ad05b50"
+    },
+    {
+      "path": "src/Reactor/Core/WindowPersistedScope.cs",
+      "tier": 1,
+      "lastChanged": "b0e0fe30d6d0950895f2cc851ec8b8a5c9c936ec",
+      "transforms": [],
+      "sha256": "acc118f921b5defba692e50f8f6c772c5c97d1b82d0ba63c767bbdabd79ffba5"
+    },
+    {
+      "path": "src/Reactor/Data/DataPage.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "71f640b3657d5210348e8de1f04b02efcf86723e91a710fa05e4b1a7cf28f212"
+    },
+    {
+      "path": "src/Reactor/Data/DataPageCache.cs",
+      "tier": 1,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "281051bf6056d09fdd5d465b382aa30c144e3d2ab0f8dc1e18bd4645137113b8"
+    },
+    {
+      "path": "src/Reactor/Data/DataRequest.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "3d7ece8f5ff06504ee564ca3e5ea228a86653c104562ea0c97b5032d3a75aa1a"
+    },
+    {
+      "path": "src/Reactor/Data/DataSourceResourceExtensions.cs",
+      "tier": 2,
+      "lastChanged": "aa7fd62817e4fb18f2bbf7b28901e84a120d3cfe",
+      "transforms": [],
+      "sha256": "b389852b1a1a36067a4cbfbbdf8bc92c2131be9122532fbc05d2cb79e8c204e7"
+    },
+    {
+      "path": "src/Reactor/Data/FieldDescriptor.cs",
+      "tier": 1,
+      "lastChanged": "fd7c97a74caca5f3641aa96f0a375521a7cbf7b9",
+      "transforms": [],
+      "sha256": "2df3aa37cfb4535a5c5941eff8bba8668a99af2e2661718b68d15f9f247bae2d"
+    },
+    {
+      "path": "src/Reactor/Data/FilterDescriptor.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "7bdd84d7c71a07623788def28b7b97413da33139f16b21bc67f6002370d07645"
+    },
+    {
+      "path": "src/Reactor/Data/GridAttributes.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "745fe3ce622ed5607ba6fb684434ccdabb6de6e3cf26dcbee98d262303c15ea5"
+    },
+    {
+      "path": "src/Reactor/Data/IDataSource.cs",
+      "tier": 1,
+      "lastChanged": "c5829589ca9dd76c489bd4972bfa79c409973b66",
+      "transforms": [],
+      "sha256": "674a7d3f43e8484e8515444725f53f45f1e3fcf24c971c51d692de2d2ad2bb45"
+    },
+    {
+      "path": "src/Reactor/Data/Providers/ListDataSource.cs",
+      "tier": 1,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "84c4a62457799ddfd3f37c2825c5c5110d21f16484db4b1f57c88a80a65328ea"
+    },
+    {
+      "path": "src/Reactor/Data/Providers/ObservableListDataSource.cs",
+      "tier": 1,
+      "lastChanged": "c5829589ca9dd76c489bd4972bfa79c409973b66",
+      "transforms": [],
+      "sha256": "e76b8af9d87c240b8a353cc0fafd65760f5b47df03e59338c36c17e7ea2afc82"
+    },
+    {
+      "path": "src/Reactor/Data/RowKey.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "47e993ff0938e2767dd516b41f954a5c5efe1d0eff66c36e209b3205509e5468"
+    },
+    {
+      "path": "src/Reactor/Data/SortDescriptor.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "9fbaa55b7a6b25fc37d07cb72cf5104a4654cbf723c85fc26d6781ba475e1a08"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceMap.RootMount.cs",
+      "tier": 1,
+      "lastChanged": "0f84736ee949bed941c6f16f598337bba75c0429",
+      "transforms": [],
+      "sha256": "21b84a8bfc8964a5e1ff3b17ddd6e3c0139e377cdcfa88c8448d6f4262030503"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceMap.StaticInfo.cs",
+      "tier": 1,
+      "lastChanged": "262488ee5f92dad3d8ccdfb952a3c7cd52993bdf",
+      "transforms": [],
+      "sha256": "bb2638f9c7c3c743dee28b4b07abebc2be953b8efd2e4203a358765fc4d29608"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceMap.cs",
+      "tier": 2,
+      "lastChanged": "587dd6ae61699a11cd5e7fe5be123c8d8e0f1812",
+      "transforms": [],
+      "sha256": "da044de8e1e31b6f0f4f4e8dda4ace3d9c447318cb4ac8de5c7a7f4b598f397b"
+    },
+    {
+      "path": "src/Reactor/Diagnostics/ReactorSourceTransparentAttribute.cs",
+      "tier": 1,
+      "lastChanged": "27ed666262354a6ac56c81491f341e7dd6d170ef",
+      "transforms": [],
+      "sha256": "9c72daef3f70f29e954ab8d15578dc9a17400fb6ef6d4e6e4cd6a80d8fb2f2a6"
+    },
+    {
+      "path": "src/Reactor/Hooks/Pending.cs",
+      "tier": 2,
+      "lastChanged": "27ed666262354a6ac56c81491f341e7dd6d170ef",
+      "transforms": [],
+      "sha256": "7f132aa768b8c7e712feca1f505b43485b2141a17b9757a7834228f201cbbe42"
+    },
+    {
+      "path": "src/Reactor/Hooks/PendingScope.cs",
+      "tier": 1,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "19e17059e4dca48e5b1dadaf42fdc61ef2a60bd3d405c928bef2cb231bf7237f"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseDevtools.cs",
+      "tier": 2,
+      "lastChanged": "a3bd7d449a46f246f2c611bdd986c76441db28ff",
+      "transforms": [],
+      "sha256": "0a39b06185a8450bbc8fe9b02afae5ae724ab54e9b51c49f1ac2e50d1692a168"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseElementFocus.cs",
+      "tier": 2,
+      "lastChanged": "5d4e81b5d7b234d56e9e9b675fd62220a23b6d06",
+      "transforms": [],
+      "sha256": "988535c93cee01a3ee584fbc017b6a990bf69243fc9a78097e15a7d8c9698e69"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseElementRef.cs",
+      "tier": 2,
+      "lastChanged": "46ae19bf32f1b207aef2f5ac0ae68c78371c2b74",
+      "transforms": [],
+      "sha256": "1855875707d874512eb6df674927b32f8f7febf94f1d9562b2418685a7d65465"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseFocus.cs",
+      "tier": 2,
+      "lastChanged": "b824003026c53a2da854f222997fdee76e76f969",
+      "transforms": [
+        "winui-qualified-identity-types",
+        "winui-qualified-control"
+      ],
+      "sha256": "1885209baa4b77578c4b888cffd88c1c228a63d9f859db2f4b84e944fb085c45"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseFocusTrap.cs",
+      "tier": 2,
+      "lastChanged": "ffe1de4d884d09f54a3938f04904620f8137ce9c",
+      "transforms": [],
+      "sha256": "04b91d37520937164f4ca503d4294e7aabc0d3c3432acd6b0e20dfed80a59bbc"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseInfiniteResource.cs",
+      "tier": 2,
+      "lastChanged": "f45d2edb35b4250154c911407779f84d5ae03c4b",
+      "transforms": [],
+      "sha256": "b5ba833dcab8b0162ed74d3080e641062de13a7a0a0433de546595401c7ba81d"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseMemoCells.cs",
+      "tier": 2,
+      "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
+      "transforms": [],
+      "sha256": "25dffb842094c1000ea19a231eb50e8ff574084ad713fbb0fef7203eaf6cce4b"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseMutation.cs",
+      "tier": 2,
+      "lastChanged": "a4dcfdf558aa82db46938fc122a1f40c56c72238",
+      "transforms": [],
+      "sha256": "51301aaf919b6d4e22b64a2a0280b110cb7e154e5b04f070be8d6e7f986db9d7"
+    },
+    {
+      "path": "src/Reactor/Hooks/UseResource.cs",
+      "tier": 2,
+      "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
+      "transforms": [],
+      "sha256": "f1b376550aac00b9ad25e0f09cc309bda08999541c5ff1b6244fe35a42adc18c"
+    },
+    {
+      "path": "src/Reactor/ThirdPartyNoticeText.txt",
+      "tier": 2,
+      "lastChanged": "3400da4565c4b0be0f0670f33be183dc342b4e93",
+      "transforms": [
+        "drop-winuiex-notice"
+      ],
+      "sha256": "72cda4f3e03a83a2f6afefd548e50f8a3c03fa23eb30fb2988262cd857ba65b6"
+    },
+    {
+      "path": "src/Reactor/Yoga/AlgorithmUtils.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "040ed9d316f7035f687869f908bbd67257eae98f8c16af44514d5751290bfd93"
+    },
+    {
+      "path": "src/Reactor/Yoga/FlexDirectionHelper.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "4a1f40fab491d73e6681373664d03ecd93cf12279b5339cd91e5395e0979dfba"
+    },
+    {
+      "path": "src/Reactor/Yoga/FlexEnums.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "b8e94b657eae3e61f43509d5b658492148bb3fd0f51cd740ec4d67a95c98aba4"
+    },
+    {
+      "path": "src/Reactor/Yoga/LayoutResults.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "a32a67204fdafbe10201b7027520f8f8db5d9df1db603b50f391c64a68b9ab58"
+    },
+    {
+      "path": "src/Reactor/Yoga/YogaAlgorithm.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "b38855aaec6c6361c4d2e372c43830530361a9536502f5980fec8e29c985f419"
+    },
+    {
+      "path": "src/Reactor/Yoga/YogaConfig.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "836b2fde4c015af711e42f73b135de6f3d37bb26110aa22a1a1f2f15e883b433"
+    },
+    {
+      "path": "src/Reactor/Yoga/YogaEnums.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "d16f726425514d916e33c853ae656ec0a8f581b8997948b96647273012c14d38"
+    },
+    {
+      "path": "src/Reactor/Yoga/YogaNode.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "b4c76f58703fc28867110c8b391f08e9c03e864621249d99a3502242d6cbe1d4"
+    },
+    {
+      "path": "src/Reactor/Yoga/YogaStyle.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "d8fca4cbbfb757613715800f1b44ed8c7d5d78ea3d62194d6146ceae05563568"
+    },
+    {
+      "path": "src/Reactor/Yoga/YogaValue.cs",
+      "tier": 1,
+      "lastChanged": "ca65995135d5d3a32eb2a5ba337687fa41f457bb",
+      "transforms": [],
+      "sha256": "f84f232093cf544e09f2aeaab5517d08dc1a0373f11beeef290cc216ef9d832c"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaAutoMinSizeTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "12b0127291c4caab97008fecd448f12c1bb959186d8d52ecb1dad4f0d21a94fc"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaCacheTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "2eb6ac283d49fb29fbafe1a686bdde2c7be8849aafed330d37693bce148f86f4"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaEdgeCaseTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "bd717c9bfa0cab9f37f8b0724540e63fa95517ed94c65a38f00c5a5fb9a5a7ec"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaFlexBasisFitContentFeatureTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "bfad711bd0e67dd589aa7ddd8666b3f23ce3a2d7eeb1c207c63dbeebe384397f"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaFlexErrataTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "f638ccd3ce0ceed58194b19f798f079b473d2fc496eb0d2b36bf1dc12845d389"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAbsolutePositionTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "39f30d82bf2f892adfe12e2f568f173cb920432aecc62b019928b98151af6e44"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAlignContentTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "5036906079e755aad52ef10a45736c7f1f68e583bcd1204d383e59c781c48ae4"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAlignItemsTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "7fedfd32d5f07b9be0f47d6e41db49c77f8c2cff720539d0e60be8e60d315ada"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAlignSelfTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "92127cc7729318143abc6aed84924c7f392debc9ab49c7b2242780e0b2a69bad"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAndroidNewsFeed.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "baf0d4fb60b01059a64450085a0c6f0ae6f071cf3a2ff8eda82e786e099f5ff3"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAspectRatioTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "080446870de100be8a3d0183b60a80cb9b537839d56517a4244ba9950e9eb4ad"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaAutoTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "e8f8b428e05ef9e5751d46816ec621c15faf689ee55f9b76b336c13235b51704"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaBorderTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "27ca3edac83d9d80a57c284ecfe7b05edf1c52175d7722d3d27f356e8c7dac2d"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaBoxSizingTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "5510c5712234f3327f1d2369e22f4487a5c47f383b9fd7fe1433d75de4222cd4"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaDimensionTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "65c080046f1f7f918c4c5af7a737de338ae19b1ca3715846eb0f8e16a3b90858"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaDisplayContentsTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "965cf01b452b849c2c1bade75a9c7ae5f4e5cb50e032cbf8f7cd2139a8250181"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaDisplayTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "e0ede26cb0501d227d16ff149ba1d7f7300ab42806edcb298d27a6c48f39557e"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaFlexBasisFitContentTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "eb220077b4cc91fd14b0a96d35e877a65ec0988dc694f825df2c925de6f50f10"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaFlexDirectionTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "4f8513b499d46a3743080b95d10cf2c2a0b2d94d00218566ef746f0554bee73c"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaFlexTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "e37072b400ba4cd356ad5e2f1d85a4a96ec719e9c2408a4f4f143322aaea1b38"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaFlexWrapTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "225db44d5564b4768aef60d394b42db2a28a17c656e28e0385644d7341cd3cee"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaGapTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "a56ea063b6b7ad01f624b966fa096410e39291bcccf17fd2e3bbfad3b274fafd"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaIntrinsicSizeTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "5d2d072873e30bb9eb4bf3eb92d6fedb7e235f6e621482747cec31e80b24b4b0"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaJustifyContentTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "26a3f1a33cd118220230ca48fb97c1588267ac01f8d369d820293c2b025cffa5"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaMarginTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "bc282db0a4a75e3686daa94ad24db0cd527ff33ecb1a728a3c716dd014d2f661"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaMinMaxDimensionTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "6a89dccf685ed955f5753bbbde352c6cee03898759e1295148b72599374cf6fc"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaPaddingTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "6aa3e14896aaab62adb6e1870dddc09b2941888a2acd5678275985d0f27cdd43"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaPercentageTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "0ecb6ce27afa9005c558041068b3e98ec62c05ad15114b7a50d16ac939c8f93a"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaRoundingTest.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "6aeaf6dd5c676ddcbceb527c1789a94729bddcc09ce055003a72c693723a3adb"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaSizeOverflowTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "7a43f2e693d4fbce6369730ddfce76b7a6b802c82709a906cc963c8d44e7bb0d"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaGenerated/YogaStaticPositionTest.cs",
+      "tier": 1,
+      "lastChanged": "5def41181147d5e9f471bc9f0c66446d0d399db3",
+      "transforms": [],
+      "sha256": "7d871e70a623223dcaafbafc87e0af97380a5514f719017c2aeabf6a8bb8caf6"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaLayoutResultsTests.cs",
+      "tier": 1,
+      "lastChanged": "4e211bec48b1cca9f935db96ecb0e459937d5f3e",
+      "transforms": [],
+      "sha256": "88e5881cd641ad691c9578c99fe0ccedde1f45f969b1f46b9d67384a743f30c8"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaMeasureCacheStalenessTests.cs",
+      "tier": 1,
+      "lastChanged": "122b2acf388a7110f7e771b5d50191c6d2f5464f",
+      "transforms": [],
+      "sha256": "144067cf15fa46ff59e8f93169df2217d01e4a5193a32a2f6b3ca8b35c1b02e9"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaUpstreamFixTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "1cef7e7e699d70d6ccc3144dd88a0140d0eb442cbb3ec13e1e7e43b89f0b670d"
+    },
+    {
+      "path": "tests/Reactor.Tests/YogaUpstreamSyncTests.cs",
+      "tier": 1,
+      "lastChanged": "fa64397767a50def47b765793184ae8725340e5e",
+      "transforms": [],
+      "sha256": "9ff2463898b8feaf621196dbf6d9899bafa85988bda096c3771c924cf4037881"
+    }
+  ]
+}

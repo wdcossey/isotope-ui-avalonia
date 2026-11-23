@@ -1,0 +1,54 @@
+{
+  "$comment": [
+    "Deterministic transforms for tier 2 files (tools/sync). \"find\" is a JavaScript regex (global), \"replace\" uses $1..$9.",
+    "Each rule lists the upstream files it must change; a listed file it no longer matches fails the sync. Fix the rule, never the vendored file.",
+    "Seeded from Spike A's spikes/A-engine/rewrite-rules.json, with the files each rule matched at 28a87225."
+  ],
+  "rules": [
+    {
+      "id": "winui-qualified-identity-types",
+      "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.(?:Controls\\.)?(Window|UIElement|FrameworkElement|Thickness|TextBlock|Panel|TextBox|NumberBox|DependencyObject)\\b(?!\\s*\\()",
+      "replace": "$1",
+      "why": "Fully qualified WinUI identity types: drop the namespace so the global aliases (Shims/Step1) map them to Avalonia.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs",
+        "src/Reactor/Hooks/UseFocus.cs",
+        "src/Reactor/Controls/Validation/ErrorStyling.cs",
+        "src/Reactor/Core/Component.cs",
+        "src/Reactor/Core/Internal/ReactorListState.cs",
+        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs",
+        "src/Reactor/Core/BackdropKind.cs",
+        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs",
+        "src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs"
+      ]
+    },
+    {
+      "id": "winui-alias-identity-types",
+      "find": "\\bWinUI\\.(TextBlock|Panel|TextBox|NumberBox|ScrollViewer)\\b",
+      "replace": "$1",
+      "why": "Same, through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias.",
+      "files": [
+        "src/Reactor/Core/ChildCollection.cs",
+        "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs"
+      ]
+    },
+    {
+      "id": "winui-qualified-control",
+      "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.Controls\\.Control\\b",
+      "replace": "Control",
+      "why": "WinUI Control (templated) maps to Avalonia TemplatedControl via the alias.",
+      "files": [
+        "src/Reactor/Hooks/UseFocus.cs"
+      ]
+    },
+    {
+      "id": "drop-winuiex-notice",
+      "find": "\\n+-+ WinUIEx -+\\n[\\s\\S]*?\\n-{20,}(?=\\r?\\n|$)",
+      "replace": "",
+      "why": "The WinUIEx-derived code (Hosting/) is tier 3 and never vendored, so its notice doesn't apply here, and it names a person (CLAUDE.md: no personal data). Yoga's notice, which does apply, is kept.",
+      "files": [
+        "src/Reactor/ThirdPartyNoticeText.txt"
+      ]
+    }
+  ]
+}

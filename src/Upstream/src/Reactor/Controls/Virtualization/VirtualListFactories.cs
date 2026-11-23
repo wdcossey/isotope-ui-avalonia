@@ -1,0 +1,37 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Virtualization/VirtualListFactories.cs, last changed upstream in 43bec45c7c9f. Do not edit: change the tools/sync rules.
+using Microsoft.UI.Reactor.Core;
+using Microsoft.UI.Reactor.Controls;
+
+namespace Microsoft.UI.Reactor;
+
+public static partial class Factories
+{
+    /// <summary>
+    /// Creates a VirtualList element — a count-based virtualized list.
+    /// Items are rendered on demand via the renderItem callback.
+    /// </summary>
+    public static ComponentElement<VirtualListElement> VirtualList(
+        int itemCount,
+        Func<int, Element> renderItem,
+        Func<int, string>? getItemKey = null,
+        double? itemHeight = null,
+        double estimatedItemHeight = 40,
+        double spacing = 0,
+        Action<VirtualListRef>? @ref = null,
+        Action<int, int>? onVisibleRangeChanged = null)
+    {
+        var props = new VirtualListElement
+        {
+            ItemCount = itemCount,
+            RenderItem = renderItem,
+            GetItemKey = getItemKey,
+            ItemHeight = itemHeight,
+            EstimatedItemHeight = estimatedItemHeight,
+            Spacing = spacing,
+            Ref = @ref,
+            OnVisibleRangeChanged = onVisibleRangeChanged,
+        };
+
+        return ComponentWithKey<VirtualListComponent, VirtualListElement>(props, $"vl-{itemCount}");
+    }
+}

@@ -1,0 +1,255 @@
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseFocus.cs, last changed upstream in b824003026c5; transforms: winui-qualified-identity-types, winui-qualified-control. Do not edit: change the tools/sync rules.
+using Microsoft.UI.Reactor.Core;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+namespace Microsoft.UI.Reactor.Hooks;
+
+/// <summary>
+/// Manages focus for a set of registered form fields.
+/// Supports programmatic focus control, enter-to-advance, and field ordering.
+/// </summary>
+public sealed class FocusManager
+{
+    private readonly List<string> _fieldOrder = new();
+    private readonly Dictionary<string, Control> _controls = new();
+    private Action? _onSubmit;
+
+    /// <summary>
+    /// Registered field names in order.
+    /// </summary>
+    public IReadOnlyList<string> Fields => _fieldOrder;
+
+    /// <summary>
+    /// Registers a field name in ordering. Call on every render to maintain order.
+    /// </summary>
+    public void Register(string fieldName)
+    {
+        if (!_fieldOrder.Contains(fieldName))
+            _fieldOrder.Add(fieldName);
+    }
+
+    /// <summary>
+    /// Associates a WinUI control with a field name. Called from .Set() during mount/update.
+    /// </summary>
+    public void SetControl(string fieldName, Control control)
+    {
+        _controls[fieldName] = control;
+    }
+
+    /// <summary>
+    /// Sets the callback for submit (Enter on last field).
+    /// </summary>
+    public void SetSubmitHandler(Action handler) => _onSubmit = handler;
+
+    /// <summary>
+    /// Focuses a specific field by name.
+    /// </summary>
+    public void FocusField(string fieldName)
+    {
+        if (_controls.TryGetValue(fieldName, out var control))
+            control.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>
+    /// Focuses the first field from the given list that exists in this manager.
+    /// Useful with ValidationContext.InvalidFields.
+    /// </summary>
+    public void FocusFirst(IReadOnlyList<string> fieldNames)
+    {
+        foreach (var name in fieldNames)
+        {
+            if (_controls.ContainsKey(name))
+            {
+                FocusField(name);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Focuses the field after the given field in registration order.
+    /// If the current field is the last one, triggers submit.
+    /// </summary>
+    // <snippet:focus-manager>
+    public void FocusNext(string? currentField = null)
+    {
+        if (_fieldOrder.Count == 0) return;
+
+        if (currentField is null)
+        {
+            FocusField(_fieldOrder[0]);
+            return;
+        }
+
+        var index = _fieldOrder.IndexOf(currentField);
+        if (index < 0) return;
+
+        if (index + 1 < _fieldOrder.Count)
+        {
+            FocusField(_fieldOrder[index + 1]);
+        }
+        else
+        {
+            _onSubmit?.Invoke();
+        }
+    }
+    // </snippet:focus-manager>
+
+    /// <summary>
+    /// Focuses the field before the given field in registration order.
+    /// </summary>
+    public void FocusPrevious(string? currentField = null)
+    {
+        if (_fieldOrder.Count == 0) return;
+
+        if (currentField is null)
+        {
+            FocusField(_fieldOrder[^1]);
+            return;
+        }
+
+        var index = _fieldOrder.IndexOf(currentField);
+        if (index <= 0) return;
+
+        FocusField(_fieldOrder[index - 1]);
+    }
+
+    /// <summary>
+    /// Returns true if the given field is the last registered field.
+    /// </summary>
+    public bool IsLastField(string fieldName) =>
+        _fieldOrder.Count > 0 && _fieldOrder[^1] == fieldName;
+
+    /// <summary>
+    /// Returns true if the given field is the first registered field.
+    /// </summary>
+    public bool IsFirstField(string fieldName) =>
+        _fieldOrder.Count > 0 && _fieldOrder[0] == fieldName;
+
+    /// <summary>
+    /// Clears all registrations.
+    /// </summary>
+    public void Clear()
+    {
+        _fieldOrder.Clear();
+        _controls.Clear();
+    }
+}
+
+/// <summary>
+/// Extension methods for the UseFocus hook.
+/// </summary>
+public static class UseFocusExtensions
+{
+    /// <summary>
+    /// Creates and returns a FocusManager scoped to this component.
+    /// The manager persists across re-renders.
+    /// </summary>
+    public static FocusManager UseFocus(this RenderContext ctx)
+    {
+        var (fm, _) = ctx.UseState(new FocusManager());
+        return fm;
+    }
+
+    /// <summary>
+    /// Creates and returns a FocusManager for this component.
+    /// </summary>
+    public static FocusManager UseFocus(this Component component)
+        => component.Context.UseFocus();
+}
+
+/// <summary>
+/// Attached metadata for focus registration on elements.
+/// </summary>
+public sealed record FocusAttached(
+    string FieldName,
+    FocusManager Manager,
+    bool AutoFocus = false);
+
+/// <summary>
+/// Fluent extensions for attaching focus management to elements.
+/// Uses .Set() to capture the WinUI control reference during mount/update.
+/// </summary>
+public static class FocusExtensions
+{
+    /// <summary>
+    /// Registers this TextBox with a FocusManager for programmatic focus control.
+    /// </summary>
+    public static TextBoxElement Focus(this TextBoxElement el, FocusManager fm, string fieldName, bool autoFocus = false)
+    {
+        fm.Register(fieldName);
+        return el
+            .Set(tb => fm.SetControl(fieldName, tb))
+            // Loaded must be wired once, not on every reconcile: .Set setters re-run on
+            // each update, so subscribing there accumulates a handler per render
+            // (REACTOR_EVENT_001).
+            .OnMountAdd(fe =>
+            {
+                if (autoFocus && fe is TextBox loaded)
+                    FocusWhenLoaded(loaded);
+            });
+    }
+
+    /// <summary>
+    /// Registers this NumberBox with a FocusManager for programmatic focus control.
+    /// </summary>
+    public static NumberBoxElement Focus(this NumberBoxElement el, FocusManager fm, string fieldName, bool autoFocus = false)
+    {
+        fm.Register(fieldName);
+        return el
+            .Set(nb => fm.SetControl(fieldName, nb))
+            // See the TextBox overload above — Loaded is wired once at mount so the
+            // handler does not accumulate across reconciles (REACTOR_EVENT_001).
+            .OnMountAdd(fe =>
+            {
+                if (autoFocus && fe is NumberBox loaded)
+                    FocusWhenLoaded(loaded);
+            });
+    }
+
+    // Give the control focus as soon as it is live, wiring at most one Loaded handler and
+    // removing it again when it fires.
+    //
+    // Mounting once is not the same as subscribing once: OnMountAdd runs on every native
+    // mount, and ElementPool recycles controls without clearing Loaded handlers — so a plain
+    // `Loaded +=` here would leave a stale autofocus closure behind on each pooled reuse, and
+    // a recycled control would steal focus for a field it no longer belongs to. Already-loaded
+    // controls (the common case for a pooled control being re-parented) are focused directly,
+    // since Loaded may not fire again. Same self-unsubscribing shape as DockSideStripRenderer
+    // and DockFloatingWindow.
+    //
+    // Plain comment rather than <summary>: the docs reference generator emits a page for every
+    // XML-documented member of a public static class, private or not.
+    private static void FocusWhenLoaded(Control control)
+    {
+        if (control.IsLoaded)
+        {
+            control.Focus(FocusState.Programmatic);
+            return;
+        }
+
+        Microsoft.UI.Xaml.RoutedEventHandler? handler = null;
+        handler = (_, _) =>
+        {
+            if (handler is not null) control.Loaded -= handler;
+            control.Focus(FocusState.Programmatic);
+        };
+        control.Loaded += handler;
+    }
+
+    /// <summary>
+    /// Registers any element with a FocusManager via attached metadata (for custom types).
+    /// </summary>
+    public static T FocusMeta<T>(this T el, FocusManager fm, string fieldName, bool autoFocus = false) where T : Element
+    {
+        fm.Register(fieldName);
+        return (T)el.SetAttached(new FocusAttached(fieldName, fm, autoFocus));
+    }
+
+    /// <summary>
+    /// Gets the FocusAttached metadata from an element.
+    /// </summary>
+    public static FocusAttached? GetFocus<T>(this T el) where T : Element =>
+        el.GetAttached<FocusAttached>();
+}
