@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderError.cs, last changed upstream in 00cd489208b1. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderError.cs, last changed upstream in 00cd489208b1; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Replaces Reactor's built-in render-error fallback. Called on the UI thread with

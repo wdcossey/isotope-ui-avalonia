@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseResource.cs, last changed upstream in 96ccfc4b057c. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseResource.cs, last changed upstream in 96ccfc4b057c; transforms: dispatcher-queue, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Concurrent;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Tuning for the <c>UseResource</c> hook. Defaults mirror
@@ -54,11 +54,11 @@ public interface IHookDispatcher
 /// </summary>
 internal sealed class WindowsDispatcherHookDispatcher : IHookDispatcher
 {
-    private readonly Microsoft.UI.Dispatching.DispatcherQueue? _queue;
+    private readonly DispatcherQueue? _queue;
 
     public WindowsDispatcherHookDispatcher()
     {
-        _queue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        _queue = DispatcherQueue.GetForCurrentThread();
     }
 
     public void Post(Action action)
@@ -180,7 +180,7 @@ public static class UseResourceExtensions
         // dispatcher" so the hook's inline continuation path kicks in.
         try
         {
-            var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            var dq = DispatcherQueue.GetForCurrentThread();
             return dq is null ? null : new WindowsDispatcherHookDispatcher();
         }
         catch (global::System.Runtime.InteropServices.COMException)

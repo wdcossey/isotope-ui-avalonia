@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs, last changed upstream in 74791562c117; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs, last changed upstream in 74791562c117; transforms: winui-qualified-element, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Kind of structural list diagnostic surfaced through

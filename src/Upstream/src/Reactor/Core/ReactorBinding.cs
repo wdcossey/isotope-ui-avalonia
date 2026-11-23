@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ReactorBinding.cs, last changed upstream in a60545539ed3. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ReactorBinding.cs, last changed upstream in a60545539ed3; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.UI.Xaml;
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Spec 047 §14 Phase 1 (1.4) — public author-facing surface for the echo

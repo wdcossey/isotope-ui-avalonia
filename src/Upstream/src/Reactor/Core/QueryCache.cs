@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/QueryCache.cs, last changed upstream in 96ccfc4b057c. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/QueryCache.cs, last changed upstream in 96ccfc4b057c; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Concurrent;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// A point-in-time cache entry for a resource keyed by cache key.

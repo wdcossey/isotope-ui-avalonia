@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ThemeResourceListeners.cs, last changed upstream in fb618d7edf9e. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ThemeResourceListeners.cs, last changed upstream in fb618d7edf9e; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core;
 
 /// <summary>Implemented by Reactor hosts so <see cref="Theme.NotifyResourcesChanged"/> can reach them.</summary>
 internal interface IThemeResourceListener

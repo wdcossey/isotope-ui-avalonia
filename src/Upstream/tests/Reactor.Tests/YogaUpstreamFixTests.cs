@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/YogaUpstreamFixTests.cs, last changed upstream in fa64397767a5. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Layout;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/YogaUpstreamFixTests.cs, last changed upstream in fa64397767a5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Layout;
 using Xunit;
 
-namespace Microsoft.UI.Reactor.Tests;
+namespace Isotope.UI.Tests;
 
 /// <summary>
 /// Hand-ported regression tests for upstream facebook/yoga fixes taken after the

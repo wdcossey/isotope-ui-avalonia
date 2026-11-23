@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/MessageCache.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/MessageCache.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Concurrent;
 using System.Globalization;
 using Jeffijoe.MessageFormat;
 
-namespace Microsoft.UI.Reactor.Localization;
+namespace Isotope.UI.Localization;
 
 /// <summary>
 /// Caches MessageFormatter instances per locale. Each formatter internally caches

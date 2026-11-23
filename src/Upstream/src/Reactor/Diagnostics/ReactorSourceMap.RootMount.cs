@@ -1,14 +1,14 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.RootMount.cs, last changed upstream in 0f84736ee949. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.RootMount.cs, last changed upstream in 0f84736ee949; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.ComponentModel;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Diagnostics;
+namespace Isotope.UI.Diagnostics;
 
 /// <summary>
 /// Root mount call sites — where an app called <c>ReactorApp.Run</c>,
 /// <c>ReactorApp.OpenWindow</c>, <c>ReactorWindow.Mount</c>, <c>ReactorHost.Mount</c> or
 /// <c>ReactorHostControl.Mount</c>. Surfaced to inspectors through
-/// <see cref="Microsoft.UI.Reactor.Core.Diagnostics.ReactorHostInfo.MountSite"/>.
+/// <see cref="Isotope.UI.Core.Diagnostics.ReactorHostInfo.MountSite"/>.
 ///
 /// <para><b>How the site gets here.</b> A root is not an element, so there is no
 /// <see cref="Element.CallSite"/> to stamp. Instead the source-map generator intercepts

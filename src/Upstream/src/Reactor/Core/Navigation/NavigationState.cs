@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationState.cs, last changed upstream in 9cb6898e7b73. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Navigation;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationState.cs, last changed upstream in 9cb6898e7b73; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Navigation;
 
 /// <summary>
 /// A snapshot of a <see cref="NavigationHandle{TRoute}"/>'s full state: the back stack,

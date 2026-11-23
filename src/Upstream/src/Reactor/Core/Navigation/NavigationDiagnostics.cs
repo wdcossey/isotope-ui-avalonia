@@ -1,14 +1,14 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationDiagnostics.cs, last changed upstream in aad55a4075ac. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core.Diagnostics;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationDiagnostics.cs, last changed upstream in aad55a4075ac; transforms: event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core.Diagnostics;
 
-namespace Microsoft.UI.Reactor.Navigation;
+namespace Isotope.UI.Navigation;
 
 /// <summary>
 /// Diagnostic events for the navigation system. Subscribe to these events
 /// to observe navigation operations for debugging and telemetry.
 /// All events fire synchronously on the UI thread.
 ///
-/// Each event also emits to the <c>Microsoft-UI-Reactor</c> ETW provider
+/// Each event also emits to the <c>Isotope-UI</c> ETW provider
 /// under the <see cref="ReactorEventSource.Keywords.Navigation"/> keyword
 /// (spec 044 §4.2). Use <c>dotnet-trace</c>/<c>PerfView</c> for capture in
 /// Release; the in-process <see cref="Diagnostics.ReactorTrace.Subscribe"/>

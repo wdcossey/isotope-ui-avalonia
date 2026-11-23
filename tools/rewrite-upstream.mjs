@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Deterministic import rewrite for upstream files (Spike A step 3a; Isotope.UI.Avalonia's upstream transforms).
+// Deterministic import rewrite for upstream files, at build time (Spike A step 3a). The library no longer uses it: it
+// compiles the files tools/sync vendors, transformed by tools/sync/transforms.json.
 // Reads the linked upstream files from a props file, applies the rules in a rules file, and writes each file the rules
 // change to <outDir>/<relative path>. Writes <outDir>/manifest.txt: one "upstreamPath|rewrittenPath|hits" line per file.
 // Usage: node tools/rewrite-upstream.mjs <files.props> <rules.json> <upstreamSrcDir> <outDir>
@@ -15,162 +16,19 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dropMember } from './sync/lib/csharp.mjs';
 
-// Marks which characters of C# source are code: not in a comment, string or char literal (interpolation holes count
-// as code). Handles //, /* */, '…', "…", @"…", $"…", $@"…"/@$"…" and raw """…""" strings.
-export function codeMask(text) {
-  const n = text.length;
-  const code = new Uint8Array(n);
-  let i = 0;
-  function charLit() {
-    i++;
-    while (i < n && text[i] !== "'") { if (text[i] === '\\') i++; i++; }
-    i++;
-  }
-  function str() {
-    let dollars = 0, verbatim = false;
-    while (text[i] === '$' || text[i] === '@') { if (text[i] === '$') dollars++; else verbatim = true; i++; }
-    let q = 0;
-    while (text[i + q] === '"') q++;
-    if (q >= 3 && !verbatim) {
-      i += q;
-      const close = '"'.repeat(q);
-      while (i < n) {
-        if (text.startsWith(close, i)) { i += q; return; }
-        if (dollars && text[i] === '{') {
-          let k = 0;
-          while (text[i + k] === '{') k++;
-          i += k;
-          if (k >= dollars) { run(true); i += dollars; }
-          continue;
-        }
-        i++;
-      }
-      return;
-    }
-    i++;
-    while (i < n) {
-      const c = text[i];
-      if (verbatim) {
-        if (c === '"') { if (text[i + 1] === '"') { i += 2; continue; } i++; return; }
-      } else {
-        if (c === '\\') { i += 2; continue; }
-        if (c === '"' || c === '\n') { i++; return; }
-      }
-      if (dollars && c === '{') {
-        if (text[i + 1] === '{') { i += 2; continue; }
-        i++;
-        run(true);
-        i++;
-        continue;
-      }
-      i++;
-    }
-  }
-  // Scans code; in an interpolation hole, returns at its closing brace (not consumed).
-  function run(hole) {
-    let depth = 0;
-    while (i < n) {
-      const c = text[i], d = text[i + 1];
-      if (c === '/' && d === '/') { while (i < n && text[i] !== '\n') i++; continue; }
-      if (c === '/' && d === '*') { const e = text.indexOf('*/', i + 2); i = e < 0 ? n : e + 2; continue; }
-      // A preprocessor line (#region Users' settings, #error "…") holds no code and no literals.
-      if (c === '#' && !hole && /^[ \t]*$/.test(text.slice(text.lastIndexOf('\n', i - 1) + 1, i))) {
-        while (i < n && text[i] !== '\n') i++;
-        continue;
-      }
-      if (c === "'") { charLit(); continue; }
-      if (c === '"' || ((c === '$' || c === '@') && /^[$@]*"/.test(text.slice(i, i + 6)))) { str(); continue; }
-      if (hole) {
-        if (c === '(' || c === '[' || c === '{') depth++;
-        else if (c === ')' || c === ']') depth--;
-        else if (c === '}') { if (depth === 0) return; depth--; }
-        else if (c === ':' && depth === 0 && d !== ':' && text[i - 1] !== ':') {
-          while (i < n && text[i] !== '}') i++; // format clause
-          return;
-        }
-      }
-      code[i] = 1;
-      i++;
-    }
-  }
-  run(false);
-  return code;
-}
-
-// The [start, end) character range of the member whose declaration starts at `at`: from its first doc-comment or
-// attribute line to the end of the line its body ends on.
-function memberRange(text, code, at) {
-  const n = text.length;
-  const nextCode = (k) => { while (k < n && (!code[k] || /\s/.test(text[k]))) k++; return k; };
-  // Index of the ';' ending the construct that starts at k, at bracket depth 0.
-  const toSemicolon = (k) => {
-    let depth = 0;
-    for (; k < n; k++) {
-      if (!code[k]) continue;
-      const c = text[k];
-      if ('([{'.includes(c)) depth++;
-      else if (')]}'.includes(c)) depth--;
-      else if (c === ';' && depth === 0) return k;
-    }
-    throw new Error('no end of member');
-  };
-  const matchBrace = (k) => {
-    let depth = 0;
-    for (; k < n; k++) {
-      if (!code[k]) continue;
-      if (text[k] === '{') depth++;
-      else if (text[k] === '}' && --depth === 0) return k;
-    }
-    throw new Error('unbalanced braces');
-  };
-  let end = -1, paren = 0;
-  for (let k = at; k < n && end < 0; k++) {
-    if (!code[k]) continue;
-    const c = text[k];
-    if (c === '(' || c === '[') paren++;
-    else if (c === ')' || c === ']') paren--;
-    else if (paren === 0 && c === '{') {
-      end = matchBrace(k);
-      const j = nextCode(end + 1);
-      if (text[j] === '=' && text[j + 1] !== '>') end = toSemicolon(j); // property initializer
-    } else if (paren === 0 && c === '=') {
-      // '==', '!=', '<=', '>=' (an operator declaration's name) are not the start of a body or initializer.
-      if (text[k + 1] === '=' || '=!<>'.includes(text[k - 1])) { if (text[k + 1] === '=') k++; continue; }
-      end = toSemicolon(k);
-    }
-    else if (paren === 0 && c === ';') end = k;
-  }
-  if (end < 0) throw new Error('no end of member');
-  let lineEnd = text.indexOf('\n', end);
-  lineEnd = lineEnd < 0 ? n : lineEnd;
-  for (let k = end + 1; k < lineEnd; k++)
-    if (code[k] && !/\s/.test(text[k])) throw new Error('code follows the member on its last line');
-  let start = text.lastIndexOf('\n', at - 1) + 1;
-  if (text.slice(start, at).trim() !== '') throw new Error('code precedes the member on its first line');
-  for (;;) {
-    if (start === 0) break;
-    const prevStart = text.lastIndexOf('\n', start - 2) + 1;
-    const prev = text.slice(prevStart, start).trim();
-    if (prev.startsWith('///') || prev.startsWith('[')) start = prevStart;
-    else break;
-  }
-  return [start, lineEnd];
-}
-
-// Blanks [start, end) line by line, keeping each line ending so later line numbers don't move.
-const blank = (text, start, end) => text.slice(0, start) + text.slice(start, end).replace(/[^\r\n]+/g, '') + text.slice(end);
+// The C# lexer lives in tools/sync/lib/csharp.mjs (one implementation, shared with tools/sync's drop rules).
+export { codeMask } from './sync/lib/csharp.mjs';
 
 export function applyRules(rel, text, rules) {
   let hits = 0;
   for (const r of rules) {
     if (r.files && !r.files.includes(rel)) continue;
     if (r.drop !== undefined) {
-      const code = codeMask(text);
-      const found = [...text.matchAll(r.re)].filter((m) => code[m.index]);
-      if (found.length !== 1) throw new Error(rel + ': drop rule matched ' + found.length + ' times, expected 1: ' + r.drop);
-      const [s, e] = memberRange(text, code, found[0].index);
-      text = blank(text, s, e);
+      const d = dropMember(text, r.re);
+      if (d.error) throw new Error(rel + ': drop rule ' + d.error + ': ' + r.drop);
+      text = d.text;
       r.hits++;
       hits++;
       continue;

@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ContextScope.cs, last changed upstream in dfd553ee3416. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ContextScope.cs, last changed upstream in dfd553ee3416; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Maintains the current context values during the reconciler's tree traversal.

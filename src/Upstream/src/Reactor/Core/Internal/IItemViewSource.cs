@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/IItemViewSource.cs, last changed upstream in 56a79400f892. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/IItemViewSource.cs, last changed upstream in 56a79400f892; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
 
-namespace Microsoft.UI.Reactor.Core.Internal;
+namespace Isotope.UI.Core.Internal;
 
 /// <summary>
 /// Spec 047 §14 Phase 3 close-out — uniform per-index view-source contract

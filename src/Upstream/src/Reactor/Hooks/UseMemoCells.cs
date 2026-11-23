@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseMemoCells.cs, last changed upstream in 96ccfc4b057c. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseMemoCells.cs, last changed upstream in 96ccfc4b057c; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 using System.Collections.Generic;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Cell-level memoization hook for high-frequency list / grid bodies.

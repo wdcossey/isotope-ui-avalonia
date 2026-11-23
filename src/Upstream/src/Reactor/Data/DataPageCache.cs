@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/DataPageCache.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Data;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/DataPageCache.cs, last changed upstream in a4dcfdf558aa; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Data;
 
 /// <summary>
 /// Status of a cached block.

@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/AppliedModifierMap.cs, last changed upstream in 1dff529a7f11; transforms: winui-alias-identity-types. Do not edit: change the tools/sync rules.
-using WinUI = Microsoft.UI.Xaml.Controls;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/AppliedModifierMap.cs, last changed upstream in 1dff529a7f11; transforms: winui-usings, winui-alias-panel, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Which WinUI property each common modifier is written to — the read-side mirror of
@@ -43,7 +43,7 @@ internal static class AppliedModifierMap
         : Is<WinUI.StackPanel>(t) ? "StackPanel.Padding"
         : Is<WinUI.Grid>(t) ? "Grid.Padding"
         : Is<WinUI.RelativePanel>(t) ? "RelativePanel.Padding"
-        : Is<TextBlock>(t) ? "TextBlock.Padding"
+        : Is<WinUI.TextBlock>(t) ? "TextBlock.Padding"
         : null;
 
     private static string? CornerRadiusOwner(Type t) =>
@@ -64,7 +64,7 @@ internal static class AppliedModifierMap
 
     private static Func<Type, string?> ControlOrTextBlock(string property)
         => t => Is<WinUI.Control>(t) ? "Control." + property
-            : Is<TextBlock>(t) ? "TextBlock." + property
+            : Is<WinUI.TextBlock>(t) ? "TextBlock." + property
             : null;
 
     private static string? BackgroundOwner(Type t) =>

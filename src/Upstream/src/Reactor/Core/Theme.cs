@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Theme.cs, last changed upstream in 1265b8653d15. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Theme.cs, last changed upstream in 1265b8653d15; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core;
+
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// A reference to a WinUI theme resource that resolves at render time.
@@ -327,8 +327,8 @@ public static class Theme
     /// (<c>RequestedTheme</c>) or for mutating an existing brush's <c>Color</c>; both are
     /// already picked up.</para>
     /// <para>What it does: clears the resolution cache behind <see cref="ThemeRef"/>, then
-    /// asks every live <see cref="Microsoft.UI.Reactor.Hosting.ReactorHost"/> and
-    /// <see cref="Microsoft.UI.Reactor.Hosting.ReactorHostControl"/> for a full re-render that
+    /// asks every live <see cref="Isotope.UI.Hosting.ReactorHost"/> and
+    /// <see cref="Isotope.UI.Hosting.ReactorHostControl"/> for a full re-render that
     /// bypasses component memoization and the reconciler's skip of unchanged elements, so
     /// memoized and reused subtrees are refreshed too. That re-resolves
     /// <c>.Resources(...)</c> theme overrides, re-applies <see cref="ThemeRef"/> modifiers

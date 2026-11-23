@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/PropertyGrid/PropertyGridFactories.cs, last changed upstream in 43bec45c7c9f. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Controls;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/PropertyGrid/PropertyGridFactories.cs, last changed upstream in 43bec45c7c9f; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using Isotope.UI.Controls;
 
-namespace Microsoft.UI.Reactor;
+namespace Isotope.UI;
 
 public static partial class Factories
 {

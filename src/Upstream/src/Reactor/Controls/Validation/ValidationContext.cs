@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ValidationContext.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Controls.Validation;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ValidationContext.cs, last changed upstream in a4dcfdf558aa; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// Collects, queries, and manages validation messages for a form or section of a component tree.
@@ -153,7 +153,7 @@ public sealed class ValidationContext
     /// </summary>
     internal void NotifyDeferred()
     {
-        var dispatcher = global::Microsoft.UI.Reactor.ReactorApp.UIDispatcher;
+        var dispatcher = global::Isotope.UI.ReactorApp.UIDispatcher;
         if (dispatcher is not null && dispatcher.TryEnqueue(DeliverDeferred))
             return;
 

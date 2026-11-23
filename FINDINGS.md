@@ -172,14 +172,15 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - `KeyedListDiff` needs no rule.
   - `ChildReconciler` needs one rule (two `using` lines).
   - `RenderContext` needs 37 member drops: 889 lines of tier 3 hooks, while the hooks core is untouched.
-- **The library** `src/Isotope.UI.Avalonia` links 65 upstream files (16,062 lines) with 74 rules: 7 find/replace and 67
-  member drops. Measured with `node tools/measure-transforms.mjs src/Isotope.UI.Avalonia/UpstreamFiles.props
-  src/Isotope.UI.Avalonia/upstream-transforms.json upstream/src/Reactor`.
 - **Tests:** 48 headless tests of the seam and the hooks core (render, state, effects, context, memo, keyed reorder, the
   render-loop guard, off-thread re-renders) and 12 tests of the rewrite tool. All 60 were proven to fail with their
   behaviour broken.
-- **Still to come:** the library links upstream at build time with its own rule file, while `tools/sync` vendors with
-  another. Unifying them is #11.
+- **Library on vendored upstream (#11, 2026-11-23):**
+  - `tools/sync` is the only transform engine. `transforms.json` has 78 rules: the library's 74 (7 find/replace, 67 member
+    drops), the WinUIEx notice, `partial-render-context`, `event-provider-isotope` and `namespace-isotope`.
+  - 167 files are vendored (116 tier 1, 51 tier 2). The library compiles 65 of them (16,062 lines): 64 transformed, 140
+    lines rewritten, 1,023 blanked (`node tools/measure-transforms.mjs src/Isotope.UI.Avalonia/UpstreamFiles.props`).
+  - It builds and passes its 48 tests without `upstream/`. Spike A stays at 567 and Yoga at 780.
 
 ## Tracking
 

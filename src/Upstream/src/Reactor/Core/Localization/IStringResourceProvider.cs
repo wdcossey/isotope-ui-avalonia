@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/IStringResourceProvider.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Localization;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/IStringResourceProvider.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Localization;
 
 /// <summary>
 /// Abstracts string resource loading so that the localization system

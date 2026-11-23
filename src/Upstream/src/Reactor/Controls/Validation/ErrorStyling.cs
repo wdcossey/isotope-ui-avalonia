@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ErrorStyling.cs, last changed upstream in ca65995135d5; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ErrorStyling.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Controls.Validation;
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// Controls when error styling becomes visible.
@@ -46,7 +46,7 @@ public static class ErrorStyling
     /// <summary>
     /// Default border thickness applied when an error is present.
     /// </summary>
-    public static readonly Thickness ErrorBorderThickness = new(2);
+    public static readonly Microsoft.UI.Xaml.Thickness ErrorBorderThickness = new(2);
 
     /// <summary>
     /// Gets the theme resource key for the specified severity.

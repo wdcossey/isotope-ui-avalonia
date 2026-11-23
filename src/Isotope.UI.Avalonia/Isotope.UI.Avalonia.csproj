@@ -3,7 +3,7 @@
        they need) compiled against our Avalonia implementation of the engine seam (Seam/). -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>Microsoft.UI.Reactor</RootNamespace>
+    <RootNamespace>Isotope.UI</RootNamespace>
     <AssemblyName>Isotope.UI.Avalonia</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -13,7 +13,7 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
-  <!-- Where upstream files come from, and which. Switching to vendored copies (#3) changes UpstreamSrc only. -->
+  <!-- Which vendored upstream files (src/Upstream/) are compiled. -->
   <Import Project="UpstreamFiles.props" />
   <ItemGroup>
     <Compile Include="Seam/**/*.cs" />
@@ -25,22 +25,4 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Isotope.UI.Avalonia.Tests" />
   </ItemGroup>
-
-  <!-- Deterministic rewrite on import: tools/rewrite-upstream.mjs applies upstream-transforms.json to the files in
-       UpstreamFiles.props; each rewritten copy replaces its original in the compile, and #line maps errors back. -->
-  <PropertyGroup>
-    <RewriteDir>$(BaseIntermediateOutputPath)rewritten\</RewriteDir>
-  </PropertyGroup>
-  <Target Name="_RewriteUpstream" BeforeTargets="BeforeBuild;CoreCompile">
-    <Exec Command="node &quot;$(MSBuildThisFileDirectory)..\..\tools\rewrite-upstream.mjs&quot; &quot;$(MSBuildThisFileDirectory)UpstreamFiles.props&quot; &quot;$(MSBuildThisFileDirectory)upstream-transforms.json&quot; &quot;$(UpstreamSrc.TrimEnd('\'))&quot; &quot;$(RewriteDir.TrimEnd('\'))&quot;" StandardOutputImportance="low" />
-    <ReadLinesFromFile File="$(RewriteDir)manifest.txt">
-      <Output TaskParameter="Lines" ItemName="_RewriteLine" />
-    </ReadLinesFromFile>
-    <ItemGroup>
-      <_RewriteOrig Include="$([System.String]::Copy('%(_RewriteLine.Identity)').Split('|')[0])" />
-      <_RewriteNew Include="$([System.String]::Copy('%(_RewriteLine.Identity)').Split('|')[1])" />
-      <Compile Remove="@(_RewriteOrig)" />
-      <Compile Include="@(_RewriteNew)" />
-    </ItemGroup>
-  </Target>
 </Project>

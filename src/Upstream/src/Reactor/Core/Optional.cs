@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Optional.cs, last changed upstream in ffe1de4d884d. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Optional.cs, last changed upstream in ffe1de4d884d; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI;
 
 /// <summary>
 /// Represents either an explicit value or an unset state.

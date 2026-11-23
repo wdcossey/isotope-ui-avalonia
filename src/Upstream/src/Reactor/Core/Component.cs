@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Component.cs, last changed upstream in aa7fd62817e4; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Hooks;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Component.cs, last changed upstream in aa7fd62817e4; transforms: drop-Component-UseWindowSize-for-window, drop-Component-UseWindowSize, drop-Component-UseBreakpoint-for-window, drop-Component-UseBreakpoint, drop-Component-UseDpi, drop-Component-UseWindow, drop-Component-UseWindowState, drop-Component-UseIsActive, drop-Component-UseClosingGuard, drop-Component-PickFileAsync, drop-Component-PickMultipleFilesAsync, drop-Component-PickFolderAsync, drop-Component-PickMultipleFoldersAsync, drop-Component-PickSaveFileAsync, drop-Component-UseWindowPosition, drop-Component-UseDisplays, drop-Component-UseIsCovered, drop-Component-UseWindowAspectRatio, drop-Component-UseWindowDragMove, drop-Component-UseOpenWindow, drop-Component-UseTrayIcon, drop-Component-UseColorScheme, drop-Component-UseIsDarkTheme, drop-Component-UseReducedMotion, drop-Component-UseIntl, drop-Component-UseSystemBackButton, drop-Component-UseAnnounce, drop-Component-UseHighContrast, drop-Component-UseHighContrastScheme, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Hooks;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Base class for stateful components (like React class components, but using hooks).
@@ -112,114 +112,114 @@ public abstract class Component
     protected Ref<T> UseRef<T>(T initialValue = default!)
         => Context.UseRef(initialValue);
 
-    protected (double Width, double Height) UseWindowSize(Window window)
-        => Context.UseWindowSize(window);
 
-    /// <summary>
-    /// Parameterless overload — resolves the host window from the current
-    /// host's owning window. Returns <c>(0, 0)</c> outside a window.
-    /// (spec 036 §5.2)
-    /// </summary>
-    protected (double Width, double Height) UseWindowSize()
-        => Context.UseWindowSize();
 
-    protected bool UseBreakpoint(Window window, double minWidth)
-        => Context.UseBreakpoint(window, minWidth);
 
-    /// <summary>
-    /// Window-inferring overload — takes only <paramref name="minWidth"/> and
-    /// resolves the host window from the current host. Returns <c>false</c>
-    /// outside a window. (spec 036 §5.2)
-    /// </summary>
-    protected bool UseBreakpoint(double minWidth)
-        => Context.UseBreakpoint(minWidth);
 
-    /// <summary>
-    /// Per-monitor DPI of the host window; re-renders on DPI change. Returns
-    /// the system primary-monitor DPI when called outside a window.
-    /// (spec 036 §5.2)
-    /// </summary>
-    protected uint UseDpi()
-        => Context.UseDpi();
 
-    /// <summary>
-    /// Returns the host window or <c>null</c> outside a window. (spec 036 §7)
-    /// </summary>
-    protected Microsoft.UI.Reactor.ReactorWindow? UseWindow()
-        => Context.UseWindow();
 
-    /// <summary>Re-renders on window state changes. (spec 036 §7)</summary>
-    protected Microsoft.UI.Reactor.WindowState UseWindowState()
-        => Context.UseWindowState();
 
-    /// <summary>Re-renders on window activation changes. (spec 036 §7)</summary>
-    protected bool UseIsActive()
-        => Context.UseIsActive();
 
-    /// <summary>
-    /// Register a synchronous "can the window close right now?" predicate.
-    /// (spec 036 §7 / §13.4)
-    /// </summary>
-    protected void UseClosingGuard(Func<bool> canClose)
-        => Context.UseClosingGuard(canClose);
 
-    /// <summary>Opens a single-file picker owned by this component's window. Not a hook: call from a UI-thread event handler.</summary>
-    protected Task<Microsoft.Windows.Storage.Pickers.PickFileResult?> PickFileAsync(FilePickerOptions options)
-        => Context.PickFileAsync(options);
 
-    /// <summary>Opens a multiple-file picker owned by this component's window. Not a hook: call from a UI-thread event handler.</summary>
-    protected Task<IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult>> PickMultipleFilesAsync(FilePickerOptions options)
-        => Context.PickMultipleFilesAsync(options);
 
-    /// <summary>Opens a single-folder picker owned by this component's window. Not a hook: call from a UI-thread event handler.</summary>
-    protected Task<Microsoft.Windows.Storage.Pickers.PickFolderResult?> PickFolderAsync(FolderPickerOptions options)
-        => Context.PickFolderAsync(options);
 
-    /// <summary>Opens a multiple-folder picker owned by this component's window. Not a hook: call from a UI-thread event handler.</summary>
-    protected Task<IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFolderResult>> PickMultipleFoldersAsync(FolderPickerOptions options)
-        => Context.PickMultipleFoldersAsync(options);
 
-    /// <summary>Opens a save-file picker owned by this component's window. Not a hook: call from a UI-thread event handler.</summary>
-    protected Task<Microsoft.Windows.Storage.Pickers.PickFileResult?> PickSaveFileAsync(SaveFilePickerOptions options)
-        => Context.PickSaveFileAsync(options);
 
-    /// <summary>Subscribes to the host window's position-changed event and re-renders on move. (spec 054 §5.5)</summary>
-    protected (double X, double Y) UseWindowPosition()
-        => Context.UseWindowPosition();
 
-    /// <summary>Returns the current display snapshot and re-renders when the display layout changes. (spec 054 §5.6)</summary>
-    protected IReadOnlyList<Microsoft.UI.Reactor.DisplayInfo> UseDisplays()
-        => Context.UseDisplays();
 
-    /// <summary>Returns a covered hint based on the host window's z-order transitions. (spec 054 §5.5)</summary>
-    protected bool UseIsCovered()
-        => Context.UseIsCovered();
 
-    /// <summary>Applies a lifetime-bound width/height aspect lock to the owning window. (spec 054 §5.2)</summary>
-    protected void UseWindowAspectRatio(double? widthOverHeight)
-        => Context.UseWindowAspectRatio(widthOverHeight);
 
-    /// <summary>Returns a stable callback that starts the framework-managed window drag/move loop. (spec 054 §5.3)</summary>
-    protected Action UseWindowDragMove()
-        => Context.UseWindowDragMove();
 
-    /// <summary>
-    /// Open or reuse a secondary window keyed by <paramref name="key"/>. Stable
-    /// identity across re-renders. (spec 036 §4.3)
-    /// </summary>
-    protected Microsoft.UI.Reactor.ReactorWindow? UseOpenWindow(
-        Microsoft.UI.Reactor.WindowKey key,
-        Microsoft.UI.Reactor.WindowSpec spec,
-        Func<Component> factory)
-        => Context.UseOpenWindow(key, spec, factory);
 
-    /// <summary>
-    /// Component mirror of <see cref="RenderContext.UseTrayIcon"/>. Opens
-    /// (or reuses by key) a system-tray icon scoped to this component;
-    /// closes on unmount. (spec 036 §11.4)
-    /// </summary>
-    protected Microsoft.UI.Reactor.ReactorTrayIcon? UseTrayIcon(Microsoft.UI.Reactor.TrayIconSpec spec)
-        => Context.UseTrayIcon(spec);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     protected T UseObservableTree<T>(T source) where T : global::System.ComponentModel.INotifyPropertyChanged
         => Context.UseObservableTree(source);
@@ -240,23 +240,23 @@ public abstract class Component
     protected IReadOnlyList<T> UseCollection<T>(global::System.Collections.ObjectModel.ObservableCollection<T> collection)
         => Context.UseCollection(collection);
 
-    protected ColorScheme UseColorScheme()
-        => Context.UseColorScheme();
 
-    protected bool UseIsDarkTheme()
-        => Context.UseIsDarkTheme();
 
-    /// <summary>
-    /// Re-renders when the user's OS reduced-motion preference changes; returns
-    /// the current value. Pair with <c>Animations.Animate(...)</c> to opt out
-    /// of structural transitions when accessibility settings request it
-    /// (WCAG 2.3.3 — spec 042 §6).
-    /// </summary>
-    protected bool UseReducedMotion()
-        => Context.UseReducedMotion();
 
-    protected Localization.IntlAccessor UseIntl()
-        => Context.UseIntl();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     protected T UseContext<T>(Context<T> context)
         => Context.UseContext(context);
@@ -274,10 +274,10 @@ public abstract class Component
         Action<Navigation.NavigatedFromContext>? onNavigatedFrom = null)
         => Context.UseNavigationLifecycle(onNavigatingTo, onNavigatedTo, onNavigatingFrom, onNavigatedFrom);
 
-    protected void UseSystemBackButton<TRoute>(
-        Navigation.NavigationHandle<TRoute> nav,
-        Window window) where TRoute : notnull
-        => Context.UseSystemBackButton(nav, window);
+
+
+
+
 
     protected (T Value, Action<T> Set) UsePersisted<T>(string key, T initialValue)
         => Context.UsePersisted(key, initialValue);
@@ -296,14 +296,14 @@ public abstract class Component
     protected Command<T> UseCommand<T>(Command<T> command)
         => Context.UseCommand(command);
 
-    protected Hooks.AnnounceHandle UseAnnounce()
-        => Context.UseAnnounce();
 
-    protected bool UseHighContrast()
-        => Context.UseHighContrast();
 
-    protected string? UseHighContrastScheme()
-        => Context.UseHighContrastScheme();
+
+
+
+
+
+
 
     protected AsyncValue<T> UseResource<T>(
         Func<CancellationToken, Task<T>> fetcher,

@@ -1,6 +1,6 @@
 using Avalonia.Threading;
 
-namespace Microsoft.UI.Reactor;
+namespace Isotope.UI;
 
 /// <summary>
 /// The engine's view of a UI-thread queue, under the member names upstream calls on WinUI's

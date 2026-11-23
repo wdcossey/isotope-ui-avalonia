@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.Logging;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
 namespace Isotope.UI.Avalonia.Tests;
 

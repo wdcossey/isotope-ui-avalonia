@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseDevtools.cs, last changed upstream in a3bd7d449a46. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseDevtools.cs, last changed upstream in a3bd7d449a46; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+namespace Isotope.UI.Hooks;
 
 public static class UseDevtoolsExtensions
 {

@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/Validators/BuiltInValidators.cs, last changed upstream in c4ab2bb5f251. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/Validators/BuiltInValidators.cs, last changed upstream in c4ab2bb5f251; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Text.RegularExpressions;
 
-namespace Microsoft.UI.Reactor.Controls.Validation;
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// Factory methods for built-in validators.

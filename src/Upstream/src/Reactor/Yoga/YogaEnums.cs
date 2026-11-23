@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaEnums.cs, last changed upstream in fa64397767a5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaEnums.cs, last changed upstream in fa64397767a5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine enums.
 // Ported from yoga/enums/*.h
-// Public user-facing enums (FlexAlign, FlexDirection, etc.) have been moved to Microsoft.UI.Reactor.Layout.
-// AI-HINT: Internal enums used by the Yoga algorithm. User-facing enums are in Microsoft.UI.Reactor.Layout.FlexEnums.
+// Public user-facing enums (FlexAlign, FlexDirection, etc.) have been moved to Isotope.UI.Layout.
+// AI-HINT: Internal enums used by the Yoga algorithm. User-facing enums are in Isotope.UI.Layout.FlexEnums.
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 internal enum YogaBoxSizing
 {

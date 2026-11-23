@@ -43,7 +43,8 @@ Package IDs use the `Isotope.` prefix, because `Avalonia.` is reserved on NuGet.
 Upstream gets several commits a day. The approach, measured in four spikes (see [FINDINGS.md](FINDINGS.md)):
 
 - **Three tiers of upstream code.**
-  - **Tier 1, verbatim:** files that compile unmodified, such as Yoga and most of the data layer.
+  - **Tier 1, verbatim:** files that compile unmodified, such as Yoga and most of the data layer (only the repo-wide
+    namespace rename applies).
   - **Tier 2, verbatim plus deterministic transforms:** most of the engine, including hooks, child diffing and validation.
   - **Tier 3, rewritten for Avalonia and watched:** elements, the reconciler, control handlers and hosting.
 - **Vendor and regenerate.** `tools/sync` copies tier 1 and 2 files from a git-ignored cache of upstream, at the commit
@@ -60,7 +61,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `docs/PROCESS.md` | How work runs: issues, branches, self-review, merging |
 | `docs/spikes/` | Spike reports: A (engine compile), B (upstream churn), C (Uno and upstream), D (FlexPanel on Avalonia) |
 | `docs/LESSONS.md`, `docs/agent-brief.md` | Traps already hit; the brief for parallel agents |
-| `src/Isotope.UI.Avalonia/` | The library: our Avalonia seam (`Element`, `ElementModifiers`, `Reconciler`, …) plus upstream's engine files, linked through `UpstreamFiles.props` and rewritten by `upstream-transforms.json` |
+| `src/Isotope.UI.Avalonia/` | The library (`Isotope.UI.*`): our Avalonia seam (`Element`, `ElementModifiers`, `Reconciler`, …) plus upstream's engine files, compiled from the vendored `src/Upstream/` (listed in `UpstreamFiles.props`) |
 | `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the seam and the hooks core |
 | `spikes/A-engine/` | Measures how much of upstream's engine compiles without WinUI |
 | `spikes/D-flex/` | `FlexPanel` on Avalonia 12 over upstream's unmodified Yoga, with upstream's Yoga tests |
@@ -87,8 +88,8 @@ git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.l
 
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (567 recorded)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam and hooks core (48 tests)
-node --test tools/rewrite-upstream.test.mjs                 # the build-time rewrite tool
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam and hooks core (48 tests; needs no upstream/)
+node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
 node tools/sync/test/all.mjs                                # the sync harness's own tests
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms
 dotnet test tools/sync/verify/Upstream.Yoga.Tests           # upstream's Yoga tests on the vendored code

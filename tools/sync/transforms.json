@@ -1,46 +1,13 @@
 {
   "$comment": [
-    "Deterministic transforms for tier 2 files (tools/sync). \"find\" is a JavaScript regex (global), \"replace\" uses $1..$9.",
-    "Each rule lists the upstream files it must change; a listed file it no longer matches fails the sync. Fix the rule, never the vendored file.",
-    "Seeded from Spike A's spikes/A-engine/rewrite-rules.json, with the files each rule matched at 28a87225."
+    "Deterministic transforms for vendored files (tools/sync). Rules run in this order; each is scoped by \"files\" or \"glob\":",
+    "  \"files\": the tier 2 files it must change; a listed file it no longer changes fails the sync, and so does a vendored file it matches without listing it.",
+    "  \"glob\": every vendored file (tier 1 or 2) the pattern matches, wherever it matches; it must change at least one file. Only for repo-wide renames.",
+    "A rule either rewrites (\"find\": a JavaScript regex, global, plus optional \"flags\" from imsu; \"replace\": $1..$9 for groups, $$ for $)",
+    "or drops a member (\"drop\": a regex matching its declaration in code, exactly once per listed file; its lines are left blank, so line numbers match upstream's).",
+    "Fix the rule, never the vendored file. The library's rules (from #1) come first; the namespace rename runs last, so every other rule is written against upstream's text."
   ],
   "rules": [
-    {
-      "id": "winui-qualified-identity-types",
-      "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.(?:Controls\\.)?(Window|UIElement|FrameworkElement|Thickness|TextBlock|Panel|TextBox|NumberBox|DependencyObject)\\b(?!\\s*\\()",
-      "replace": "$1",
-      "why": "Fully qualified WinUI identity types: drop the namespace so the global aliases (Shims/Step1) map them to Avalonia.",
-      "files": [
-        "src/Reactor/Core/RenderContext.cs",
-        "src/Reactor/Hooks/UseFocus.cs",
-        "src/Reactor/Controls/Validation/ErrorStyling.cs",
-        "src/Reactor/Core/Component.cs",
-        "src/Reactor/Core/Internal/ReactorListState.cs",
-        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs",
-        "src/Reactor/Core/BackdropKind.cs",
-        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs",
-        "src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs"
-      ]
-    },
-    {
-      "id": "winui-alias-identity-types",
-      "find": "\\bWinUI\\.(TextBlock|Panel|TextBox|NumberBox|ScrollViewer)\\b",
-      "replace": "$1",
-      "why": "Same, through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias.",
-      "files": [
-        "src/Reactor/Core/ChildCollection.cs",
-        "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs"
-      ]
-    },
-    {
-      "id": "winui-qualified-control",
-      "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.Controls\\.Control\\b",
-      "replace": "Control",
-      "why": "WinUI Control (templated) maps to Avalonia TemplatedControl via the alias.",
-      "files": [
-        "src/Reactor/Hooks/UseFocus.cs"
-      ]
-    },
     {
       "id": "drop-winuiex-notice",
       "find": "\\n+-+ WinUIEx -+\\n[\\s\\S]*?\\n-{20,}(?=\\r?\\n|$)",
@@ -49,6 +16,657 @@
       "files": [
         "src/Reactor/ThirdPartyNoticeText.txt"
       ]
+    },
+    {
+      "id": "winui-usings",
+      "find": "^using (?:WinUI = )?Microsoft\\.UI\\.(?:Xaml|Composition)(?:\\.[A-Za-z]+)*;\\r?$",
+      "flags": "m",
+      "replace": "",
+      "why": "WinUI and Composition namespace imports: the names they brought in come from global aliases onto Avalonia types (Seam/GlobalUsings.cs) or from the rules below.",
+      "files": [
+        "src/Reactor/Controls/Virtualization/VirtualListElement.cs",
+        "src/Reactor/Core/BackdropKind.cs",
+        "src/Reactor/Core/ChildCollection.cs",
+        "src/Reactor/Core/ChildReconciler.cs",
+        "src/Reactor/Core/ColorScheme.cs",
+        "src/Reactor/Core/ContextScope.cs",
+        "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs",
+        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Components.cs",
+        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs",
+        "src/Reactor/Core/DragAttached.cs",
+        "src/Reactor/Core/IItemsRepeaterFactorySource.cs",
+        "src/Reactor/Core/Navigation/NavigationTransition.cs",
+        "src/Reactor/Core/ReactorBinding.cs",
+        "src/Reactor/Core/RenderErrorDispatch.cs",
+        "src/Reactor/Core/Theme.cs",
+        "src/Reactor/Core/V1HandlerRegistry.cs",
+        "src/Reactor/Diagnostics/ReactorSourceMap.cs",
+        "src/Reactor/Hooks/UseElementFocus.cs",
+        "src/Reactor/Hooks/UseElementRef.cs",
+        "src/Reactor/Hooks/UseFocus.cs",
+        "src/Reactor/Hooks/UseFocusTrap.cs"
+      ]
+    },
+    {
+      "id": "winui-alias-panel",
+      "find": "\\bWinUI\\.(Panel)\\b",
+      "replace": "$1",
+      "why": "WinUI types named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias: use the bare name, which the global aliases map to Avalonia.",
+      "files": [
+        "src/Reactor/Core/ChildCollection.cs",
+        "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs"
+      ]
+    },
+    {
+      "id": "effective-viewport-handler",
+      "find": "global::Windows\\.Foundation\\.TypedEventHandler<Microsoft\\.UI\\.Xaml\\.FrameworkElement, Microsoft\\.UI\\.Xaml\\.EffectiveViewportChangedEventArgs>",
+      "replace": "EventHandler<Avalonia.Layout.EffectiveViewportChangedEventArgs>",
+      "why": "WinUI's EffectiveViewportChanged handler shape, as Avalonia's Layoutable.EffectiveViewportChanged declares it.",
+      "files": [
+        "src/Reactor/Core/Internal/ReactorListState.cs"
+      ]
+    },
+    {
+      "id": "routed-event-handler",
+      "find": "Microsoft\\.UI\\.Xaml\\.RoutedEventHandler\\b",
+      "replace": "EventHandler<Avalonia.Interactivity.RoutedEventArgs>",
+      "why": "WinUI's Loaded handler shape, as Avalonia's Control.Loaded declares it.",
+      "files": [
+        "src/Reactor/Core/Internal/ReactorListState.cs",
+        "src/Reactor/Hooks/UseFocus.cs"
+      ]
+    },
+    {
+      "id": "winui-qualified-element",
+      "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.(UIElement|FrameworkElement)\\b",
+      "replace": "$1",
+      "why": "Fully qualified WinUI identity types: drop the namespace so the global aliases map them to Avalonia's Control.",
+      "files": [
+        "src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs",
+        "src/Reactor/Core/Diagnostics/ReactorDiagnostics.cs",
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "dispatcher-queue",
+      "find": "\\bMicrosoft\\.UI\\.Dispatching\\.DispatcherQueue\\b",
+      "replace": "DispatcherQueue",
+      "why": "WinUI's DispatcherQueue, fully qualified: the bare name resolves to the internal Avalonia-dispatcher wrapper in Seam/Threading.cs.",
+      "files": [
+        "src/Reactor/Core/ObservableTreeTracker.cs",
+        "src/Reactor/Hooks/UseElementFocus.cs",
+        "src/Reactor/Hooks/UseInfiniteResource.cs",
+        "src/Reactor/Hooks/UseMutation.cs",
+        "src/Reactor/Hooks/UseResource.cs"
+      ]
+    },
+    {
+      "id": "memory-manager",
+      "find": "\\bglobal::Windows\\.System\\.(MemoryManager|AppMemoryUsageLevel)\\b",
+      "replace": "$1",
+      "why": "Windows' app memory-pressure API, fully qualified: the bare names resolve to internal placeholders in Seam/Tier3Placeholders.cs (no memory-pressure signal on Avalonia yet).",
+      "files": [
+        "src/Reactor/Core/PersistedStateCache.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseSystemBackButton",
+      "drop": "public void UseSystemBackButton<TRoute>\\(",
+      "why": "System back button (window key events): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseColorScheme",
+      "drop": "public ColorScheme UseColorScheme\\(\\)",
+      "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseIsDarkTheme",
+      "drop": "public bool UseIsDarkTheme\\(\\)",
+      "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseHighContrast",
+      "drop": "public bool UseHighContrast\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseHighContrastScheme",
+      "drop": "public string\\? UseHighContrastScheme\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseHighContrastState",
+      "drop": "private HighContrastState UseHighContrastState\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-HighContrastState",
+      "drop": "private sealed class HighContrastState\\b",
+      "why": "Accessibility-settings hook state (WinUI AccessibilitySettings/UISettings): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseReducedMotion",
+      "drop": "public bool UseReducedMotion\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseReducedMotionState",
+      "drop": "private ReducedMotionState UseReducedMotionState\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-ReducedMotionState",
+      "drop": "private sealed class ReducedMotionState\\b",
+      "why": "Accessibility-settings hook state (WinUI UISettings): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseIntl",
+      "drop": "public Localization\\.IntlAccessor UseIntl\\(\\)",
+      "why": "Localization hook (.resw resources): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-_defaultAccessor",
+      "drop": "private static readonly Lazy<Localization\\.IntlAccessor> _defaultAccessor\\b",
+      "why": "Localization hook (.resw resources): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindowSize-for-window",
+      "drop": "public \\(double Width, double Height\\) UseWindowSize\\(Microsoft\\.UI\\.Xaml\\.Window window\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindowSize",
+      "drop": "public \\(double Width, double Height\\) UseWindowSize\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindow",
+      "drop": "public Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseWindow\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindowPosition",
+      "drop": "public \\(double X, double Y\\) UseWindowPosition\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseIsCovered",
+      "drop": "public bool UseIsCovered\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseDisplays",
+      "drop": "public IReadOnlyList<Microsoft\\.UI\\.Reactor\\.DisplayInfo> UseDisplays\\(\\)",
+      "why": "Displays hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindowAspectRatio",
+      "drop": "public void UseWindowAspectRatio\\(",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindowDragMove",
+      "drop": "public Action UseWindowDragMove\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-PickerService",
+      "drop": "internal static IPickerService PickerService\\b",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-PickFileAsync",
+      "drop": "public Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickFileAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-PickMultipleFilesAsync",
+      "drop": "public Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult>> PickMultipleFilesAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-PickFolderAsync",
+      "drop": "public Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult\\?> PickFolderAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-PickMultipleFoldersAsync",
+      "drop": "public Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult>> PickMultipleFoldersAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-PickSaveFileAsync",
+      "drop": "public Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickSaveFileAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-GetPickerOwner",
+      "drop": "private Microsoft\\.UI\\.WindowId GetPickerOwner\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseWindowState",
+      "drop": "public Microsoft\\.UI\\.Reactor\\.WindowState UseWindowState\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseIsActive",
+      "drop": "public bool UseIsActive\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseClosingGuard",
+      "drop": "public void UseClosingGuard\\(",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseDpi",
+      "drop": "public uint UseDpi\\(\\)",
+      "why": "DPI hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseOpenWindow",
+      "drop": "public Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseOpenWindow\\(",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseTrayIcon",
+      "drop": "public Microsoft\\.UI\\.Reactor\\.ReactorTrayIcon\\? UseTrayIcon\\(",
+      "why": "Tray hook: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseBreakpoint-for-window",
+      "drop": "public bool UseBreakpoint\\(Microsoft\\.UI\\.Xaml\\.Window window, double minWidth\\)",
+      "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-UseBreakpoint",
+      "drop": "public bool UseBreakpoint\\(double minWidth\\)",
+      "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-MigrateHooksForHotReload",
+      "drop": "internal void MigrateHooksForHotReload\\(",
+      "why": "Hot reload: tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-RenderContext-FullNameMatches",
+      "drop": "private static bool FullNameMatches\\(",
+      "why": "Hot reload (used only by MigrateHooksForHotReload): tier 3 (rewritten for Avalonia later), not part of the hooks core.",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindowSize-for-window",
+      "drop": "protected \\(double Width, double Height\\) UseWindowSize\\(Microsoft\\.UI\\.Xaml\\.Window window\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindowSize",
+      "drop": "protected \\(double Width, double Height\\) UseWindowSize\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseBreakpoint-for-window",
+      "drop": "protected bool UseBreakpoint\\(Microsoft\\.UI\\.Xaml\\.Window window, double minWidth\\)",
+      "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseBreakpoint",
+      "drop": "protected bool UseBreakpoint\\(double minWidth\\)",
+      "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseDpi",
+      "drop": "protected uint UseDpi\\(\\)",
+      "why": "DPI hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindow",
+      "drop": "protected Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseWindow\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindowState",
+      "drop": "protected Microsoft\\.UI\\.Reactor\\.WindowState UseWindowState\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseIsActive",
+      "drop": "protected bool UseIsActive\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseClosingGuard",
+      "drop": "protected void UseClosingGuard\\(",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-PickFileAsync",
+      "drop": "protected Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickFileAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-PickMultipleFilesAsync",
+      "drop": "protected Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult>> PickMultipleFilesAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-PickFolderAsync",
+      "drop": "protected Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult\\?> PickFolderAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-PickMultipleFoldersAsync",
+      "drop": "protected Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult>> PickMultipleFoldersAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-PickSaveFileAsync",
+      "drop": "protected Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickSaveFileAsync\\(",
+      "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindowPosition",
+      "drop": "protected \\(double X, double Y\\) UseWindowPosition\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseDisplays",
+      "drop": "protected IReadOnlyList<Microsoft\\.UI\\.Reactor\\.DisplayInfo> UseDisplays\\(\\)",
+      "why": "Displays hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseIsCovered",
+      "drop": "protected bool UseIsCovered\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindowAspectRatio",
+      "drop": "protected void UseWindowAspectRatio\\(",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseWindowDragMove",
+      "drop": "protected Action UseWindowDragMove\\(\\)",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseOpenWindow",
+      "drop": "protected Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseOpenWindow\\(",
+      "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseTrayIcon",
+      "drop": "protected Microsoft\\.UI\\.Reactor\\.ReactorTrayIcon\\? UseTrayIcon\\(",
+      "why": "Tray hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseColorScheme",
+      "drop": "protected ColorScheme UseColorScheme\\(\\)",
+      "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseIsDarkTheme",
+      "drop": "protected bool UseIsDarkTheme\\(\\)",
+      "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseReducedMotion",
+      "drop": "protected bool UseReducedMotion\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseIntl",
+      "drop": "protected Localization\\.IntlAccessor UseIntl\\(\\)",
+      "why": "Localization hook (.resw resources): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseSystemBackButton",
+      "drop": "protected void UseSystemBackButton<TRoute>\\(",
+      "why": "System back button (window key events): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseAnnounce",
+      "drop": "protected Hooks\\.AnnounceHandle UseAnnounce\\(\\)",
+      "why": "Screen-reader announcements (Hooks/UseAnnounce.cs, a generated WinUI wrapper): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseHighContrast",
+      "drop": "protected bool UseHighContrast\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-Component-UseHighContrastScheme",
+      "drop": "protected string\\? UseHighContrastScheme\\(\\)",
+      "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above.",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
+      "id": "drop-SourceLocation-DeclaredName",
+      "drop": "public string\\? DeclaredName\\b",
+      "why": "Source-map name lookup (Diagnostics/ReactorSourceMap.cs, devtools source mapping, which names WinUI flyouts): tier 3, not linked.",
+      "files": [
+        "src/Reactor/Core/SourceLocation.cs"
+      ]
+    },
+    {
+      "id": "partial-render-context",
+      "find": "\\bpublic sealed class RenderContext\\b",
+      "replace": "public sealed partial class RenderContext",
+      "why": "RenderContext is partial, so our Avalonia versions of the tier 3 hooks (theme, windows, displays…) can be written as our own partial part with access to its state (decided 2026-11-23).",
+      "files": [
+        "src/Reactor/Core/RenderContext.cs"
+      ]
+    },
+    {
+      "id": "event-provider-isotope",
+      "find": "Microsoft-UI-Reactor",
+      "replace": "Isotope-UI",
+      "why": "Upstream's EventSource/trace provider names (Microsoft-UI-Reactor, Microsoft-UI-Reactor-Perf) become Isotope-UI(-Perf), decided 2026-11-23 with the namespace rename: nothing reads as Microsoft's, and the provider GUID (derived from the name) no longer equals real Reactor's, so traces can tell them apart.",
+      "glob": "**/*.cs"
+    },
+    {
+      "id": "namespace-isotope",
+      "find": "\\bMicrosoft\\.UI\\.Reactor\\b",
+      "replace": "Isotope.UI",
+      "why": "Upstream's namespaces become Isotope.UI.* (decided 2026-11-23), so the package ID and the namespaces match and nothing reads as Microsoft's. Member names stay. Applies to code and to doc comments (their crefs name the namespace).",
+      "glob": "**/*.cs"
     }
   ]
 }

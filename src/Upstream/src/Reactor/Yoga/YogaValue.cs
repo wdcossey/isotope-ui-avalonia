@@ -1,11 +1,11 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaValue.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaValue.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine value types.
 // Ported from yoga/YGValue.h, yoga/numeric/FloatOptional.h, yoga/numeric/Comparison.h,
 // yoga/style/StyleLength.h, yoga/style/StyleSizeLength.h
 
-using Microsoft.UI.Reactor.Layout;
+using Isotope.UI.Layout;
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 /// <summary>
 /// Represents a CSS-like value with a unit (point, percent, auto, etc.).

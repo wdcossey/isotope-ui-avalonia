@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Context.cs, last changed upstream in 73328ebabb6c. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Context.cs, last changed upstream in 73328ebabb6c; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Runtime.CompilerServices;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Non-generic base for type-erased storage in the context scope stack.

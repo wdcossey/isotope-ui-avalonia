@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/DataSourceResourceExtensions.cs, last changed upstream in aa7fd62817e4. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Core.Diagnostics;
-using Microsoft.UI.Reactor.Hooks;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/DataSourceResourceExtensions.cs, last changed upstream in aa7fd62817e4; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using Isotope.UI.Core.Diagnostics;
+using Isotope.UI.Hooks;
 
-namespace Microsoft.UI.Reactor.Data;
+namespace Isotope.UI.Data;
 
 /// <summary>
 /// Adapter bridging <see cref="IDataSource{T}"/> and <c>UseInfiniteResource</c>. Lets

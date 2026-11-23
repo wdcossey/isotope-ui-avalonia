@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1HandlerRegistry.cs, last changed upstream in 104154159348. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1HandlerRegistry.cs, last changed upstream in 104154159348; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 // Spec 047 §14 Phase 1 — v1 protocol feature flag (1.1) introduces a separate
 // registry for ported built-in controls. `IV1HandlerEntry` is the type-erased

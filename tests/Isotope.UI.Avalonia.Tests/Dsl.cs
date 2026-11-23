@@ -1,5 +1,5 @@
 using Avalonia.Layout;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
 namespace Isotope.UI.Avalonia.Tests;
 

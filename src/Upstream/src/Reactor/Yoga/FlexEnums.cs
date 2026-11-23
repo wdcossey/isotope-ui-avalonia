@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/FlexEnums.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/FlexEnums.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // Public flex layout enums, originally from Yoga.
 // These are the user-facing enum types for flex layout configuration.
 // AI-HINT: Maps 1:1 to CSS Flexbox enum values. Used by FlexPanel and YogaStyle.
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 public enum FlexAlign
 {

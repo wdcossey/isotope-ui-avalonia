@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/DragAttached.cs, last changed upstream in 7d1929ea8d2e. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/DragAttached.cs, last changed upstream in 7d1929ea8d2e; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 /// <summary>Attached element data for the window drag-from-background opt-out modifier.</summary>
 public sealed record DragAttached(bool IsEnabled);

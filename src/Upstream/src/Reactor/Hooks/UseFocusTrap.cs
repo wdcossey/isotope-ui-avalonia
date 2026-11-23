@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseFocusTrap.cs, last changed upstream in ffe1de4d884d. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseFocusTrap.cs, last changed upstream in ffe1de4d884d; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+
+
+
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Handle returned by UseFocusTrap. When active, traps keyboard focus within

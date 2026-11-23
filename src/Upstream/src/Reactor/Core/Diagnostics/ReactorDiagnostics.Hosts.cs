@@ -1,24 +1,24 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs, last changed upstream in 73328ebabb6c; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Hosting;
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorDiagnostics.Hosts.cs, last changed upstream in 73328ebabb6c; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Hosting;
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>Which kind of Reactor host a <see cref="ReactorHostInfo"/> describes.</summary>
 public enum ReactorHostKind
 {
     /// <summary>
-    /// A <see cref="Microsoft.UI.Reactor.Hosting.ReactorHost"/> rendering into a WinUI
-    /// <see cref="Window"/> — either a window opened through
+    /// A <see cref="Isotope.UI.Hosting.ReactorHost"/> rendering into a WinUI
+    /// <see cref="Microsoft.UI.Xaml.Window"/> — either a window opened through
     /// <c>ReactorApp.Run</c> / <c>ReactorApp.OpenWindow</c> (see
     /// <see cref="ReactorHostInfo.ReactorWindow"/>) or a <c>new ReactorHost(window)</c>
     /// on any window, optionally redirected into a
-    /// <see cref="Microsoft.UI.Reactor.Hosting.ReactorHost.ContentTarget"/>.
+    /// <see cref="Isotope.UI.Hosting.ReactorHost.ContentTarget"/>.
     /// </summary>
     WindowHost,
 
     /// <summary>
-    /// A <see cref="Microsoft.UI.Reactor.Hosting.ReactorHostControl"/> embedded in a XAML
+    /// A <see cref="Isotope.UI.Hosting.ReactorHostControl"/> embedded in a XAML
     /// tree (a hybrid "island").
     /// </summary>
     HostControl,
@@ -132,7 +132,7 @@ public sealed class ReactorHostInfo
     /// <c>ReactorWindow.Mount</c>, <c>ReactorHost.Mount</c> or <c>ReactorHostControl.Mount</c>
     /// call in app code. Null unless the calling project was built with source mapping
     /// (<c>ReactorSourceMap=true</c>, the Debug default) and
-    /// <see cref="Microsoft.UI.Reactor.Diagnostics.ReactorSourceMap.Enabled"/> was true at mount
+    /// <see cref="Isotope.UI.Diagnostics.ReactorSourceMap.Enabled"/> was true at mount
     /// time; also null for a root created from <see cref="ReactorHostControl.ComponentFactory"/>
     /// or <see cref="ReactorHostControl.ComponentType"/>, or mounted by framework code, none of
     /// which has a call site in app code.

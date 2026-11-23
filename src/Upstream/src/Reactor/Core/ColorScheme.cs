@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ColorScheme.cs, last changed upstream in ffe1de4d884d. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ColorScheme.cs, last changed upstream in ffe1de4d884d; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Represents a color scheme variant a component can adapt its rendering to.

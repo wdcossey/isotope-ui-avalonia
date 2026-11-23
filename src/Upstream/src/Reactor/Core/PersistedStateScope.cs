@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/PersistedStateScope.cs, last changed upstream in cffd97503ac5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/PersistedStateScope.cs, last changed upstream in cffd97503ac5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
-using Microsoft.UI.Reactor.Core.Internal;
+using Isotope.UI.Core.Internal;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Selector for the lifetime/visibility scope of <see cref="RenderContext.UsePersisted{T}(string, T)"/>
@@ -11,8 +11,8 @@ namespace Microsoft.UI.Reactor.Core;
 public enum PersistedScope
 {
     /// <summary>
-    /// Bound to the lifetime of the hosting <see cref="Microsoft.UI.Reactor.Hosting.ReactorHost"/>
-    /// or <see cref="Microsoft.UI.Reactor.Hosting.ReactorHostControl"/>. State is
+    /// Bound to the lifetime of the hosting <see cref="Isotope.UI.Hosting.ReactorHost"/>
+    /// or <see cref="Isotope.UI.Hosting.ReactorHostControl"/>. State is
     /// dropped when the host unloads. Recommended default for new code.
     /// </summary>
     Window,

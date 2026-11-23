@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs, last changed upstream in 91540bb61ea6. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs, last changed upstream in 91540bb61ea6; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // Authoring attributes for Reactor.Wrappers.Generator.
 //
 // These were previously emitted into every consuming compilation by the source
@@ -11,7 +11,7 @@
 // references, removes the duplicate: the generator binds them by metadata name
 // from this assembly instead of synthesizing its own copy.
 #nullable enable
-namespace Microsoft.UI.Reactor.Wrappers
+namespace Isotope.UI.Wrappers
 {
     /// <summary>Marks a partial element record for source-generated Reactor wrapping of <c>controlType</c>.</summary>
     [global::System.AttributeUsage(global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct, AllowMultiple = false)]

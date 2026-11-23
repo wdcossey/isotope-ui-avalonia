@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/YogaMeasureCacheStalenessTests.cs, last changed upstream in 122b2acf388a. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Layout;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/YogaMeasureCacheStalenessTests.cs, last changed upstream in 122b2acf388a; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Layout;
 using Xunit;
 
-namespace Microsoft.UI.Reactor.Tests;
+namespace Isotope.UI.Tests;
 
 /// <summary>
 /// Issue #681 (correctness) — Yoga measurement-cache contract underpinning the

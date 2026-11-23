@@ -1,4 +1,4 @@
-namespace Microsoft.UI.Reactor.Core
+namespace Isotope.UI.Core
 {
     /// <summary>Which hook produced a hook cell (upstream: Core/Diagnostics/ReactorDiagnostics.Components.cs).</summary>
     internal enum HookKind

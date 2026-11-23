@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/ReactorListState.cs, last changed upstream in cc7af7285272; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/ReactorListState.cs, last changed upstream in cc7af7285272; transforms: effective-viewport-handler, routed-event-handler, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-namespace Microsoft.UI.Reactor.Core.Internal;
+namespace Isotope.UI.Core.Internal;
 
 /// <summary>
 /// Stable identity carrier inside the internally-owned
@@ -126,13 +126,13 @@ internal sealed class ReactorListState
     /// The list's one-shot <c>EffectiveViewportChanged</c> handler while a sweep waits for the
     /// collapsed list to be laid out again.
     /// </summary>
-    internal global::Windows.Foundation.TypedEventHandler<FrameworkElement, Microsoft.UI.Xaml.EffectiveViewportChangedEventArgs>? ShownWatch { get; set; }
+    internal EventHandler<Avalonia.Layout.EffectiveViewportChangedEventArgs>? ShownWatch { get; set; }
 
     /// <summary>
     /// The list's one-shot <c>Loaded</c> handler while a sweep waits for the list to enter the
     /// tree again.
     /// </summary>
-    internal Microsoft.UI.Xaml.RoutedEventHandler? LoadedWatch { get; set; }
+    internal EventHandler<Avalonia.Interactivity.RoutedEventArgs>? LoadedWatch { get; set; }
 
     public ReactorListState() => Source.CollectionChanged += (_, _) =>
     {

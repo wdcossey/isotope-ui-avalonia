@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Layout;
 using Avalonia.Media;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// The base of every element: an immutable description of one piece of UI. The engine-facing members keep
@@ -23,10 +23,10 @@ public abstract record Element
     public SourceLocation? CallSite { get; init; }
 
     /// <summary>Enter and exit transitions (tier 3: not played on Avalonia yet).</summary>
-    public Microsoft.UI.Reactor.Animation.ElementTransition? ElementTransition { get; init; }
+    public Isotope.UI.Animation.ElementTransition? ElementTransition { get; init; }
 
     /// <summary>Resource overrides for this element's subtree (tier 3: not applied on Avalonia yet).</summary>
-    public Microsoft.UI.Reactor.Elements.ResourceOverrides? ResourceOverrides { get; init; }
+    public Isotope.UI.Elements.ResourceOverrides? ResourceOverrides { get; init; }
 
     /// <summary>Context values provided to this element's subtree (see <c>ElementExtensions.Provide</c>).</summary>
     public IReadOnlyDictionary<ContextBase, object?>? ContextValues { get; init; }

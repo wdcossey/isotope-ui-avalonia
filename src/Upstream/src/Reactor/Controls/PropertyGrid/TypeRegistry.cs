@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/PropertyGrid/TypeRegistry.cs, last changed upstream in 7d4caf7ec83f. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/PropertyGrid/TypeRegistry.cs, last changed upstream in 7d4caf7ec83f; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.UI.Reactor.Core;
-using static Microsoft.UI.Reactor.Factories;
+using Isotope.UI.Core;
+using static Isotope.UI.Factories;
 
-namespace Microsoft.UI.Reactor.Controls;
+namespace Isotope.UI.Controls;
 
 /// <summary>
 /// Maps CLR types to TypeMetadata for the PropertyGrid.

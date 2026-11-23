@@ -1,14 +1,14 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseElementFocus.cs, last changed upstream in 5d4e81b5d7b2. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Input;
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseElementFocus.cs, last changed upstream in 5d4e81b5d7b2; transforms: winui-usings, dispatcher-queue, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using Isotope.UI.Input;
 
-namespace Microsoft.UI.Reactor.Hooks;
+
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Hook for imperative element focus (spec 027 Tier 5). Returns a stable
 /// <see cref="ElementRef"/> (survives re-renders) plus a <c>RequestFocus</c> action
-/// that schedules <see cref="Microsoft.UI.Reactor.Input.FocusManager.Focus"/> on the UI dispatcher. Scheduling
+/// that schedules <see cref="Isotope.UI.Input.FocusManager.Focus"/> on the UI dispatcher. Scheduling
 /// defers focus past the current reconcile pass so callers can safely request focus
 /// from effects or event handlers without racing against layout.
 /// </summary>
@@ -17,7 +17,7 @@ public static class UseElementFocusExtensions
     /// <summary>
     /// Creates (or retrieves) a component-scoped <see cref="ElementRef"/> and pairs it
     /// with a <c>RequestFocus</c> action. Bind the ref to an element via <c>.Ref(ref)</c>.
-    /// Calling <c>RequestFocus</c> schedules <see cref="Microsoft.UI.Reactor.Input.FocusManager.Focus"/> on the UI
+    /// Calling <c>RequestFocus</c> schedules <see cref="Isotope.UI.Input.FocusManager.Focus"/> on the UI
     /// dispatcher; if the ref's target has not mounted yet the call is a no-op.
     /// </summary>
     /// <example>
@@ -34,18 +34,18 @@ public static class UseElementFocusExtensions
         // GetForCurrentThread() would return the wrong queue or null.
         // Guard the call itself: in unit-test / headless contexts the WinUI activation
         // factory isn't registered and GetForCurrentThread throws a COMException.
-        Microsoft.UI.Dispatching.DispatcherQueue? uiQueue;
-        try { uiQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(); }
+        DispatcherQueue? uiQueue;
+        try { uiQueue = DispatcherQueue.GetForCurrentThread(); }
         catch { uiQueue = null; }
         Action requestFocus = () =>
         {
             if (uiQueue is null)
             {
                 // No dispatcher available (headless/tests) — invoke synchronously.
-                Microsoft.UI.Reactor.Input.FocusManager.Focus(elRef, state);
+                Isotope.UI.Input.FocusManager.Focus(elRef, state);
                 return;
             }
-            uiQueue.TryEnqueue(() => Microsoft.UI.Reactor.Input.FocusManager.Focus(elRef, state));
+            uiQueue.TryEnqueue(() => Isotope.UI.Input.FocusManager.Focus(elRef, state));
         };
         return (elRef, requestFocus);
     }

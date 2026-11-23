@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseInfiniteResource.cs, last changed upstream in f45d2edb35b4. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseInfiniteResource.cs, last changed upstream in f45d2edb35b4; transforms: dispatcher-queue, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Concurrent;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Extension methods providing <c>UseInfiniteResource</c> on <see cref="RenderContext"/>.
@@ -114,7 +114,7 @@ public static class UseInfiniteResourceExtensions
     {
         try
         {
-            var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            var dq = DispatcherQueue.GetForCurrentThread();
             return dq is null ? null : new WindowsDispatcherHookDispatcher();
         }
         catch (global::System.Runtime.InteropServices.COMException)

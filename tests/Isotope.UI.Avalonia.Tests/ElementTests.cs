@@ -1,6 +1,6 @@
 using Avalonia;
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Elements;
+using Isotope.UI.Core;
+using Isotope.UI.Elements;
 using Xunit;
 using static Isotope.UI.Avalonia.Tests.Dsl;
 

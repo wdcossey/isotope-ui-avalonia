@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/Pending.cs, last changed upstream in 27ed66626235. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Diagnostics;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/Pending.cs, last changed upstream in 27ed66626235; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using Isotope.UI.Diagnostics;
 
-namespace Microsoft.UI.Reactor.Hooks;
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Props for <see cref="PendingComponent"/>.
@@ -38,7 +38,7 @@ public static class PendingFactory
     /// </remarks>
     [ReactorSourceTransparent]
     public static Element Pending(Element fallback, Element child)
-        => Microsoft.UI.Reactor.Factories.Component<PendingComponent, PendingProps>(new PendingProps(fallback, child));
+        => Isotope.UI.Factories.Component<PendingComponent, PendingProps>(new PendingProps(fallback, child));
 }
 
 /// <summary>
@@ -76,9 +76,9 @@ public sealed class PendingComponent : Component<PendingProps>
 
         // Always mount both. Visibility toggles between fallback and child so the child
         // subtree's hooks keep running, even while the fallback is visible.
-        return Microsoft.UI.Reactor.Factories.Grid(
-            columns: new[] { Microsoft.UI.Reactor.GridSize.Star() },
-            rows: new[] { Microsoft.UI.Reactor.GridSize.Star() },
+        return Isotope.UI.Factories.Grid(
+            columns: new[] { Isotope.UI.GridSize.Star() },
+            rows: new[] { Isotope.UI.GridSize.Star() },
             Props.Child.IsVisible(!showFallback),
             Props.Fallback.IsVisible(showFallback))
             .Provide(AppContexts.PendingScope, (PendingScope?)scope);

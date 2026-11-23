@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/FocusRevalidationService.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/FocusRevalidationService.cs, last changed upstream in a4dcfdf558aa; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Central service that invalidates stale <see cref="QueryCache"/> entries when the

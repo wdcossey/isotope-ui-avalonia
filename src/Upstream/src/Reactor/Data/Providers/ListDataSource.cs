@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/Providers/ListDataSource.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/Providers/ListDataSource.cs, last changed upstream in a4dcfdf558aa; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
-namespace Microsoft.UI.Reactor.Data.Providers;
+namespace Isotope.UI.Data.Providers;
 
 /// <summary>
 /// In-memory data source backed by a list. Supports client-side sorting,

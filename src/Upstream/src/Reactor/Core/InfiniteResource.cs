@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/InfiniteResource.cs, last changed upstream in 73644fe63f37. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/InfiniteResource.cs, last changed upstream in 73644fe63f37; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// One page of paginated results, as returned by a <c>UseInfiniteResource</c> fetcher.

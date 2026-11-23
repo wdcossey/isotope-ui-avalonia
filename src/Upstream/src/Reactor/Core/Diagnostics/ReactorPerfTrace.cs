@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs, last changed upstream in ad0ab15f2795. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs, last changed upstream in ad0ab15f2795; transforms: event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Reactor's performance spans, written as TraceLogging events through a raw ETW provider
@@ -35,11 +35,11 @@ namespace Microsoft.UI.Reactor.Core.Diagnostics;
 internal static unsafe partial class ReactorPerfTrace
 {
     /// <summary>The provider name. Its GUID is the EventSource-style name hash of it.</summary>
-    internal const string ProviderName = "Microsoft-UI-Reactor-Perf";
+    internal const string ProviderName = "Isotope-UI-Perf";
 
     /// <summary>
     /// <see cref="ProviderName"/> hashed the way <c>EventSource</c>, <c>xperf</c> and
-    /// <c>tracelog</c> derive a GUID from <c>*Microsoft-UI-Reactor-Perf</c>.
+    /// <c>tracelog</c> derive a GUID from <c>*Isotope-UI-Perf</c>.
     /// </summary>
     internal static readonly Guid ProviderId = new(0x0902a96c, 0x4e92, 0x5b91, 0x4d, 0x2b, 0x5a, 0x80, 0x58, 0x05, 0x5c, 0x78);
 
@@ -199,7 +199,7 @@ internal static unsafe partial class ReactorPerfTrace
             long handle;
             uint status = EventRegister(&id, (nint)(delegate* unmanaged[Stdcall]<Guid*, uint, byte, ulong, ulong, void*, void*, void>)&OnEnable, null, &handle);
             if (status != 0) return;
-            // Provider traits carry the name, so TDH shows "Microsoft-UI-Reactor-Perf". Setting
+            // Provider traits carry the name, so TDH shows "Isotope-UI-Perf". Setting
             // traits also turns on the descriptor Type field the metadata blobs rely on.
             var traits = Metadata.Provider;
             EventSetInformation(handle, EventProviderSetTraits, traits.Pointer, traits.Size);

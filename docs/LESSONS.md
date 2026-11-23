@@ -42,6 +42,10 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **`Task.Run(...).GetAwaiter().GetResult()` can run the task inline on the waiting thread,** so a test of
   off-thread code silently ran on the UI thread. Use a dedicated `Thread`. (2026-11-23)
 
+- **A guard on raw text fights ordered transform rules.** A rule that ate another rule's match made the "matches an
+  unlisted file" guard fire. Check the text as transformed so far, and run repo-wide (glob) rules last so they can't hide
+  new code from the guard. (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

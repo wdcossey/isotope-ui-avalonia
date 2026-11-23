@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/FlexDirectionHelper.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/FlexDirectionHelper.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine FlexDirection utilities.
 // Ported from yoga/algorithm/FlexDirection.h
 
-using Microsoft.UI.Reactor.Layout;
+using Isotope.UI.Layout;
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 /// <summary>
 /// Direction-aware utility functions for resolving flex axes to physical edges.

@@ -1,17 +1,17 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/BackdropKind.cs, last changed upstream in 7d1929ea8d2e; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml.Media;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/BackdropKind.cs, last changed upstream in 7d1929ea8d2e; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Declarative selector for the WinUI <see cref="SystemBackdrop"/> applied to a
-/// Reactor-hosted <see cref="Window"/>. Set via the
-/// <see cref="Microsoft.UI.Reactor.BackdropExtensions.Backdrop{T}(T, BackdropKind)"/>
+/// Reactor-hosted <see cref="Microsoft.UI.Xaml.Window"/>. Set via the
+/// <see cref="Isotope.UI.BackdropExtensions.Backdrop{T}(T, BackdropKind)"/>
 /// modifier on a Reactor root tree.
 /// </summary>
 /// <remarks>
 /// Spec 033 §6. Mica/Acrylic backdrops are a Windows 11 (build 22000+) feature.
-/// On Windows 10 the WinUI <see cref="Window.SystemBackdrop"/>
+/// On Windows 10 the WinUI <see cref="Microsoft.UI.Xaml.Window.SystemBackdrop"/>
 /// setter no-ops; we delegate to that behavior rather than reimplementing the
 /// fallback ladder.
 /// </remarks>
