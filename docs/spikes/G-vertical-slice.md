@@ -60,6 +60,13 @@ The library's own tests, counted per class with `dotnet test --list-tests` and t
 | FlexElement (`FlexElementTests`) | 7 | Container members written; `.Flex(...)` data written and reset on a reused control; keyed reorder in a flex row keeps controls and lays out in the new order; a container change updates the same panel; an equal `FlexElement` is skipped; upstream's argument checks. |
 | Examples (`ExampleTests`) | 2 | The counter and the todo app, end to end. |
 
+**Proven to fail:** all 44 new tests went red with their behaviour broken, in 34 breaks run on the committed branch
+(`e4b31f8`), each restored before the next. Breaks in vendored files (`RenderContext`, `ChildReconciler`, `PropEntry`)
+were temporary working-tree edits, never committed. Two tests stayed green on the first try and were strengthened
+(`e4b31f8`). Spike D's re-attach test is proven by the grow break, not by its own (it was a guard in Spike D). The seam's
+threading fix is proven by upstream's `UseResourceTests.Null_Dispatcher_Runs_Continuation_Inline`, which fails with it
+reverted.
+
 ### The examples
 
 `tests/Isotope.UI.Avalonia.Tests/Examples.cs`: the README's counter, and a todo app that uses `UseState` (a controlled
