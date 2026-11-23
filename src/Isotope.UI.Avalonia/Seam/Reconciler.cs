@@ -291,9 +291,24 @@ public sealed partial class Reconciler
 
         /// <summary>Duplicate-key reports already made for this control.</summary>
         internal System.Collections.Concurrent.ConcurrentDictionary<long, int>? KeyedDiagnosticLedger;
+
+        /// <summary>Echo-suppression tokens: change events of the engine's own writes still to drop.</summary>
+        internal int EchoSuppressCount;
+
+        /// <summary>Depth of setter scopes (ApplySetters) in which every change event is an echo.</summary>
+        internal int EchoSuppressScopeDepth;
+
+        /// <summary>A one-shot predicate that recognizes the echo of a value-diff controlled write.</summary>
+        internal Func<object?, bool>? PendingEchoMatch;
+
+        /// <summary>The per-control event payload box (V1 protocol trampolines).</summary>
+        internal object? ControlEventState;
+
+        /// <summary>The items-host strategy's state for this control.</summary>
+        internal V1Protocol.ItemsHostState? ItemsHostState;
     }
 
-    private sealed class ReactorAttached : AvaloniaObject
+    internal sealed class ReactorAttached : AvaloniaObject
     {
         internal static readonly AttachedProperty<ReactorState?> StateProperty =
             AvaloniaProperty.RegisterAttached<ReactorAttached, Control, ReactorState?>("ReactorState");
