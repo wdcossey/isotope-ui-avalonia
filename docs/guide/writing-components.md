@@ -257,3 +257,30 @@ public static Element Greeters(RenderContext ctx) => VStack(
     Component(Greeter),
     Component(Greeter).Provide(Greeting, "Bonjour"));
 ```
+
+## Running an app
+
+An app is a root component in a window. `ReactorApp.Run` takes the app's Avalonia `AppBuilder` (its `Application`,
+platform and theme), opens one window around the root component and runs until it closes; the sample app
+([`samples/Isotope.UI.Samples`](../../samples/Isotope.UI.Samples/Program.cs)) does this with the counter and the todo
+app. Run it with `dotnet run` in that folder.
+
+The window's content is a `ReactorHostControl` (`using Isotope.UI.Hosting;`), which can also hold a root component
+anywhere in an existing Avalonia layout. It renders on Avalonia's dispatcher: however many state changes arrive before
+a pass runs, the root renders once. When a render throws, the host shows the exception (or what the
+`RenderErrorHandler` returns, or `ReactorApp.DefaultRenderErrorHandler` for every host), and the next state change
+renders again. Leaving the visual tree doesn't unmount it; `Dispose` does.
+
+<!-- snippet: host-control -->
+```csharp
+// A root component inside any Avalonia layout: here, a window's content.
+var host = new ReactorHostControl(Counter)
+{
+    // Optional: what to show when a render throws (null keeps the built-in panel with the exception).
+    RenderErrorHandler = error => TextBlock($"Something broke: {error.Exception.Message}"),
+};
+window.Content = host;
+
+// When it's no longer needed: unmounts the tree and runs the effects' cleanups.
+host.Dispose();
+```

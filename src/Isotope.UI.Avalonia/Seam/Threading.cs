@@ -62,10 +62,17 @@ internal sealed class DispatcherQueue
     /// Posts <paramref name="callback"/> to the UI thread. Returns <c>false</c> once the dispatcher
     /// has begun shutting down, as WinUI's <c>TryEnqueue</c> does.
     /// </summary>
-    internal bool TryEnqueue(Action callback)
+    internal bool TryEnqueue(Action callback) => TryEnqueue(DispatcherPriority.Normal, callback);
+
+    /// <summary>
+    /// Posts <paramref name="callback"/> at <paramref name="priority"/> (upstream's overload takes WinUI's
+    /// <c>DispatcherQueuePriority</c>; its <c>Low</c> is Avalonia's <see cref="DispatcherPriority.Background"/>, below
+    /// input, layout and render). Returns <c>false</c> once the dispatcher has begun shutting down.
+    /// </summary>
+    internal bool TryEnqueue(DispatcherPriority priority, Action callback)
     {
         if (_shutdownStarted) return false;
-        _dispatcher.Post(callback);
+        _dispatcher.Post(callback, priority);
         return true;
     }
 }

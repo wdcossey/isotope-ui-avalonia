@@ -23,16 +23,6 @@ namespace Isotope.UI
     /// <summary>Tier 3 placeholder for a top-level window's identity.</summary>
     public readonly record struct WindowId(ulong Value);
 
-    /// <summary>The application-wide engine state the linked files read. Hosting is tier 3.</summary>
-    public static class ReactorApp
-    {
-        /// <summary>
-        /// The UI thread's queue, captured by the host at startup; <c>null</c> until then (headless and unit-test
-        /// contexts), when an off-thread state setter throws rather than racing the render.
-        /// </summary>
-        internal static DispatcherQueue? UIDispatcher { get; set; }
-    }
-
     /// <summary>Tier 3 placeholder for the OS memory-pressure signal: never raised on Avalonia yet.</summary>
     internal static class MemoryManager
     {
