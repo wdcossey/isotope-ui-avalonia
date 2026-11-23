@@ -100,6 +100,10 @@ jobs:
         shell: bash
         run: test ! -e upstream
 
+      - name: Sample app builds (running it opens a real window, so CI doesn't)
+        shell: bash
+        run: dotnet build samples/Isotope.UI.Samples -nologo -v:q
+
       - name: Library tests (seam, hooks, controls, upstream engine tests), count unchanged
         shell: bash
         run: |
