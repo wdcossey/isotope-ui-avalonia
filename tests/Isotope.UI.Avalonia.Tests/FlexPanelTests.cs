@@ -275,9 +275,10 @@ public sealed class FlexPanelTests : IDisposable
     public void Row_WrappingText_ShrinksToItsLongestWord()
     {
         const string word = "Incomprehensibilities", s = "An " + word + " too";
-        var text = new TextBlock { Text = s, TextWrapping = TextWrapping.WrapWithOverflow };
+        var pad = new Thickness(6, 0);
+        var text = new TextBlock { Text = s, TextWrapping = TextWrapping.WrapWithOverflow, Padding = pad };
         var panel = new FlexPanel { Width = 20, HorizontalAlignment = HorizontalAlignment.Left, Children = { text } };
-        var twins = HostWithTwins(panel, new TextBlock { Text = word }, new TextBlock { Text = s });
+        var twins = HostWithTwins(panel, new TextBlock { Text = word, Padding = pad }, new TextBlock { Text = s, Padding = pad });
         double longest = twins[0].Bounds.Width, whole = twins[1].Bounds.Width;
         Assert.True(longest > 60, $"longest word {longest}");
         Assert.True(text.Bounds.Width >= longest - 0.5, $"width {text.Bounds.Width}, longest word {longest}");

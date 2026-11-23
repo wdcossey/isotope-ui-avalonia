@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
@@ -412,7 +413,7 @@ public class FlexPanel : Panel
     // Not upstream's: upstream measures at 0 on the axis and reads DesiredSize, which WinUI doesn't clamp. Avalonia
     // clamps DesiredSize to the size offered, so that probe reads 0 (#15). Instead:
     //   • a subtree that can't get narrower (no wrapping or trimmed text, scrolling, wrap panel, Viewbox or stretched
-    //     image) has min-content = max-content, so it's measured unconstrained;
+    //     image or shape) has min-content = max-content, so it's measured unconstrained;
     //   • a wrapping TextBlock is measured at a width of 1 and its TextLayout read, which isn't clamped (the widest
 //     line: the longest word with WrapWithOverflow);
     //   • anything else, and an element with an explicit size on the axis, keeps upstream's probe (0 on Avalonia),
@@ -423,16 +424,22 @@ public class FlexPanel : Panel
         double mH = margin.Left + margin.Right, mV = margin.Top + margin.Bottom;
         if (double.IsNaN(isWidth ? el.Width : el.Height))
         {
-            el.Measure(Size.Infinity); // applies templates, so the scan below sees the whole subtree
+            // Scanned before and after the unconstrained measure: before, so content that can shrink costs no extra
+            // measure once its templates are applied; after, since the first measure applies them.
             if (!CanShrink(el))
-                return isWidth ? Math.Max(0, el.DesiredSize.Width - mH) : Math.Max(0, el.DesiredSize.Height - mV);
+            {
+                el.Measure(Size.Infinity);
+                if (!CanShrink(el))
+                    return isWidth ? Math.Max(0, el.DesiredSize.Width - mH) : Math.Max(0, el.DesiredSize.Height - mV);
+            }
         }
         if (isWidth && double.IsNaN(el.Width) && el is TextBlock tb && IsWrapping(tb) && !IsTrimming(tb))
         {
             // 1, not 0: at a width of 0 Avalonia's TextBlock lays out nothing (measured: width 0, one line).
-            el.Measure(new Size(1 + Math.Max(0, mH), double.PositiveInfinity));
-            var layout = tb.TextLayout;
+            // TextBlock takes its Padding off the width offered, so it's added back.
             var p = tb.Padding;
+            el.Measure(new Size(1 + Math.Max(0, mH) + Math.Max(0, p.Left + p.Right), double.PositiveInfinity));
+            var layout = tb.TextLayout;
             return Math.Max(0, Math.Min(tb.MaxWidth, Math.Max(tb.MinWidth, layout.OverhangLeading + layout.WidthIncludingTrailingWhitespace + layout.OverhangTrailing + p.Left + p.Right)));
         }
         var constraint = isWidth ? new Size(Math.Max(0, mH), double.PositiveInfinity) : new Size(double.PositiveInfinity, Math.Max(0, mV));
@@ -448,7 +455,7 @@ public class FlexPanel : Panel
     {
         if (Shrinks(el)) return true;
         foreach (var v in el.GetVisualDescendants())
-            if (v is Control c && c.IsVisible && Shrinks(c)) return true;
+            if (v is Control c && c.IsEffectivelyVisible && Shrinks(c)) return true;
         return false;
 
         static bool Shrinks(Control c) => c switch
@@ -458,6 +465,7 @@ public class FlexPanel : Panel
             ScrollViewer or ScrollContentPresenter or WrapPanel or Viewbox => true,
             FlexPanel fp => fp.Wrap != FlexWrap.NoWrap,
             Image img => img.Stretch != Stretch.None,
+            Shape shape => shape.Stretch != Stretch.None,
             _ => false,
         };
     }
