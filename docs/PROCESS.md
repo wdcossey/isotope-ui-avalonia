@@ -31,7 +31,7 @@ Never without the developer's go-ahead in the conversation:
 ## 3. Build
 
 1. **Branch** from `main`: `spike/<letter>-<slug>`, `feat/<slug>`, `chore/<slug>`. Parallel work that changes code
-   gets its own worktree under `../<repo folder>.worktrees\<slug>` (a sibling, so nothing scans it):
+   gets its own worktree under `../<repo folder>.worktrees/<slug>` (a sibling, so nothing scans it):
    `git worktree add ../<repo folder>.worktrees/<slug> -b <branch> main`.
 2. **Build** in small commits. Before every commit: `dotnet build` and `dotnet test` for the projects touched.
    Stage files by name, never `git add -A`.

@@ -1,6 +1,7 @@
 
-import subprocess, json, re, sys
-U = r'<repo root>/upstream'
+import subprocess, json, re, sys, hashlib
+import os
+U = os.environ.get('UPSTREAM') or os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'upstream'))
 OUT = sys.argv[1]
 REF = 'origin/main'
 BASE = ['git','-C',U,'-c','diff.renameLimit=50000','-c','core.quotepath=off','log',REF,'--first-parent','--diff-merges=first-parent','-M']
@@ -21,6 +22,10 @@ cur=None
 for line in run(['--numstat']).splitlines():
     if line.startswith('@@C\t'):
         _,h,cd,ad,par,an,subj = line.split('\t',6)
+        # No personal data in outputs: authors are kept only as a short hash (for distinct counts), and merge
+        # subjects lose their source branch, which often carries a username.
+        an = hashlib.sha256(an.encode('utf-8')).hexdigest()[:12]
+        subj = re.sub(r'^(Merge pull request #\d+) from \S+', r'\1', subj)
         cur={'h':h,'cdate':cd,'adate':ad,'parents':par.split(),'author':an,'subject':subj,'files':{}}
         commits[h]=cur; order.append(h); continue
     if not line.strip() or cur is None: continue
