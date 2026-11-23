@@ -18,14 +18,26 @@ public sealed partial class Reconciler
     // The handler entry for each element type this reconciler has dispatched, or null for a type with none.
     private readonly Dictionary<Type, IV1HandlerEntry?> _v1Handlers = new();
 
-    /// <summary>The registered handler for <paramref name="elementType"/>, resolved once per reconciler.</summary>
+    /// <summary>
+    /// The registered handler for <paramref name="elementType"/>, or for the nearest base type that has one; resolved
+    /// once per reconciler.
+    /// </summary>
     internal bool TryGetV1Handler(Type elementType, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out IV1HandlerEntry? entry)
     {
         if (!_v1Handlers.TryGetValue(elementType, out entry))
         {
-            // A generated descriptor registers from its record's static constructor; make sure it has run.
-            RuntimeHelpers.RunClassConstructor(elementType.TypeHandle);
-            entry = ControlRegistry.TryResolve(elementType, out var factory) ? factory() : null;
+            // A record derived from a control's record (record MyText(string S) : TextBlockElement(S)) mounts as its
+            // base, as the seam's type patterns did; upstream's registry matches the exact type only.
+            for (var t = elementType; t is not null && t != typeof(Element); t = t.BaseType)
+            {
+                // A generated descriptor registers from its record's static constructor; make sure it has run.
+                RuntimeHelpers.RunClassConstructor(t.TypeHandle);
+                if (ControlRegistry.TryResolve(t, out var factory))
+                {
+                    entry = factory();
+                    break;
+                }
+            }
             _v1Handlers[elementType] = entry;
         }
         return entry is not null;

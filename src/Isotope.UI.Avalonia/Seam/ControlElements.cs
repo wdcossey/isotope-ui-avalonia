@@ -64,7 +64,7 @@ public partial record StackElement(Orientation Orientation, Element[] Children) 
 /// A text box, as an Avalonia <see cref="Avalonia.Controls.TextBox"/>. <see cref="Value"/> defaults to
 /// <see cref="Optional{T}.Unset"/>, so the text the user types is kept unless a value is given.
 /// </summary>
-[GenerateReactorDescriptor(typeof(TextBox))]
+[GenerateReactorDescriptor(typeof(TextBox), ClearValueOnUnset = true)]
 [WrapManual("Value")]
 [WrapManual("AcceptsReturn")]
 [WrapManual("TextWrapping")]
@@ -85,30 +85,36 @@ public partial record TextBoxElement(
     internal override bool HasCallbacks => OnChanged is not null;
 
     // Reports user edits. The echo of the engine's own write (the controlled Value) is recognized by its value and
-    // dropped (ShouldSuppressEcho: the value-diff channel, which also honours a WriteSuppressed token).
+    // dropped (ShouldSuppressEcho: the value-diff channel, which also honours a WriteSuppressed token). Avalonia posts
+    // TextChanged, so two writes can be pending when the events arrive, and both events read the box's current text;
+    // a text equal to the controlled value is then not a user change either (and reporting it would change nothing).
     private static readonly EventHandler<TextChangedEventArgs> __TextChangedTrampoline = (s, _) =>
     {
         var tb = (TextBox)s!;
         if (!Reconciler.TryGetReactorState(tb, out var state)) return;
         var text = tb.Text ?? string.Empty;
         if (ChangeEchoSuppressor.ShouldSuppressEcho(state, text)) return;
-        (state.Element as TextBoxElement)?.OnChanged?.Invoke(text);
+        if (state.Element is not TextBoxElement live) return;
+        if (live.Value.HasValue && live.Value.Value == text) return;
+        live.OnChanged?.Invoke(text);
     };
 
     // As upstream's: AcceptsReturn and TextWrapping are written before the text (a single-line box strips line
-    // breaks from the text it's given), and Value is a controlled value whose write doesn't echo. Unlike upstream's
+    // breaks from the text it's given), and Value is a controlled value whose write doesn't echo. Unlike upstream's,
+    // the nullable members go through the ClearValue channel (ClearValueOnUnset, OneWay with a property), so setting
+    // one back to null gives the control its default again instead of leaving the old value. Unlike upstream's
     // TextBox, the write is armed by value, on mount too (valueDiffEcho, armOnMount: upstream's RichEditBox
     // channel): Avalonia raises TextChanged after the write returns, even for the first write of a control not yet
     // in a window, so that echo reaches the trampoline wired after the mount writes.
     private static partial ControlDescriptor<TextBoxElement, TextBox> Customize(ControlDescriptor<TextBoxElement, TextBox> d)
-        => d.OneWayConditional(
-                get:         static e => e.AcceptsReturn,
-                set:         static (c, v) => c.AcceptsReturn = v!.Value,
-                shouldWrite: static e => e.AcceptsReturn.HasValue)
-            .OneWayConditional(
-                get:         static e => e.TextWrapping,
-                set:         static (c, v) => c.TextWrapping = v!.Value,
-                shouldWrite: static e => e.TextWrapping.HasValue)
+        => d.OneWay<bool>(
+                get:  static e => e.AcceptsReturn.HasValue ? e.AcceptsReturn.Value : Optional<bool>.Unset,
+                set:  static (c, v) => c.AcceptsReturn = v,
+                dp:   TextBox.AcceptsReturnProperty)
+            .OneWay<TextWrapping>(
+                get:  static e => e.TextWrapping.HasValue ? e.TextWrapping.Value : Optional<TextWrapping>.Unset,
+                set:  static (c, v) => c.TextWrapping = v,
+                dp:   TextBox.TextWrappingProperty)
             .HandCodedControlled<TextBoxEventPayload, string, EventHandler<TextChangedEventArgs>>(
                 get:         static e => e.Value,
                 set:         static (c, v) => c.Text = v,

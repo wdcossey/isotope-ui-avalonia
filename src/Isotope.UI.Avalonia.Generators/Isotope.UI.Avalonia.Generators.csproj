@@ -4,7 +4,8 @@
        plus our own partial (WrapperGenerator.Avalonia.cs). The library references it as an analyzer. -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <!-- C# 15, as the other projects that compile upstream files. No `closed` hierarchies here, so no polyfill. -->
+    <LangVersion>15</LangVersion>
     <Nullable>enable</Nullable>
     <IsRoslynComponent>true</IsRoslynComponent>
     <AssemblyName>Isotope.UI.Avalonia.Generators</AssemblyName>

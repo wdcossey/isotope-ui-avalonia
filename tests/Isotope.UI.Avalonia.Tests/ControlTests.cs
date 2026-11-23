@@ -65,6 +65,77 @@ public class ControlTests
     }
 
     [AvaloniaFact]
+    public void TextBox_two_writes_before_their_events_arrive_do_not_echo()
+    {
+        var reported = new List<string>();
+        Action<string>? set = null;
+        var host = new TestHost(() => Component(ctx =>
+        {
+            var (text, setText) = ctx.UseState("a");
+            set = setText;
+            return new TextBoxElement(text, v => { reported.Add(v); setText(v); });
+        }));
+        var box = host.All<TextBox>()[0];
+        Dispatcher.UIThread.RunJobs();
+
+        // Two renders write before the dispatcher runs: both TextChanged events arrive afterwards, reading "c".
+        set!("b");
+        host.Flush();
+        set!("c");
+        host.Flush();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("c", box.Text);
+        Assert.Empty(reported);
+
+        box.Text = "d";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(["d"], reported);
+    }
+
+    [AvaloniaFact]
+    public void TextBox_nullable_members_set_back_to_null_return_to_the_defaults()
+    {
+        var set = true;
+        var host = new TestHost(() => set
+            ? new TextBoxElement(PlaceholderText: "name")
+            {
+                IsReadOnly = true, AcceptsReturn = true, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+            }
+            : new TextBoxElement());
+        var box = host.All<TextBox>()[0];
+        Assert.Equal("name", box.PlaceholderText);
+        Assert.True(box.IsReadOnly);
+        Assert.True(box.AcceptsReturn);
+
+        set = false;
+        host.Render();
+
+        var defaults = new TextBox();
+        Assert.Equal(defaults.PlaceholderText, box.PlaceholderText);
+        Assert.Equal(defaults.IsReadOnly, box.IsReadOnly);
+        Assert.Equal(defaults.AcceptsReturn, box.AcceptsReturn);
+        Assert.Equal(defaults.TextWrapping, box.TextWrapping);
+    }
+
+    private sealed record Heading(string Title) : TextBlockElement(Title);
+
+    [AvaloniaFact]
+    public void A_record_derived_from_a_control_record_mounts_and_updates_as_its_base()
+    {
+        var title = "one";
+        var host = new TestHost(() => VStack(new Heading(title)));
+        var text = host.All<TextBlock>()[0];
+        Assert.Equal(["one"], host.Texts());
+
+        title = "two";
+        host.Render();
+
+        Assert.Equal(["two"], host.Texts());
+        Assert.Same(text, host.All<TextBlock>()[0]);
+    }
+
+    [AvaloniaFact]
     public void TextBox_with_no_value_keeps_what_the_user_typed_across_renders()
     {
         Action<int>? bump = null;
