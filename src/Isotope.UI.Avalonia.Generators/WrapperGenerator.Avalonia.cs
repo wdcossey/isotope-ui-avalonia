@@ -57,7 +57,7 @@ public sealed partial class WrapperGenerator
         title: "Record member has no control counterpart",
         messageFormat: "'{0}' declares {1}, but '{2}' has no settable property of that name the generator can map, so the descriptor would not write it. Map it with [WrapAlias], write it in Customize with [WrapManual], or remove it.",
         category: "Isotope.Wrappers",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Error, // decided 2026-11-23: a silent drop is what this catches
         isEnabledByDefault: true);
 
     /// <summary>

@@ -152,6 +152,16 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## Decisions after Spike F (2026-11-23)
+
+1. **`ISOTOPEGEN001`** (a record member with no Avalonia counterpart) **is a build error.** A silent drop is what it exists
+   to catch.
+2. **Control pooling is ported later,** and only if a measurement shows it pays (#14).
+3. **Controlled values keep upstream's rule:** a value equal to the last render's isn't re-applied, so a rejected edit
+   stays in the box until the value changes. This matches Reactor, and #2 pins it with a test.
+4. **Also kept as recommended:** TextBox's first-write suppression token, recording the element on every mounted
+   control, and the generator project's `netstandard2.0` target (Roslyn requires it).
+
 ## Spike F: descriptor runtime and generated controls (issue #12, 2026-11-23)
 
 - **The runtime compiles on Avalonia through transform rules only.** Upstream's 6 descriptor-runtime files (3,522 lines) are
