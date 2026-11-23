@@ -18,13 +18,16 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   `git log origin/main..HEAD --format=%B | grep -i -E '<your username>|\b[A-Z]:[\\/]|Users[\\/]'` (both must print nothing).
   Vendored files (`src/Upstream/`) are left out of that scan: upstream's doc comments contain example paths, and
   personal data in vendored files is removed by a transform rule in `tools/sync/transforms.json`, never by hand.
+  Until `tools/sync` checks generated files itself (#10), also run
+  `git grep -n -I -i -E '<your username>' -- src/Upstream` (must print nothing), and read the sync report's list of
+  new and changed vendored files for names, emails and user folders.
   Commit author identity comes from the machine's git config: the developer chose to keep their own; see
   `CLAUDE.local.md` on each machine, and never add other names or emails.
 - **Upstream is read-only.** Never edit, commit or build inside `upstream/`. Read-only git, `git fetch`, and checking
   out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are the only writes allowed. Send
   nothing upstream: no issues, PRs or comments. Plans must not depend on upstream changing.
 - **Vendored upstream files are never edited by hand.** Differences come only from transform rules applied by
-  `tools/sync`, and CI regenerates them and fails on drift (both once built: #3, #6). If a file can't be expressed that way, it moves to tier 3.
+  `tools/sync`, and CI regenerates them and fails on drift (on Ubuntu and Windows). If a file can't be expressed that way, it moves to tier 3.
 - **Ask first** for anything in `docs/PROCESS.md` §2. Examples: real windows or UI automation (screenshots are rendered
   headless), installs, repo settings or branch protection, force-pushes or history rewrites, new remotes, and
   publishing packages.

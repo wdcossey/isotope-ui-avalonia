@@ -75,8 +75,13 @@ jobs:
           test "$total" = "$expected"
 
   sync:
-    name: sync check (vendored files, harness tests, upstream Yoga tests)
-    runs-on: ubuntu-latest
+    name: sync check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows matters most here: its checkouts use core.autocrlf=true, which the byte-exact check must survive.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -108,9 +113,11 @@ jobs:
           node-version: 22
 
       - name: Vendored files match upstream + transforms
+        shell: bash
         run: node tools/sync/sync.mjs --check --no-fetch
 
       - name: Harness tests
+        shell: bash
         run: node tools/sync/test/all.mjs
 
       - name: Upstream Yoga tests on the vendored code, count unchanged
@@ -118,5 +125,6 @@ jobs:
         run: |
           dotnet test tools/sync/verify/Upstream.Yoga.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee verify.log
           total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' verify.log | tail -1)"
-          echo "total=$total expected=780"
-          test "$total" = "780"
+          expected="$(cat tools/sync/verify/Upstream.Yoga.Tests/expected-total.txt)"
+          echo "total=$total expected=$expected"
+          test "$total" = "$expected"

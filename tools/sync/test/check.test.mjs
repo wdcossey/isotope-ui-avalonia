@@ -115,6 +115,8 @@ test('--commit commits only what the sync wrote, refuses a dirty index, and skip
     // doesn't depend on the machine's (a fresh CI runner has none).
     g('config', 'user.name', 't');
     g('config', 'user.email', 't@example.invalid');
+    g('config', 'commit.gpgsign', 'false');
+    g('config', 'core.autocrlf', 'false');
     g('add', '-A');
     g('commit', '-q', '-m', 'settings');
     f.put('notes.txt', 'staged work\n');
