@@ -17,6 +17,11 @@ const [propsFile, ...only] = process.argv.slice(2);
 if (!propsFile) { console.error('usage: node tools/measure-transforms.mjs <files.props> [file ...]'); process.exit(2); }
 const props = readFileSync(propsFile, 'utf8');
 const rels = [...props.matchAll(/Include="\$\(UpstreamSrc\)([^"]+)"/g)].map((m) => m[1].replace(/\\/g, '/'));
+const strangers = only.filter((f) => !rels.includes(f));
+if (strangers.length) {
+  console.error('not files the props file compiles (give paths relative to src/Reactor/, as in its includes): ' + strangers.join(', '));
+  process.exit(2);
+}
 const { baseline } = parseLock(readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8'));
 const manifest = JSON.parse(readFileSync(path.join(repo, 'src', 'Upstream', 'vendored.json'), 'utf8'));
 if (manifest.commit !== baseline) throw new Error('src/Upstream was generated at ' + manifest.commit + ', not at the commit in UPSTREAM.lock');
@@ -39,7 +44,10 @@ for (const rel of rels) {
     if (before[i] === after[i]) continue;
     if (after[i].trim() === '') blanked++; else rewritten++;
   }
-  for (const id of entry.transforms) used.add(id);
+  for (const id of entry.transforms) {
+    if (!rules.has(id)) throw new Error(p + ': vendored.json names rule ' + id + ', which tools/sync/transforms.json lacks: run the sync again');
+    used.add(id);
+  }
   const lineCount = before.length - (up.endsWith('\n') ? 1 : 0); // as wc -l counts
   totals.files++;
   totals.lines += lineCount;
@@ -47,7 +55,7 @@ for (const rel of rels) {
   totals.rewritten += rewritten;
   totals.blanked += blanked;
   if (only.length && !only.includes(rel)) continue;
-  const drops = entry.transforms.filter((id) => rules.get(id)?.kind === 'drop').length;
+  const drops = entry.transforms.filter((id) => rules.get(id).kind === 'drop').length;
   console.log(rel + ': ' + lineCount + ' lines; tier ' + entry.tier + '; ' + entry.transforms.length + ' rules hit (' + drops + ' member drops); ' +
     rewritten + ' lines rewritten, ' + blanked + ' lines blanked');
 }

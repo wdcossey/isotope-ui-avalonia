@@ -1,6 +1,6 @@
 // The tier map: ordered rules over upstream repo-relative paths, first match wins.
 // Each rule has exactly one of "path" (an exact path) or "glob" (see glob.mjs), and a tier:
-//   1      vendored verbatim
+//   1      vendored verbatim, apart from the repo-wide "glob" rules in transforms.json (the namespace rename)
 //   2      vendored, with the transforms in transforms.json
 //   3      rewritten for Avalonia: not vendored, watched (the sync report lists the PRs that touch it)
 //   "none" not imported and not watched

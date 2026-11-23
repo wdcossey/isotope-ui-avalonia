@@ -2,6 +2,7 @@
 //   "files": [paths]  tier 2 files it must change; a listed file it no longer matches fails the sync loudly.
 //   "glob": pattern   every vendored file (tier 1 or 2) the glob matches, wherever the rule matches; it must change at
 //                     least one file. For repo-wide renames (the namespace), so tier 1 means "no rule but those".
+//                     Glob rules come after every listed rule (see loadTransforms).
 // and does one of two things:
 //   "find" (JS regex source, "flags" optional: any of "imsu", added to "g") with "replace" ($1..$9 for groups, $$ for $);
 //   "drop" (JS regex source): deletes the one member whose declaration it matches in code (not in a comment or
@@ -15,7 +16,7 @@ import { dropMember } from './csharp.mjs';
 export function loadTransforms(json) {
   if (!json || !Array.isArray(json.rules)) throw new Error('transforms: expected {"rules": [...]}');
   const ids = new Set();
-  return json.rules.map((r, i) => {
+  const rules = json.rules.map((r, i) => {
     const where = 'transform ' + (r.id ?? '#' + (i + 1));
     if (typeof r.id !== 'string' || !r.id) throw new Error('transform #' + (i + 1) + ': needs an "id"');
     if (ids.has(r.id)) throw new Error(where + ': duplicate id');
@@ -47,6 +48,12 @@ export function loadTransforms(json) {
     return { id: r.id, kind: drop ? 'drop' : 'find', find: r.find, drop: r.drop, replace: r.replace, flags, why: r.why ?? '',
       files: r.files ?? null, glob: r.glob ?? null, globRe, re };
   });
+  // The unlisted-file guard (transformFile) sees the text as transformed so far, so a glob rule placed before a listed
+  // rule could convert new upstream code first and hide it from the guard. Glob rules therefore run last.
+  const lastListed = rules.findLastIndex((r) => r.files);
+  const early = rules.find((r, i) => r.glob && i < lastListed);
+  if (early) throw new Error('transform ' + early.id + ': glob rules come after every listed rule (' + rules[lastListed].id + ' follows it)');
+  return rules;
 }
 
 /** Rules that apply to one vendored file of the given tier, in rule order: listed rules (tier 2 only) and glob rules. */
@@ -100,10 +107,10 @@ export function transformFile(rules, p, tier, text) {
   for (const r of rules) {
     if (mine.has(r)) {
       const x = applyTransforms([r], p, text);
+      if (x.text !== text) applied.push(r); // a match whose replacement equals it changes nothing
       text = x.text;
       errors.push(...x.errors);
       hits[r.id] = x.hits[r.id];
-      if (hits[r.id]) applied.push(r);
     } else if (r.kind === 'find' && r.files && !r.files.includes(p) && new RegExp(r.find, r.flags).test(text)) {
       errors.push('transform ' + r.id + ' matches ' + p + ', which it does not list: add the file to its "files" (tier 2), or classify the file again');
     }

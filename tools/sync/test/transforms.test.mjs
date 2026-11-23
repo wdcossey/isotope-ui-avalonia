@@ -182,3 +182,17 @@ test('the tracked namespace and partial rules rename Microsoft.UI.Reactor and ma
   for (const p of ['src/Reactor/Core/RenderContext.cs', 'tests/Reactor.Tests/YogaCacheTests.cs']) assert.ok(ns.globRe.test(p), p);
   for (const p of ['LICENSE', 'src/Reactor/ThirdPartyNoticeText.txt']) assert.ok(!ns.globRe.test(p), p);
 });
+
+test('glob rules come after every listed rule, so none can hide new upstream code from the unlisted-file guard', () => {
+  const listed = { id: 'l', find: 'a', replace: 'b', files: ['f.cs'] };
+  const glob = { id: 'g', find: 'c', replace: 'd', glob: '**/*.cs' };
+  assert.throws(() => loadTransforms({ rules: [glob, listed] }), /transform g: glob rules come after every listed rule \(l follows it\)/);
+  assert.deepEqual(loadTransforms({ rules: [listed, glob] }).map((r) => r.id), ['l', 'g']);
+});
+
+test('a rule whose replacement equals its match changes nothing, so it is not named as applied', () => {
+  const rules = loadTransforms({ rules: [{ id: 'same', find: 'Isotope\\.UI', replace: 'Isotope.UI', glob: '*.cs' }, { id: 'real', find: 'x', replace: 'y', glob: '*.cs' }] });
+  const r = transformFile(rules, 'f.cs', 1, 'Isotope.UI x');
+  assert.equal(r.text, 'Isotope.UI y');
+  assert.deepEqual(r.applied.map((x) => x.id), ['real']);
+});

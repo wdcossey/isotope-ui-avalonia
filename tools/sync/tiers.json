@@ -2,7 +2,7 @@
   "$comment": [
     "The tier map for tools/sync: ordered rules over upstream repo-relative paths, first match wins.",
     "Each rule has \"path\" (exact) or \"glob\" (\"*\" within a segment, \"**\" any number of segments) and a tier:",
-    "1 vendored verbatim; 2 vendored with transforms.json; 3 rewritten for Avalonia and watched (the report lists PRs touching it);",
+    "1 vendored verbatim apart from the repo-wide glob rules (the namespace rename); 2 vendored with listed transforms.json rules; 3 rewritten for Avalonia and watched (the report lists PRs touching it);",
     "\"none\" not imported. A rule that matches no file fails the sync. Seeded from spikes/A-engine/outcomes.json and the Spike A and D reports."
   ],
   "rules": [
@@ -574,27 +574,27 @@
     {
       "path": "src/Reactor/Core/ChildSlots.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Core/ChildDiffHints.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Core/HookOrderException.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Core/UIThreadMarshal.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Hosting/WindowKey.cs",
       "tier": 1,
-      "note": "the library (#1) links it: a window identity value type, compiles unmodified (the rest of Hosting/ is tier 3)"
+      "note": "the library (#1) links it: a window identity value type, no listed rules (the rest of Hosting/ is tier 3)"
     },
     {
       "path": "src/Reactor/Core/Navigation/NavigationTransition.cs",
@@ -604,17 +604,17 @@
     {
       "path": "src/Reactor/Core/Diagnostics/LogCategory.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/DiagnosticLog.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/ComponentNames.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "src/Reactor/Core/ObservableTreeTracker.cs",
@@ -629,7 +629,7 @@
     {
       "path": "src/Reactor/Core/Diagnostics/DiagnosticText.cs",
       "tier": 1,
-      "note": "the library (#1) links it; compiles unmodified"
+      "note": "the library (#1) links it; no listed rules (only the namespace rename)"
     },
     {
       "path": "tests/Reactor.Tests/YogaValueExtensionsTests.cs",
