@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/DiagnosticLog.cs, last changed upstream in 430d6877dce4; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/DiagnosticLog.cs, last changed upstream in 430d6877dce4; transforms: event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 
@@ -36,7 +36,7 @@ internal static class DiagnosticLog
 {
     /// <summary>
     /// Logs a swallowed exception the framework chose not to propagate.
-    /// Always emits to <c>Microsoft-UI-Reactor</c>'s <c>SwallowedError</c>
+    /// Always emits to <c>Isotope-UI</c>'s <c>SwallowedError</c>
     /// event under the <see cref="ReactorEventSource.Keywords.Errors"/>
     /// keyword; additionally mirrors a richer line including
     /// <see cref="Exception.Message"/> to <c>Debug.WriteLine</c> in DEBUG.
@@ -71,7 +71,7 @@ internal static class DiagnosticLog
     /// <summary>
     /// Logs a bare HRESULT / Win32 code that the framework chose to
     /// continue past rather than throw. Always emits to
-    /// <c>Microsoft-UI-Reactor</c>'s <c>HResultFailed</c> event under the
+    /// <c>Isotope-UI</c>'s <c>HResultFailed</c> event under the
     /// <see cref="ReactorEventSource.Keywords.Errors"/> keyword;
     /// additionally mirrors to <c>Debug.WriteLine</c> in DEBUG.
     /// </summary>
@@ -97,7 +97,7 @@ internal static class DiagnosticLog
     /// <summary>
     /// Logs a framework-authored warning about a recoverable misconfiguration
     /// the framework chose to continue past. Always emits to
-    /// <c>Microsoft-UI-Reactor</c>'s <c>Warning</c> event under the
+    /// <c>Isotope-UI</c>'s <c>Warning</c> event under the
     /// <see cref="ReactorEventSource.Keywords.Errors"/> keyword; additionally
     /// mirrors to <c>Debug.WriteLine</c> in DEBUG.
     /// </summary>

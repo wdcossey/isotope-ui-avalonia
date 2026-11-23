@@ -359,18 +359,20 @@
       "tier": 1,
       "lastChanged": "1b9fbc3b6093fa0786ae4c6e0a09fe5cc7855c9c",
       "transforms": [
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "bc8bddd6800e33464b48c8b16cc6ed8693d7be081fd3c427dbd8d2cf4cac33ee"
+      "sha256": "8ed944fb7e2ed7591c86f736a30e02816314a937bb0f4ee6a5fbbd3b5c481d5b"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/ComponentPerfTally.cs",
       "tier": 1,
       "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
       "transforms": [
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "d6dac8db4120699a927910ca60ffb91a03319e219af60dbcbba90c72a632c853"
+      "sha256": "f64fc3aba16358966cd8fc8dd20aa4182ddd70a7b52d61865f364ca7cddcb3a2"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs",
@@ -387,9 +389,10 @@
       "tier": 1,
       "lastChanged": "430d6877dce48106c7bad9709b24fc4ffcc17e44",
       "transforms": [
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "7c8458ee6547e171469723d636ec1d33319153b0c3bd4e87a70fa0cdc2395211"
+      "sha256": "093e4a7e5e67840f0059fb56cf4774916cc7d20d12483a8dd96fe0b972e403a7"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/DiagnosticText.cs",
@@ -444,18 +447,20 @@
       "tier": 1,
       "lastChanged": "0cdc78ad040d2b6b8c50c2899f6c10ce1d2849d1",
       "transforms": [
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "2cd263cfa95a2887d000871bb6dcae95566f6524bbb43c9b4f03d1894295cbd8"
+      "sha256": "910c1f9618c393afa914d2bb6be00064181383a00ae0998983249b43586cd57d"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs",
       "tier": 1,
       "lastChanged": "ad0ab15f2795f49a4a6f265ab062deb1a5c28428",
       "transforms": [
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "1c55f42337337ef0a2d68117a8f4a5ef8be5353b7c8010ba2f61200aadcb91da"
+      "sha256": "c0c78ba25b3e545bd258d1311bcef76f782c4d54e2526e0a28a25138c21ea901"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/RenderPassRequests.cs",
@@ -682,9 +687,10 @@
       "tier": 1,
       "lastChanged": "aad55a4075ac2e37d5ee18af0560af9e69558198",
       "transforms": [
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "b69bf003abb8712fe41a87b49b3dfffb70a66c6071ca9fa1ddabf0940303bea6"
+      "sha256": "edb18be139dbb3c73f018d898544837e22fa99ed10fd3a5d73aa5f86a97070e4"
     },
     {
       "path": "src/Reactor/Core/Navigation/NavigationHandle.cs",
@@ -849,9 +855,10 @@
         "drop-RenderContext-MigrateHooksForHotReload",
         "drop-RenderContext-FullNameMatches",
         "partial-render-context",
+        "event-provider-isotope",
         "namespace-isotope"
       ],
-      "sha256": "188e31f8a2759eaed6b3e94840f67039a863740b9b9578725efcdac193c5cd09"
+      "sha256": "b9f5b8c159fcdc5b58ab648545bb946f7658bce886625e7a53661b37266823da"
     },
     {
       "path": "src/Reactor/Core/RenderError.cs",

@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentPerfTally.cs, last changed upstream in ad0ab15f2795; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentPerfTally.cs, last changed upstream in ad0ab15f2795; transforms: event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
 namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
-/// Per-thread tallies behind the render-outcome fields of the <c>Microsoft-UI-Reactor-Perf</c>
+/// Per-thread tallies behind the render-outcome fields of the <c>Isotope-UI-Perf</c>
 /// provider (schema revision 3, issue #1538): the <c>ComponentRender</c> Stop's <c>changes</c>
 /// and <c>ownStateSets</c>, and the <c>Effects</c> Stop's <c>ownStateSets</c>.
 /// </summary>

@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderContext.cs, last changed upstream in ad0ab15f2795; transforms: winui-qualified-element, drop-RenderContext-UseSystemBackButton, drop-RenderContext-UseColorScheme, drop-RenderContext-UseIsDarkTheme, drop-RenderContext-UseHighContrast, drop-RenderContext-UseHighContrastScheme, drop-RenderContext-UseHighContrastState, drop-RenderContext-HighContrastState, drop-RenderContext-UseReducedMotion, drop-RenderContext-UseReducedMotionState, drop-RenderContext-ReducedMotionState, drop-RenderContext-UseIntl, drop-RenderContext-_defaultAccessor, drop-RenderContext-UseWindowSize-for-window, drop-RenderContext-UseWindowSize, drop-RenderContext-UseWindow, drop-RenderContext-UseWindowPosition, drop-RenderContext-UseIsCovered, drop-RenderContext-UseDisplays, drop-RenderContext-UseWindowAspectRatio, drop-RenderContext-UseWindowDragMove, drop-RenderContext-PickerService, drop-RenderContext-PickFileAsync, drop-RenderContext-PickMultipleFilesAsync, drop-RenderContext-PickFolderAsync, drop-RenderContext-PickMultipleFoldersAsync, drop-RenderContext-PickSaveFileAsync, drop-RenderContext-GetPickerOwner, drop-RenderContext-UseWindowState, drop-RenderContext-UseIsActive, drop-RenderContext-UseClosingGuard, drop-RenderContext-UseDpi, drop-RenderContext-UseOpenWindow, drop-RenderContext-UseTrayIcon, drop-RenderContext-UseBreakpoint-for-window, drop-RenderContext-UseBreakpoint, drop-RenderContext-MigrateHooksForHotReload, drop-RenderContext-FullNameMatches, partial-render-context, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderContext.cs, last changed upstream in ad0ab15f2795; transforms: winui-qualified-element, drop-RenderContext-UseSystemBackButton, drop-RenderContext-UseColorScheme, drop-RenderContext-UseIsDarkTheme, drop-RenderContext-UseHighContrast, drop-RenderContext-UseHighContrastScheme, drop-RenderContext-UseHighContrastState, drop-RenderContext-HighContrastState, drop-RenderContext-UseReducedMotion, drop-RenderContext-UseReducedMotionState, drop-RenderContext-ReducedMotionState, drop-RenderContext-UseIntl, drop-RenderContext-_defaultAccessor, drop-RenderContext-UseWindowSize-for-window, drop-RenderContext-UseWindowSize, drop-RenderContext-UseWindow, drop-RenderContext-UseWindowPosition, drop-RenderContext-UseIsCovered, drop-RenderContext-UseDisplays, drop-RenderContext-UseWindowAspectRatio, drop-RenderContext-UseWindowDragMove, drop-RenderContext-PickerService, drop-RenderContext-PickFileAsync, drop-RenderContext-PickMultipleFilesAsync, drop-RenderContext-PickFolderAsync, drop-RenderContext-PickMultipleFoldersAsync, drop-RenderContext-PickSaveFileAsync, drop-RenderContext-GetPickerOwner, drop-RenderContext-UseWindowState, drop-RenderContext-UseIsActive, drop-RenderContext-UseClosingGuard, drop-RenderContext-UseDpi, drop-RenderContext-UseOpenWindow, drop-RenderContext-UseTrayIcon, drop-RenderContext-UseBreakpoint-for-window, drop-RenderContext-UseBreakpoint, drop-RenderContext-MigrateHooksForHotReload, drop-RenderContext-FullNameMatches, partial-render-context, event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
 using Isotope.UI.Core.Diagnostics;
 using Isotope.UI.Hooks;
@@ -28,7 +28,7 @@ public sealed partial class RenderContext
     private bool _ownerReleased;
 
     // This component's diagnostic id: the componentId of ReactorEventSource.ComponentRendered
-    // and of the Microsoft-UI-Reactor-Perf spans and StateChange. 0 until first asked for; then
+    // and of the Isotope-UI-Perf spans and StateChange. 0 until first asked for; then
     // fixed for the context's lifetime (a hot-reload instance swap moves the context, so it keeps
     // the id). Assigned lazily so a process nobody traces never takes one.
     private long _diagnosticId;
@@ -259,7 +259,7 @@ public sealed partial class RenderContext
     // </snippet:set-state>
 
     /// <summary>
-    /// Reports a state-hook write on the <c>Microsoft-UI-Reactor-Perf</c> provider: the verbose
+    /// Reports a state-hook write on the <c>Isotope-UI-Perf</c> provider: the verbose
     /// <c>StateChange</c> event, and the call toward the open render or effects span's
     /// <c>stateSets</c> (<see cref="ComponentPerfTally"/>). Two static gate reads when nobody listens.
     /// </summary>

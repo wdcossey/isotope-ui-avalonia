@@ -655,6 +655,13 @@
       ]
     },
     {
+      "id": "event-provider-isotope",
+      "find": "Microsoft-UI-Reactor",
+      "replace": "Isotope-UI",
+      "why": "Upstream's EventSource/trace provider names (Microsoft-UI-Reactor, Microsoft-UI-Reactor-Perf) become Isotope-UI(-Perf), decided 2026-11-23 with the namespace rename: nothing reads as Microsoft's, and the provider GUID (derived from the name) no longer equals real Reactor's, so traces can tell them apart.",
+      "glob": "**/*.cs"
+    },
+    {
       "id": "namespace-isotope",
       "find": "\\bMicrosoft\\.UI\\.Reactor\\b",
       "replace": "Isotope.UI",

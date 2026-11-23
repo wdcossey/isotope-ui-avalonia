@@ -183,6 +183,18 @@ test('the tracked namespace and partial rules rename Microsoft.UI.Reactor and ma
   for (const p of ['LICENSE', 'src/Reactor/ThirdPartyNoticeText.txt']) assert.ok(!ns.globRe.test(p), p);
 });
 
+test('the tracked event-provider rule renames Microsoft-UI-Reactor(-Perf) and nothing else, before the namespace rename', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const rules = loadTransforms(JSON.parse(readFileSync(path.join(here, '..', 'transforms.json'), 'utf8')));
+  const ev = rules.find((r) => r.id === 'event-provider-isotope');
+  assert.ok(ev, 'rule exists');
+  assert.ok(rules.indexOf(ev) < rules.findIndex((r) => r.id === 'namespace-isotope'), 'runs before the namespace rename');
+  const src = '[EventSource(Name = "Microsoft-UI-Reactor")]\nconst string P = "Microsoft-UI-Reactor-Perf";\n// Microsoft.UI.Reactor is left to the namespace rule; Microsoft-UI-Xaml is not ours';
+  const r = applyTransforms([ev], 'src/Reactor/Core/Diagnostics/ReactorEventSource.cs', src);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.text, '[EventSource(Name = "Isotope-UI")]\nconst string P = "Isotope-UI-Perf";\n// Microsoft.UI.Reactor is left to the namespace rule; Microsoft-UI-Xaml is not ours');
+});
+
 test('glob rules come after every listed rule, so none can hide new upstream code from the unlisted-file guard', () => {
   const listed = { id: 'l', find: 'a', replace: 'b', files: ['f.cs'] };
   const glob = { id: 'g', find: 'c', replace: 'd', glob: '**/*.cs' };

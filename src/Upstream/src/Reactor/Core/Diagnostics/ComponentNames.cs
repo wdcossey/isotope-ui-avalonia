@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentNames.cs, last changed upstream in 1b9fbc3b6093; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentNames.cs, last changed upstream in 1b9fbc3b6093; transforms: event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
 namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
@@ -19,7 +19,7 @@ namespace Isotope.UI.Core.Diagnostics;
 /// component renders its arity in C# form (<c>Counter&lt;Int32&gt;</c>) instead of the
 /// metadata name (<c>Counter`1</c>). Function and memo components have no type of their
 /// own and keep reporting <c>FuncElement</c> / <c>MemoElement</c> here; the
-/// <c>Microsoft-UI-Reactor-Perf</c> spans name them by their render function instead
+/// <c>Isotope-UI-Perf</c> spans name them by their render function instead
 /// (<see cref="ForRenderFunction(Element)"/>).</para>
 ///
 /// <para><b>PII.</b> Output is built only from developer-authored type names — never
@@ -53,7 +53,7 @@ internal static class ComponentNames
     internal const string RootRenderFunctionFallback = "render";
 
     /// <summary>
-    /// The name the <c>Microsoft-UI-Reactor-Perf</c> spans give a function or memo component:
+    /// The name the <c>Isotope-UI-Perf</c> spans give a function or memo component:
     /// what its render function runs, as DevTools' component inspector shows it
     /// (<c>Counter.Row</c> for a method group, <c>RenderEachTime in MainPage.Render</c> or
     /// <c>Memo in MainPage.Render</c> for a lambda or local function). Any other element gets

@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorEventSource.cs, last changed upstream in 0cdc78ad040d; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorEventSource.cs, last changed upstream in 0cdc78ad040d; transforms: event-provider-isotope, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.Tracing;
 
 namespace Isotope.UI.Core.Diagnostics;
@@ -17,7 +17,7 @@ namespace Isotope.UI.Core.Diagnostics;
 ///
 /// EventPipe example (Reactor only):
 ///   dotnet-trace collect --process-id &lt;pid&gt; \
-///       --providers Microsoft-UI-Reactor
+///       --providers Isotope-UI
 ///
 /// ETW example (Reactor + WinUI correlated):
 ///   xperf -start ReactorSession \
@@ -35,10 +35,10 @@ namespace Isotope.UI.Core.Diagnostics;
 /// As of .NET 10, a private ETW session (what a non-elevated <c>winapp perf</c> attaches with)
 /// never enables an EventSource, so this provider writes nothing there. Reactor's
 /// render-pass and component spans are also written through the raw
-/// <c>Microsoft-UI-Reactor-Perf</c> provider (<see cref="ReactorPerfTrace"/>),
+/// <c>Isotope-UI-Perf</c> provider (<see cref="ReactorPerfTrace"/>),
 /// which such a session does record.
 /// </summary>
-[EventSource(Name = "Microsoft-UI-Reactor")]
+[EventSource(Name = "Isotope-UI")]
 internal sealed class ReactorEventSource : EventSource
 {
     public static readonly ReactorEventSource Log = new();
@@ -247,7 +247,7 @@ internal sealed class ReactorEventSource : EventSource
             // message; the exception type is enough to triage class. Apps
             // that want richer diagnostics should opt in through the
             // app-level logger pipeline, which goes to ETL/disk under their
-            // own ACL, not the Microsoft-UI-Reactor provider.
+            // own ACL, not the Isotope-UI provider.
             WriteEvent(9, componentName ?? string.Empty, exceptionType ?? string.Empty, string.Empty);
     }
 
