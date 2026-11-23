@@ -210,12 +210,15 @@ public class ChildDiffTests
         var host = new TestHost(() => VStack(items.Select(i => (Element)new ModifiedElement(Text(i), mods) { Key = i }).ToArray()));
         var before = host.All<TextBlock>().ToDictionary(t => t.Text!);
 
-        items = ["c", "b", "a"];
+        items = ["c", "x", "a"];
         host.Render();
 
         var after = host.All<TextBlock>();
-        Assert.Equal(["c", "b", "a"], after.Select(t => t.Text));
-        Assert.All(after, t => Assert.Same(before[t.Text!], t));
+        Assert.Equal(["c", "x", "a"], after.Select(t => t.Text));
+        Assert.Same(before["c"], after[0]);
+        Assert.Same(before["a"], after[2]);
+        // The mounted element carries the wrapper's key (what the child diff sees), not the inner's (none).
+        Assert.Equal("c", Reconciler.GetMountedElement(after[0])!.Key);
     }
 
     [AvaloniaFact]
