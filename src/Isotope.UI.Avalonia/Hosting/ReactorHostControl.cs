@@ -19,16 +19,18 @@ namespace Isotope.UI.Hosting;
 /// and the pass runs from the dispatcher. However many changes arrive before it runs, one pass is queued. A change made
 /// during a pass (by the render or an effect) queues one more pass, at <see cref="DispatcherPriority.Background"/> so
 /// input, layout and rendering run first; so does any request after a pass slower than one frame (16 ms).</para>
-/// <para><b>Errors.</b> An exception from the root's render (<see cref="RenderErrorSource.RootRender"/>), its effects
-/// (<see cref="RenderErrorSource.Effects"/>) or the reconcile after it (<see cref="RenderErrorSource.Reconcile"/>,
-/// which includes child components' renders until error boundaries arrive) goes to <see cref="EffectiveRenderErrorHandler"/>.
-/// With no handler, or one that returns <c>null</c>, a built-in panel shows the exception text and the failed tree is
-/// kept, so the next good pass reconciles against it and child state survives. An element the handler returns replaces
+/// <para><b>Errors.</b> An exception from the root's render (<see cref="RenderErrorSource.RootRender"/>), the reconcile
+/// after it (<see cref="RenderErrorSource.Reconcile"/>, which includes child components' renders until error boundaries
+/// arrive) or the root's effects, flushed once the tree is committed (<see cref="RenderErrorSource.Effects"/>), goes to
+/// <see cref="EffectiveRenderErrorHandler"/>. With no handler, or one that returns <c>null</c>, a built-in panel shows
+/// the exception text. After a root render or effects failure the tree is kept, so the next good pass reconciles against
+/// it and child state survives; after a reconcile failure the half-updated tree is released (its cleanups run). An element the handler returns replaces
 /// the content. A handler that throws, or whose element fails, gets a neutral "Something went wrong." panel. A handler
 /// that calls <see cref="RenderError.Propagate"/> gets nothing shown, and the exception is rethrown out of the
 /// dispatcher callback (Avalonia's <c>Dispatcher.UnhandledException</c>). Every later pass retries the root.</para>
 /// <para><b>Lifetime.</b> Leaving the visual tree does not unmount (it may be a move); <see cref="Dispose"/> does:
-/// it runs every effect cleanup and stops rendering. A cleanup that throws is reported to the handler as
+/// it runs every effect cleanup (each isolated from the others' failures) and stops rendering, also when called during
+/// a pass. A cleanup that throws is reported to the handler as
 /// <see cref="RenderErrorSource.Cleanup"/>; with no handler, the first is rethrown once the teardown is done.</para>
 /// </remarks>
 public sealed class ReactorHostControl : Decorator, IDisposable
@@ -114,6 +116,7 @@ public sealed class ReactorHostControl : Decorator, IDisposable
         if (_disposed) return;
         VerifyAccess();
         _disposed = true;
+        // During a pass (an effect or handler closed the window), the pass sees _disposed and drops what it mounts.
         var failures = RetireRoot();
         ReportCleanupFailures(failures)?.Throw();
     }
@@ -127,8 +130,15 @@ public sealed class ReactorHostControl : Decorator, IDisposable
         if (_isRendering) return;
         if (Interlocked.CompareExchange(ref _renderPending, 1, 0) != 0) return;
         var priority = Volatile.Read(ref _lastRenderMs) > FrameBudgetMs ? DispatcherPriority.Background : DispatcherPriority.Normal;
-        if (!_queue.TryEnqueue(priority, _renderLoop))
-            Interlocked.Exchange(ref _renderPending, 0);
+        Enqueue(priority);
+    }
+
+    // The gate is held (_renderPending is 1). A dispatcher shutting down takes nothing: then nothing is pending.
+    private void Enqueue(DispatcherPriority priority)
+    {
+        if (_queue.TryEnqueue(priority, _renderLoop)) return;
+        _needsRerender = false;
+        Interlocked.Exchange(ref _renderPending, 0);
     }
 
     private void RenderLoop()
@@ -143,12 +153,11 @@ public sealed class ReactorHostControl : Decorator, IDisposable
         {
             // Also when a propagated render error escapes, so later requests can queue again.
             Interlocked.Exchange(ref _renderPending, 0);
+            // A change during the pass (also one that propagated): one more pass, below input, layout and rendering,
+            // so a component that keeps changing its state can't starve them.
+            if (_needsRerender && !_disposed && Interlocked.CompareExchange(ref _renderPending, 1, 0) == 0)
+                Enqueue(DispatcherPriority.Background);
         }
-        // A change during the pass: one more pass, below input, layout and rendering, so a component that keeps
-        // changing its state can't starve them.
-        if (_needsRerender && !_disposed && Interlocked.CompareExchange(ref _renderPending, 1, 0) == 0
-            && !_queue.TryEnqueue(DispatcherPriority.Background, _renderLoop))
-            Interlocked.Exchange(ref _renderPending, 0);
     }
 
     private void Render()
@@ -161,19 +170,33 @@ public sealed class ReactorHostControl : Decorator, IDisposable
         {
             _reconciler.BeginRootRender(ctx, _requestRender);
             Element? tree = render(ctx);
+            // Disposed by the render (Dispose retired the root): nothing to commit.
+            if (_disposed) return;
+            // As upstream: a root that renders null keeps its content.
+            if (tree is not null)
+            {
+                phase = RenderErrorSource.Reconcile;
+                var control = _reconciler.Reconcile(_currentTree, tree, _currentControl, _requestRender);
+                if (_disposed)
+                {
+                    // Disposed during the reconcile (a child's effect closed the window): drop what this pass mounted.
+                    if (control is not null) ReleaseControl(control);
+                    return;
+                }
+                _currentTree = tree;
+                _currentControl = control;
+                if (!ReferenceEquals(Child, control)) Child = control;
+            }
+            // As upstream: the root's effects run once its tree is committed.
             phase = RenderErrorSource.Effects;
             ctx.FlushEffects();
-            // As upstream: a root that renders null keeps its content.
-            if (tree is null) return;
-            phase = RenderErrorSource.Reconcile;
-            var control = _reconciler.Reconcile(_currentTree, tree, _currentControl, _requestRender);
-            _currentTree = tree;
-            _currentControl = control;
-            if (!ReferenceEquals(Child, control)) Child = control;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            ShowRenderError(ex, phase);
+            if (_disposed)
+                _logger?.LogError(ex, "Render failed ({Source}) after the host was disposed", phase);
+            else
+                ShowRenderError(ex, phase);
         }
         finally
         {
@@ -187,6 +210,8 @@ public sealed class ReactorHostControl : Decorator, IDisposable
     {
         _logger?.LogError(ex, "Render failed ({Source})", source);
         var error = new RenderError(ex, source, componentName: null, isHostLevel: true);
+        // A reconcile that threw part-way left the tree in an unknown state: release it rather than diff against it.
+        if (source == RenderErrorSource.Reconcile) ReleaseTree();
         Element? appElement = null;
         bool handlerFailed = false;
         if (EffectiveRenderErrorHandler is { } handler)
@@ -246,15 +271,23 @@ public sealed class ReactorHostControl : Decorator, IDisposable
         var control = _currentControl;
         _currentTree = null;
         _currentControl = null;
-        if (control is null) return;
+        if (control is not null) ReleaseControl(control);
+    }
+
+    private void ReleaseControl(Control control)
+    {
+        var failures = new List<Exception>();
         try
         {
-            _reconciler.UnmountChild(control);
+            using (_reconciler.IsolateUnmountCleanupFailures(failures.Add))
+                _reconciler.UnmountChild(control);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            _logger?.LogError(ex, "Unmounting the failed tree threw; continuing with the render-error outcome");
+            failures.Add(ex);
         }
+        foreach (var failure in failures)
+            _logger?.LogError(failure, "Unmounting a released tree threw; the remaining cleanups still ran");
     }
 
     // Runs the root's cleanups (each isolated), then unmounts its tree, and forgets the root. Returns the failures.
@@ -273,7 +306,8 @@ public sealed class ReactorHostControl : Decorator, IDisposable
         {
             try
             {
-                _reconciler.UnmountChild(control);
+                using (_reconciler.IsolateUnmountCleanupFailures(failures.Add))
+                    _reconciler.UnmountChild(control);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
@@ -312,7 +346,7 @@ public sealed class ReactorHostControl : Decorator, IDisposable
     }
 
     /// <summary>The text of the built-in error panel's message for <paramref name="ex"/>.</summary>
-    internal static string ErrorText(Exception ex) => "Render error: " + ex.GetType().Name + ": " + ex.Message + "\n\n" + ex;
+    internal static string ErrorText(Exception ex) => "Render error\n\n" + ex;
 
     /// <summary>The neutral message shown when the error handler itself failed (no exception details).</summary>
     internal const string SafeText = "Something went wrong.";

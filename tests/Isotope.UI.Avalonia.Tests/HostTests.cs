@@ -273,16 +273,21 @@ public sealed class HostTests : IDisposable
     public void Propagate_shows_nothing_and_rethrows_out_of_the_dispatcher()
     {
         var app = new Failing { Fail = true };
-        var host = new ReactorHostControl(app.Root) { RenderErrorHandler = e => { e.Propagate(); return null; } };
+        var host = new ReactorHostControl(app.Root);
+        host.RenderErrorHandler = e =>
+        {
+            e.Propagate();
+            app.Fail = false;
+            app.Rerender!(1); // a change during the failed pass
+            return null;
+        };
         var ex = Assert.Throws<InvalidOperationException>(Pump);
         Assert.Equal("boom 0", ex.Message);
         Assert.Null(host.Child);
 
-        app.Fail = false; // the gate reopened: a later change renders again
-        host.RenderErrorHandler = null;
-        app.Rerender!(1);
-        Pump();
+        Pump(); // the gate reopened and the change still renders
         Assert.Equal(["tick 1", "Clicked 0 times"], Texts(host));
+        Assert.True(host.IsIdle);
     }
 
     [AvaloniaFact]
@@ -292,7 +297,9 @@ public sealed class HostTests : IDisposable
         Element Root(RenderContext ctx)
         {
             ctx.UseEffect(() => () => throw new InvalidOperationException("cleanup"), Array.Empty<object>());
-            return Component(c => { c.UseEffect(() => () => otherCleanups++, Array.Empty<object>()); return TextBlock("child"); });
+            return VStack(
+                Component(c => { c.UseEffect(() => () => throw new InvalidOperationException("child cleanup"), Array.Empty<object>()); return TextBlock("a"); }),
+                Component(c => { c.UseEffect(() => () => otherCleanups++, Array.Empty<object>()); return TextBlock("b"); }));
         }
 
         var unhandled = new ReactorHostControl(Root);
@@ -307,8 +314,54 @@ public sealed class HostTests : IDisposable
         Assert.Null(unhandled.Child);
 
         reported.Dispose();
-        Assert.Equal([RenderErrorSource.Cleanup], sources);
+        Assert.Equal([RenderErrorSource.Cleanup, RenderErrorSource.Cleanup], sources);
         Assert.Equal(2, otherCleanups);
+    }
+
+    [AvaloniaFact]
+    public void Root_effects_run_once_the_tree_is_committed()
+    {
+        ReactorHostControl? host = null;
+        var seen = new List<string?>();
+        host = new ReactorHostControl(ctx =>
+        {
+            ctx.UseEffect(() => seen.AddRange(Texts(host!)), Array.Empty<object>());
+            return TextBlock("mounted");
+        });
+        Pump();
+        Assert.Equal(["mounted"], seen);
+    }
+
+    [AvaloniaFact]
+    public void Dispose_during_a_pass_drops_what_the_pass_mounted()
+    {
+        ReactorHostControl? host = null;
+        int cleanups = 0;
+        host = new ReactorHostControl(_ => Component(c =>
+        {
+            c.UseEffect(() => { host!.Dispose(); return () => cleanups++; }, Array.Empty<object>());
+            return TextBlock("x");
+        }));
+        Pump();
+        Assert.Null(host.Child);
+        Assert.Equal(1, cleanups);
+        Assert.True(host.IsIdle);
+    }
+
+    [AvaloniaFact]
+    public void A_reconcile_error_releases_the_half_updated_tree()
+    {
+        int cleanups = 0;
+        var app = new Failing();
+        var host = new ReactorHostControl(_ => VStack(
+            Component(c => { c.UseEffect(() => () => cleanups++, Array.Empty<object>()); return TextBlock("sibling"); }),
+            Component(app.Root)));
+        Pump();
+        app.Fail = true;
+        app.Rerender!(1); // a child component throws: the reconcile fails part-way
+        Pump();
+        Assert.IsType<Border>(host.Child);
+        Assert.Equal(1, cleanups);
     }
 
     private static Element Counter(RenderContext ctx) => Examples.Counter(ctx);

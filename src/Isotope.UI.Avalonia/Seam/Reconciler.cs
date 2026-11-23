@@ -849,6 +849,25 @@ public sealed partial class Reconciler
     //  Unmount
     // ════════════════════════════════════════════════════════════════════
 
+    private Action<Exception>? _unmountCleanupFailures;
+
+    /// <summary>
+    /// Until the returned scope is disposed, a cleanup that throws during an unmount goes to
+    /// <paramref name="onFailure"/> and the teardown goes on, so every cleanup runs (upstream's member, used by its
+    /// hosts when they release a tree).
+    /// </summary>
+    internal IDisposable IsolateUnmountCleanupFailures(Action<Exception> onFailure)
+    {
+        var previous = _unmountCleanupFailures;
+        _unmountCleanupFailures = onFailure;
+        return new UnmountIsolation(this, previous);
+    }
+
+    private sealed class UnmountIsolation(Reconciler owner, Action<Exception>? previous) : IDisposable
+    {
+        public void Dispose() => owner._unmountCleanupFailures = previous;
+    }
+
     /// <summary>
     /// Tears down the subtree under <paramref name="control"/>: runs effect cleanups (a component before its
     /// children, as upstream does) and forgets the component nodes. Does not detach it from its parent.
@@ -859,8 +878,16 @@ public sealed partial class Reconciler
         _exitingControls?.Remove(control);
         if (_componentNodes.Remove(control, out var node))
         {
-            node.Component?.Context.RunCleanups();
-            node.Context?.RunCleanups();
+            if (_unmountCleanupFailures is { } onFailure)
+            {
+                node.Component?.Context.RunCleanupsIsolated(onFailure);
+                node.Context?.RunCleanupsIsolated(onFailure);
+            }
+            else
+            {
+                node.Component?.Context.RunCleanups();
+                node.Context?.RunCleanups();
+            }
         }
         // A control a handler mounted: the handler tears down what it owns (its children strategy, its unmount
         // hooks) and says whether the generic walk below still visits the children (a panel strategy's).
