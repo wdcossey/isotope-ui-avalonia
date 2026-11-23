@@ -48,6 +48,13 @@ public sealed partial class Reconciler
     /// <summary>The host that renders this reconciler's content (tier 3: no Avalonia host sets it yet).</summary>
     internal IContentOwner? Owner { get; init; }
 
+    /// <summary>
+    /// Begins a host's root render on <paramref name="ctx"/>, with this reconciler's context scope and owner, as a
+    /// component's render begins (the host then calls the root's render function and flushes its effects).
+    /// </summary>
+    internal void BeginRootRender(RenderContext ctx, Action requestRerender) =>
+        ctx.BeginRender(requestRerender, _contextScope, Owner);
+
     // ════════════════════════════════════════════════════════════════════
     //  Root pass
     // ════════════════════════════════════════════════════════════════════
