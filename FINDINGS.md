@@ -146,7 +146,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 ## Tracking
 
-Open work is tracked in GitHub Issues (since 2026-11-23): #1 seam types, #2 vertical slice, #3 `tools/sync`, #4 Roslyn transforms, #5 first real sync, #6 CI, #7 PR process (hands-on), #8 wrappers-generator research, #9 FlexPanel ambient-mode divergence.
+Open work is tracked in GitHub Issues (since 2026-11-23): #1 seam types, #2 vertical slice, #3 `tools/sync` (done 2026-11-23: 155 files vendored, first sync to `14172dce`), #4 Roslyn transforms, #5 first real sync, #6 CI, #7 PR process (hands-on), #8 wrappers-generator research, #9 FlexPanel ambient-mode divergence.
 
 ## Not done
 

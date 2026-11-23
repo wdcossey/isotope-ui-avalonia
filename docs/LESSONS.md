@@ -26,6 +26,12 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **Branch names in merge subjects carry usernames.** "Merge pull request #N from org/<user>/…" brought contributors'
   usernames into script output. Strip the source branch when collecting history. (2026-11-23)
 
+- **Vendored bytes need `-text`.** With `core.autocrlf=true` a checkout turns LF into CRLF, so a byte-exact `--check`
+  fails on every Windows clone. `tools/sync` writes `src/Upstream/.gitattributes` with `* -text`. (2026-11-23)
+- **Squash a branch whose history once held personal data.** An intermediate commit vendored a third-party notice
+  naming a person; a later commit removed it. A `--no-ff` merge would have kept it in `main`'s history, so the branch was
+  squashed into one commit. (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would
