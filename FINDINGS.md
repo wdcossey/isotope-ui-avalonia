@@ -182,7 +182,9 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 3. **Controlled values keep upstream's rule:** a TextBox element equal to the last render's is skipped, so a rejected edit
    stays in the box until the element changes; when it changes for any reason, the controlled value is written back if
    the box has drifted from it (upstream spec 047 §8). #2 pins both halves.
-4. **Also kept as recommended:** TextBox's first-write suppression token, recording the element on every mounted
+4. **Element factories (#17):** `Component(render)` stays as an Isotope addition (upstream only has `RenderEachTime`), and
+   the guide says so. `TextBlock` keeps its name, since WinUI and Avalonia share it, so there's no `Text` alias.
+5. **Also kept as recommended:** TextBox's first-write suppression token, recording the element on every mounted
    control, and the generator project's `netstandard2.0` target (Roslyn requires it).
 
 ## Spike F: descriptor runtime and generated controls (issue #12, 2026-11-23)
