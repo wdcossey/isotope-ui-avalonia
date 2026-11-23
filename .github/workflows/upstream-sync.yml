@@ -1,0 +1,100 @@
+name: upstream-sync
+
+# The weekly upstream sync (issue #5). When upstream main has moved past UPSTREAM.lock, tools/sync regenerates the
+# vendored files on a branch "sync/<old>-<new>"; the job pushes it, dispatches ci on it and opens an issue with the sync
+# report (the tier 3 PRs to port). When nothing moved it writes nothing. A failing sync fails the run and writes nothing.
+# The glue and its tests: tools/sync/ci/.
+#
+# Runner: vars.SYNC_RUNNER (a repo variable), else GitHub-hosted ubuntu-latest. A runner image needs bash, git and
+# network access to github.com and api.github.com. Node 22 and the .NET SDK from global.json (with the .NET 10
+# runtime) are installed by the setup steps below, so an image can skip them if those steps can write their tool cache;
+# no gh CLI is used.
+on:
+  schedule:
+    # Mondays 05:17 UTC (off the hour, when scheduled runs bunch up).
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (sync and report, push no branch and open no issue). A real run only happens from the default branch.
+        type: boolean
+        default: true
+  # A change to the job or to tools/sync gets a dry run on its branch, since workflow_dispatch needs the file on the
+  # default branch first. A push never writes: it is always a dry run.
+  push:
+    paths:
+      - .github/workflows/upstream-sync.yml
+      - tools/sync/**
+
+permissions: {}
+
+concurrency:
+  group: upstream-sync-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ${{ vars.SYNC_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    permissions:
+      contents: write # push the sync branch
+      issues: write # open the issue with the report
+      actions: write # dispatch ci on the sync branch: a push made with this job's token starts no workflow
+    steps:
+      - name: Mode
+        id: mode
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          DRY_INPUT: ${{ inputs.dry_run }}
+          REF: ${{ github.ref }}
+          DEFAULT_REF: refs/heads/${{ github.event.repository.default_branch }}
+        run: |
+          dry=true
+          if [ "$EVENT" = schedule ]; then dry=false
+          elif [ "$EVENT" = workflow_dispatch ] && [ "$DRY_INPUT" = false ]; then
+            if [ "$REF" = "$DEFAULT_REF" ]; then dry=false
+            else echo "::notice::A real sync runs only from the default branch; this run is a dry run."; fi
+          fi
+          echo "dry=$dry" >> "$GITHUB_OUTPUT"
+          echo "event=$EVENT dry=$dry"
+
+      - uses: actions/checkout@v7
+
+      - name: Check out upstream main with full history (tools/sync refuses a shallow cache)
+        uses: actions/checkout@v7
+        with:
+          repository: microsoft/microsoft-ui-reactor
+          ref: main
+          path: upstream
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          # tools/sync runs upstream's Yoga tests on the regenerated files: the SDK from global.json and the .NET 10 runtime.
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Glue tests
+        shell: bash
+        run: node --test tools/sync/ci/upstream-sync.test.mjs
+
+      - name: Sync
+        shell: bash
+        env:
+          DRY: ${{ steps.mode.outputs.dry }}
+          GITHUB_TOKEN: ${{ github.token }}
+          # The sync commit's identity: GitHub's own Actions bot.
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          args=(--no-fetch)
+          if [ "$DRY" = true ]; then args+=(--dry-run); fi
+          node tools/sync/ci/upstream-sync.mjs "${args[@]}"
