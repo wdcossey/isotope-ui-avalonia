@@ -27,6 +27,10 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | `Memo(render, dependencies...)` | `MemoElement` | a function component that re-renders only when a dependency changes |
 | `Group(...)`, `Empty()` | `GroupElement`, `EmptyElement` | none (a fragment; nothing) |
 
+> **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
+> same element upstream's `RenderEachTime(render)` builds. Both exist here, and `RenderEachTime` works as it does in
+> Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia.
+
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
 keep their controls when it does. A `TextBox` or `Slider` given no value owns its own; given the state's value and a
 change callback, it is controlled by it.
