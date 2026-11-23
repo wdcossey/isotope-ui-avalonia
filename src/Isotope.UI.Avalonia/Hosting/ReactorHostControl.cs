@@ -27,7 +27,8 @@ namespace Isotope.UI.Hosting;
 /// it and child state survives; after a reconcile failure the half-updated tree is released (its cleanups run). An element the handler returns replaces
 /// the content. A handler that throws, or whose element fails, gets a neutral "Something went wrong." panel. A handler
 /// that calls <see cref="RenderError.Propagate"/> gets nothing shown, and the exception is rethrown out of the
-/// dispatcher callback (Avalonia's <c>Dispatcher.UnhandledException</c>). Every later pass retries the root.</para>
+/// dispatcher callback (Avalonia's <c>Dispatcher.UnhandledException</c>; Avalonia also faults the dispatcher operation's
+/// task with it, which surfaces as an unobserved task exception). Every later pass retries the root.</para>
 /// <para><b>Lifetime.</b> Leaving the visual tree does not unmount (it may be a move); <see cref="Dispose"/> does:
 /// it runs every effect cleanup (each isolated from the others' failures) and stops rendering, also when called during
 /// a pass. A cleanup that throws is reported to the handler as

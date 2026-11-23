@@ -288,6 +288,11 @@ public sealed class HostTests : IDisposable
         Pump(); // the gate reopened and the change still renders
         Assert.Equal(["tick 1", "Clicked 0 times"], Texts(host));
         Assert.True(host.IsIdle);
+
+        // Avalonia also faults the dispatcher operation's task with the escaped exception, and nothing observes it.
+        // Surface it now, while this collection runs alone, so it can't land in another test's unobserved-exception
+        // check (upstream's UseResourceThreadingTests count every unobserved task exception while they run).
+        for (int i = 0; i < 3; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
     }
 
     [AvaloniaFact]
