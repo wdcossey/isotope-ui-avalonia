@@ -4,7 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Microsoft.Extensions.Logging;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 using Xunit;
 using static Isotope.UI.Avalonia.Tests.Dsl;
 

@@ -1,9 +1,9 @@
 <Project>
-  <!-- The upstream files this library compiles, from upstream's src/Reactor/ at the commit in UPSTREAM.lock.
-       Today they are linked from the git-ignored upstream/ cache; when the vendoring harness (#3) lands, point
-       UpstreamSrc at the vendored copies instead. tools/rewrite-upstream.mjs reads the Include paths below. -->
+  <!-- The upstream files this library compiles: tools/sync's vendored copies (src/Upstream/, tier 1 and 2 in
+       tools/sync/tiers.json), already transformed by tools/sync/transforms.json at the commit in UPSTREAM.lock.
+       Nothing is rewritten at build time and upstream/ isn't needed; tools/sync's check mode keeps them honest. -->
   <PropertyGroup>
-    <UpstreamSrc Condition="'$(UpstreamSrc)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\upstream\src\Reactor\'))</UpstreamSrc>
+    <UpstreamSrc Condition="'$(UpstreamSrc)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor\'))</UpstreamSrc>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(UpstreamSrc)Core\RenderContext.cs" Link="Upstream\Core\RenderContext.cs" />

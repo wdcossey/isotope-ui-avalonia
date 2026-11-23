@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
-using Microsoft.UI.Reactor;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI;
+using Isotope.UI.Core;
 using Xunit;
 using static Isotope.UI.Avalonia.Tests.Dsl;
 

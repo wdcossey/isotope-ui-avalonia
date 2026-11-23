@@ -8,7 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Turns elements into Avalonia controls and keeps them in step across renders. Written for Avalonia; the
@@ -679,7 +679,7 @@ public sealed partial class Reconciler
                 $"{MaxRerenderReentrancy} times. Likely cause: setState called " +
                 "synchronously inside Render() or effect cleanup.");
 
-        var ui = Microsoft.UI.Reactor.ReactorApp.UIDispatcher;
+        var ui = Isotope.UI.ReactorApp.UIDispatcher;
         if (ui is not null && !ui.HasThreadAccess)
         {
             ui.TryEnqueue(() =>

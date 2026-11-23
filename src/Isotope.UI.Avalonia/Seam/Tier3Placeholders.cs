@@ -1,11 +1,11 @@
 using Avalonia.Rendering.Composition;
 using Avalonia.Rendering.Composition.Animations;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
 // Types the linked upstream files name whose behaviour is tier 3 (windows, hosting, animation, theming,
 // platform signals). Each carries only what the linked files need to compile, and says what it does
 // instead; the Avalonia versions come later.
-namespace Microsoft.UI.Reactor
+namespace Isotope.UI
 {
     /// <summary>
     /// Tier 3 placeholder for upstream's top-level window wrapper. Nothing creates one yet, so every
@@ -44,7 +44,7 @@ namespace Microsoft.UI.Reactor
     internal enum AppMemoryUsageLevel { Low, Medium, High, OverLimit }
 }
 
-namespace Microsoft.UI.Reactor.Input
+namespace Isotope.UI.Input
 {
     /// <summary>
     /// A ref to a mounted control. Tier 3 placeholder: the Avalonia reconciler doesn't attach refs yet,
@@ -64,13 +64,13 @@ namespace Microsoft.UI.Reactor.Input
     }
 }
 
-namespace Microsoft.UI.Reactor.Core
+namespace Isotope.UI.Core
 {
     /// <summary>A reference to a theme resource by key. Theming is tier 3.</summary>
     public readonly record struct ThemeRef(string ResourceKey);
 }
 
-namespace Microsoft.UI.Reactor.Elements
+namespace Isotope.UI.Elements
 {
     /// <summary>Per-control resource overrides. Tier 3: recorded on elements, not applied on Avalonia yet.</summary>
     public sealed record ResourceOverrides(
@@ -78,7 +78,7 @@ namespace Microsoft.UI.Reactor.Elements
         IReadOnlyDictionary<string, ThemeRef> ThemeRefs);
 }
 
-namespace Microsoft.UI.Reactor.Animation
+namespace Isotope.UI.Animation
 {
     /// <summary>Tier 3 placeholder for an element's enter/exit transition. Nothing can create one yet.</summary>
     public sealed record ElementTransition
@@ -103,7 +103,7 @@ namespace Microsoft.UI.Reactor.Animation
     }
 }
 
-namespace Microsoft.UI.Reactor.Core.Internal
+namespace Isotope.UI.Core.Internal
 {
     /// <summary>
     /// Maps an ambient animation kind to a curve. Animations are tier 3, so every kind maps to no curve,
@@ -111,7 +111,7 @@ namespace Microsoft.UI.Reactor.Core.Internal
     /// </summary>
     internal static class AnimationKindMap
     {
-        public static Microsoft.UI.Reactor.Animation.Curve? ToCurve(AnimationKind kind) => null;
+        public static Isotope.UI.Animation.Curve? ToCurve(AnimationKind kind) => null;
 
         public static bool IsActive(AnimationKind kind) => false;
     }
