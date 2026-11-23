@@ -3,8 +3,9 @@ name: ci
 # Builds and tests what exists today against upstream at the commit pinned in UPSTREAM.lock.
 # The vendored-files drift check (tools/sync --check) joins once #3 lands.
 on:
+  # Every branch push, so agent branches get CI. A pull_request trigger joins with the PR flow (#7);
+  # adding it now would run every PR commit twice.
   push:
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -12,7 +13,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded runs are cancelled on branches, never on main, so every main commit gets a result.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   spikes:
@@ -29,7 +31,10 @@ jobs:
       - name: Read the upstream baseline
         id: lock
         shell: bash
-        run: echo "sha=$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)" >> "$GITHUB_OUTPUT"
+        run: |
+          sha="$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "UPSTREAM.lock has no valid 'baseline=<40 hex>' line"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Check out upstream at the baseline
         uses: actions/checkout@v7
@@ -42,24 +47,30 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
+          # The SDK from global.json (C# 15 compiler) and the .NET 10 runtime every project targets.
           global-json-file: global.json
+          dotnet-version: 10.0.x
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
 
-      - name: Spike D tests (upstream Yoga tests + FlexPanel)
+      - name: Spike D tests (upstream Yoga tests + FlexPanel), count unchanged
         shell: bash
         run: |
-          dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests -nologo -v:q | tee test.log
-          grep -E "Passed!.*Total: +[0-9]+" test.log
+          dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee test.log
+          total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' test.log | tail -1)"
+          expected="$(cat spikes/D-flex/expected-total.txt)"
+          echo "total=$total expected=$expected"
+          test "$total" = "$expected"
 
       - name: Spike A error count unchanged
         shell: bash
         run: |
-          out="$(node spikes/A-engine/run-spike.mjs 3)"
-          echo "$out" | head -20
-          total="$(echo "$out" | sed -n 's/^total //p')"
+          out="$(node spikes/A-engine/run-spike.mjs 3 2>&1)"
+          head -20 <<<"$out"
+          if grep -q "not understood" <<<"$out"; then echo "build-errors could not parse some error lines"; exit 1; fi
+          total="$(sed -n 's/^total //p' <<<"$out")"
           expected="$(cat spikes/A-engine/expected-total.txt)"
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
