@@ -1,7 +1,7 @@
 {
   "generatedBy": "tools/sync",
   "repo": "https://github.com/microsoft/microsoft-ui-reactor",
-  "commit": "14172dce0af5887c13493a0e345d76e09241cd33",
+  "commit": "1f0784368e39b9b660974060d6d7c653438414ab",
   "files": [
     {
       "path": "LICENSE",
@@ -406,12 +406,12 @@
     {
       "path": "src/Reactor/Core/ChildReconciler.cs",
       "tier": 2,
-      "lastChanged": "7258869cc7116d9a7508e5c60d12d599ee720e4f",
+      "lastChanged": "244b77b228af15833583cbab13f8f98a74f2a532",
       "transforms": [
         "winui-usings",
         "namespace-isotope"
       ],
-      "sha256": "9411880b340284b88e63e78e488b00819ab7daf910185e6677df7f88faee9d2d"
+      "sha256": "e0f7ab3babe1ed2d0fba54a6dfd59d1a866ac6836765870d99d144799b5f91c5"
     },
     {
       "path": "src/Reactor/Core/ChildSlots.cs",
@@ -1117,14 +1117,14 @@
     {
       "path": "src/Reactor/Core/V1Protocol/ControlRegistry.cs",
       "tier": 2,
-      "lastChanged": "262488ee5f92dad3d8ccdfb952a3c7cd52993bdf",
+      "lastChanged": "1f0784368e39b9b660974060d6d7c653438414ab",
       "transforms": [
         "winui-usings",
         "drop-ControlRegistry-RegisterDecorator",
         "drop-ControlRegistry-RegisterDecoratorForDerivedTypes",
         "namespace-isotope"
       ],
-      "sha256": "d0fd33c157c0b218bff583b0360164a20a00864f580711deabb8a187eb621f4a"
+      "sha256": "604ef30c8daa9c9786c410cfac21ecf61a958abfa5ea9f412ad47695bf627fbe"
     },
     {
       "path": "src/Reactor/Core/V1Protocol/Descriptor/ControlDescriptor.cs",
@@ -1786,11 +1786,11 @@
     {
       "path": "tests/Reactor.Tests/Data/DataPageCacheParityTests.cs",
       "tier": 1,
-      "lastChanged": "f518b05b6e45674a166d814a1eb108ff94b9fb6c",
+      "lastChanged": "e24d1a498a556d29f5cffff1b3d2270a76e320cf",
       "transforms": [
         "namespace-isotope"
       ],
-      "sha256": "48f8b11bf7078c236f72fd4dd3334012c22e34a3b9fa953782cdf872e7af3e58"
+      "sha256": "cfdeaa18b5ae2688cbb30ad56d1d12c70606adbc8da7a66b7e9276122d2e96f5"
     },
     {
       "path": "tests/Reactor.Tests/HookArityOverloadTests.cs",
@@ -1835,11 +1835,11 @@
     {
       "path": "tests/Reactor.Tests/Internal/KeyedListDiffPoolingTests.cs",
       "tier": 1,
-      "lastChanged": "628fb7f4d10a3f6c38dc9774a4a2d8932bff2a30",
+      "lastChanged": "e24d1a498a556d29f5cffff1b3d2270a76e320cf",
       "transforms": [
         "namespace-isotope"
       ],
-      "sha256": "b37e47890dcbee22ba4b109c3a1062e5f4aec53cb4d0f99baa7ae2c6f9d9e69b"
+      "sha256": "3e2cdf2931c75e580ec8e8ee002f290125f73944780811cc15c1207d84ee120f"
     },
     {
       "path": "tests/Reactor.Tests/Internal/KeyedListDiffTests.cs",
@@ -1927,11 +1927,11 @@
     {
       "path": "tests/Reactor.Tests/TestIsolationCollections.cs",
       "tier": 1,
-      "lastChanged": "aa7fd62817e4fb18f2bbf7b28901e84a120d3cfe",
+      "lastChanged": "e24d1a498a556d29f5cffff1b3d2270a76e320cf",
       "transforms": [
         "namespace-isotope"
       ],
-      "sha256": "a2c8b0dba0abf9c623b7d7a2de72c81fd6605a8f4a3f1bd379c6a4d57550abd6"
+      "sha256": "d1f4c6e4c8fb62bc3a5194ebb5798ece8021444e75afced1ea42043edd1a7053"
     },
     {
       "path": "tests/Reactor.Tests/ThreadSafeHookTests.cs",
