@@ -80,7 +80,7 @@ export function neutralise(markdown, ownUrl) {
   const wrap = (s) => (s.includes('\x60') ? '\x60\x60 ' + s + ' \x60\x60' : '\x60' + s + '\x60');
   const plain = (text) => text
     .replace(/\[([^\]\n]*)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, url) => (isOwn(url) ? m : wrap(label || url)))
-    .replace(/(?<![\w\x60(])https?:\/\/[^\s<>()\x60|]*[^\s<>()\x60|.,;:!?'"]/g, (url) => (isOwn(url) ? url : wrap(url)))
+    .replace(/(?<![\w\x60]|\]\()https?:\/\/[^\s<>()\x60|]*[^\s<>()\x60|.,;:!?'"]/g, (url) => (isOwn(url) ? url : wrap(url)))
     .replace(/(?<![\w\x60/])(?:[\w.-]+\/[\w.-]+)?[#@][A-Za-z0-9][\w.-]*/g, (m) => wrap(m));
   // Split on code spans (a run of backticks up to the same run), and on links to this repo, which stay as they are.
   return markdown.split(/(\x60+)([^]*?)(\1)/).reduce((acc, part, i, parts) => {
@@ -151,8 +151,10 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
     issues = page.filter((i) => !i.pull_request && typeof i.title === 'string');
   } else log('GitHub not checked (no GITHUB_TOKEN): an existing issue for this range would not be seen');
   const existing = issues?.find((i) => i.title === title);
-  if (onRemote && existing) {
-    log('already done: branch ' + branch + ' is pushed and issue #' + existing.number + ' is open for it; nothing to do');
+  // An issue for the range, open or closed, means it was handled: a closed one whose branch is gone was turned down,
+  // and is not opened again. A branch with no issue is a run that failed after its push: open the issue now.
+  if (existing) {
+    log('already done: issue #' + existing.number + ' (' + existing.state + ') is for this range' + (onRemote ? ', and ' + branch + ' is pushed' : '') + '; nothing to do');
     return { status: 'exists', branch, issue: existing.number, old: baseline, new: target };
   }
 
@@ -178,6 +180,7 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
   }
 
   const superseded = (issues ?? []).filter((i) => i.state === 'open' && i.title !== title && i.title.startsWith('Upstream sync '));
+  const bodyFor = (ci) => issueBody({ report, branch, reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
   if (opts.dryRun) {
     log('dry run: would ' + (onRemote ? '' : 'push ' + branch + ', ') + 'dispatch ' + CI_WORKFLOW + ' on it and open the issue "' + title + '"' +
       (superseded.length ? ' (superseding #' + superseded.map((i) => i.number).join(', #') + ')' : ''));
@@ -185,7 +188,7 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
       git('checkout', '--quiet', start);
       git('branch', '--quiet', '-D', branch);
     }
-    return { status: 'dry-run', branch, title, report, old: baseline, new: target };
+    return { status: 'dry-run', branch, title, body: bodyFor({ ok: true }), old: baseline, new: target };
   }
 
   if (!onRemote) {
@@ -195,8 +198,7 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
   let ci = { ok: true };
   try { await api('POST', '/repos/' + opts.repoSlug + '/actions/workflows/' + CI_WORKFLOW + '/dispatches', { ref: branch }); }
   catch (e) { ci = { ok: false, error: e.message.split('\n')[0] }; log('warning: could not dispatch ' + CI_WORKFLOW + ': ' + ci.error); }
-  const body = issueBody({ report, branch, reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
-  const issue = await api('POST', '/repos/' + opts.repoSlug + '/issues', { title, body });
+  const issue = await api('POST', '/repos/' + opts.repoSlug + '/issues', { title, body: bodyFor(ci) });
   log('opened issue #' + issue.number + ': ' + title);
   return { status: 'opened', branch, issue: issue.number, ci: ci.ok, old: baseline, new: target };
 }
@@ -209,7 +211,7 @@ function summarise(r) {
     opened: 'Upstream moved ' + short(r.old) + ' → ' + short(r.new) + ': pushed \x60' + r.branch + '\x60 and opened #' + r.issue + '.' +
       (r.ci ? '' : ' CI could not be dispatched on it.'),
   }[r.status];
-  return '## Upstream sync\n\n' + head + '\n' + (r.report ? '\n' + r.report : '');
+  return '## Upstream sync\n\n' + head + '\n' + (r.body ? '\nThe issue it would open, "' + r.title + '":\n\n' + r.body : '');
 }
 
 async function main(argv, env) {
@@ -225,7 +227,7 @@ async function main(argv, env) {
       repo: o.repo ?? path.join(here, '..', '..', '..'), upstream: o.upstream, syncScript: path.join(here, '..', 'sync.mjs'), dryRun: o.dryRun, fetch: o.fetch, repoSlug, serverUrl,
       runUrl: repoSlug && env.GITHUB_RUN_ID ? serverUrl + '/' + repoSlug + '/actions/runs/' + env.GITHUB_RUN_ID : null,
     }, { api });
-    if (r.report && o.dryRun) console.log(r.report);
+    if (r.body) console.log('issue "' + r.title + '":\n' + r.body);
     if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, 'status=' + r.status + '\nbranch=' + (r.branch ?? '') + '\nissue=' + (r.issue ?? '') + '\n');
     if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, summarise(r));
     return 0;

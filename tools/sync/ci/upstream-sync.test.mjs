@@ -152,7 +152,8 @@ test('--dry-run syncs locally but pushes and opens nothing, and returns to the s
     const gh = fakeApi();
     const r = await f.job({ dryRun: true }, { api: gh.api });
     assert.equal(r.status, 'dry-run');
-    assert.match(r.report, /# Upstream sync/);
+    assert.match(r.body, /# Upstream sync/);
+    assert.match(r.body, /\x60#8\x60/, 'the issue body it would open, neutralised');
     assert.equal(r.branch, 'sync/' + range(f.base, next));
     assert.deepEqual(gh.posts(), []);
     assert.equal(f.remoteHead(r.branch), null);
@@ -207,6 +208,21 @@ test('a branch pushed by a run that failed before its issue gets the issue on th
     const issue = gh.posts().find((c) => c.p.endsWith('/issues'));
     assert.match(issue.body.body, /# Upstream sync/);
     assert.equal(f.git('branch', '--list', 'sync/*'), '', 'the pushed branch was read, not rebuilt');
+  } finally { f.cleanup(); }
+});
+
+test('a range whose issue was closed and whose branch is gone is not pushed or opened again', async () => {
+  const f = fixture();
+  try {
+    const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    const title = 'Upstream sync ' + f.base.slice(0, 8) + ' → ' + next.slice(0, 8);
+    const gh = fakeApi({ issues: [{ number: 7, title, state: 'closed' }] });
+    const r = await f.job({}, { api: gh.api });
+    assert.equal(r.status, 'exists');
+    assert.equal(r.issue, 7);
+    assert.deepEqual(gh.posts(), []);
+    assert.equal(f.git('ls-remote', '--heads', 'origin', 'sync/*'), '');
+    assert.equal(f.git('branch', '--list', 'sync/*'), '');
   } finally { f.cleanup(); }
 });
 
@@ -272,6 +288,7 @@ test('neutralise puts references, mentions and outside links in code, and leaves
     ['a \x60#12 @x https://h.invalid\x60 span, and \x60\x60 a \x60 b #3 \x60\x60', 'a \x60#12 @x https://h.invalid\x60 span, and \x60\x60 a \x60 b #3 \x60\x60'],
     ['[report](https://github.com/owner/repo/blob/x/r.md) and ' + own + '/issues', '[report](https://github.com/owner/repo/blob/x/r.md) and ' + own + '/issues'],
     ['## Heading, C# and issue#5', '## Heading, C# and issue#5'],
+    ['(see https://github.com/up/stream/pull/2) <https://h.invalid/x>', '(see \x60https://github.com/up/stream/pull/2\x60) <\x60https://h.invalid/x\x60>'],
   ];
   for (const [input, want] of cases) assert.equal(neutralise(input, own), want, input);
 });
@@ -302,7 +319,7 @@ test('the command line: a dry run writes the step outputs and summary; a failure
     let r = cli('--dry-run');
     assert.equal(r.status, 0, r.stderr);
     assert.match(readFileSync(outFile, 'utf8'), new RegExp('^status=dry-run\nbranch=sync/' + range(f.base, next) + '\nissue=\n$'));
-    assert.match(readFileSync(sumFile, 'utf8'), /Dry run: upstream moved[^]*# Upstream sync/);
+    assert.match(readFileSync(sumFile, 'utf8'), /Dry run: upstream moved[^]*The issue it would open[^]*# Upstream sync/);
     assert.match(r.stdout, /dry run: would push sync\//);
     r = cli();
     assert.equal(r.status, 1);
