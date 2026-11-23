@@ -50,7 +50,7 @@ public sealed class FlexPanelTests : IDisposable
         Assert.Equal(0, a.Bounds.X);
         Assert.Equal(100, b.Bounds.X);
         Assert.Equal(250, b.Bounds.Width);
-        Assert.Equal(350, c.Bounds.X);
+        Assert.Equal(351, c.Bounds.X); // CI red-check: deliberately wrong, reverted in the next commit
     }
 
     [AvaloniaFact]
