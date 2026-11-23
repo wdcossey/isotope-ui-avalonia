@@ -173,6 +173,36 @@ public class ChildDiffTests
     }
 
     [AvaloniaFact]
+    public void A_wrapper_keeps_its_own_modifiers_and_an_inner_key()
+    {
+        var wrapped = new ModifiedElement(Text("a", key: "k"), new ElementModifiers { Height = 20 })
+            .WithModifiers(m => m with { Width = 30 });
+        var host = new TestHost(() => VStack(wrapped));
+        var text = host.All<TextBlock>()[0];
+
+        Assert.Equal(30, text.Width);
+        Assert.Equal(20, text.Height);
+        Assert.Equal("k", Reconciler.GetMountedElement(text)!.Key);
+    }
+
+    [AvaloniaFact]
+    public void Groups_are_flattened_and_a_resized_group_keeps_its_siblings_controls()
+    {
+        var count = 1;
+        var host = new TestHost(() => VStack(
+            new GroupElement(Enumerable.Range(0, count).Select(i => (Element)Text("g" + i)).ToArray()),
+            Text("after")));
+        Assert.Equal(["g0", "after"], host.Texts());
+        var after = host.All<TextBlock>()[1];
+
+        count = 3;
+        host.Render();
+
+        Assert.Equal(["g0", "g1", "g2", "after"], host.Texts());
+        Assert.Same(after, host.All<TextBlock>()[3]);
+    }
+
+    [AvaloniaFact]
     public void Keyed_modified_elements_keep_their_controls_when_reordered()
     {
         string[] items = ["a", "b", "c"];

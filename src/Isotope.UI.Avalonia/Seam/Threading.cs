@@ -35,6 +35,9 @@ internal sealed class DispatcherQueue
         }
     }
 
+    /// <summary>Whether the calling thread is this queue's thread.</summary>
+    internal bool HasThreadAccess => _dispatcher.CheckAccess();
+
     /// <summary>The Avalonia dispatcher this queue posts to.</summary>
     internal Dispatcher Dispatcher => _dispatcher;
 

@@ -43,6 +43,10 @@ test('codeMask keeps interpolation holes as code, nested strings inside them as 
   assert.equal(codeText(src).replace(/\s+/g, ''), '(y?:z)q');
 });
 
+test('codeMask skips preprocessor lines', () => {
+  assert.equal(codeText("#region Users' settings\na\n  #error \"b\nc").replace(/\s+/g, ''), 'ac');
+});
+
 test('codeMask: a format clause is not code, a raw string is not code', () => {
   assert.equal(codeText('$"{v:N2}" + """a { b""" + c').replace(/\s+/g, ''), 'v++c');
 });
@@ -144,6 +148,9 @@ test('an unchanged rewrite keeps its file, and a failed import leaves no manifes
     assert.equal(run(good), 0);
     assert.equal(statSync(out).mtime.getTime(), stamp.getTime());
     assert.equal(run([{ find: 'NotThere', replace: 'X', why: 't' }]), 1);
+    assert.equal(existsSync(path.join(dir, 'out', 'manifest.txt')), false);
+    assert.equal(run(good), 0);
+    assert.equal(run([{ drop: 'void Missing\\(', files: ['A.cs'], why: 't' }]), 1);
     assert.equal(existsSync(path.join(dir, 'out', 'manifest.txt')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });

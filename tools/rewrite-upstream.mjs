@@ -74,6 +74,11 @@ export function codeMask(text) {
       const c = text[i], d = text[i + 1];
       if (c === '/' && d === '/') { while (i < n && text[i] !== '\n') i++; continue; }
       if (c === '/' && d === '*') { const e = text.indexOf('*/', i + 2); i = e < 0 ? n : e + 2; continue; }
+      // A preprocessor line (#region Users' settings, #error "…") holds no code and no literals.
+      if (c === '#' && !hole && /^[ \t]*$/.test(text.slice(text.lastIndexOf('\n', i - 1) + 1, i))) {
+        while (i < n && text[i] !== '\n') i++;
+        continue;
+      }
       if (c === "'") { charLit(); continue; }
       if (c === '"' || ((c === '$' || c === '@') && /^[$@]*"/.test(text.slice(i, i + 6)))) { str(); continue; }
       if (hole) {
@@ -212,9 +217,21 @@ function main() {
   const rels = [...props.matchAll(/Include="\$\(UpstreamSrc\)([^"]+)"/g)].map((m) => m[1].replace(/\\/g, '/'));
   const manifest = [];
   const written = new Set();
+  const manifestFile = path.resolve(outDir, 'manifest.txt');
+  // A failed import leaves no manifest, so a build can't go on with the previous run's rewritten files.
+  const fail = (message) => {
+    rmSync(manifestFile, { force: true });
+    console.error(message);
+    process.exit(1);
+  };
   for (const rel of rels) {
     const src = path.join(srcDir, rel);
-    const { text, hits } = applyRules(rel, readFileSync(src, 'utf8'), rules);
+    let text, hits;
+    try {
+      ({ text, hits } = applyRules(rel, readFileSync(src, 'utf8'), rules));
+    } catch (e) {
+      fail('rewrite-upstream: ' + e.message);
+    }
     if (!hits) continue;
     const dst = path.resolve(outDir, rel);
     // #line maps compiler errors back to the upstream file and line, so rewritten and verbatim files report alike.
@@ -223,13 +240,8 @@ function main() {
     manifest.push([path.resolve(src), dst, hits].join('|'));
   }
   const unmatched = rules.filter((r) => r.hits === 0 || (r.drop !== undefined && r.files && r.hits !== r.files.length));
-  if (unmatched.length) {
-    for (const r of unmatched) console.error('rewrite-upstream: rule did not match: ' + (r.drop ?? r.find));
-    // Leave no manifest behind, so a build can't go on with the previous run's rewritten files.
-    rmSync(path.join(outDir, 'manifest.txt'), { force: true });
-    process.exit(1);
-  }
-  const manifestFile = path.resolve(outDir, 'manifest.txt');
+  if (unmatched.length)
+    fail(unmatched.map((r) => 'rewrite-upstream: rule did not match: ' + (r.drop ?? r.find)).join('\n'));
   for (const stale of listFiles(outDir)) if (!written.has(stale) && stale !== manifestFile) rmSync(stale);
   writeIfChanged(manifestFile, manifest.join('\n') + (manifest.length ? '\n' : ''));
   console.log('rewrote ' + manifest.length + ' files');

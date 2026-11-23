@@ -194,6 +194,29 @@ public class HooksTests
     }
 
     [AvaloniaFact]
+    public void A_setter_called_from_render_under_a_synchronous_host_fails_as_a_render_loop()
+    {
+        var reconciler = new Reconciler();
+        Element? last = null;
+        global::Avalonia.Controls.Control? root = null;
+        Element App() => Component(ctx =>
+        {
+            var (value, set) = ctx.UseState(0);
+            set(value + 1);
+            return Text(value.ToString());
+        });
+        void Render()
+        {
+            var element = App();
+            root = reconciler.Reconcile(last, element, root, Render);
+            last = element;
+        }
+
+        var error = Assert.Throws<InvalidOperationException>(Render);
+        Assert.Contains("Render loop detected", error.Message);
+    }
+
+    [AvaloniaFact]
     public void Changing_the_hook_order_throws_HookOrderException()
     {
         var useRefFirst = false;
@@ -306,6 +329,35 @@ public class ThreadingTests
             host.Flush();
 
             Assert.Equal(["7"], host.Texts());
+        }
+        finally
+        {
+            ReactorApp.UIDispatcher = previous;
+        }
+    }
+
+    [AvaloniaFact]
+    public void A_thread_safe_setter_off_the_UI_thread_asks_for_a_render_on_it()
+    {
+        var previous = ReactorApp.UIDispatcher;
+        ReactorApp.UIDispatcher = DispatcherQueue.ForUIThread;
+        try
+        {
+            Action<int>? set = null;
+            var host = new TestHost(() => Component(ctx =>
+            {
+                var (value, setValue) = ctx.UseState(0, threadSafe: true);
+                set = setValue;
+                return Text(value.ToString());
+            }));
+
+            Assert.Null(OtherThread.Run(() => set!(5)));
+            Assert.False(host.RerenderRequested); // the render request was moved to the UI thread
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(host.RerenderRequested);
+            host.Flush();
+
+            Assert.Equal(["5"], host.Texts());
         }
         finally
         {

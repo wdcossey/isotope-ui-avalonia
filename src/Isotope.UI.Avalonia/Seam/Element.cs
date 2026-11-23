@@ -116,7 +116,7 @@ public record EmptyElement : Element
     public static readonly EmptyElement Instance = new();
 }
 
-/// <summary>A transparent grouping element (like React's Fragment); container factories flatten it.</summary>
+/// <summary>A transparent grouping element (like React's Fragment), flattened into its container's children.</summary>
 public record GroupElement(Element[] Children) : Element;
 
 /// <summary>Wraps an element with modifiers. Kept for upstream compatibility: new code sets <see cref="Element.Modifiers"/>.</summary>
@@ -129,7 +129,9 @@ public record ComponentElement(
     Type ComponentType,
     object? Props = null) : Element
 {
-    // A field, so it takes no part in record equality.
+    // Creates the instance without reflection. Note: record equality compares fields too, so two elements
+    // with different factories are unequal; the reconciler matches components by ComponentType (CanUpdate)
+    // and props (ShouldUpdate), never by element equality.
     internal Func<Component>? _factory;
 
     internal Component CreateInstance() =>

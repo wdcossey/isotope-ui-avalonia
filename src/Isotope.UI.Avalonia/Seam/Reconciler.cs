@@ -339,7 +339,7 @@ public sealed partial class Reconciler
                 ButtonElement button => MountButton(button),
                 StackElement stack => MountStack(stack, requestRerender),
                 GroupElement => throw new NotSupportedException(
-                    "A GroupElement is flattened by the container factories; it can't be mounted on its own."),
+                    "A GroupElement is flattened into its container's children; it can't be mounted on its own."),
                 _ => throw new NotSupportedException(
                     $"{element.GetType().Name} has no Avalonia control yet (the element vocabulary is tier 3)."),
             };
@@ -371,7 +371,7 @@ public sealed partial class Reconciler
     private StackPanel MountStack(StackElement element, Action requestRerender)
     {
         var panel = new StackPanel { Orientation = element.Orientation, Spacing = element.Spacing };
-        ChildReconciler.Reconcile([], element.Children, new PanelChildCollection(panel), this, requestRerender, panel);
+        ChildReconciler.Reconcile([], Flatten(element.Children), new PanelChildCollection(panel), this, requestRerender, panel);
         return panel;
     }
 
@@ -427,7 +427,7 @@ public sealed partial class Reconciler
                     var panel = (StackPanel)control;
                     if (panel.Orientation != stack.Orientation) panel.Orientation = stack.Orientation;
                     if (panel.Spacing != stack.Spacing) panel.Spacing = stack.Spacing;
-                    ChildReconciler.Reconcile(((StackElement)oldInner).Children, stack.Children,
+                    ChildReconciler.Reconcile(Flatten(((StackElement)oldInner).Children), Flatten(stack.Children),
                         new PanelChildCollection(panel), this, requestRerender, panel);
                     break;
             }
@@ -480,6 +480,45 @@ public sealed partial class Reconciler
     /// carries the outermost key and every wrapper's provided context values, since the child diff and the
     /// context scope see the wrapper, not what it wraps.
     /// </summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Element[], Element[]> s_flattened = new();
+
+    /// <summary>
+    /// A container's children with <see cref="GroupElement"/>s flattened into them, as upstream's container
+    /// factories do (there are none here yet), with each child's slot registered in <see cref="ChildSlots"/>
+    /// so a group that grows or shrinks doesn't shift its siblings onto other controls. The same input array
+    /// always gives the same output array, so a reused children array still compares equal.
+    /// </summary>
+    internal static Element[] Flatten(Element[] children)
+    {
+        if (!Array.Exists(children, static c => c is GroupElement)) return children;
+        return s_flattened.GetValue(children, static source =>
+        {
+            var flat = new List<Element>();
+            var slots = new List<long>();
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (source[i] is GroupElement group)
+                {
+                    var inner = Flatten(group.Children);
+                    var innerSlots = ChildSlots.Get(inner);
+                    for (int j = 0; j < inner.Length; j++)
+                    {
+                        flat.Add(inner[j]);
+                        slots.Add(innerSlots is null ? ChildSlots.ForGroupChild(i, j) : ChildSlots.Nest(i, innerSlots[j]));
+                    }
+                }
+                else
+                {
+                    flat.Add(source[i]);
+                    slots.Add(ChildSlots.ForIndex(i));
+                }
+            }
+            var result = flat.ToArray();
+            ChildSlots.Set(result, slots.ToArray());
+            return result;
+        });
+    }
+
     private static Element Unwrap(Element element, out ElementModifiers? modifiers)
     {
         if (element is not ModifiedElement)
@@ -493,13 +532,18 @@ public sealed partial class Reconciler
         while (element is ModifiedElement mod)
         {
             wrapped = wrapped is null ? mod.WrappedModifiers : wrapped.Merge(mod.WrappedModifiers);
+            // The wrapper's own modifiers (set through WithModifiers) apply too. Upstream reads only
+            // WrappedModifiers; dropping these silently would surprise.
+            if (mod.Modifiers is not null) wrapped = wrapped.Merge(mod.Modifiers);
             AddProvided(ref provided, mod.ContextValues);
             element = mod.Inner;
         }
         modifiers = element.Modifiers is null ? wrapped : wrapped!.Merge(element.Modifiers);
         if (provided is not null) AddProvided(ref provided, element.ContextValues);
-        if (outerKey != element.Key || provided is not null)
-            element = element with { Key = outerKey, ContextValues = provided ?? element.ContextValues };
+        // The outer key wins; with none, the inner element keeps its own (as upstream's wrapper-key rule does).
+        var key = outerKey ?? element.Key;
+        if (key != element.Key || provided is not null)
+            element = element with { Key = key, ContextValues = provided ?? element.ContextValues };
         return element;
     }
 
@@ -619,13 +663,44 @@ public sealed partial class Reconciler
     internal bool TryFindComponentNode(UIElement control, [NotNullWhen(true)] out ComponentNode? node)
         => _componentNodes.TryGetValue(control, out node);
 
+    [ThreadStatic]
+    private static int t_rerenderDepth;
+
+    private const int MaxRerenderReentrancy = 50;
+
     // A state change marks the node and asks the parent's rerender, so every component above it is on
-    // the next root pass's dirty-ancestor path.
+    // the next root pass's dirty-ancestor path. As upstream's: re-entrancy is bounded (a setter called
+    // synchronously from a render loops otherwise), and a call off the UI thread is moved onto it.
     private static Action CreateComponentRerender(ComponentNode node, Action requestRerender) => () =>
     {
+        if (t_rerenderDepth >= MaxRerenderReentrancy)
+            throw new InvalidOperationException(
+                "Render loop detected: requestRerender re-entered more than " +
+                $"{MaxRerenderReentrancy} times. Likely cause: setState called " +
+                "synchronously inside Render() or effect cleanup.");
+
+        var ui = Microsoft.UI.Reactor.ReactorApp.UIDispatcher;
+        if (ui is not null && !ui.HasThreadAccess)
+        {
+            ui.TryEnqueue(() =>
+            {
+                node.SelfTriggered = true;
+                InvokeRerenderTracked(requestRerender);
+            });
+            return;
+        }
+
+        // On the UI thread, or no UI dispatcher was captured (headless/test host): run inline.
         node.SelfTriggered = true;
-        requestRerender();
+        InvokeRerenderTracked(requestRerender);
     };
+
+    private static void InvokeRerenderTracked(Action requestRerender)
+    {
+        t_rerenderDepth++;
+        try { requestRerender(); }
+        finally { t_rerenderDepth--; }
+    }
 
     private Element Render(RenderContext ctx, Action componentRerender, Func<Element> render)
     {
