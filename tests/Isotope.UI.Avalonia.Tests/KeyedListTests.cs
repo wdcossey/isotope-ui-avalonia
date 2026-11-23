@@ -3,7 +3,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Isotope.UI.Core;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -27,8 +27,8 @@ public class KeyedListTests
         var (count, setCount) = ctx.UseState(0);
         rows.Increment[key] = () => setCount(count + 1);
         ctx.UseEffect(() => () => rows.Log.Add("unmount " + key));
-        return VStack(Text($"{key}={count}"), new TextBoxElement());
-    }, key)).ToArray()));
+        return VStack(TextBlock($"{key}={count}"), new TextBoxElement());
+    }).WithKey(key)).ToArray()));
 
     private static Dictionary<string, (Border Row, TextBox Box)> Controls(TestHost host)
     {

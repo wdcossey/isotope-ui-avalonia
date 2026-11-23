@@ -4,7 +4,7 @@ using Avalonia.Threading;
 using Isotope.UI;
 using Isotope.UI.Core;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -21,7 +21,7 @@ public class ControlTests
         var host = new TestHost(() => Component(ctx =>
         {
             var (text, setText) = ctx.UseState("a");
-            return VStack(Text("state " + text), new TextBoxElement(text, v => { reported.Add(v); setText(v); }));
+            return VStack(TextBlock("state " + text), new TextBoxElement(text, v => { reported.Add(v); setText(v); }));
         }));
         var box = host.All<TextBox>()[0];
         Assert.Equal("a", box.Text);
@@ -125,7 +125,7 @@ public class ControlTests
             setValue = set;
             bump = () => setN(n + 1);
             // Digits only: anything else is rejected by not setting the state.
-            return VStack(Text("render " + n),
+            return VStack(TextBlock("render " + n),
                 new TextBoxElement(value, v => { reported.Add(v); if (v.All(char.IsDigit)) set(v); }));
         }));
         var box = host.All<TextBox>()[0];
@@ -208,10 +208,10 @@ public class ControlTests
     public void A_control_remounted_by_its_handler_keeps_the_wrapper_modifiers()
     {
         // A slot holding the wrong kind of control: the handler mounts a new one in its place.
-        var host = new TestHost(() => Text("x"));
+        var host = new TestHost(() => TextBlock("x"));
         var mods = new ElementModifiers { Width = 99, IsEnabled = false };
         var replacement = host.Reconciler.UpdateChildTracked(
-            new ModifiedElement(Text("a"), mods), new ModifiedElement(Text("b"), mods), new Button(), () => { }, out _);
+            new ModifiedElement(TextBlock("a"), mods), new ModifiedElement(TextBlock("b"), mods), new Button(), () => { }, out _);
 
         var text = Assert.IsType<TextBlock>(replacement);
         Assert.Equal("b", text.Text);
@@ -245,7 +245,7 @@ public class ControlTests
             var (n, setN) = ctx.UseState(0);
             bump = setN;
             // The placeholder changes with each render, so the box is updated rather than skipped.
-            return VStack(Text(n.ToString()), new TextBoxElement(PlaceholderText: "name " + n));
+            return VStack(TextBlock(n.ToString()), new TextBoxElement(PlaceholderText: "name " + n));
         }));
         var box = host.All<TextBox>()[0];
         Assert.Equal("name 0", box.PlaceholderText);
@@ -269,7 +269,7 @@ public class ControlTests
         {
             var (value, setValue) = ctx.UseState(10.0);
             set = setValue;
-            return VStack(Text("state " + value), new SliderElement(value, OnValueChanged: v => { reported.Add(v); setValue(v); }));
+            return VStack(TextBlock("state " + value), new SliderElement(value, OnValueChanged: v => { reported.Add(v); setValue(v); }));
         }));
         var slider = host.All<Slider>()[0];
         Assert.Equal(10, slider.Value);

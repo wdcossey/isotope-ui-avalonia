@@ -2,7 +2,7 @@ using Avalonia;
 using Isotope.UI.Core;
 using Isotope.UI.Elements;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -12,8 +12,8 @@ public class ElementTests
     [Fact]
     public void Equal_leaves_can_skip_and_different_ones_cannot()
     {
-        Assert.True(Element.CanSkipUpdate(Text("a"), Text("a")));
-        Assert.False(Element.CanSkipUpdate(Text("a"), Text("b")));
+        Assert.True(Element.CanSkipUpdate(TextBlock("a"), TextBlock("a")));
+        Assert.False(Element.CanSkipUpdate(TextBlock("a"), TextBlock("b")));
     }
 
     [Fact]
@@ -26,7 +26,7 @@ public class ElementTests
     [Fact]
     public void A_modifier_or_key_change_declines_the_skip()
     {
-        var plain = Text("a");
+        var plain = TextBlock("a");
         Assert.False(Element.CanSkipUpdate(plain, plain with { Modifiers = new ElementModifiers { Margin = new Thickness(4) } }));
         Assert.True(Element.CanSkipUpdate(
             plain with { Modifiers = new ElementModifiers { Margin = new Thickness(4) } },
@@ -37,7 +37,7 @@ public class ElementTests
     [Fact]
     public void A_theme_sensitive_element_always_goes_through_update()
     {
-        var themed = Text("a") with
+        var themed = TextBlock("a") with
         {
             ResourceOverrides = new ResourceOverrides(
                 new Dictionary<string, object>(),
@@ -49,15 +49,15 @@ public class ElementTests
     [Fact]
     public void Containers_compare_children_by_reference()
     {
-        Element[] children = [Text("a")];
+        Element[] children = [TextBlock("a")];
         Assert.True(Element.CanSkipUpdate(VStack(children), VStack(children)));
-        Assert.False(Element.CanSkipUpdate(VStack(children), VStack([Text("a")])));
+        Assert.False(Element.CanSkipUpdate(VStack(children), VStack([TextBlock("a")])));
     }
 
     [Fact]
     public void Components_only_skip_as_the_same_instance()
     {
-        Func<RenderContext, Element> render = _ => Text("a");
+        Func<RenderContext, Element> render = _ => TextBlock("a");
         var func = new FuncElement(render);
         Assert.True(Element.CanSkipUpdate(func, func));
         Assert.False(Element.CanSkipUpdate(func, new FuncElement(render)));
@@ -67,7 +67,7 @@ public class ElementTests
     public void Provide_adds_a_context_value_and_leaves_the_original_alone()
     {
         var ctx = new Context<int>(0);
-        var plain = Text("a");
+        var plain = TextBlock("a");
         var provided = plain.Provide(ctx, 7);
         Assert.Null(plain.ContextValues);
         Assert.Equal(7, provided.ContextValues![ctx]);

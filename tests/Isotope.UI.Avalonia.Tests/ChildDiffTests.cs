@@ -6,7 +6,7 @@ using Avalonia.Media;
 using Microsoft.Extensions.Logging;
 using Isotope.UI.Core;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -18,7 +18,7 @@ public class ChildDiffTests
     [AvaloniaFact]
     public void Mount_builds_the_Avalonia_controls_in_order()
     {
-        var host = new TestHost(() => VStack(Text("a"), Text("b")));
+        var host = new TestHost(() => VStack(TextBlock("a"), TextBlock("b")));
         var panel = Assert.IsType<StackPanel>(host.Root.Child);
         Assert.Equal(Orientation.Vertical, panel.Orientation);
         Assert.Equal(8, panel.Spacing);
@@ -29,7 +29,7 @@ public class ChildDiffTests
     public void Keyed_reorder_moves_the_same_controls()
     {
         string[] items = ["a", "b", "c"];
-        var host = new TestHost(() => VStack(items.Select(i => (Element)Text(i, key: i)).ToArray()));
+        var host = new TestHost(() => VStack(items.Select(i => (Element)TextBlock(i).WithKey(i)).ToArray()));
         var before = host.All<TextBlock>().ToDictionary(t => t.Text!);
 
         items = ["c", "a", "b"];
@@ -48,8 +48,8 @@ public class ChildDiffTests
         Element Row(string name) => Component(ctx =>
         {
             ctx.UseEffect(() => () => log.Add("cleanup " + name), Array.Empty<object>());
-            return Text(name);
-        }, key: name);
+            return TextBlock(name);
+        }).WithKey(name);
         var host = new TestHost(() => VStack(items.Select(Row).ToArray()));
         var before = host.All<TextBlock>().ToDictionary(t => t.Text!);
 
@@ -66,7 +66,7 @@ public class ChildDiffTests
     public void Unkeyed_children_update_in_place()
     {
         var text = "a";
-        var host = new TestHost(() => VStack(Text(text), Text("fixed")));
+        var host = new TestHost(() => VStack(TextBlock(text), TextBlock("fixed")));
         var before = host.All<TextBlock>();
 
         text = "b";
@@ -80,7 +80,7 @@ public class ChildDiffTests
     public void A_conditional_child_does_not_shift_its_siblings_onto_other_controls()
     {
         var show = false;
-        var host = new TestHost(() => VStack(show ? Text("banner") : EmptyElement.Instance, Text("a"), Text("b")));
+        var host = new TestHost(() => VStack(show ? TextBlock("banner") : EmptyElement.Instance, TextBlock("a"), TextBlock("b")));
         var a = host.All<TextBlock>()[0];
         var b = host.All<TextBlock>()[1];
 
@@ -102,7 +102,7 @@ public class ChildDiffTests
             : Component(ctx =>
             {
                 ctx.UseEffect(() => () => log.Add("cleanup"), Array.Empty<object>());
-                return Text("text");
+                return TextBlock("text");
             })));
 
         asButton = true;
@@ -117,7 +117,7 @@ public class ChildDiffTests
     public void Duplicate_sibling_keys_are_reported_with_the_component_that_rendered_them()
     {
         var logger = new ListLogger();
-        _ = new TestHost(() => Component(_ => VStack(Text("1", key: "k"), Text("2", key: "k"))), logger);
+        _ = new TestHost(() => Component(_ => VStack(TextBlock("1").WithKey("k"), TextBlock("2").WithKey("k"))), logger);
 
         var warning = Assert.Single(logger.Entries, e => e.Level == LogLevel.Warning);
         Assert.Contains("duplicate child keys", warning.Message);
@@ -130,8 +130,8 @@ public class ChildDiffTests
     {
         var withModifiers = true;
         var host = new TestHost(() => VStack(withModifiers
-            ? Text("a").WithModifiers(m => m with { Margin = new Thickness(4), Width = 50, Background = Brushes.Red })
-            : Text("a")));
+            ? TextBlock("a").WithModifiers(m => m with { Margin = new Thickness(4), Width = 50, Background = Brushes.Red })
+            : TextBlock("a")));
         var text = host.All<TextBlock>()[0];
         Assert.Equal(new Thickness(4), text.Margin);
         Assert.Equal(50, text.Width);
@@ -149,7 +149,7 @@ public class ChildDiffTests
     [AvaloniaFact]
     public void A_modified_element_merges_its_modifiers_under_the_inner_ones()
     {
-        var inner = Text("a").WithModifiers(m => m with { Width = 10 });
+        var inner = TextBlock("a").WithModifiers(m => m with { Width = 10 });
         var host = new TestHost(() => VStack(new ModifiedElement(inner, new ElementModifiers { Width = 99, Height = 20 })));
         var text = host.All<TextBlock>()[0];
         Assert.Equal(10, text.Width);
@@ -160,7 +160,7 @@ public class ChildDiffTests
     public void Nested_modified_elements_merge_every_level_and_provide_their_values()
     {
         var ctx = new Context<string>("default");
-        var inner = Component(c => Text(c.UseContext(ctx))).WithModifiers(m => m with { Width = 10 });
+        var inner = Component(c => TextBlock(c.UseContext(ctx))).WithModifiers(m => m with { Width = 10 });
         var nested = new ModifiedElement(new ModifiedElement(inner, new ElementModifiers { Width = 99, Height = 20 }),
             new ElementModifiers { Height = 77, Opacity = 0.5 }).Provide(ctx, "provided");
         var host = new TestHost(() => VStack(nested));
@@ -175,7 +175,7 @@ public class ChildDiffTests
     [AvaloniaFact]
     public void A_wrapper_keeps_its_own_modifiers_and_an_inner_key()
     {
-        var wrapped = new ModifiedElement(Text("a", key: "k"), new ElementModifiers { Height = 20 })
+        var wrapped = new ModifiedElement(TextBlock("a").WithKey("k"), new ElementModifiers { Height = 20 })
             .WithModifiers(m => m with { Width = 30 });
         var host = new TestHost(() => VStack(wrapped));
         var text = host.All<TextBlock>()[0];
@@ -190,8 +190,8 @@ public class ChildDiffTests
     {
         var count = 1;
         var host = new TestHost(() => VStack(
-            new GroupElement(Enumerable.Range(0, count).Select(i => (Element)Text("g" + i)).ToArray()),
-            Text("after")));
+            new GroupElement(Enumerable.Range(0, count).Select(i => (Element)TextBlock("g" + i)).ToArray()),
+            TextBlock("after")));
         Assert.Equal(["g0", "after"], host.Texts());
         var after = host.All<TextBlock>()[1];
 
@@ -207,7 +207,7 @@ public class ChildDiffTests
     {
         string[] items = ["a", "b", "c"];
         var mods = new ElementModifiers { Width = 40 };
-        var host = new TestHost(() => VStack(items.Select(i => (Element)new ModifiedElement(Text(i), mods) { Key = i }).ToArray()));
+        var host = new TestHost(() => VStack(items.Select(i => (Element)new ModifiedElement(TextBlock(i), mods) { Key = i }).ToArray()));
         var before = host.All<TextBlock>().ToDictionary(t => t.Text!);
 
         items = ["c", "x", "a"];
@@ -250,10 +250,10 @@ public class ChildDiffTests
         var first = reconciler.Mount(Component(ctx =>
         {
             ctx.UseEffect(() => () => log.Add("cleanup"), Array.Empty<object>());
-            return Text("old");
+            return TextBlock("old");
         }), () => { });
 
-        var next = reconciler.Reconcile(null, Text("new"), first, () => { });
+        var next = reconciler.Reconcile(null, TextBlock("new"), first, () => { });
 
         Assert.Equal(["cleanup"], log);
         Assert.Equal("new", Assert.IsType<TextBlock>(next).Text);
@@ -265,7 +265,7 @@ public class ChildDiffTests
         var host = new TestHost(() => Component(ctx =>
         {
             var (count, setCount) = ctx.UseState(0);
-            return VStack(Text($"count {count}"), Button("inc", () => setCount(count + 1)));
+            return VStack(TextBlock($"count {count}"), Button("inc", () => setCount(count + 1)));
         }));
 
         for (int i = 0; i < 3; i++)

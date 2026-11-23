@@ -4,7 +4,7 @@ using Avalonia.Threading;
 using Isotope.UI;
 using Isotope.UI.Core;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -17,7 +17,7 @@ public class HooksTests
         var host = new TestHost(() => Component(ctx =>
         {
             var (count, setCount) = ctx.UseState(0);
-            return VStack(Text($"Clicked {count} times"), Button("Click", () => setCount(count + 1)));
+            return VStack(TextBlock($"Clicked {count} times"), Button("Click", () => setCount(count + 1)));
         }));
         var text = host.All<TextBlock>()[0];
 
@@ -37,7 +37,7 @@ public class HooksTests
         {
             var (value, setValue) = ctx.UseState(5);
             set = setValue;
-            return Text(value.ToString());
+            return TextBlock(value.ToString());
         }));
 
         set!(5);
@@ -53,7 +53,7 @@ public class HooksTests
         {
             var (total, send) = ctx.UseReducer<int, string>((state, action) => action == "add" ? state + 10 : state - 1, 0);
             dispatch = send;
-            return Text(total.ToString());
+            return TextBlock(total.ToString());
         }));
 
         dispatch!("add");
@@ -78,7 +78,7 @@ public class HooksTests
                     log.Add($"run {d}");
                     return () => log.Add($"cleanup {d}");
                 }, d);
-                return Text("x");
+                return TextBlock("x");
             })
             : EmptyElement.Instance));
         Assert.Equal(["run 1"], log);
@@ -104,7 +104,7 @@ public class HooksTests
         {
             var d = dep;
             var value = ctx.UseMemo(() => { computed++; return d.ToUpperInvariant(); }, d);
-            return Text(value);
+            return TextBlock(value);
         }));
         host.Render();
         Assert.Equal(1, computed);
@@ -125,7 +125,7 @@ public class HooksTests
             var r = ctx.UseRef(0);
             r.Current++;
             seen = r;
-            return Text(r.Current.ToString());
+            return TextBlock(r.Current.ToString());
         }));
         var first = seen;
         host.Render();
@@ -141,7 +141,7 @@ public class HooksTests
     [AvaloniaFact]
     public void UseContext_reads_the_nearest_provider_or_the_default()
     {
-        Element Reader(string key) => Component(ctx => Text(ctx.UseContext(Theme)), key);
+        Element Reader(string key) => Component(ctx => TextBlock(ctx.UseContext(Theme))).WithKey(key);
         var host = new TestHost(() => VStack(
             Reader("outside"),
             VStack(Reader("outer"), VStack(Reader("inner")).Provide(Theme, "inner")).Provide(Theme, "outer")));
@@ -153,7 +153,7 @@ public class HooksTests
     public void A_provider_change_reaches_a_consumer_inside_a_reused_subtree()
     {
         var value = "one";
-        var consumer = VStack(Component(ctx => Text(ctx.UseContext(Theme))));
+        var consumer = VStack(Component(ctx => TextBlock(ctx.UseContext(Theme))));
         var host = new TestHost(() => VStack(consumer).Provide(Theme, value));
         Assert.Equal(["one"], host.Texts());
 
@@ -167,7 +167,7 @@ public class HooksTests
     public void A_removed_provider_sends_a_reused_consumer_back_to_the_default()
     {
         var provide = true;
-        var consumer = VStack(Component(ctx => Text(ctx.UseContext(Theme))));
+        var consumer = VStack(Component(ctx => TextBlock(ctx.UseContext(Theme))));
         var host = new TestHost(() => provide ? VStack(consumer).Provide(Theme, "one") : VStack(consumer));
         Assert.Equal(["one"], host.Texts());
 
@@ -181,9 +181,9 @@ public class HooksTests
     public void A_provider_change_reaches_memo_components_and_what_they_render()
     {
         var value = "one";
-        Element Inner(RenderContext ctx) => Text("inner " + ctx.UseContext(Theme));
+        Element Inner(RenderContext ctx) => TextBlock("inner " + ctx.UseContext(Theme));
         var host = new TestHost(() => VStack(
-            new MemoElement(ctx => Text("memo " + ctx.UseContext(Theme))),
+            new MemoElement(ctx => TextBlock("memo " + ctx.UseContext(Theme))),
             new MemoElement(_ => VStack(new FuncElement(Inner)))).Provide(Theme, value));
         Assert.Equal(["memo one", "inner one"], host.Texts());
 
@@ -203,7 +203,7 @@ public class HooksTests
         {
             var (value, set) = ctx.UseState(0);
             set(value + 1);
-            return Text(value.ToString());
+            return TextBlock(value.ToString());
         });
         void Render()
         {
@@ -224,7 +224,7 @@ public class HooksTests
         {
             if (useRefFirst) ctx.UseRef(0);
             ctx.UseState(0);
-            return Text("x");
+            return TextBlock("x");
         }));
 
         useRefFirst = true;
@@ -237,7 +237,7 @@ public class HooksTests
         Element Counter(RenderContext ctx)
         {
             var (count, setCount) = ctx.UseState(0);
-            return VStack(Text($"count {count}"), Button("inc", () => setCount(count + 1)));
+            return VStack(TextBlock($"count {count}"), Button("inc", () => setCount(count + 1)));
         }
         int parentRenders = 0;
         var host = new TestHost(() => Component(ctx =>
@@ -266,7 +266,7 @@ public class HooksTests
             {
                 var (value, setValue) = ctx.UsePersisted(key, 1, PersistedScope.Application);
                 set = setValue;
-                return Text(value.ToString());
+                return TextBlock(value.ToString());
             })
             : EmptyElement.Instance));
         set!(42);
@@ -297,7 +297,7 @@ public class ThreadingTests
         try
         {
             Action<int>? set = null;
-            _ = new TestHost(() => Component(ctx => { set = ctx.UseState(0).Set; return Text("x"); }));
+            _ = new TestHost(() => Component(ctx => { set = ctx.UseState(0).Set; return TextBlock("x"); }));
 
             var error = OtherThread.Run(() => set!(1));
 
@@ -324,7 +324,7 @@ public class ThreadingTests
             {
                 var (value, setValue) = ctx.UseState(0);
                 set = setValue;
-                return Text(value.ToString());
+                return TextBlock(value.ToString());
             }));
 
             Assert.Null(OtherThread.Run(() => set!(7)));
@@ -353,7 +353,7 @@ public class ThreadingTests
             {
                 var (value, setValue) = ctx.UseState(0, threadSafe: true);
                 set = setValue;
-                return Text(value.ToString());
+                return TextBlock(value.ToString());
             }));
 
             Assert.Null(OtherThread.Run(() => set!(5)));

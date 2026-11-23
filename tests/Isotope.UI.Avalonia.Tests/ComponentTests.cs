@@ -1,7 +1,7 @@
 using Avalonia.Headless.XUnit;
 using Isotope.UI.Core;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -13,7 +13,7 @@ public class ComponentTests
     {
         int renders = 0;
         var dep = 1;
-        var host = new TestHost(() => VStack(new MemoElement(_ => { renders++; return Text($"dep {dep}"); }, [dep])));
+        var host = new TestHost(() => VStack(new MemoElement(_ => { renders++; return TextBlock($"dep {dep}"); }, [dep])));
         host.Render();
         Assert.Equal(1, renders);
 
@@ -32,7 +32,7 @@ public class ComponentTests
         {
             var (value, setValue) = ctx.UseState(0);
             set = setValue;
-            return Text(value.ToString());
+            return TextBlock(value.ToString());
         })));
 
         set!(3);
@@ -51,7 +51,7 @@ public class ComponentTests
         {
             Renders++;
             var (clicks, setClicks) = UseState(0);
-            return VStack(Text($"Hello {Props.Name} ({clicks})"), Button("click", () => setClicks(clicks + 1)));
+            return VStack(TextBlock($"Hello {Props.Name} ({clicks})"), Button("click", () => setClicks(clicks + 1)));
         }
     }
 
@@ -81,7 +81,7 @@ public class ComponentTests
 
     private sealed class Labelled : Component
     {
-        public override Element Render() => Text("label " + UseContext(Label));
+        public override Element Render() => TextBlock("label " + UseContext(Label));
     }
 
     [AvaloniaFact]
@@ -100,7 +100,7 @@ public class ComponentTests
     [AvaloniaFact]
     public void A_component_whose_first_render_throws_leaves_no_node_behind()
     {
-        var host = new TestHost(() => VStack(Text("ok")));
+        var host = new TestHost(() => VStack(TextBlock("ok")));
         Assert.Throws<InvalidOperationException>(() =>
             host.Reconciler.Mount(Component(_ => throw new InvalidOperationException("boom")), () => { }));
 
@@ -114,7 +114,7 @@ public class ComponentTests
         Element Child(RenderContext ctx)
         {
             ctx.UseEffect(() => () => log.Add("child"), Array.Empty<object>());
-            return Text("c");
+            return TextBlock("c");
         }
         var host = new TestHost(() => Component(ctx =>
         {

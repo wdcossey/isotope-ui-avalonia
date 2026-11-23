@@ -6,7 +6,7 @@ using Isotope.UI;
 using Isotope.UI.Core;
 using Isotope.UI.Layout;
 using Xunit;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -31,12 +31,12 @@ public sealed class FlexElementTests : IDisposable
         return host;
     }
 
-    private static Element Box(string name, double width) => Text(name, key: name).WithModifiers(m => m with { Width = width, Height = 40 });
+    private static Element Box(string name, double width) => TextBlock(name).WithKey(name).WithModifiers(m => m with { Width = width, Height = 40 });
 
     [AvaloniaFact]
     public void Mounts_a_FlexPanel_with_the_container_members_and_its_children()
     {
-        var host = new TestHost(() => new FlexElement([Text("a"), Text("b")])
+        var host = new TestHost(() => new FlexElement([TextBlock("a"), TextBlock("b")])
         {
             Direction = FlexDirection.Column, JustifyContent = FlexJustify.Center, AlignItems = FlexAlign.FlexEnd,
             AlignContent = FlexAlign.Center, Wrap = FlexWrap.Wrap, ColumnGap = 4, RowGap = 6, FlexPadding = new Thickness(1, 2, 3, 4),
@@ -60,8 +60,8 @@ public sealed class FlexElementTests : IDisposable
         var grow = true;
         var host = Show(() => new FlexElement([
             Box("a", 100),
-            grow ? Text("b", key: "b").WithModifiers(m => m with { Height = 40 }).Flex(grow: 1)
-                 : Text("b", key: "b").WithModifiers(m => m with { Height = 40 }),
+            grow ? TextBlock("b").WithKey("b").WithModifiers(m => m with { Height = 40 }).Flex(grow: 1)
+                 : TextBlock("b").WithKey("b").WithModifiers(m => m with { Height = 40 }),
             Box("c", 50)]));
         var b = host.All<TextBlock>()[1];
         Assert.Equal(1, FlexPanel.GetGrow(b));
@@ -82,9 +82,9 @@ public sealed class FlexElementTests : IDisposable
     {
         var set = true;
         var host = new TestHost(() => new FlexElement([set
-            ? Text("a").Flex(grow: 2, shrink: 0, basis: 30, minWidth: 5, minHeight: 6, alignSelf: FlexAlign.Center,
+            ? TextBlock("a").Flex(grow: 2, shrink: 0, basis: 30, minWidth: 5, minHeight: 6, alignSelf: FlexAlign.Center,
                 position: FlexPositionType.Absolute, left: 1, top: 2, right: 3, bottom: 4)
-            : Text("a")]));
+            : TextBlock("a")]));
         var a = host.All<TextBlock>()[0];
         Assert.Equal((2.0, 0.0, 30.0, 5.0, 6.0, FlexAlign.Center, FlexPositionType.Absolute),
             (FlexPanel.GetGrow(a), FlexPanel.GetShrink(a), FlexPanel.GetBasis(a), FlexPanel.GetFlexMinWidth(a),
@@ -146,7 +146,7 @@ public sealed class FlexElementTests : IDisposable
     public void An_equal_FlexElement_is_skipped_and_a_changed_one_is_not()
     {
         // A skipped element is never applied, so the panel keeps the element it was last updated with.
-        var children = new Element[] { Text("a") };
+        var children = new Element[] { TextBlock("a") };
         var gap = 3.0;
         var rendered = new List<FlexElement>();
         var host = new TestHost(() =>
@@ -170,9 +170,9 @@ public sealed class FlexElementTests : IDisposable
     [AvaloniaFact]
     public void Flex_rejects_negative_or_non_finite_factors_as_upstream_does()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => Text("a").Flex(grow: -1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Text("a").Flex(shrink: double.NaN));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Text("a").Flex(minWidth: double.PositiveInfinity));
-        Assert.Throws<ArgumentOutOfRangeException>(() => Text("a").Flex(minHeight: -2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TextBlock("a").Flex(grow: -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TextBlock("a").Flex(shrink: double.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TextBlock("a").Flex(minWidth: double.PositiveInfinity));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TextBlock("a").Flex(minHeight: -2));
     }
 }

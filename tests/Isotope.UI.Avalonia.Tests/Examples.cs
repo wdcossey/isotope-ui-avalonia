@@ -4,7 +4,7 @@ using Avalonia.Media;
 using Isotope.UI;
 using Isotope.UI.Core;
 using Isotope.UI.Layout;
-using static Isotope.UI.Avalonia.Tests.Dsl;
+using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -19,7 +19,7 @@ internal static class Examples
     {
         var (count, setCount) = ctx.UseState(0);
         return VStack(
-            Text($"Clicked {count} times"),
+            TextBlock($"Clicked {count} times"),
             Button("Click", () => setCount(count + 1)));
     }
 
@@ -62,7 +62,7 @@ internal static class Examples
         }
 
         return new FlexElement([
-            Text("Todos").WithModifiers(m => m with { Background = accent }),
+            TextBlock("Todos").WithModifiers(m => m with { Background = accent }),
             new FlexElement([
                 new TextBoxElement(draft, setDraft, PlaceholderText: "What needs doing?").Flex(grow: 1),
                 Button("Add", Add),
@@ -71,7 +71,7 @@ internal static class Examples
                 state.Items.Select(t => (Element)new FuncElement(c => TodoRow(c, t, dispatch)) { Key = "todo-" + t.Id }).ToArray())
             { Spacing = 4 }.Flex(grow: 1),
             new FlexElement([
-                Text($"{left} of {state.Items.Length} left").Flex(grow: 1),
+                TextBlock($"{left} of {state.Items.Length} left").Flex(grow: 1),
                 Button("Reverse", () => dispatch(new TodoCommand(TodoAction.Reverse))),
             ]) { ColumnGap = 8, AlignItems = FlexAlign.Center },
         ])
@@ -90,8 +90,8 @@ internal static class Examples
     {
         var (toggles, setToggles) = ctx.UseState(0);
         return new FlexElement([
-            Text((todo.Done ? "[x] " : "[ ] ") + todo.Title).Flex(grow: 1),
-            Text($"toggled {toggles}"),
+            TextBlock((todo.Done ? "[x] " : "[ ] ") + todo.Title).Flex(grow: 1),
+            TextBlock($"toggled {toggles}"),
             Button(todo.Done ? "Undo" : "Done", () =>
             {
                 setToggles(toggles + 1);
