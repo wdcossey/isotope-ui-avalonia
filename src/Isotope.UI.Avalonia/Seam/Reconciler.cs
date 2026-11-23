@@ -417,7 +417,13 @@ public sealed partial class Reconciler
                     if (TryGetV1Handler(newInner.GetType(), out var entry))
                     {
                         var updated = entry.Update(oldInner, newInner, control, requestRerender, this);
-                        if (!ReferenceEquals(updated, control)) return updated;
+                        if (!ReferenceEquals(updated, control))
+                        {
+                            // The adapter mounted the unwrapped element: give the new control the wrapper's modifiers too.
+                            ApplyModifiers(updated, null, newModifiers);
+                            ApplyEnabled(updated, newInner, newModifiers);
+                            return updated;
+                        }
                     }
                     break;
             }

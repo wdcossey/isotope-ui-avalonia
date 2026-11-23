@@ -84,28 +84,24 @@ public partial record TextBoxElement(
 
     internal override bool HasCallbacks => OnChanged is not null;
 
-    // Reports user edits. The echo of the engine's own write (the controlled Value) is recognized by its value and
-    // dropped (ShouldSuppressEcho: the value-diff channel, which also honours a WriteSuppressed token). Avalonia posts
-    // TextChanged, so two writes can be pending when the events arrive, and both events read the box's current text;
-    // a text equal to the controlled value is then not a user change either (and reporting it would change nothing).
+    // Reports user edits, as upstream's does: the echo of each write of the engine's own (the controlled Value) carries
+    // a suppression token, which the trampoline consumes. Avalonia posts TextChanged, so the event arrives after the
+    // write, and every write of a new text posts one.
     private static readonly EventHandler<TextChangedEventArgs> __TextChangedTrampoline = (s, _) =>
     {
         var tb = (TextBox)s!;
         if (!Reconciler.TryGetReactorState(tb, out var state)) return;
-        var text = tb.Text ?? string.Empty;
-        if (ChangeEchoSuppressor.ShouldSuppressEcho(state, text)) return;
-        if (state.Element is not TextBoxElement live) return;
-        if (live.Value.HasValue && live.Value.Value == text) return;
-        live.OnChanged?.Invoke(text);
+        if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
+        (state.Element as TextBoxElement)?.OnChanged?.Invoke(tb.Text ?? string.Empty);
     };
 
     // As upstream's: AcceptsReturn and TextWrapping are written before the text (a single-line box strips line
-    // breaks from the text it's given), and Value is a controlled value whose write doesn't echo. Unlike upstream's,
-    // the nullable members go through the ClearValue channel (ClearValueOnUnset, OneWay with a property), so setting
-    // one back to null gives the control its default again instead of leaving the old value. Unlike upstream's
-    // TextBox, the write is armed by value, on mount too (valueDiffEcho, armOnMount: upstream's RichEditBox
-    // channel): Avalonia raises TextChanged after the write returns, even for the first write of a control not yet
-    // in a window, so that echo reaches the trampoline wired after the mount writes.
+    // breaks from the text it's given), and Value is a controlled value whose update writes carry a suppression token
+    // (HandCodedControlled). Unlike upstream's:
+    // - the mount write carries a token too (the entry just before HandCodedControlled), because Avalonia raises
+    //   TextChanged for it even before the box is in a window, after the trampoline is wired;
+    // - the nullable members go through the ClearValue channel (ClearValueOnUnset, OneWay with a property), so setting
+    //   one back to null gives the control its default again instead of leaving the old value.
     private static partial ControlDescriptor<TextBoxElement, TextBox> Customize(ControlDescriptor<TextBoxElement, TextBox> d)
         => d.OneWay<bool>(
                 get:  static e => e.AcceptsReturn.HasValue ? e.AcceptsReturn.Value : Optional<bool>.Unset,
@@ -115,6 +111,13 @@ public partial record TextBoxElement(
                 get:  static e => e.TextWrapping.HasValue ? e.TextWrapping.Value : Optional<TextWrapping>.Unset,
                 set:  static (c, v) => c.TextWrapping = v,
                 dp:   TextBox.TextWrappingProperty)
+            .ImperativeBridged(
+                mount:       static (ctx, c, e) =>
+                {
+                    if (e.Value.HasValue && (c.Text ?? string.Empty) != e.Value.Value)
+                        ReactorBinding.WriteSuppressed(c, () => c.Text = e.Value.Value);
+                },
+                update:      static (ctx, c, o, n) => { })
             .HandCodedControlled<TextBoxEventPayload, string, EventHandler<TextChangedEventArgs>>(
                 get:         static e => e.Value,
                 set:         static (c, v) => c.Text = v,
@@ -123,9 +126,7 @@ public partial record TextBoxElement(
                 callback:    static e => e.OnChanged,
                 trampoline:  __TextChangedTrampoline,
                 slotIsNull:  static p => p.TextChangedTrampoline is null,
-                setSlot:     static (p, h) => p.TextChangedTrampoline = h,
-                valueDiffEcho: true,
-                armOnMount:  true);
+                setSlot:     static (p, h) => p.TextChangedTrampoline = h);
 }
 
 /// <summary>

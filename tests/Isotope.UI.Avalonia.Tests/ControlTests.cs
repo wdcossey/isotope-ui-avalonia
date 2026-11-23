@@ -94,6 +94,23 @@ public class ControlTests
     }
 
     [AvaloniaFact]
+    public void TextBox_edit_back_to_the_controlled_value_is_reported()
+    {
+        // The value comes from somewhere that doesn't follow each keystroke, so it stays "a".
+        var reported = new List<string>();
+        var host = new TestHost(() => new TextBoxElement("a", reported.Add));
+        var box = host.All<TextBox>()[0];
+        Dispatcher.UIThread.RunJobs();
+
+        box.Text = "ab";
+        Dispatcher.UIThread.RunJobs();
+        box.Text = "a";
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(["ab", "a"], reported);
+    }
+
+    [AvaloniaFact]
     public void TextBox_nullable_members_set_back_to_null_return_to_the_defaults()
     {
         var set = true;
@@ -116,6 +133,21 @@ public class ControlTests
         Assert.Equal(defaults.IsReadOnly, box.IsReadOnly);
         Assert.Equal(defaults.AcceptsReturn, box.AcceptsReturn);
         Assert.Equal(defaults.TextWrapping, box.TextWrapping);
+    }
+
+    [AvaloniaFact]
+    public void A_control_remounted_by_its_handler_keeps_the_wrapper_modifiers()
+    {
+        // A slot holding the wrong kind of control: the handler mounts a new one in its place.
+        var host = new TestHost(() => Text("x"));
+        var mods = new ElementModifiers { Width = 99, IsEnabled = false };
+        var replacement = host.Reconciler.UpdateChildTracked(
+            new ModifiedElement(Text("a"), mods), new ModifiedElement(Text("b"), mods), new Button(), () => { }, out _);
+
+        var text = Assert.IsType<TextBlock>(replacement);
+        Assert.Equal("b", text.Text);
+        Assert.Equal(99, text.Width);
+        Assert.False(text.IsEnabled);
     }
 
     private sealed record Heading(string Title) : TextBlockElement(Title);

@@ -91,7 +91,7 @@ Measured by `tools/measure-transforms.mjs` over the vendored files: line counts 
 **Totals:**
 - The library now compiles 82 vendored files (21,339 lines); it compiled 65 before.
 - 81 of them are transformed: 191 lines rewritten and 1,665 blanked.
-- 95 of the 117 rules in `transforms.json` hit them.
+- 95 of the 116 rules in `transforms.json` hit them.
 
 ## Half 2: the generator and the swap
 
