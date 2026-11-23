@@ -13,7 +13,8 @@ import { parseLock } from './sync/lib/lock.mjs';
 import { loadTransforms } from './sync/lib/transforms.mjs';
 
 const repo = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [propsFile, ...only] = process.argv.slice(2);
+const [propsFile, ...args] = process.argv.slice(2);
+const only = args.map((f) => f.replace(/\\/g, '/'));
 if (!propsFile) { console.error('usage: node tools/measure-transforms.mjs <files.props> [file ...]'); process.exit(2); }
 const props = readFileSync(propsFile, 'utf8');
 const rels = [...props.matchAll(/Include="\$\(UpstreamSrc\)([^"]+)"/g)].map((m) => m[1].replace(/\\/g, '/'));

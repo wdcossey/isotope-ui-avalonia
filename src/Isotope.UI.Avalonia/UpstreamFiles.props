@@ -3,7 +3,7 @@
        tools/sync/tiers.json), already transformed by tools/sync/transforms.json at the commit in UPSTREAM.lock.
        Nothing is rewritten at build time and upstream/ isn't needed; tools/sync's check mode keeps them honest. -->
   <PropertyGroup>
-    <UpstreamSrc Condition="'$(UpstreamSrc)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor\'))</UpstreamSrc>
+    <UpstreamSrc>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\Upstream\src\Reactor\'))</UpstreamSrc>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(UpstreamSrc)Core\RenderContext.cs" Link="Upstream\Core\RenderContext.cs" />
