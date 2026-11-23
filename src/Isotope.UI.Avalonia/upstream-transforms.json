@@ -1,0 +1,513 @@
+[
+  {
+    "find": "^using (?:WinUI = )?Microsoft\\.UI\\.(?:Xaml|Composition)(?:\\.[A-Za-z]+)*;\\r?$",
+    "flags": "m",
+    "replace": "",
+    "why": "WinUI and Composition namespace imports: the names they brought in come from global aliases onto Avalonia types (Seam/GlobalUsings.cs) or from the rules below."
+  },
+  {
+    "find": "\\bWinUI\\.(Panel)\\b",
+    "replace": "$1",
+    "why": "WinUI types named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias: use the bare name, which the global aliases map to Avalonia."
+  },
+  {
+    "find": "global::Windows\\.Foundation\\.TypedEventHandler<Microsoft\\.UI\\.Xaml\\.FrameworkElement, Microsoft\\.UI\\.Xaml\\.EffectiveViewportChangedEventArgs>",
+    "replace": "EventHandler<Avalonia.Layout.EffectiveViewportChangedEventArgs>",
+    "files": [
+      "Core/Internal/ReactorListState.cs"
+    ],
+    "why": "WinUI's EffectiveViewportChanged handler shape, as Avalonia's Layoutable.EffectiveViewportChanged declares it."
+  },
+  {
+    "find": "Microsoft\\.UI\\.Xaml\\.RoutedEventHandler\\b",
+    "replace": "EventHandler<Avalonia.Interactivity.RoutedEventArgs>",
+    "files": [
+      "Core/Internal/ReactorListState.cs"
+    ],
+    "why": "WinUI's Loaded handler shape, as Avalonia's Control.Loaded declares it."
+  },
+  {
+    "find": "(?:global::)?Microsoft\\.UI\\.Xaml\\.(UIElement|FrameworkElement)\\b",
+    "replace": "$1",
+    "why": "Fully qualified WinUI identity types: drop the namespace so the global aliases map them to Avalonia's Control."
+  },
+  {
+    "find": "\\bMicrosoft\\.UI\\.Dispatching\\.DispatcherQueue\\b",
+    "replace": "DispatcherQueue",
+    "why": "WinUI's DispatcherQueue, fully qualified: the bare name resolves to the internal Avalonia-dispatcher wrapper in Seam/Threading.cs."
+  },
+  {
+    "find": "\\bglobal::Windows\\.System\\.(MemoryManager|AppMemoryUsageLevel)\\b",
+    "replace": "$1",
+    "why": "Windows' app memory-pressure API, fully qualified: the bare names resolve to internal placeholders in Seam/Tier3Placeholders.cs (no memory-pressure signal on Avalonia yet)."
+  },
+  {
+    "drop": "public void UseSystemBackButton<TRoute>\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "System back button (window key events): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public ColorScheme UseColorScheme\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseIsDarkTheme\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseHighContrast\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public string\\? UseHighContrastScheme\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private HighContrastState UseHighContrastState\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private sealed class HighContrastState\\b",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook state (WinUI AccessibilitySettings/UISettings): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseReducedMotion\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private ReducedMotionState UseReducedMotionState\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private sealed class ReducedMotionState\\b",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Accessibility-settings hook state (WinUI UISettings): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Localization\\.IntlAccessor UseIntl\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Localization hook (.resw resources): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private static readonly Lazy<Localization\\.IntlAccessor> _defaultAccessor\\b",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Localization hook (.resw resources): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public \\(double Width, double Height\\) UseWindowSize\\(Microsoft\\.UI\\.Xaml\\.Window window\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public \\(double Width, double Height\\) UseWindowSize\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseWindow\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public \\(double X, double Y\\) UseWindowPosition\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseIsCovered\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public IReadOnlyList<Microsoft\\.UI\\.Reactor\\.DisplayInfo> UseDisplays\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Displays hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public void UseWindowAspectRatio\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Action UseWindowDragMove\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "internal static IPickerService PickerService\\b",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickFileAsync\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult>> PickMultipleFilesAsync\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult\\?> PickFolderAsync\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult>> PickMultipleFoldersAsync\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickSaveFileAsync\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private Microsoft\\.UI\\.WindowId GetPickerOwner\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Microsoft\\.UI\\.Reactor\\.WindowState UseWindowState\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseIsActive\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public void UseClosingGuard\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public uint UseDpi\\(\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "DPI hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseOpenWindow\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public Microsoft\\.UI\\.Reactor\\.ReactorTrayIcon\\? UseTrayIcon\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Tray hook: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseBreakpoint\\(Microsoft\\.UI\\.Xaml\\.Window window, double minWidth\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "public bool UseBreakpoint\\(double minWidth\\)",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "internal void MigrateHooksForHotReload\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Hot reload: tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "private static bool FullNameMatches\\(",
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "Hot reload (used only by MigrateHooksForHotReload): tier 3 (rewritten for Avalonia later), not part of the hooks core."
+  },
+  {
+    "drop": "protected \\(double Width, double Height\\) UseWindowSize\\(Microsoft\\.UI\\.Xaml\\.Window window\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected \\(double Width, double Height\\) UseWindowSize\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseBreakpoint\\(Microsoft\\.UI\\.Xaml\\.Window window, double minWidth\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseBreakpoint\\(double minWidth\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Breakpoint hook (window size): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected uint UseDpi\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "DPI hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseWindow\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Microsoft\\.UI\\.Reactor\\.WindowState UseWindowState\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseIsActive\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected void UseClosingGuard\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickFileAsync\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult>> PickMultipleFilesAsync\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult\\?> PickFolderAsync\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Task<IReadOnlyList<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFolderResult>> PickMultipleFoldersAsync\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Task<Microsoft\\.Windows\\.Storage\\.Pickers\\.PickFileResult\\?> PickSaveFileAsync\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Pickers: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected \\(double X, double Y\\) UseWindowPosition\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected IReadOnlyList<Microsoft\\.UI\\.Reactor\\.DisplayInfo> UseDisplays\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Displays hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseIsCovered\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected void UseWindowAspectRatio\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Action UseWindowDragMove\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Microsoft\\.UI\\.Reactor\\.ReactorWindow\\? UseOpenWindow\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Window hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Microsoft\\.UI\\.Reactor\\.ReactorTrayIcon\\? UseTrayIcon\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Tray hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected ColorScheme UseColorScheme\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseIsDarkTheme\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Theme hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseReducedMotion\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Localization\\.IntlAccessor UseIntl\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Localization hook (.resw resources): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected void UseSystemBackButton<TRoute>\\(",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "System back button (window key events): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected Hooks\\.AnnounceHandle UseAnnounce\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Screen-reader announcements (Hooks/UseAnnounce.cs, a generated WinUI wrapper): tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected bool UseHighContrast\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "protected string\\? UseHighContrastScheme\\(\\)",
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Accessibility-settings hook: tier 3 (rewritten for Avalonia later), not part of the hooks core. Component's forwarder to the RenderContext hook dropped above."
+  },
+  {
+    "drop": "public string\\? DeclaredName\\b",
+    "files": [
+      "Core/SourceLocation.cs"
+    ],
+    "why": "Source-map name lookup (Diagnostics/ReactorSourceMap.cs, devtools source mapping, which names WinUI flyouts): tier 3, not linked."
+  }
+]

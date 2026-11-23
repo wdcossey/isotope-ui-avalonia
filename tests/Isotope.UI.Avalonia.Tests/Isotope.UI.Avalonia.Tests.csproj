@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for the engine seam: our Avalonia Element/Reconciler driving upstream's ChildReconciler,
+       KeyedListDiff and RenderContext, headless. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>15</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- xunit.v3 3.2.x: the version Avalonia.Headless.XUnit 12.1.6 is built against (as in Spike D). -->
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
+  </ItemGroup>
+</Project>

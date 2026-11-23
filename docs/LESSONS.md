@@ -37,6 +37,11 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   set `user.name`/`user.email` locally; reproduce with `GIT_CONFIG_GLOBAL=<empty file>` and `GIT_CONFIG_NOSYSTEM=1`.
   (2026-11-23)
 
+- **`Dispatcher.UIThread` can change between Avalonia headless tests.** A cached UI-thread queue kept posting to an
+  old dispatcher. Don't cache it; compare before reusing. (2026-11-23)
+- **`Task.Run(...).GetAwaiter().GetResult()` can run the task inline on the waiting thread,** so a test of
+  off-thread code silently ran on the UI thread. Use a dedicated `Thread`. (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

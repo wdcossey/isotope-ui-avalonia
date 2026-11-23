@@ -60,6 +60,8 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `docs/PROCESS.md` | How work runs: issues, branches, self-review, merging |
 | `docs/spikes/` | Spike reports: A (engine compile), B (upstream churn), C (Uno and upstream), D (FlexPanel on Avalonia) |
 | `docs/LESSONS.md`, `docs/agent-brief.md` | Traps already hit; the brief for parallel agents |
+| `src/Isotope.UI.Avalonia/` | The library: our Avalonia seam (`Element`, `ElementModifiers`, `Reconciler`, …) plus upstream's engine files, linked through `UpstreamFiles.props` and rewritten by `upstream-transforms.json` |
+| `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the seam and the hooks core |
 | `spikes/A-engine/` | Measures how much of upstream's engine compiles without WinUI |
 | `spikes/D-flex/` | `FlexPanel` on Avalonia 12 over upstream's unmodified Yoga, with upstream's Yoga tests |
 | `tools/` | Build-error grouping, the import rewrite, and `tools/sync` (vendor and regenerate: `node tools/sync/sync.mjs --help`) |
@@ -85,6 +87,8 @@ git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.l
 
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (567 recorded)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam and hooks core (48 tests)
+node --test tools/rewrite-upstream.test.mjs                 # the build-time rewrite tool
 node tools/sync/test/all.mjs                                # the sync harness's own tests
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms
 dotnet test tools/sync/verify/Upstream.Yoga.Tests           # upstream's Yoga tests on the vendored code

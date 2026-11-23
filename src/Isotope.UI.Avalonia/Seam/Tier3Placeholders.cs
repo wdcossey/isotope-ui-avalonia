@@ -1,0 +1,118 @@
+using Avalonia.Rendering.Composition;
+using Avalonia.Rendering.Composition.Animations;
+using Microsoft.UI.Reactor.Core;
+
+// Types the linked upstream files name whose behaviour is tier 3 (windows, hosting, animation, theming,
+// platform signals). Each carries only what the linked files need to compile, and says what it does
+// instead; the Avalonia versions come later.
+namespace Microsoft.UI.Reactor
+{
+    /// <summary>
+    /// Tier 3 placeholder for upstream's top-level window wrapper. Nothing creates one yet, so every
+    /// <c>OwningReactorWindow</c> is <c>null</c> and window-scoped persisted state falls back to the
+    /// application scope, as upstream does for content without an owning window.
+    /// </summary>
+    public sealed class ReactorWindow
+    {
+        private ReactorWindow() { }
+
+        internal WindowPersistedScope PersistedScope
+            => throw new NotSupportedException("ReactorWindow is tier 3: not on Avalonia yet.");
+    }
+
+    /// <summary>Tier 3 placeholder for a top-level window's identity.</summary>
+    public readonly record struct WindowId(ulong Value);
+
+    /// <summary>The application-wide engine state the linked files read. Hosting is tier 3.</summary>
+    public static class ReactorApp
+    {
+        /// <summary>
+        /// The UI thread's queue, captured by the host at startup; <c>null</c> until then (headless and unit-test
+        /// contexts), when an off-thread state setter throws rather than racing the render.
+        /// </summary>
+        internal static DispatcherQueue? UIDispatcher { get; set; }
+    }
+
+    /// <summary>Tier 3 placeholder for the OS memory-pressure signal: never raised on Avalonia yet.</summary>
+    internal static class MemoryManager
+    {
+        internal static event EventHandler<object>? AppMemoryUsageIncreased { add { } remove { } }
+
+        internal static AppMemoryUsageLevel AppMemoryUsageLevel => AppMemoryUsageLevel.Low;
+    }
+
+    internal enum AppMemoryUsageLevel { Low, Medium, High, OverLimit }
+}
+
+namespace Microsoft.UI.Reactor.Input
+{
+    /// <summary>
+    /// A ref to a mounted control. Tier 3 placeholder: the Avalonia reconciler doesn't attach refs yet,
+    /// so <see cref="Current"/> stays null.
+    /// </summary>
+    public sealed class ElementRef
+    {
+        internal Avalonia.Controls.Control? _current;
+
+        /// <summary>The expected control type, when this is the inner of a typed ref.</summary>
+        internal Type? ExpectedType { get; set; }
+
+        /// <summary>The mounted control, or null.</summary>
+        public Avalonia.Controls.Control? Current => _current;
+
+        internal void SetCurrent(Avalonia.Controls.Control? value) => _current = value;
+    }
+}
+
+namespace Microsoft.UI.Reactor.Core
+{
+    /// <summary>A reference to a theme resource by key. Theming is tier 3.</summary>
+    public readonly record struct ThemeRef(string ResourceKey);
+}
+
+namespace Microsoft.UI.Reactor.Elements
+{
+    /// <summary>Per-control resource overrides. Tier 3: recorded on elements, not applied on Avalonia yet.</summary>
+    public sealed record ResourceOverrides(
+        IReadOnlyDictionary<string, object> Literals,
+        IReadOnlyDictionary<string, ThemeRef> ThemeRefs);
+}
+
+namespace Microsoft.UI.Reactor.Animation
+{
+    /// <summary>Tier 3 placeholder for an element's enter/exit transition. Nothing can create one yet.</summary>
+    public sealed record ElementTransition
+    {
+        private ElementTransition() { }
+    }
+
+    /// <summary>Tier 3 placeholder for an animation curve. Nothing can create one yet.</summary>
+    public sealed class Curve
+    {
+        private Curve() { }
+    }
+
+    /// <summary>Tier 3: composition animations are not wired on Avalonia yet.</summary>
+    internal static class AnimationHelper
+    {
+        internal static CompositionVisual GetElementVisual(UIElement element)
+            => throw new NotSupportedException("Composition animations are tier 3: not on Avalonia yet.");
+
+        internal static CompositionAnimation CreateVector3ImplicitAnimation(Compositor compositor, string target, Curve curve)
+            => throw new NotSupportedException("Composition animations are tier 3: not on Avalonia yet.");
+    }
+}
+
+namespace Microsoft.UI.Reactor.Core.Internal
+{
+    /// <summary>
+    /// Maps an ambient animation kind to a curve. Animations are tier 3, so every kind maps to no curve,
+    /// which the engine treats as "no transition this render".
+    /// </summary>
+    internal static class AnimationKindMap
+    {
+        public static Microsoft.UI.Reactor.Animation.Curve? ToCurve(AnimationKind kind) => null;
+
+        public static bool IsActive(AnimationKind kind) => false;
+    }
+}
