@@ -1,7 +1,8 @@
 # How work runs
 
-Adapted from `~/.claude/ways-of-working/PROCESS.md` for a **local-only git repo** (user's choice, 2026-11-22):
-no GitHub remote, so no issues, PRs, CI or branch protection. The loop is otherwise the same.
+Adapted from `~/.claude/ways-of-working/PROCESS.md` for a **local-first repo** (user's choice, 2026-11-22). A private
+GitHub remote exists since 2026-11-23 (`origin`); until issues, PRs, CI and branch protection are adopted, branches
+are merged locally and `main` is pushed after each merge. The loop is otherwise the same.
 
 ```
  TASK → BRANCH/WORKTREE → BUILD → SELF-REVIEW ×2 → PROVE THE TESTS → CLEAN RUN → MERGE TO main → TIDY
@@ -19,7 +20,7 @@ Never without the developer's go-ahead in the conversation:
 - **Anything that takes over the machine:** launching an Avalonia app in a real window, UI automation, screen
   capture of real windows (use the `device-lease` skill). Screenshots come from Avalonia.Headless rendering instead.
 - **Tools that need a human:** debugger MCPs (x64dbg/x32dbg), Rider/WebStorm MCPs driving the IDE.
-- **Anything that leaves this folder:** adding a git remote, pushing, publishing packages, contacting upstream
+- **Anything that leaves this folder beyond pushing `main` and branches to `origin`:** other remotes, publishing packages, contacting upstream
   maintainers, opening issues or PRs anywhere.
 - **Commands that change the system:** installing SDKs or workloads (the .NET 11 SDK is the developer's to install),
   global tools, registry, stopping processes Claude didn't start.
