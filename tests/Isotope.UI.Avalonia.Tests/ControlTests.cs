@@ -72,10 +72,11 @@ public class ControlTests
         {
             var (n, setN) = ctx.UseState(0);
             bump = setN;
-            return VStack(Text(n.ToString()), new TextBoxElement(PlaceholderText: "name"));
+            // The placeholder changes with each render, so the box is updated rather than skipped.
+            return VStack(Text(n.ToString()), new TextBoxElement(PlaceholderText: "name " + n));
         }));
         var box = host.All<TextBox>()[0];
-        Assert.Equal("name", box.PlaceholderText);
+        Assert.Equal("name 0", box.PlaceholderText);
 
         box.Text = "typed";
         Dispatcher.UIThread.RunJobs();
@@ -83,6 +84,7 @@ public class ControlTests
         host.Flush();
 
         Assert.Equal(["1"], host.Texts());
+        Assert.Equal("name 1", box.PlaceholderText);
         Assert.Equal("typed", box.Text);
     }
 
