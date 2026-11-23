@@ -48,7 +48,7 @@ test('codeMask skips preprocessor lines', () => {
 });
 
 test('codeMask: a format clause is not code, a raw string is not code', () => {
-  assert.equal(codeText('$"{v:N2}" + """a { b""" + c').replace(/\s+/g, ''), 'v++c');
+  assert.equal(codeText('$"{v:N2}" + """a " b { c""" + d').replace(/\s+/g, ''), 'v++d');
 });
 
 test('drop removes the member with its doc comment and attributes, keeping line count', () => {
