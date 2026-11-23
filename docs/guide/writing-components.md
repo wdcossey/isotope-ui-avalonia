@@ -258,6 +258,13 @@ public static Element Greeters(RenderContext ctx) => VStack(
     Component(Greeter).Provide(Greeting, "Bonjour"));
 ```
 
+### Platform hooks
+
+The theme, the window and the displays, with Reactor's names: `UseColorScheme`, `UseIsDarkTheme`, `UseHighContrast`,
+`UseWindow`, `UseWindowSize`, `UseBreakpoint`, `UseWindowState`, `UseIsActive`, `UseWindowPosition`, `UseDpi`,
+`UseDisplays` and `UseClosingGuard`. Each reads its value during the render and re-renders the component when it
+changes. See [Platform hooks](platform-hooks.md) for what each returns, examples, and what differs from Reactor.
+
 ## Running an app
 
 An app is a root component in a window. `ReactorApp.Run` takes the app's Avalonia `AppBuilder` (its `Application`,
