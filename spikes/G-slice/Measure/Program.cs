@@ -1,8 +1,8 @@
 // Run from the repo root: dotnet run -c Release --project spikes/G-slice/Measure [-- <rows> <runs>]
 // Spike G (#2): timings of the vertical slice on Avalonia 12, headless (no window, no rendering): a keyed list of
 // stateful rows through upstream's ChildReconciler and KeyedListDiff, and one row's state change. Each case runs
-// --runs times (default 7) on a fresh tree after a warm-up; the median is printed, with how many row controls
-// survived the change (identity kept).
+// <runs> times (default 7) on a fresh tree after a warm-up; the median is printed, with the fewest row controls any run
+// kept through the change (identity kept).
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
@@ -12,6 +12,11 @@ using Isotope.UI.Core;
 
 var rows = args.Length > 0 ? int.Parse(args[0]) : 1000;
 var runs = args.Length > 1 ? int.Parse(args[1]) : 7;
+if (rows < 2 || runs < 1)
+{
+    Console.Error.WriteLine("usage: [<rows> (at least 2)] [<runs> (at least 1)]");
+    return 1;
+}
 
 var session = HeadlessUnitTestSession.StartNew(typeof(MeasureApp));
 await session.Dispatch(() =>
@@ -23,17 +28,18 @@ await session.Dispatch(() =>
     Case("move last to first", rows, _ => { }, keys => [keys[^1], .. keys[..^1]]);
     Case("insert 1 in the middle", rows, _ => { }, keys => [.. keys[..(keys.Length / 2)], "new", .. keys[(keys.Length / 2)..]]);
     Case("remove every other", rows, _ => { }, keys => keys.Where((_, i) => i % 2 == 0).ToArray());
-    Case("shuffle (seeded)", rows, _ => { }, keys => keys.OrderBy(k => (k.GetHashCode() * 31) ^ 0x5bd1e995).ToArray());
+    Case("shuffle (seeded)", rows, _ => { }, keys => { var rng = new Random(42); return keys.OrderBy(_ => rng.Next()).ToArray(); });
     StateCase(rows);
     return 0;
 }, CancellationToken.None);
 // The headless session's dispatcher thread keeps the process alive (disposing the session waits on it), so exit.
 Environment.Exit(0);
+return 0;
 
 void Case(string name, int n, Action<Host> before, Func<string[], string[]> change)
 {
     var times = new List<double>();
-    int reused = 0;
+    int reused = int.MaxValue; // the fewest rows kept in any run
     for (int run = -1; run < runs; run++)
     {
         var keys = Enumerable.Range(0, n).Select(i => "k" + i).ToArray();
@@ -52,7 +58,7 @@ void Case(string name, int n, Action<Host> before, Func<string[], string[]> chan
         host.Render();
         sw.Stop();
         var rowsAfter = host.RowControls();
-        reused = rowsAfter.Count(kv => rowsBefore.TryGetValue(kv.Key, out var c) && ReferenceEquals(c, kv.Value));
+        reused = Math.Min(reused, rowsAfter.Count(kv => rowsBefore.TryGetValue(kv.Key, out var c) && ReferenceEquals(c, kv.Value)));
         if (run >= 0) times.Add(sw.Elapsed.TotalMilliseconds);
     }
     Console.WriteLine($"{name,-26} {Median(times),8:F2} ms   reused {(name == "mount" ? "-" : reused.ToString())}");

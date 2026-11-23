@@ -77,19 +77,20 @@ The PNGs are the tests' captures, copied from the test output folder.
 
 **Keyed list timings.** `dotnet run -c Release --project spikes/G-slice/Measure` mounts 1,000 keyed rows headless (no
 window, no rendering). Each row is a memoized function component with `UseState`, a TextBlock and a Button. Each case
-runs 7 times after a warm-up, on a fresh tree, on the development machine. "Kept" counts the rows whose control is the
-same object after the change.
+runs 7 times after a warm-up, on a fresh tree, and the program prints the median. The table gives the lowest and highest
+median over 3 invocations on the development machine; they vary that much from run to run. "Kept" is the fewest rows,
+in any run, whose control is the same object after the change.
 
-| Case | Median | Rows kept |
+| Case | Median, 3 invocations | Rows kept |
 |---|---|---|
-| mount | 37.98 ms | |
-| re-render, same keys | 1.52 ms | 1000 of 1000 |
-| reverse | 42.13 ms | 1000 of 1000 |
-| move last to first | 0.51 ms | 1000 of 1000 |
-| insert 1 in the middle | 0.47 ms | 1000 of 1000 |
-| remove every other | 16.23 ms | 500 of 500 |
-| shuffle (seeded) | 23.40 ms | 1000 of 1000 |
-| one row's state change (a root pass) | 0.44 ms | |
+| mount | 37.5 to 40.2 ms | |
+| re-render, same keys | 1.2 to 1.6 ms | 1000 of 1000 |
+| reverse | 47.6 to 78.0 ms | 1000 of 1000 |
+| move last to first | 0.8 to 1.0 ms | 1000 of 1000 |
+| insert 1 in the middle | 0.8 to 1.1 ms | 1000 of 1000 |
+| remove every other | 15.3 to 19.2 ms | 500 of 500 |
+| shuffle (seeded) | 19.6 to 23.7 ms | 1000 of 1000 |
+| one row's state change (a root pass) | 0.34 to 0.45 ms | |
 
 **Code.**
 
@@ -123,8 +124,11 @@ same object after the change.
    semantics, not React's (React runs child effects first). Pinned, not changed.
 5. **A keyed move detaches the control.** Upstream's `PanelChildCollection.Move` is `RemoveAt` then `Insert`. On Avalonia
    that takes the control (and its subtree) out of the logical tree and puts it back, and in a window out of the visual
-   tree too. Reversing 1,000 rows costs 42 ms against 0.5 ms for a single move. Avalonia's `Controls` collection has a
-   `Move`; whether it avoids the detach, and what it saves, isn't measured [J: worth a measurement before #14].
+   tree too. Reversing 1,000 rows costs 48 to 78 ms against under 1 ms for a single move. Avalonia's `Controls`
+   collection has a `Move`; whether it avoids the detach, and what it saves, isn't measured [J: worth a measurement before
+   #14]. A moved `FlexPanel` in a window also drops its Yoga node cache when it is detached (its
+   `OnDetachedFromVisualTree`, as upstream's `Unloaded` handler does), so it rebuilds its Yoga tree on the next measure.
+   Review pass 1 says WinUI defers `Unloaded`, so a remove and re-insert in one tick doesn't raise it there; not verified here, and not measured.
 6. **The element vocabulary is thin.** Upstream tests that use `TextBlockElement.FontSize`, `ThemeBindings` or upstream's
    element factories can't link yet; that's 2 dropped tests and 5 left-out files.
 7. **FlexPanel's minimum-size attached properties are `FlexMinWidth`/`FlexMinHeight`** (Spike D: Avalonia's
