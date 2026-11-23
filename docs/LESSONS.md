@@ -58,6 +58,16 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   took 1.1 s on a 40k-character line (an unanchored email pattern), and read UTF-16 text as UTF-8 with NULs, finding
   nothing. Anchor patterns with a lookbehind, test a long line, and treat NUL bytes as binary. (2026-11-23)
 
+- **Avalonia 12 binds `Dispatcher.UIThread` to the first thread that reads it** (reading it,
+  `Dispatcher.CurrentDispatcher`, or creating a control). Ask `Dispatcher.FromThread(Thread.CurrentThread)` before
+  `Dispatcher.UIThread.CheckAccess()`. A vendored upstream test found it as a 10 s timeout. (2026-11-23)
+- **Avalonia clamps `DesiredSize` to the size offered; WinUI doesn't,** so ported code that measures at 0 to find
+  min-content reads 0. (2026-11-23)
+- **A reorder test must move the row it checks:** a 3-item reverse leaves the middle row in place, so a positional diff
+  passed it. (2026-11-23)
+- **Plain `[Fact]` and `[AvaloniaFact]` tests share process-wide engine state** (`ReactorApp.UIDispatcher`); tests that
+  set it run in a non-parallel collection. (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

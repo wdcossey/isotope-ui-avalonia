@@ -100,7 +100,7 @@ jobs:
         shell: bash
         run: test ! -e upstream
 
-      - name: Library tests (seam, hooks core), count unchanged
+      - name: Library tests (seam, hooks, controls, upstream engine tests), count unchanged
         shell: bash
         run: |
           dotnet test tests/Isotope.UI.Avalonia.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee lib.log
