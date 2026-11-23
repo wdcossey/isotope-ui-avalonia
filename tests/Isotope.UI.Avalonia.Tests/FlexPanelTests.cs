@@ -234,6 +234,57 @@ public sealed class FlexPanelTests : IDisposable
         Assert.Equal(250, b.Bounds.X);
     }
 
+    // #15: CSS's automatic minimum size (§4.5). Upstream reads min-content by measuring at 0, which Avalonia clamps to 0.
+    // Natural widths come from twins hosted beside the panel (in a horizontal StackPanel, so unconstrained), since
+    // the theme sets the font and a button's label is in its template.
+    private Control[] HostWithTwins(FlexPanel panel, params Control[] twins)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (var t in twins) row.Children.Add(t);
+        Host(new StackPanel { Children = { panel, row } }, 800, 300);
+        return twins;
+    }
+
+    [AvaloniaFact]
+    public void Row_NonWrappingTexts_KeepMinContentWidthAndOverflow()
+    {
+        const string s = "Quarterly revenue";
+        TextBlock a = new() { Text = s }, b = new() { Text = s };
+        var panel = new FlexPanel { Width = 100, HorizontalAlignment = HorizontalAlignment.Left, Children = { a, b } };
+        double natural = HostWithTwins(panel, new TextBlock { Text = s })[0].Bounds.Width;
+        Assert.True(natural is > 50 and < 200, $"natural width {natural}");
+        Assert.Equal(natural, a.Bounds.Width, 0.5);
+        Assert.Equal(natural, b.Bounds.Width, 0.5);
+        Assert.Equal(natural, b.Bounds.X, 0.5); // overflows the 100-wide row
+    }
+
+    [AvaloniaFact]
+    public void Row_ButtonLabel_IsMinContent()
+    {
+        const string s = "A button with a long label";
+        var button = new Button { Content = s };
+        var rest = Box(h: 20, grow: 1);
+        FlexPanel.SetBasis(rest, 400);
+        var panel = new FlexPanel { Width = 200, HorizontalAlignment = HorizontalAlignment.Left, Children = { button, rest } };
+        double natural = HostWithTwins(panel, new Button { Content = s })[0].Bounds.Width;
+        Assert.True(natural > 100, $"natural width {natural}");
+        Assert.Equal(natural, button.Bounds.Width, 0.5);
+    }
+
+    [AvaloniaFact]
+    public void Row_WrappingText_ShrinksToItsLongestWord()
+    {
+        const string word = "Incomprehensibilities", s = "An " + word + " too";
+        var pad = new Thickness(6, 0);
+        var text = new TextBlock { Text = s, TextWrapping = TextWrapping.WrapWithOverflow, Padding = pad };
+        var panel = new FlexPanel { Width = 20, HorizontalAlignment = HorizontalAlignment.Left, Children = { text } };
+        var twins = HostWithTwins(panel, new TextBlock { Text = word, Padding = pad }, new TextBlock { Text = s, Padding = pad });
+        double longest = twins[0].Bounds.Width, whole = twins[1].Bounds.Width;
+        Assert.True(longest > 60, $"longest word {longest}");
+        Assert.True(text.Bounds.Width >= longest - 0.5, $"width {text.Bounds.Width}, longest word {longest}");
+        Assert.True(text.Bounds.Width < whole - 10, $"width {text.Bounds.Width}, whole line {whole}: still wraps");
+    }
+
     [AvaloniaFact]
     public void Demo_RendersToPng()
     {
