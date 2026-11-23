@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Pickers.cs, last changed upstream in 713ecc95e654. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Pickers.cs, last changed upstream in 713ecc95e654; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using Microsoft.UI;
 using Microsoft.Windows.Storage.Pickers;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>A labelled group of file extensions offered by a file picker, such as <c>("Text", [".txt", ".md"])</c>.</summary>
 /// <param name="Label">The display label shown in the picker's file-type list.</param>

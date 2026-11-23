@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs, last changed upstream in 1b9fbc3b6093; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentRenderTrace.cs, last changed upstream in 1b9fbc3b6093; transforms: winui-qualified-element, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.Tracing;
 using System.Runtime.CompilerServices;
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Shared plumbing for <see cref="ReactorEventSource.ComponentRendered"/>: the enable

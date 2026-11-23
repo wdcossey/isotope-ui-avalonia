@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorEventSource.cs, last changed upstream in 0cdc78ad040d. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorEventSource.cs, last changed upstream in 0cdc78ad040d; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.Tracing;
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// ETW/EventPipe provider for Reactor internals. Emits reconcile, render,

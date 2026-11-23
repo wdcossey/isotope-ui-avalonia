@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/AmbientAnimation.cs, last changed upstream in 7fa5c61116ea. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core.Internal;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/AmbientAnimation.cs, last changed upstream in 7fa5c61116ea; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core.Internal;
 
 /// <summary>
 /// Immutable snapshot of an active <see cref="Animations.Animate(AnimationKind, global::System.Action)"/>

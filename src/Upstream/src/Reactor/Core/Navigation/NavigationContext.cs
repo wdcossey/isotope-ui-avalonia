@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationContext.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationContext.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Navigation;
+namespace Isotope.UI.Navigation;
 
 /// <summary>
 /// Provides a static <see cref="Context{T}"/> instance per TRoute type

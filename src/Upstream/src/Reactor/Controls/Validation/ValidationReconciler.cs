@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ValidationReconciler.cs, last changed upstream in e5a3edc2d322. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ValidationReconciler.cs, last changed upstream in e5a3edc2d322; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Linq;
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Controls.Validation;
+using Isotope.UI.Core;
+using Isotope.UI.Controls.Validation;
 
-namespace Microsoft.UI.Reactor.Controls.Validation;
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// Helpers for running validation within a component's render cycle.

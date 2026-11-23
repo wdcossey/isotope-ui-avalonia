@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Virtualization/VirtualListElement.cs, last changed upstream in b0d9d3177621. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Xaml.Controls;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Virtualization/VirtualListElement.cs, last changed upstream in b0d9d3177621; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Controls;
+
+namespace Isotope.UI.Controls;
 
 /// <summary>
 /// Element record for the VirtualList component — a count-based virtualized list

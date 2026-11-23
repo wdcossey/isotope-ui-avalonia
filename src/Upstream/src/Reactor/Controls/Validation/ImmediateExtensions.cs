@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ImmediateExtensions.cs, last changed upstream in 5d4e81b5d7b2. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ImmediateExtensions.cs, last changed upstream in 5d4e81b5d7b2; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Controls.Validation;
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// Marker attached to a control to request keystroke-level value commit instead

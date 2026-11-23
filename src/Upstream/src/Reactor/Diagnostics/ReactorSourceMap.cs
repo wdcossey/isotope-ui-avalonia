@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.cs, last changed upstream in 587dd6ae6169. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Core.V1Protocol;
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.cs, last changed upstream in 587dd6ae6169; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using Isotope.UI.Core.V1Protocol;
 
-namespace Microsoft.UI.Reactor.Diagnostics;
+
+namespace Isotope.UI.Diagnostics;
 
 /// <summary>
 /// Spec 010 — runtime switch and read path for Reactor source mapping.
@@ -52,7 +52,7 @@ public static partial class ReactorSourceMap
             global::System.Environment.GetEnvironmentVariable("REACTOR_SOURCEMAP"),
             // Guarded inline so a build without Reactor.DevtoolsSupport folds the read (and
             // the variable's name) away.
-            global::Microsoft.UI.Reactor.Hosting.ReactorFeatures.DevtoolsSupported
+            global::Isotope.UI.Hosting.ReactorFeatures.DevtoolsSupported
                 ? global::System.Environment.GetEnvironmentVariable("REACTOR_DIAGNOSTICS")
                 : null) ? 1 : 0;
 
@@ -65,7 +65,7 @@ public static partial class ReactorSourceMap
     /// </summary>
     internal static bool IsEnabledAtStartup(string? sourceMapValue, string? diagnosticsValue)
         => IsEnabledByEnvironment(sourceMapValue)
-            || (global::Microsoft.UI.Reactor.Hosting.ReactorFeatures.DevtoolsSupported && IsEnabledByEnvironment(diagnosticsValue));
+            || (global::Isotope.UI.Hosting.ReactorFeatures.DevtoolsSupported && IsEnabledByEnvironment(diagnosticsValue));
 
     /// <summary>
     /// The <c>REACTOR_SOURCEMAP</c> contract: exactly <c>"1"</c> enables, anything else
@@ -141,21 +141,21 @@ public static partial class ReactorSourceMap
             // child it forwarded to was not tagged; under JIT the child's tag stays and names the
             // child. The published value still describes the child, so it answers instead.
             if (Reconciler.SkipsCallSiteOnlyTags
-                && control.GetValue(global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics.SourceProperty) is string published
-                && global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.AtKey(published) is not null
-                && global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.DescribesAnotherElement(published, element))
-                return global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.ResolvePublishedSource(control);
+                && control.GetValue(global::Isotope.UI.Core.Diagnostics.ReactorDiagnostics.SourceProperty) is string published
+                && global::Isotope.UI.Core.Diagnostics.ReactorSourcePublisher.AtKey(published) is not null
+                && global::Isotope.UI.Core.Diagnostics.ReactorSourcePublisher.DescribesAnotherElement(published, element))
+                return global::Isotope.UI.Core.Diagnostics.ReactorSourcePublisher.ResolvePublishedSource(control);
             return UnwrapDecorators(element)?.CallSite;
         }
         // No tag: Native AOT's call-site-only skip (above), or a menu / command-bar item a
         // flyout built from an item record rather than an element (MenuItem(…), AppBarButton(…)).
         // An item records its exact call site; otherwise the published value names it.
-        if (!global::Microsoft.UI.Reactor.Hosting.ReactorFeatures.DevtoolsSupported
-            || !global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.IsEnabled)
+        if (!global::Isotope.UI.Hosting.ReactorFeatures.DevtoolsSupported
+            || !global::Isotope.UI.Core.Diagnostics.ReactorSourcePublisher.IsEnabled)
             return null;
-        if (global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics.GetItemSite(control) is { } itemSite)
+        if (global::Isotope.UI.Core.Diagnostics.ReactorDiagnostics.GetItemSite(control) is { } itemSite)
             return itemSite;
-        return global::Microsoft.UI.Reactor.Core.Diagnostics.ReactorSourcePublisher.ResolvePublishedSource(control);
+        return global::Isotope.UI.Core.Diagnostics.ReactorSourcePublisher.ResolvePublishedSource(control);
     }
 
     /// <summary>

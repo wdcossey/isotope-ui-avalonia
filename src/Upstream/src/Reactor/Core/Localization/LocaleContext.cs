@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/LocaleContext.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/LocaleContext.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Localization;
+namespace Isotope.UI.Localization;
 
 /// <summary>
 /// Context-based locale context. The LocaleProvider component provides an IntlAccessor

@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseFocus.cs, last changed upstream in b824003026c5; transforms: winui-qualified-identity-types, winui-qualified-control. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseFocus.cs, last changed upstream in b824003026c5; transforms: winui-usings, routed-event-handler, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+
+
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Manages focus for a set of registered form fields.
@@ -186,7 +186,7 @@ public static class FocusExtensions
             // (REACTOR_EVENT_001).
             .OnMountAdd(fe =>
             {
-                if (autoFocus && fe is TextBox loaded)
+                if (autoFocus && fe is Microsoft.UI.Xaml.Controls.TextBox loaded)
                     FocusWhenLoaded(loaded);
             });
     }
@@ -203,7 +203,7 @@ public static class FocusExtensions
             // handler does not accumulate across reconciles (REACTOR_EVENT_001).
             .OnMountAdd(fe =>
             {
-                if (autoFocus && fe is NumberBox loaded)
+                if (autoFocus && fe is Microsoft.UI.Xaml.Controls.NumberBox loaded)
                     FocusWhenLoaded(loaded);
             });
     }
@@ -221,7 +221,7 @@ public static class FocusExtensions
     //
     // Plain comment rather than <summary>: the docs reference generator emits a page for every
     // XML-documented member of a public static class, private or not.
-    private static void FocusWhenLoaded(Control control)
+    private static void FocusWhenLoaded(Microsoft.UI.Xaml.Controls.Control control)
     {
         if (control.IsLoaded)
         {
@@ -229,7 +229,7 @@ public static class FocusExtensions
             return;
         }
 
-        Microsoft.UI.Xaml.RoutedEventHandler? handler = null;
+        EventHandler<Avalonia.Interactivity.RoutedEventArgs>? handler = null;
         handler = (_, _) =>
         {
             if (handler is not null) control.Loaded -= handler;

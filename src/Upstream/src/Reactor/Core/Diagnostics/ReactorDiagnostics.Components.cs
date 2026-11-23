@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorDiagnostics.Components.cs, last changed upstream in 587dd6ae6169. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Xaml;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorDiagnostics.Components.cs, last changed upstream in 587dd6ae6169; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// A point-in-time description of one mounted component, for inspectors. Every value is text:
@@ -96,7 +96,7 @@ public static partial class ReactorDiagnostics
     /// <c>ReactorHostControl</c>, or the dev-overlay wrapper. A host that installs straight into
     /// <c>Window.Content</c> has none of those, so in that one shape its root is not reachable.</para>
     /// </remarks>
-    [Microsoft.UI.Reactor.Hosting.UIThreadOnly]
+    [Isotope.UI.Hosting.UIThreadOnly]
     public static ComponentSnapshot? DescribeComponent(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
@@ -121,7 +121,7 @@ public static partial class ReactorDiagnostics
     /// Only state, reducer and persisted hooks of a text-typed value can be set.
     /// Must be called on the UI thread that renders the component.
     /// </remarks>
-    [Microsoft.UI.Reactor.Hosting.UIThreadOnly]
+    [Isotope.UI.Hosting.UIThreadOnly]
     public static bool TrySetState(UIElement element, int hookIndex, string text, out string? error)
     {
         ArgumentNullException.ThrowIfNull(element);
@@ -146,7 +146,7 @@ public static partial class ReactorDiagnostics
     /// same. Must be called on the UI thread that renders the component.
     /// </remarks>
     /// <returns>False when no component is hosted at <paramref name="element"/> or it has never rendered.</returns>
-    [Microsoft.UI.Reactor.Hosting.UIThreadOnly]
+    [Isotope.UI.Hosting.UIThreadOnly]
     public static bool Rerender(UIElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
@@ -160,7 +160,7 @@ public static partial class ReactorDiagnostics
     /// overwritten when the element's value changes). Empty when the control is not tagged with
     /// its element — Reactor tags only controls something reads back (callbacks, a key, or a
     /// stamped source location), so turn on
-    /// <see cref="Microsoft.UI.Reactor.Diagnostics.ReactorSourceMap.Enabled"/> for full coverage.
+    /// <see cref="Isotope.UI.Diagnostics.ReactorSourceMap.Enabled"/> for full coverage.
     /// </summary>
     /// <remarks>
     /// Covers <see cref="ElementModifiers"/> and <see cref="AccessibilityModifiers"/>, plus the
@@ -170,15 +170,15 @@ public static partial class ReactorDiagnostics
     /// different live name was written by the app. Properties a control's own element record sets
     /// (<c>TextBlock("hi")</c> → <c>Text</c>) are not listed. Must be called on the UI thread.
     /// </remarks>
-    [Microsoft.UI.Reactor.Hosting.UIThreadOnly]
+    [Isotope.UI.Hosting.UIThreadOnly]
     public static IReadOnlyList<AppliedProperty> GetAppliedProperties(UIElement control)
     {
         ArgumentNullException.ThrowIfNull(control);
         EnsureUIThread(control);
         var tag = Reconciler.GetMountedElement(control);
         if (tag is null) return global::System.Array.Empty<AppliedProperty>();
-        var chain = Microsoft.UI.Reactor.Diagnostics.ReactorSourceMap.DecoratorChain(tag);
-        if (Microsoft.UI.Reactor.Core.V1Protocol.OverlayLifecycle.IsAttributionOnlyTag(control, chain[^1]))
+        var chain = Isotope.UI.Diagnostics.ReactorSourceMap.DecoratorChain(tag);
+        if (Isotope.UI.Core.V1Protocol.OverlayLifecycle.IsAttributionOnlyTag(control, chain[^1]))
             return global::System.Array.Empty<AppliedProperty>();
 
         var described = AppliedModifierMap.DescribeChain(
@@ -208,7 +208,7 @@ public static partial class ReactorDiagnostics
                     "Use element.DispatcherQueue.TryEnqueue(...) to marshal the call.");
             return;
         }
-        Microsoft.UI.Reactor.Hosting.ThreadAffinity.ThrowIfNotOnUIThread("ReactorDiagnostics component inspection");
+        Isotope.UI.Hosting.ThreadAffinity.ThrowIfNotOnUIThread("ReactorDiagnostics component inspection");
     }
 }
 

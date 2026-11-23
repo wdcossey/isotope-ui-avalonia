@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/LayoutResults.cs, last changed upstream in fa64397767a5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/LayoutResults.cs, last changed upstream in fa64397767a5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine LayoutResults.
 // Ported from yoga/node/LayoutResults.h, yoga/node/CachedMeasurement.h
 
-using Microsoft.UI.Reactor.Layout;
+using Isotope.UI.Layout;
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 /// <summary>
 /// Cached measurement entry for avoiding redundant measure calls.

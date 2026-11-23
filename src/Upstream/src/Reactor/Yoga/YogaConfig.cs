@@ -1,11 +1,11 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaConfig.cs, last changed upstream in fa64397767a5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaConfig.cs, last changed upstream in fa64397767a5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine Config.
 // Ported from yoga/config/Config.h, yoga/config/Config.cpp
 
 using System.Diagnostics;
-using Microsoft.UI.Reactor.Layout;
+using Isotope.UI.Layout;
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 /// <summary>
 /// Configuration for the Yoga layout engine. Controls experimental features,

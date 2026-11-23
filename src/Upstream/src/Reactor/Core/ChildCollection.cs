@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildCollection.cs, last changed upstream in 0cdc78ad040d; transforms: winui-alias-identity-types. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildCollection.cs, last changed upstream in 0cdc78ad040d; transforms: winui-usings, winui-alias-panel, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using WinUI = Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.UI.Reactor.Core;
+
+
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Abstraction over a collection of UIElement children.

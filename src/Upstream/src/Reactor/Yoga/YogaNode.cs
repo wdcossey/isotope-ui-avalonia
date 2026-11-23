@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaNode.cs, last changed upstream in fa64397767a5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/YogaNode.cs, last changed upstream in fa64397767a5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine Node.
 // Ported from yoga/node/Node.h, yoga/node/Node.cpp
 //
@@ -10,9 +10,9 @@
 //   - ProcessedDimensions: min/max collapsed — if min==max, dimension is locked
 //   - GetLayoutChildren() flattens Display.Contents nodes (like CSS display:contents)
 
-using Microsoft.UI.Reactor.Layout;
+using Isotope.UI.Layout;
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 /// <summary>
 /// Size returned by measure functions.

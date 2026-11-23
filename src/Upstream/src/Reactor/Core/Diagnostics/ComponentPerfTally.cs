@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentPerfTally.cs, last changed upstream in ad0ab15f2795. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ComponentPerfTally.cs, last changed upstream in ad0ab15f2795; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Per-thread tallies behind the render-outcome fields of the <c>Microsoft-UI-Reactor-Perf</c>

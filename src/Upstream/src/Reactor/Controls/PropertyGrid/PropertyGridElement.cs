@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/PropertyGrid/PropertyGridElement.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Data;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/PropertyGrid/PropertyGridElement.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using Isotope.UI.Data;
 
-namespace Microsoft.UI.Reactor.Controls;
+namespace Isotope.UI.Controls;
 
 /// <summary>
 /// Element record for the PropertyGrid component. Serves as both the

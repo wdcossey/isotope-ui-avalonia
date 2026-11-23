@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/IReactorKeyed.cs, last changed upstream in 516aa2db0ceb. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/IReactorKeyed.cs, last changed upstream in 516aa2db0ceb; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Identity-on-data convention for items rendered into Reactor collection

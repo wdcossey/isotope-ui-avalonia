@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Command.cs, last changed upstream in 085e74b3691f. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Command.cs, last changed upstream in 085e74b3691f; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Immutable (init-only) command descriptor that bundles an action with its metadata (label, icon,

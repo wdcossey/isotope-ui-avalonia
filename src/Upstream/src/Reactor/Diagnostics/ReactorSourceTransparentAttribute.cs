@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceTransparentAttribute.cs, last changed upstream in 27ed66626235. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceTransparentAttribute.cs, last changed upstream in 27ed66626235; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 
-namespace Microsoft.UI.Reactor.Diagnostics;
+namespace Isotope.UI.Diagnostics;
 
 /// <summary>
 /// Spec 010 — marks a helper method as <em>source-transparent</em>: elements it

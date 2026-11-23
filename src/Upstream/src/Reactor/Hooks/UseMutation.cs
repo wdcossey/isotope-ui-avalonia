@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseMutation.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseMutation.cs, last changed upstream in a4dcfdf558aa; transforms: dispatcher-queue, namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Hooks;
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Callbacks and side-effects for the <c>UseMutation</c> hook.
@@ -145,7 +145,7 @@ public static class UseMutationExtensions
     {
         try
         {
-            var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            var dq = DispatcherQueue.GetForCurrentThread();
             return dq is null ? null : new WindowsDispatcherHookDispatcher();
         }
         catch (global::System.Runtime.InteropServices.COMException)

@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/AlgorithmUtils.cs, last changed upstream in fa64397767a5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Yoga/AlgorithmUtils.cs, last changed upstream in fa64397767a5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // C# port of Meta's Yoga layout engine algorithm utilities.
 // Ported from yoga/algorithm/BoundAxis.h, Align.h, TrailingPosition.h, SizingMode.h,
 // Cache.cpp, Baseline.cpp, FlexLine.h/cpp, PixelGrid.cpp
@@ -13,9 +13,9 @@
 //   CacheHelper       — validates cached measurements to skip re-layout
 //   FlexLineHelper    — builds FlexLine by accumulating children until wrap threshold
 
-using Microsoft.UI.Reactor.Layout;
+using Isotope.UI.Layout;
 
-namespace Microsoft.UI.Reactor.Layout;
+namespace Isotope.UI.Layout;
 
 /// <summary>
 /// Sizing mode conversion between internal SizingMode and public MeasureMode.

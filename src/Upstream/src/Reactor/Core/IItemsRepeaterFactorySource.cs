@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/IItemsRepeaterFactorySource.cs, last changed upstream in dfd553ee3416. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/IItemsRepeaterFactorySource.cs, last changed upstream in dfd553ee3416; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using WinUI = Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.UI.Reactor.Core;
+
+
+
+namespace Isotope.UI.Core;
 
 // Spec 047 §14 Phase 3 finish — Engine (1).
 //

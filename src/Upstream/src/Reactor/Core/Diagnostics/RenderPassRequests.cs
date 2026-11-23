@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/RenderPassRequests.cs, last changed upstream in 1b9fbc3b6093. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/RenderPassRequests.cs, last changed upstream in 1b9fbc3b6093; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Who scheduled a host's next render pass, for the <c>requesterId</c> / <c>requesterName</c> /

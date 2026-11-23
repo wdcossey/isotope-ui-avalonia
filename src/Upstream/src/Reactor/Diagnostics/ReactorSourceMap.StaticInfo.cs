@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.StaticInfo.cs, last changed upstream in 262488ee5f92. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Diagnostics/ReactorSourceMap.StaticInfo.cs, last changed upstream in 262488ee5f92; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.ComponentModel;
-using Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core;
 
-namespace Microsoft.UI.Reactor.Diagnostics;
+namespace Isotope.UI.Diagnostics;
 
 /// <summary>
 /// Static facts the source-map generator knows at compile time and the runtime cannot
@@ -132,7 +132,7 @@ public static partial class ReactorSourceMap
         for (Type? type = componentType; type is not null; type = type.BaseType)
         {
             var open = type.IsGenericType && !type.IsGenericTypeDefinition ? type.GetGenericTypeDefinition() : type;
-            if (open == typeof(global::Microsoft.UI.Reactor.Core.Component) || open == typeof(global::Microsoft.UI.Reactor.Core.Component<>)
+            if (open == typeof(global::Isotope.UI.Core.Component) || open == typeof(global::Isotope.UI.Core.Component<>)
                 || !table.TryGetAssemblyHooks(open.Assembly, out var assemblyHooks))
                 return null;
             if (open.FullName is { } key && assemblyHooks.TryGetValue(key, out var hooks))

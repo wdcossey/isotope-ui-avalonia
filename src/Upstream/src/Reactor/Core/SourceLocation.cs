@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/SourceLocation.cs, last changed upstream in 262488ee5f92. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/SourceLocation.cs, last changed upstream in 262488ee5f92; transforms: drop-SourceLocation-DeclaredName, namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Spec 010 — the C# source location that produced an <see cref="Element"/>.
@@ -33,21 +33,21 @@ namespace Microsoft.UI.Reactor.Core;
 /// </param>
 public readonly record struct SourceLocation(string FilePath, int LineNumber, int ColumnNumber)
 {
-    /// <summary>
-    /// The identifier the element created at this call site was assigned to, as the
-    /// source-map generator saw it — <c>title</c> for <c>var title = TextBlock("x").Bold()</c>,
-    /// a field or property name for an initializer, the member name for an expression-bodied
-    /// member or local function. <c>null</c> for an element written inline (an argument, a
-    /// collection element), for a build without source mapping, or after a hot-reload edit
-    /// moved the call.
-    ///
-    /// <para>Not stored on the location: it is looked up in the generator's static table, so
-    /// it costs nothing per element and does not take part in equality.</para>
-    /// </summary>
-    public string? DeclaredName
-        => string.IsNullOrEmpty(FilePath)
-            ? null
-            : global::Microsoft.UI.Reactor.Diagnostics.ReactorSourceMap.GetDeclaredName(this);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /// <summary>
     /// Full form: <c>C:\src\MainPage.cs:34</c>. Deliberately omits

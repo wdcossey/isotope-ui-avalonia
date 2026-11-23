@@ -1,12 +1,12 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/FormField.cs, last changed upstream in e1fa2b6e3807. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/FormField.cs, last changed upstream in e1fa2b6e3807; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Data;
-using Microsoft.UI.Reactor.Controls.Validation;
-using static Microsoft.UI.Reactor.Factories;
-using V1 = Microsoft.UI.Reactor.Core.V1Protocol;
+using Isotope.UI.Core;
+using Isotope.UI.Data;
+using Isotope.UI.Controls.Validation;
+using static Isotope.UI.Factories;
+using V1 = Isotope.UI.Core.V1Protocol;
 
-namespace Microsoft.UI.Reactor.Controls.Validation;
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// A wrapper element that provides label, required indicator, description, and error display
@@ -65,7 +65,7 @@ public static class FormFieldDsl
         FieldDescriptor field,
         object value,
         Action<object> onChange,
-        Microsoft.UI.Reactor.Controls.TypeRegistry? registry = null)
+        Isotope.UI.Controls.TypeRegistry? registry = null)
     {
         // Spec 048 §3.4 — per-factory registration touch.
         _ = V1.RegDecorator<FormFieldElement, V1.Handlers.FormFieldHandler>.Done;

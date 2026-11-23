@@ -1,15 +1,15 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderContext.cs, last changed upstream in ad0ab15f2795; transforms: winui-qualified-identity-types. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderContext.cs, last changed upstream in ad0ab15f2795; transforms: winui-qualified-element, drop-RenderContext-UseSystemBackButton, drop-RenderContext-UseColorScheme, drop-RenderContext-UseIsDarkTheme, drop-RenderContext-UseHighContrast, drop-RenderContext-UseHighContrastScheme, drop-RenderContext-UseHighContrastState, drop-RenderContext-HighContrastState, drop-RenderContext-UseReducedMotion, drop-RenderContext-UseReducedMotionState, drop-RenderContext-ReducedMotionState, drop-RenderContext-UseIntl, drop-RenderContext-_defaultAccessor, drop-RenderContext-UseWindowSize-for-window, drop-RenderContext-UseWindowSize, drop-RenderContext-UseWindow, drop-RenderContext-UseWindowPosition, drop-RenderContext-UseIsCovered, drop-RenderContext-UseDisplays, drop-RenderContext-UseWindowAspectRatio, drop-RenderContext-UseWindowDragMove, drop-RenderContext-PickerService, drop-RenderContext-PickFileAsync, drop-RenderContext-PickMultipleFilesAsync, drop-RenderContext-PickFolderAsync, drop-RenderContext-PickMultipleFoldersAsync, drop-RenderContext-PickSaveFileAsync, drop-RenderContext-GetPickerOwner, drop-RenderContext-UseWindowState, drop-RenderContext-UseIsActive, drop-RenderContext-UseClosingGuard, drop-RenderContext-UseDpi, drop-RenderContext-UseOpenWindow, drop-RenderContext-UseTrayIcon, drop-RenderContext-UseBreakpoint-for-window, drop-RenderContext-UseBreakpoint, drop-RenderContext-MigrateHooksForHotReload, drop-RenderContext-FullNameMatches, partial-render-context, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.UI.Reactor.Core.Diagnostics;
-using Microsoft.UI.Reactor.Hooks;
+using Isotope.UI.Core.Diagnostics;
+using Isotope.UI.Hooks;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Passed to function components and provides access to hooks.
 /// Each component instance gets its own RenderContext which tracks hook call order.
 /// </summary>
-public sealed class RenderContext
+public sealed partial class RenderContext
 {
     private readonly List<HookState> _hooks = new(8);
     private int _hookIndex;
@@ -50,7 +50,7 @@ public sealed class RenderContext
     }
 
     /// <summary>
-    /// The <see cref="Microsoft.UI.Reactor.ReactorWindow"/> whose host renders this context, as
+    /// The <see cref="Isotope.UI.ReactorWindow"/> whose host renders this context, as
     /// recorded by that host's reconciler at the last <c>BeginRender</c>; <c>null</c> when the
     /// content has no owning <c>ReactorWindow</c> (tray flyout, <c>ReactorHostControl</c>, a
     /// <c>ReactorHost</c> constructed over a raw <c>Window</c>) or after unmount. Read by the window
@@ -58,7 +58,7 @@ public sealed class RenderContext
     /// would name an unrelated host there. The pickers instead resolve a window id from the owner
     /// itself, so they also work in content without a <c>ReactorWindow</c>.
     /// </summary>
-    internal Microsoft.UI.Reactor.ReactorWindow? OwningReactorWindow => _owner?.ReactorWindow;
+    internal Isotope.UI.ReactorWindow? OwningReactorWindow => _owner?.ReactorWindow;
 
     /// <summary>
     /// Time source used by time-based hooks (currently <see cref="UseCommand(Command)"/>'s
@@ -98,7 +98,7 @@ public sealed class RenderContext
     /// scheduled cross-thread (caller should return without executing inline).
     /// Returns <c>false</c> when the caller is already on the UI thread (hot path).
     /// <para>
-    /// When no <see cref="Microsoft.UI.Reactor.ReactorApp.UIDispatcher"/> has been
+    /// When no <see cref="Isotope.UI.ReactorApp.UIDispatcher"/> has been
     /// captured (unit-test / headless render contexts) or when the dispatcher has
     /// already begun shutting down, a cross-thread call throws instead of silently
     /// racing or dropping the update. The dispatcher is captured during host
@@ -119,7 +119,7 @@ public sealed class RenderContext
         // and NavigationHandle's mutator gate (issue #234) share one implementation.
         // The exact diagnostic wording — including the "threadSafe: true" remedy — is
         // preserved here because callers/tests depend on it.
-        var dq = Microsoft.UI.Reactor.ReactorApp.UIDispatcher;
+        var dq = Isotope.UI.ReactorApp.UIDispatcher;
         return UIThreadMarshal.EnqueueOrThrow(
             dq is null ? null : w => dq.TryEnqueue(w.Invoke),
             work,
@@ -921,7 +921,7 @@ public sealed class RenderContext
     /// </summary>
     /// <remarks>
     /// <see cref="PersistedScope.Window"/> resolves to the
-    /// <see cref="Microsoft.UI.Reactor.ReactorWindow.PersistedScope"/> of the window whose host
+    /// <see cref="Isotope.UI.ReactorWindow.PersistedScope"/> of the window whose host
     /// renders this component; content without an owning window (tray flyouts,
     /// <c>ReactorHostControl</c>, unit-test contexts) falls back to the process-wide
     /// scope. Two windows of the same component class therefore
@@ -1194,39 +1194,39 @@ public sealed class RenderContext
     //  Navigation system back button
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Subscribes to Alt+Left and VirtualKey.GoBack keyboard events on the given window's content
-    /// to call <see cref="Navigation.NavigationHandle{TRoute}.GoBack"/>. Unsubscribes on unmount.
-    /// </summary>
-    public void UseSystemBackButton<TRoute>(
-        Navigation.NavigationHandle<TRoute> nav,
-        Window window) where TRoute : notnull
-    {
-        UseEffect(() =>
-        {
-            void handler(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
-            {
-                if (e.Key == global::Windows.System.VirtualKey.GoBack ||
-                    (e.Key == global::Windows.System.VirtualKey.Left &&
-                     Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(global::Windows.System.VirtualKey.Menu)
-                         .HasFlag(global::Windows.UI.Core.CoreVirtualKeyStates.Down)))
-                {
-                    if (nav.CanGoBack)
-                    {
-                        nav.GoBack();
-                        e.Handled = true;
-                    }
-                }
-            }
 
-            if (window.Content is UIElement rootElement)
-            {
-                rootElement.KeyDown += handler;
-                return () => rootElement.KeyDown -= handler;
-            }
-            return () => { };
-        }, nav, window);
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // ════════════════════════════════════════════════════════════════
     //  Navigation lifecycle hooks
@@ -1397,298 +1397,298 @@ public sealed class RenderContext
     //  Color scheme hooks
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Returns the app-global <see cref="ColorScheme"/> — <see cref="ColorScheme.Light"/>
-    /// or <see cref="ColorScheme.Dark"/>, read from
-    /// <c>Application.Current.RequestedTheme</c>.
-    /// <para>
-    /// The value is re-evaluated on every render — when the app theme changes,
-    /// <see cref="Microsoft.UI.Reactor.Hosting.ReactorHost"/> triggers a re-render so this hook
-    /// naturally picks up the new value.
-    /// </para>
-    /// <para>
-    /// This hook does <b>not</b> observe per-element <c>RequestedTheme</c> overrides: it
-    /// consults the application, not the calling component's position in the tree, so a
-    /// component inside a <c>.RequestedTheme(Dark)</c> subtree still reports the app theme.
-    /// It also never returns <see cref="ColorScheme.HighContrast"/> in a running app — use
-    /// <see cref="UseHighContrast"/> for forced-colors mode.
-    /// </para>
-    /// </summary>
-    public ColorScheme UseColorScheme()
-    {
-        // App-global only. Application.Current.RequestedTheme is Light or Dark, so
-        // FromActualTheme never reaches its ElementTheme.Default branch (and therefore
-        // never reports HighContrast) unless Application.Current is null. Reading the
-        // calling component's FrameworkElement.ActualTheme instead would make this
-        // subtree-aware, but RenderContext has no element reference at hook time.
-        var theme = Microsoft.UI.Xaml.Application.Current?.RequestedTheme;
-        var elementTheme = theme switch
-        {
-            Microsoft.UI.Xaml.ApplicationTheme.Dark => Microsoft.UI.Xaml.ElementTheme.Dark,
-            Microsoft.UI.Xaml.ApplicationTheme.Light => Microsoft.UI.Xaml.ElementTheme.Light,
-            _ => Microsoft.UI.Xaml.ElementTheme.Default,
-        };
-        return ColorSchemeContext.FromActualTheme(elementTheme);
-    }
 
-    /// <summary>
-    /// Convenience wrapper — returns <c>true</c> when the app-global color
-    /// scheme is <see cref="ColorScheme.Dark"/>. Exactly
-    /// <c>UseColorScheme() == ColorScheme.Dark</c>, so it inherits that hook's
-    /// semantics: it does not observe per-element <c>RequestedTheme</c>.
-    /// </summary>
-    public bool UseIsDarkTheme() => UseColorScheme() == ColorScheme.Dark;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // ════════════════════════════════════════════════════════════════
     //  High contrast / accessibility display hooks
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Returns <c>true</c> when the system is in a High Contrast (forced colors) theme.
-    /// Automatically re-renders the component when high contrast is toggled.
-    /// <para>
-    /// Use this to conditionally override custom styling (hardcoded backgrounds,
-    /// foregrounds, border colors) that would ignore forced-colors mode.
-    /// WinUI controls using ThemeResource brushes adapt automatically — this hook
-    /// is for Reactor components that use explicit color values.
-    /// </para>
-    /// </summary>
-    public bool UseHighContrast() => UseHighContrastState().IsHighContrast;
 
-    /// <summary>
-    /// Returns the high contrast scheme name (e.g., "High Contrast Black",
-    /// "High Contrast White") or <c>null</c> if not in high contrast mode.
-    /// Automatically re-renders the component when the scheme changes.
-    /// <para>
-    /// Must be called instead of (not in addition to) <see cref="UseHighContrast"/>
-    /// because each consumes the same hook slots. Use one or the other.
-    /// </para>
-    /// </summary>
-    public string? UseHighContrastScheme() => UseHighContrastState().HighContrastScheme;
 
-    private HighContrastState UseHighContrastState()
-    {
-        var (state, _) = UseState(new HighContrastState());
 
-        // Seeded during render for the same reason as UseReducedMotionState above: a value
-        // first read inside UseEffect is not available to the frame the user sees, so the
-        // first paint reported IsHighContrast=false / scheme=null to every caller —
-        // including callers running under high contrast. Guarded so the WinRT settings
-        // objects are constructed once per component rather than once per render.
-        // Guarded for the same reason as the reduced-motion seed, and broad for the same
-        // reason: the try holds only interop and field assignment.
-        if (!state.Seeded)
-        {
-            try
-            {
-                state.A11ySettings ??= new global::Windows.UI.ViewManagement.AccessibilitySettings();
-                state.IsHighContrast = state.A11ySettings.HighContrast;
-                state.HighContrastScheme = state.A11ySettings.HighContrast ? state.A11ySettings.HighContrastScheme : null;
-            }
-            catch (global::System.Exception) { state.A11ySettings = null; }
-            state.Seeded = true;
-        }
 
-        // AccessibilitySettings.HighContrastChanged throws ERROR_NOT_FOUND
-        // (0x80070490) in WinUI 3 desktop apps because it requires a CoreWindow.
-        // Instead, use UISettings.ColorValuesChanged which fires reliably for
-        // system theme changes including high contrast toggles.
-        UseEffect(() =>
-        {
-            try
-            {
-                state.A11ySettings ??= new global::Windows.UI.ViewManagement.AccessibilitySettings();
-                state.UiSettings ??= new global::Windows.UI.ViewManagement.UISettings();
-            }
-            catch (global::System.Exception) { state.UiSettings = null; }
 
-            // No projection for the settings objects: report the default and skip the
-            // subscription rather than throwing out of the effect flush, which is wrapped
-            // in try/finally and would propagate.
-            if (state.A11ySettings is not { } a11ySettings || state.UiSettings is not { } uiSettings)
-                return () => { };
 
-            var rerender = _requestRerender;
 
-            void OnColorValuesChanged(global::Windows.UI.ViewManagement.UISettings sender, object args)
-            {
-                state.IsHighContrast = a11ySettings.HighContrast;
-                state.HighContrastScheme = a11ySettings.HighContrast ? a11ySettings.HighContrastScheme : null;
-                rerender?.Invoke();
-            }
 
-            uiSettings.ColorValuesChanged += OnColorValuesChanged;
 
-            // Re-read after subscribing: the window between the seed above and this
-            // subscription has no listener, so a toggle inside it would otherwise persist
-            // until an unrelated theme notification arrived.
-            var hc = a11ySettings.HighContrast;
-            var scheme = hc ? a11ySettings.HighContrastScheme : null;
-            if (hc != state.IsHighContrast || scheme != state.HighContrastScheme)
-            {
-                state.IsHighContrast = hc;
-                state.HighContrastScheme = scheme;
-                rerender?.Invoke();
-            }
-            return () => uiSettings.ColorValuesChanged -= OnColorValuesChanged;
-        });
 
-        return state;
-    }
 
-    private sealed class HighContrastState
-    {
-        public global::Windows.UI.ViewManagement.AccessibilitySettings? A11ySettings;
-        public global::Windows.UI.ViewManagement.UISettings? UiSettings;
-        public bool IsHighContrast;
-        public string? HighContrastScheme;
-        public bool Seeded;
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // ════════════════════════════════════════════════════════════════
     //  Reduced-motion hook
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Returns <c>true</c> when the user or system prefers reduced motion
-    /// (e.g., Windows "Show animations" is off, or <c>SPI_GETCLIENTAREAANIMATION</c>
-    /// returns false). Automatically re-renders the component when the preference changes.
-    /// <para>
-    /// Use this to skip entrance/exit animations, disable pan inertia, terminate
-    /// force-graph simulations immediately, and keep only ≤ 150 ms opacity fades
-    /// (WCAG 2.3.3).
-    /// </para>
-    /// <para>
-    /// The value is seeded during the first render and then tracked live through
-    /// <c>UISettings.AnimationsEnabledChanged</c>. That event needs Windows 10 2004 (19041);
-    /// on older builds the preference is re-read whenever a theme or palette change arrives
-    /// instead, so it updates on the next such notification rather than immediately.
-    /// </para>
-    /// </summary>
-    public bool UseReducedMotion() => UseReducedMotionState().IsReducedMotion;
 
-    private ReducedMotionState UseReducedMotionState()
-    {
-        var (state, _) = UseState(new ReducedMotionState());
 
-        // Seed during render, not in the effect below. UseEffect does not run until after
-        // the first render commits, so a value read there is invisible to the frame the
-        // user actually sees: every consumer rendered its first frame with
-        // IsReducedMotion=false, and a component that never re-renders keeps that value
-        // forever. For an accessibility hook that is the worst possible direction — the
-        // first frame animates for precisely the users who asked it not to. Guarded so
-        // UISettings is constructed once per component, not once per render.
-        //
-        // UseExternalStore also closes the render-to-subscribe race, but it is a public hook
-        // for app-authored stores with zero internal callers, it requires a stable subscribe
-        // delegate (so it would need extra memoization here), and it re-reads the snapshot on
-        // every render. Seed-then-subscribe is what every sibling environment hook in this
-        // file does — UseWindowPosition seeds via UseState(win.Position) — so this stays
-        // consistent with them.
-        // Constructing the WinRT settings object is fallible — ReactorHost guards the same
-        // constructor because a host may have no projection for it. Seeding during render
-        // widens where that runs: the effect below only executes under a live reconciler.
-        // Degrade to the default rather than failing the frame, and set Seeded either way so
-        // a host that cannot provide it does not throw once per render.
-        //
-        // The catches are deliberately broad. What bounds them is the scope of the try —
-        // only interop and field assignment, no application logic whose bug could be masked.
-        // A narrower list would have to enumerate every way a projection can be absent, which
-        // is not something this repo can test: measured in the headless host, both
-        // constructors and every property read off them succeed.
-        if (!state.Seeded)
-        {
-            try
-            {
-                state.Settings ??= new global::Windows.UI.ViewManagement.UISettings();
-                state.IsReducedMotion = !state.Settings.AnimationsEnabled;
-            }
-            catch (global::System.Exception) { state.Settings = null; }
-            state.Seeded = true;
-        }
 
-        UseEffect(() =>
-        {
-            try { state.Settings ??= new global::Windows.UI.ViewManagement.UISettings(); }
-            catch (global::System.Exception) { state.Settings = null; }
 
-            // No projection for the settings object: report the default and skip the
-            // subscription rather than throwing out of the effect flush, which is wrapped
-            // in try/finally and would propagate.
-            if (state.Settings is not { } settings) return () => { };
 
-            var rerender = _requestRerender;
-            void OnChanged(global::Windows.UI.ViewManagement.UISettings sender, object args)
-            {
-                var value = !sender.AnimationsEnabled;
-                if (value == state.IsReducedMotion) return;
-                state.IsReducedMotion = value;
-                rerender?.Invoke();
-            }
 
-            // AnimationsEnabledChanged is the only event raised for this preference.
-            // ColorValuesChanged is NOT — measured with a live subscription to both while
-            // toggling Settings > Accessibility > Visual effects > Animation effects, it
-            // fired zero times in either direction. It is kept as the pre-19041 fallback
-            // because OnChanged re-reads the current value, so a theme or palette change
-            // picks up a missed animation flip as a side effect.
-            settings.ColorValuesChanged += OnChanged;
-            if (UiSettingsCapabilities.HasAnimationsEnabledChanged)
-                settings.AnimationsEnabledChanged += OnChanged;
 
-            // Re-read after subscribing: the preference can flip between the seed above and
-            // this subscription, and that window has no listener, so the change would
-            // otherwise be missed until some unrelated notification happened to arrive.
-            var current = !settings.AnimationsEnabled;
-            if (current != state.IsReducedMotion)
-            {
-                state.IsReducedMotion = current;
-                rerender?.Invoke();
-            }
-            return () =>
-            {
-                settings.ColorValuesChanged -= OnChanged;
-                // Called rather than captured: CA1416's flow analysis does not carry a
-                // guard's outcome across a closure boundary.
-                if (UiSettingsCapabilities.HasAnimationsEnabledChanged)
-                    settings.AnimationsEnabledChanged -= OnChanged;
-            };
-        });
 
-        return state;
-    }
 
-    private sealed class ReducedMotionState
-    {
-        public global::Windows.UI.ViewManagement.UISettings? Settings;
-        public bool IsReducedMotion;
-        public bool Seeded;
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // ════════════════════════════════════════════════════════════════
     //  Localization hooks
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Returns an IntlAccessor for the current locale. Re-renders this component
-    /// when the locale changes via a parent LocaleProvider.
-    /// If no LocaleProvider is present, returns a default accessor using the OS locale.
-    /// Uses Context internally — the context system handles re-renders automatically.
-    /// </summary>
-    public Localization.IntlAccessor UseIntl()
-    {
-        var contextAccessor = UseContext(Localization.IntlContexts.Locale);
-        return contextAccessor ?? _defaultAccessor.Value;
-    }
 
-    private static readonly Lazy<Localization.IntlAccessor> _defaultAccessor = new(() =>
-    {
-        var osLocale = global::System.Globalization.CultureInfo.CurrentUICulture.Name;
-        if (string.IsNullOrEmpty(osLocale)) osLocale = "en-US";
-        var cache = new Localization.MessageCache();
-        var provider = new Localization.ReswResourceProvider(osLocale);
-        return new Localization.IntlAccessor(osLocale, provider, cache, osLocale);
-    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // ════════════════════════════════════════════════════════════════
     //  Command hooks
@@ -1984,569 +1984,569 @@ public sealed class RenderContext
     //  Responsive layout hooks
     // ════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Returns (width, height) of the given window and re-renders when the window resizes.
-    /// </summary>
-    public (double Width, double Height) UseWindowSize(Window window)
-    {
-        var (size, setSize) = UseState((window.Bounds.Width, window.Bounds.Height));
 
-        UseEffect(() =>
-        {
-            void handler(object sender, Microsoft.UI.Xaml.WindowSizeChangedEventArgs args)
-            {
-                setSize((args.Size.Width, args.Size.Height));
-            }
-            window.SizeChanged += handler;
-            return () => window.SizeChanged -= handler;
-        }, window);
 
-        return size;
-    }
 
-    /// <summary>
-    /// Parameterless overload — resolves the window whose host renders this
-    /// component and re-renders on resize. Returns
-    /// <c>(0, 0)</c> when the component has no owning window (tray-flyout content,
-    /// <c>ReactorHostControl</c> embeds); no implicit fallback to <c>PrimaryWindow</c>
-    /// or to another open window. (spec 036 §5.2 / §7.1)
-    /// </summary>
-    public (double Width, double Height) UseWindowSize()
-    {
-        var hostWindow = OwningReactorWindow;
-        if (hostWindow is null)
-        {
-            // Reserve the same hook slots as the live branch (UseState +
-            // UseEffect) and use the same tuple-shaped state so a render that
-            // crosses the no-window → window transition doesn't trip the
-            // hook-state type check.
-            _ = UseState((0.0, 0.0));
-            UseEffect(() => { /* no-op */ }, this);
-            return (0, 0);
-        }
-        return UseWindowSize(hostWindow.NativeWindow);
-    }
 
-    /// <summary>
-    /// Resolves the <see cref="Microsoft.UI.Reactor.ReactorWindow"/> whose host renders this
-    /// component — including nested components and virtualized rows realized outside the
-    /// host's render pass — or <c>null</c> when it has no owning window (tray-flyout content,
-    /// <c>ReactorHostControl</c> embeds). O(1) field read; no subscription, no re-render
-    /// trigger. (spec 036 §7 / §7.1)
-    /// </summary>
-    public Microsoft.UI.Reactor.ReactorWindow? UseWindow()
-        => OwningReactorWindow;
 
-    /// <summary>
-    /// Subscribes to the host window's <c>PositionChanged</c> event and re-renders
-    /// on change. Returns <c>(0, 0)</c> outside a window. (spec 054 §5.5)
-    /// </summary>
-    public (double X, double Y) UseWindowPosition()
-    {
-        var win = OwningReactorWindow;
-        if (win is null)
-        {
-            _ = UseState((0.0, 0.0));
-            UseEffect(() => { /* no-op */ }, this);
-            return (0, 0);
-        }
 
-        var (position, setPosition) = UseState(win.Position);
-        UseEffect(() =>
-        {
-            void handler(object? sender, Microsoft.UI.Reactor.WindowDipPositionChangedEventArgs args)
-                => setPosition(args.Position);
-            win.PositionChanged += handler;
-            return () => win.PositionChanged -= handler;
-        }, win);
-        return position;
-    }
 
-    /// <summary>
-    /// Returns a covered hint from the host window's z-order transitions and
-    /// re-renders on change. The value is not pixel-accurate occlusion state.
-    /// </summary>
-    public bool UseIsCovered()
-    {
-        var win = OwningReactorWindow;
-        if (win is null)
-        {
-            _ = UseState(false);
-            UseEffect(() => { /* no-op */ }, this);
-            return false;
-        }
 
-        var (isCovered, setIsCovered) = UseState(false);
-        UseEffect(() =>
-        {
-            void handler(object? sender, Microsoft.UI.Reactor.WindowZOrderChangedEventArgs args)
-            {
-                if (args.MovedToTop) setIsCovered(false);
-                else if (args.IsCovered) setIsCovered(true);
-            }
-            win.ZOrderChanged += handler;
-            return () => win.ZOrderChanged -= handler;
-        }, win);
-        return isCovered;
-    }
 
-    /// <summary>
-    /// Returns the current display snapshot and re-renders when the display layout changes.
-    /// </summary>
-    public IReadOnlyList<Microsoft.UI.Reactor.DisplayInfo> UseDisplays()
-    {
-        var (displays, setDisplays) = UseState(Microsoft.UI.Reactor.ReactorDisplay.Displays);
-        UseEffect(() =>
-        {
-            void handler(object? sender, EventArgs args)
-                => setDisplays(Microsoft.UI.Reactor.ReactorDisplay.Displays);
-            Microsoft.UI.Reactor.ReactorDisplay.DisplayLayoutChanged += handler;
-            return () => Microsoft.UI.Reactor.ReactorDisplay.DisplayLayoutChanged -= handler;
-        }, this);
-        return displays;
-    }
 
-    /// <summary>
-    /// Applies a lifetime-bound width/height aspect lock to the owning window.
-    /// Last mounted hook wins; unmounting restores the previous writer.
-    /// </summary>
-    public void UseWindowAspectRatio(double? widthOverHeight)
-    {
-        var win = OwningReactorWindow;
-        UseEffect(() =>
-        {
-            if (win is null) return () => { };
-            var token = win.RegisterAspectRatioOverride(widthOverHeight);
-            return () => token.Dispose();
-        }, win!, widthOverHeight ?? double.NaN);
-    }
 
-    /// <summary>
-    /// Returns a stable callback that starts a framework-managed window
-    /// drag/move loop (cursor polling + <c>AppWindow.Move</c> at ~60Hz
-    /// until the left mouse button is released).
-    /// </summary>
-    /// <remarks>
-    /// The loop is framework-managed (not OS-managed) because WinUI 3
-    /// routes pointer input through a child input-site HWND, so
-    /// synthesizing <c>WM_NCLBUTTONDOWN</c> against the top-level HWND
-    /// silently falls back to keyboard/cursor-track Move mode rather
-    /// than mouse-driven click-drag. The polling approach is reliable
-    /// but trades away OS Aero Snap during the drag. See spec 054 §5.3.
-    /// </remarks>
-    public Action UseWindowDragMove()
-    {
-        var win = OwningReactorWindow;
-        return UseMemo<Action>(() => win is null ? static () => { } : win.BeginDragMove, win!);
-    }
 
-    internal static IPickerService PickerService { get; set; } = new DefaultPickerService();
 
-    /// <summary>Opens a single-file picker owned by this component's window.</summary>
-    /// <remarks>
-    /// Not a hook: call from a UI-thread event handler, not during Render. The owner is the window
-    /// whose host renders this component (for ReactorHostControl, the window it is loaded in). Throws <see cref="InvalidOperationException"/> once the component unmounts, its window closes or its host is disposed, or while its ReactorHostControl is not loaded. Cancellation returns null.
-    /// </remarks>
-    public Task<Microsoft.Windows.Storage.Pickers.PickFileResult?> PickFileAsync(FilePickerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        PickerOptionsValidation.Validate(options);
-        var owner = GetPickerOwner(nameof(PickFileAsync));
-        return PickerService.PickFileAsync(owner, options);
-    }
 
-    /// <summary>Opens a multiple-file picker owned by this component's window.</summary>
-    /// <remarks>
-    /// Not a hook: call from a UI-thread event handler, not during Render. The owner is the window
-    /// whose host renders this component (for ReactorHostControl, the window it is loaded in). Throws <see cref="InvalidOperationException"/> once the component unmounts, its window closes or its host is disposed, or while its ReactorHostControl is not loaded. Cancellation returns an empty list.
-    /// </remarks>
-    public Task<IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult>> PickMultipleFilesAsync(FilePickerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        PickerOptionsValidation.Validate(options);
-        var owner = GetPickerOwner(nameof(PickMultipleFilesAsync));
-        return PickerService.PickMultipleFilesAsync(owner, options);
-    }
 
-    /// <summary>Opens a single-folder picker owned by this component's window.</summary>
-    /// <remarks>
-    /// Not a hook: call from a UI-thread event handler, not during Render. The owner is the window
-    /// whose host renders this component (for ReactorHostControl, the window it is loaded in). Throws <see cref="InvalidOperationException"/> once the component unmounts, its window closes or its host is disposed, or while its ReactorHostControl is not loaded. Cancellation returns null.
-    /// </remarks>
-    public Task<Microsoft.Windows.Storage.Pickers.PickFolderResult?> PickFolderAsync(FolderPickerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        var owner = GetPickerOwner(nameof(PickFolderAsync));
-        return PickerService.PickFolderAsync(owner, options);
-    }
 
-    /// <summary>Opens a multiple-folder picker owned by this component's window.</summary>
-    /// <remarks>
-    /// Not a hook: call from a UI-thread event handler, not during Render. The owner is the window
-    /// whose host renders this component (for ReactorHostControl, the window it is loaded in). Throws <see cref="InvalidOperationException"/> once the component unmounts, its window closes or its host is disposed, or while its ReactorHostControl is not loaded. Cancellation returns an empty list.
-    /// </remarks>
-    public Task<IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFolderResult>> PickMultipleFoldersAsync(FolderPickerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        var owner = GetPickerOwner(nameof(PickMultipleFoldersAsync));
-        return PickerService.PickMultipleFoldersAsync(owner, options);
-    }
 
-    /// <summary>Opens a save-file picker owned by this component's window.</summary>
-    /// <remarks>
-    /// Not a hook: call from a UI-thread event handler, not during Render. The owner is the window
-    /// whose host renders this component (for ReactorHostControl, the window it is loaded in). Throws <see cref="InvalidOperationException"/> once the component unmounts, its window closes or its host is disposed, or while its ReactorHostControl is not loaded. Cancellation returns null. Selecting a target does not
-    /// create or write the file; that is the caller's responsibility.
-    /// </remarks>
-    public Task<Microsoft.Windows.Storage.Pickers.PickFileResult?> PickSaveFileAsync(SaveFilePickerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        PickerOptionsValidation.Validate(options);
-        var owner = GetPickerOwner(nameof(PickSaveFileAsync));
-        return PickerService.PickSaveFileAsync(owner, options);
-    }
 
-    private Microsoft.UI.WindowId GetPickerOwner(string operation)
-    {
-        var owner = _owner ?? throw new InvalidOperationException(_ownerReleased
-            ? $"{operation} was called from a component that is no longer mounted."
-            : $"{operation} requires a component rendered by a Reactor host (a ReactorWindow, ReactorHostControl or ReactorHost).");
-        return owner.TryGetWindowId(out var id) switch
-        {
-            ContentOwnerStatus.Available => id,
-            ContentOwnerStatus.Closed => throw new InvalidOperationException(
-                $"{operation} was called after the component's window closed or its host was disposed."),
-            ContentOwnerStatus.Detached => throw new InvalidOperationException(
-                $"{operation} was called while the component's ReactorHostControl is not loaded in a window."),
-            _ => throw new InvalidOperationException($"{operation} must be called on the owning window's UI thread."),
-        };
-    }
 
-    /// <summary>
-    /// Subscribes to the host window's <c>StateChanged</c> event and re-renders
-    /// on change. Returns <see cref="Microsoft.UI.Reactor.WindowState.Normal"/>
-    /// outside a window. (spec 036 §7)
-    /// </summary>
-    public Microsoft.UI.Reactor.WindowState UseWindowState()
-    {
-        var win = OwningReactorWindow;
-        if (win is null)
-        {
-            // Same slots as the live branch (UseState + UseEffect) so a context can cross the
-            // no-window ↔ window transition without a hook-order mismatch.
-            _ = UseState(Microsoft.UI.Reactor.WindowState.Normal);
-            UseEffect(() => { /* no-op */ }, this);
-            return Microsoft.UI.Reactor.WindowState.Normal;
-        }
-        var (state, setState) = UseState(win.State);
-        UseEffect(() =>
-        {
-            void handler(object? sender, Microsoft.UI.Reactor.WindowState newState) => setState(newState);
-            win.StateChanged += handler;
-            return () => win.StateChanged -= handler;
-        }, win);
-        return state;
-    }
 
-    /// <summary>
-    /// Subscribes to the host window's activation events and re-renders on
-    /// change. Returns <c>true</c> outside a window (the surface is "active"
-    /// while shown). (spec 036 §7)
-    /// </summary>
-    public bool UseIsActive()
-    {
-        var win = OwningReactorWindow;
-        if (win is null)
-        {
-            _ = UseState(true);
-            UseEffect(() => { /* no-op */ }, this);
-            return true;
-        }
-        var (active, setActive) = UseState(win.IsActive);
-        UseEffect(() =>
-        {
-            void onAct(object? s, EventArgs e) => setActive(true);
-            void onDeact(object? s, EventArgs e) => setActive(false);
-            win.Activated += onAct;
-            win.Deactivated += onDeact;
-            return () =>
-            {
-                win.Activated -= onAct;
-                win.Deactivated -= onDeact;
-            };
-        }, win);
-        return active;
-    }
 
-    /// <summary>
-    /// Registers a synchronous "can the window close right now?" predicate.
-    /// Multiple guards stack — any returning <c>false</c> cancels the close.
-    /// Runs on the UI thread; for async confirmation, return <c>false</c> and
-    /// re-trigger <see cref="Microsoft.UI.Reactor.ReactorWindow.Close"/> from
-    /// the dialog callback. No-op outside a window. (spec 036 §7 / §13.4)
-    /// </summary>
-    public void UseClosingGuard(Func<bool> canClose)
-    {
-        ArgumentNullException.ThrowIfNull(canClose);
-        var win = OwningReactorWindow;
-        if (win is null) { UseEffect(() => { /* no-op */ }, canClose); return; }
-        UseEffect(() =>
-        {
-            var token = win.RegisterClosingGuard(canClose);
-            return () => token.Dispose();
-        }, win, canClose);
-    }
 
-    /// <summary>
-    /// Returns the current per-window DPI (<see cref="Microsoft.UI.Reactor.ReactorWindow.Dpi"/>)
-    /// and re-renders on DPI change. Returns the system primary-monitor DPI when
-    /// called outside a window. (spec 036 §5.2)
-    /// </summary>
-    public uint UseDpi()
-    {
-        var win = OwningReactorWindow;
-        if (win is null)
-        {
-            _ = UseState((uint)0);
-            UseEffect(() => { /* no-op */ }, this);
-            return DpiHelpers.GetSystemDpiSafe();
-        }
 
-        var (dpi, setDpi) = UseState(win.Dpi);
 
-        UseEffect(() =>
-        {
-            void handler(object? sender, uint newDpi) => setDpi(newDpi);
-            win.DpiChanged += handler;
-            return () => win.DpiChanged -= handler;
-        }, win);
 
-        return dpi == 0 ? win.Dpi : dpi;
-    }
 
-    /// <summary>
-    /// Open or reuse a secondary window keyed by <paramref name="key"/>. Renders
-    /// that pass the same <paramref name="key"/> share the same
-    /// <see cref="Microsoft.UI.Reactor.ReactorWindow"/>; if the spec changes
-    /// across renders the live window is updated via
-    /// <see cref="Microsoft.UI.Reactor.ReactorWindow.Update"/>. The returned
-    /// handle is identity-stable across renders so long as the key is stable.
-    /// </summary>
-    /// <remarks>
-    /// <para>Unmount semantics: when the calling component unmounts, the opened
-    /// window stays open. Components that want the inverse behavior must close
-    /// the window explicitly — e.g. by registering a <c>UseEffect</c> cleanup
-    /// that calls <see cref="Microsoft.UI.Reactor.ReactorWindow.Close"/> on the
-    /// returned handle. (spec 036 §4.3 / §15.6)</para>
-    /// <para><b>Note — asymmetry with <see cref="UseTrayIcon"/>:</b> tray icons
-    /// are component-scoped and close on unmount; opened windows are app-scoped
-    /// and survive unmount. The asymmetry is deliberate (a window is normally
-    /// expected to outlive the menu item that opened it, while a tray icon
-    /// belongs to the component that declared it), so the two hooks behave
-    /// inversely despite the matching naming.</para>
-    /// <para>Returns <c>null</c> when no UI dispatcher has been captured —
-    /// happens in unit-test contexts where no <c>ReactorApp.Run</c> is in
-    /// flight. In production this is unreachable.</para>
-    /// </remarks>
-    public Microsoft.UI.Reactor.ReactorWindow? UseOpenWindow(
-        Microsoft.UI.Reactor.WindowKey key,
-        Microsoft.UI.Reactor.WindowSpec spec,
-        Func<Component> factory)
-    {
-        ArgumentNullException.ThrowIfNull(spec);
-        ArgumentNullException.ThrowIfNull(factory);
 
-        // Capture an identity-stable handle slot. Renders that pass the same
-        // key reuse this slot; rekeying clears the handle so a fresh window
-        // opens for the new key.
-        var handleRef = UseRef<Microsoft.UI.Reactor.ReactorWindow?>(null);
-        var lastKeyRef = UseRef<Microsoft.UI.Reactor.WindowKey?>(null);
 
-        // Resolve the live window for this key. Three cases:
-        //   1. Slot already holds a non-disposed window with the matching key — reuse.
-        //   2. The key changed since last render — drop the slot (the old window
-        //      stays open per spec §15.6) and look up by new key.
-        //   3. No window matches — open one, save the handle.
-        if (handleRef.Current is { } prior && lastKeyRef.Current is { } priorKey && priorKey.Equals(key))
-        {
-            // Reuse — but if the underlying window has been closed externally,
-            // drop the stale reference so the next branch reopens.
-            var snapshot = Microsoft.UI.Reactor.ReactorApp.Windows;
-            bool stillOpen = false;
-            for (int i = 0; i < snapshot.Count; i++)
-                if (ReferenceEquals(snapshot[i], prior)) { stillOpen = true; break; }
-            if (!stillOpen) handleRef.Current = null;
-        }
-        else
-        {
-            // Key changed (or first render) — clear the slot. We do NOT close
-            // the previous window; the spec calls for explicit close-on-cleanup.
-            handleRef.Current = null;
-        }
 
-        // Slot is empty — try a process-wide lookup by key first (the user may
-        // have already opened a window with this key from elsewhere) and only
-        // fall back to OpenWindow when no live window owns it.
-        if (handleRef.Current is null)
-        {
-            var existing = Microsoft.UI.Reactor.ReactorApp.FindWindow(key);
-            if (existing is not null)
-            {
-                handleRef.Current = existing;
-            }
-            else if (Microsoft.UI.Reactor.ReactorApp.UIDispatcher is not null)
-            {
-                // Stamp the key onto the spec so FindWindow / FindTrayIcon /
-                // shutdown-policy bookkeeping work without an explicit
-                // WindowSpec.Key on the caller.
-                var stamped = spec.Key is null ? spec with { Key = key } : spec;
-                try
-                {
-                    handleRef.Current = Microsoft.UI.Reactor.ReactorApp.OpenWindow(stamped, factory);
-                }
-                catch (Exception ex) when ((ex is InvalidOperationException || ex is global::System.Runtime.InteropServices.COMException)
-                    && !RenderErrorDispatch.IsPropagating(ex))
-                {
-                    // No XAML application or UI dispatcher available. Hooks
-                    // must not crash the calling render; the live multi-
-                    // window path is exercised in selftest fixtures. A render
-                    // error the app asked to propagate (and then declined) is
-                    // not that case: it keeps going out (issue #1291).
-                    handleRef.Current = null;
-                }
-            }
-            else
-            {
-                // No UI dispatcher captured — unit-test contexts. Hook slot
-                // count must stay stable so the hook-order check passes on
-                // subsequent renders.
-                handleRef.Current = null;
-            }
-        }
-        lastKeyRef.Current = key;
 
-        // If the spec changed since the last render, push it through Update so
-        // chrome stays in sync. Effect dependency is the spec record's
-        // value-equality so we only call Update on real changes.
-        var win = handleRef.Current;
-        if (win is not null)
-        {
-            UseEffect(() =>
-            {
-                try { win.Update(spec.Key is null ? spec with { Key = key } : spec); }
-                catch { /* best effort — disposed windows / threading races */ }
-            }, win, spec);
-        }
-        else
-        {
-            // Keep the hook slot count stable across the no-window branch.
-            UseEffect(() => { /* no-op */ }, key, spec);
-        }
 
-        return win;
-    }
 
-    /// <summary>
-    /// Open (or reuse-by-<see cref="Microsoft.UI.Reactor.TrayIconSpec.Key"/>) a
-    /// system-tray icon scoped to the calling component. The icon closes
-    /// automatically on unmount — that's the only difference from
-    /// <see cref="Microsoft.UI.Reactor.ReactorApp.OpenTrayIcon"/>, which is
-    /// app-scoped and keeps the icon alive until explicit
-    /// <see cref="Microsoft.UI.Reactor.ReactorTrayIcon.Close"/>.
-    /// </summary>
-    /// <remarks>
-    /// Returns <c>null</c> when no UI dispatcher has been captured (test
-    /// contexts) or when the spec change cannot be reconciled — callers
-    /// should null-check before subscribing to events. Identity-stable across
-    /// re-renders so the same handle wires through subsequent
-    /// <c>UseEffect</c> dependencies.
-    /// (spec 036 §11.4)
-    /// </remarks>
-    public Microsoft.UI.Reactor.ReactorTrayIcon? UseTrayIcon(Microsoft.UI.Reactor.TrayIconSpec spec)
-    {
-        ArgumentNullException.ThrowIfNull(spec);
 
-        var handleRef = UseRef<Microsoft.UI.Reactor.ReactorTrayIcon?>(null);
 
-        // Open on first render; reuse on subsequent renders if a key match
-        // already exists. The hook owns the lifetime — UseEffect cleanup
-        // closes the icon on unmount.
-        if (handleRef.Current is null)
-        {
-            if (spec.Key is { } key)
-            {
-                handleRef.Current = Microsoft.UI.Reactor.ReactorApp.FindTrayIcon(key);
-            }
 
-            if (handleRef.Current is null && Microsoft.UI.Reactor.ReactorApp.UIDispatcher is not null)
-            {
-                try
-                {
-                    handleRef.Current = Microsoft.UI.Reactor.ReactorApp.OpenTrayIcon(spec);
-                }
-                catch (Exception ex) when (ex is InvalidOperationException || ex is global::System.Runtime.InteropServices.COMException)
-                {
-                    // Shell COM unavailable in test/headless contexts.
-                    handleRef.Current = null;
-                }
-            }
-        }
 
-        var icon = handleRef.Current;
 
-        // Spec-change diff: re-apply only when the value-equal record
-        // signature changes. Effect dependency carries the spec record.
-        if (icon is not null)
-        {
-            UseEffect(() =>
-            {
-                try { icon.Update(spec); }
-                catch { /* best effort */ }
-            }, icon, spec);
-        }
-        else
-        {
-            // Keep slot count stable so the hook-order check passes on
-            // subsequent renders even when the open failed.
-            UseEffect(() => { /* no-op */ }, spec);
-        }
 
-        // Component-scoped lifetime — close on unmount. UseEffect with
-        // empty deps runs once. Read the icon via handleRef inside the
-        // cleanup so a late-bound icon (e.g. UIDispatcher captured after the
-        // first render) still gets closed.
-        UseEffect(() =>
-        {
-            return () =>
-            {
-                try { handleRef.Current?.Close(); } catch { /* best effort */ }
-            };
-        });
 
-        return icon;
-    }
 
-    /// <summary>
-    /// Returns true when the given window's width is >= minWidth.
-    /// Re-renders when the window resizes across the breakpoint.
-    /// </summary>
-    public bool UseBreakpoint(Window window, double minWidth)
-    {
-        var (width, _) = UseWindowSize(window);
-        return width >= minWidth;
-    }
 
-    /// <summary>
-    /// Window-inferring overload — takes only <paramref name="minWidth"/> and
-    /// resolves the window whose host renders this component (see the parameterless
-    /// <see cref="UseWindowSize()"/>). Returns false when the component has no owning
-    /// window. (spec 036 §5.2)
-    /// </summary>
-    public bool UseBreakpoint(double minWidth)
-    {
-        var (width, _) = UseWindowSize();
-        return width >= minWidth;
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     internal void FlushEffects()
     {
@@ -2697,96 +2697,96 @@ public sealed class RenderContext
         _owner = null;
     }
 
-    /// <summary>
-    /// Hot Reload state migration (spec 049 §6). Called once per live context at
-    /// the <em>start</em> of a hot-reload pass, before any <c>Render()</c> runs.
-    /// For each value-carrying hook cell (<c>UseState</c> / <c>UseReducer</c> /
-    /// <c>UseRef</c> / <c>UseMemo</c> / <c>UsePersisted</c>) whose stored value's
-    /// type was reported as updated by the runtime, constructs a fresh instance
-    /// of the (current) type and copies the surviving fields by name via
-    /// <see cref="Microsoft.UI.Reactor.Hosting.ReactorHotReloadCopier"/>, then value-swaps it into the cell.
-    /// This is a value swap, not a hook reset: <c>_hookIndex</c> is untouched and
-    /// no cleanups run, so hook identity/order is preserved while the data shape
-    /// catches up to the edited record/class. Effects whose deps referenced the
-    /// migrated value re-run on the following render because the new instance is
-    /// a different reference (spec §11 Q1) — matching normal SetState semantics.
-    ///
-    /// <para>Within a hot-reload pass it always resets every cell's
-    /// <see cref="HookState.Migrated"/> flag first so the devtools annotation
-    /// reflects only the most recent pass, even when there is nothing to
-    /// migrate. Outside a pass it is a complete no-op (the guard is checked
-    /// before the reset) so a stray call never wipes the prior pass's
-    /// annotations. Reflection-bearing; reachable only inside a hot-reload
-    /// pass, so it is statically dead under NativeAOT (spec §8).</para>
-    /// </summary>
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Reachable only inside a hot-reload pass; dead under NativeAOT (spec 049 §8).")]
-    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "Reachable only inside a hot-reload pass; dead under NativeAOT (spec 049 §8).")]
-    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Reachable only inside a hot-reload pass; dead under NativeAOT (spec 049 §8).")]
-    internal void MigrateHooksForHotReload(IReadOnlySet<Type>? updatedTypes)
-    {
-        // Outside a hot-reload pass this is a complete no-op so a stray call
-        // never disturbs the devtools Migrated annotations from the last pass.
-        if (!Microsoft.UI.Reactor.Hosting.HotReloadService.WithinUpdatePass) return;
 
-        // Within a pass, clear stale per-pass annotations regardless of work.
-        for (int i = 0; i < _hooks.Count; i++)
-            _hooks[i].Migrated = false;
 
-        if (updatedTypes is null || updatedTypes.Count == 0) return;
 
-        for (int i = 0; i < _hooks.Count; i++)
-        {
-            var h = _hooks[i];
-            var t = h.GetType();
-            if (!t.IsGenericType) continue;
-            var def = t.GetGenericTypeDefinition();
-            if (def != typeof(ValueHookState<>) &&
-                def != typeof(MemoHookState<>) &&
-                def != typeof(PersistedHookState<>))
-                continue;
 
-            var valueField = t.GetField("Value");
-            if (valueField is null) continue;
 
-            object? oldValue = valueField.GetValue(h);
-            if (oldValue is null) continue;
 
-            Type valueType = oldValue.GetType();
-            if (!FullNameMatches(updatedTypes, valueType)) continue;
 
-            object? newInstance = Microsoft.UI.Reactor.Hosting.ReactorHotReloadCopier.CreateInstance(valueType);
-            if (newInstance is null) continue; // no usable ctor — keep old value.
 
-            Microsoft.UI.Reactor.Hosting.ReactorHotReloadCopier.TryMigrate(
-                oldValue, newInstance,
-                new HashSet<object>(ReferenceEqualityComparer.Instance));
 
-            try
-            {
-                valueField.SetValue(h, newInstance);
-                h.Migrated = true;
-                Diagnostics.ReactorEventSource.Log.HotReloadStateMigrated(
-                    valueType.FullName ?? valueType.Name);
-            }
-            catch (ArgumentException)
-            {
-                // The cell's generic argument is a distinct Type that merely
-                // shares a FullName with the edited shape (the runtime minted a
-                // new Type token rather than editing in place). The new instance
-                // is not assignable to the old cell — leave the old value rather
-                // than corrupt the hook. Tracked as a known headless-irreproducible
-                // limitation in spec 049 §6.
-            }
-        }
-    }
 
-    private static bool FullNameMatches(IReadOnlySet<Type> updatedTypes, Type candidate)
-    {
-        if (updatedTypes.Contains(candidate)) return true;
-        foreach (var u in updatedTypes)
-            if (u.FullName is not null && u.FullName == candidate.FullName) return true;
-        return false;
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     /// <summary>
     /// Determines whether two dependency arrays are equal.

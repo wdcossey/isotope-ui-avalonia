@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/PendingScope.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Hooks;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/PendingScope.cs, last changed upstream in a4dcfdf558aa; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Shared loading-state ref-count consumed by the <c>Pending</c> element and populated by

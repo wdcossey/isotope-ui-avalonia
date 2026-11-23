@@ -1,14 +1,14 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/WindowPersistedScope.cs, last changed upstream in b0e0fe30d6d0. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/WindowPersistedScope.cs, last changed upstream in b0e0fe30d6d0; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 using System.Diagnostics;
-using Microsoft.UI.Reactor.Core.Internal;
+using Isotope.UI.Core.Internal;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Per-host (per-window) persisted-state scope. Owned by a
-/// <see cref="Microsoft.UI.Reactor.Hosting.ReactorHost"/> /
-/// <see cref="Microsoft.UI.Reactor.Hosting.ReactorHostControl"/> and disposed
+/// <see cref="Isotope.UI.Hosting.ReactorHost"/> /
+/// <see cref="Isotope.UI.Hosting.ReactorHostControl"/> and disposed
 /// when the host unloads — so window-scoped state is bounded by window
 /// lifetime, not process lifetime.
 /// </summary>

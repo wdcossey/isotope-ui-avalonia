@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationDiagnostics.cs, last changed upstream in aad55a4075ac. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core.Diagnostics;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationDiagnostics.cs, last changed upstream in aad55a4075ac; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core.Diagnostics;
 
-namespace Microsoft.UI.Reactor.Navigation;
+namespace Isotope.UI.Navigation;
 
 /// <summary>
 /// Diagnostic events for the navigation system. Subscribe to these events

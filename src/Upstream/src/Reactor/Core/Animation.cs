@@ -1,7 +1,7 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Animation.cs, last changed upstream in ffe1de4d884d. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core.Internal;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Animation.cs, last changed upstream in ffe1de4d884d; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core.Internal;
 
-namespace Microsoft.UI.Reactor.Core;
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// Animation kinds that an ambient <c>Animations.Animate(...)</c>
@@ -54,7 +54,7 @@ public enum AnimationKind
 /// </para>
 /// <para>
 /// Named <c>Animations</c> (plural) instead of <c>Animation</c> to avoid
-/// collision with the existing <c>Microsoft.UI.Reactor.Animation</c>
+/// collision with the existing <c>Isotope.UI.Animation</c>
 /// sub-namespace, which houses per-element animation modifiers.
 /// </para>
 /// </remarks>

@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderErrorDispatch.cs, last changed upstream in 0f84736ee949. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/RenderErrorDispatch.cs, last changed upstream in 0f84736ee949; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
-using Microsoft.UI.Xaml;
 
-namespace Microsoft.UI.Reactor.Core;
+
+namespace Isotope.UI.Core;
 
 /// <summary>
 /// The internal error boundary around an app-supplied render-error fallback (issue #1291).

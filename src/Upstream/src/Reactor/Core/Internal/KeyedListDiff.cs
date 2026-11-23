@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/KeyedListDiff.cs, last changed upstream in ad0ab15f2795. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/KeyedListDiff.cs, last changed upstream in ad0ab15f2795; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Buffers;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.UI.Reactor.Core.Internal;
+namespace Isotope.UI.Core.Internal;
 
 /// <summary>
 /// Where a keyed-list diagnostic came from: the component whose render produced the list
@@ -270,7 +270,7 @@ internal static class KeyedListDiff
         {
             ReportBailout(
                 controlInstance, diagnosticContext, logger,
-                Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.DuplicateKey,
+                Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.DuplicateKey,
                 CollectDuplicates(newKeys, newCount),
                 indexHint: null,
                 attribution);
@@ -636,7 +636,7 @@ internal static class KeyedListDiff
         object? controlInstance,
         string? diagnosticContext,
         ILogger? logger,
-        Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind kind,
+        Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind kind,
         IReadOnlyList<string> sampleKeys,
         int? indexHint,
         KeyedListAttribution attribution,
@@ -644,17 +644,17 @@ internal static class KeyedListDiff
     {
         // Every occurrence (not deduplicated): a perf capture wants to see each re-realize. The
         // owning component is the enclosing ComponentRender span.
-        if (Microsoft.UI.Reactor.Core.Diagnostics.ReactorPerfTrace.ChildrenEnabled)
+        if (Isotope.UI.Core.Diagnostics.ReactorPerfTrace.ChildrenEnabled)
         {
-            Microsoft.UI.Reactor.Core.Diagnostics.ReactorPerfTrace.KeyedListDiagnostic(
-                kind == Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.NullKey ? "nullKey" : "duplicateKey",
+            Isotope.UI.Core.Diagnostics.ReactorPerfTrace.KeyedListDiagnostic(
+                kind == Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.NullKey ? "nullKey" : "duplicateKey",
                 bailedOut);
         }
 
-        bool isFirst = Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics
+        bool isFirst = Isotope.UI.Core.Diagnostics.ReactorDiagnostics
             .IsFirstOccurrence(controlInstance, kind, sampleKeys, diagnosticContext);
 
-        Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics
+        Isotope.UI.Core.Diagnostics.ReactorDiagnostics
             .Record(controlInstance, diagnosticContext, kind, sampleKeys, attribution.ComponentName, attribution.CallSite);
 
         // Only emit the structured ILogger warning on the *first* occurrence
@@ -663,7 +663,7 @@ internal static class KeyedListDiff
         if (!isFirst) return;
         if (logger is null || !logger.IsEnabled(LogLevel.Warning)) return;
 
-        string reason = kind == Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.NullKey
+        string reason = kind == Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.NullKey
             ? (indexHint is { } i ? $"null key at index {i}" : "null key")
             : $"duplicate keys: {LogKeys(sampleKeys)}";
 
@@ -702,7 +702,7 @@ internal static class KeyedListDiff
     /// <summary>At most <see cref="Diagnostics.ReactorDiagnostics.MaxSampleKeys"/> keys, for a log line.</summary>
     private static string LogKeys(IReadOnlyList<string> keys)
     {
-        int max = Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics.MaxSampleKeys;
+        int max = Isotope.UI.Core.Diagnostics.ReactorDiagnostics.MaxSampleKeys;
         return keys.Count <= max
             ? string.Join(", ", keys)
             : string.Join(", ", keys.Take(max)) + $", … ({keys.Count - max} more)";
@@ -719,7 +719,7 @@ internal static class KeyedListDiff
         object? controlInstance, string? diagnosticContext, ILogger? logger, int index, KeyedListAttribution attribution)
         => ReportBailout(
             controlInstance, diagnosticContext, logger,
-            Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.NullKey,
+            Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.NullKey,
             NullKeySample,
             indexHint: index,
             attribution,
@@ -802,7 +802,7 @@ internal static class KeyedListDiff
         {
             ReportBailout(
                 controlInstance, diagnosticContext, logger,
-                Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.NullKey,
+                Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.NullKey,
                 NullKeySample,
                 indexHint: firstNull,
                 attribution,
@@ -812,7 +812,7 @@ internal static class KeyedListDiff
         {
             ReportBailout(
                 controlInstance, diagnosticContext, logger,
-                Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.DuplicateKey,
+                Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.DuplicateKey,
                 SortedSample(dupes),
                 indexHint: null,
                 attribution,
@@ -878,17 +878,17 @@ internal static class KeyedListDiff
         }
         if (dupes is null) return;
         // Not a bailout: the panel's keyed reconcile still runs, pairing the duplicates wrongly.
-        if (Microsoft.UI.Reactor.Core.Diagnostics.ReactorPerfTrace.ChildrenEnabled)
-            Microsoft.UI.Reactor.Core.Diagnostics.ReactorPerfTrace.KeyedListDiagnostic("duplicateKey", bailedOut: false);
+        if (Isotope.UI.Core.Diagnostics.ReactorPerfTrace.ChildrenEnabled)
+            Isotope.UI.Core.Diagnostics.ReactorPerfTrace.KeyedListDiagnostic("duplicateKey", bailedOut: false);
         var sample = SortedSample(dupes);
 
         var attribution = new KeyedListAttribution(reconciler?.DiagnosticComponent, KeyedListAttribution.CallSiteOf(firstDuplicate));
         var context = parentControl?.GetType().Name ?? "Panel";
-        var kind = Microsoft.UI.Reactor.Core.Diagnostics.KeyedListDiagnosticKind.DuplicateKey;
+        var kind = Isotope.UI.Core.Diagnostics.KeyedListDiagnosticKind.DuplicateKey;
 
-        bool isFirst = Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics
+        bool isFirst = Isotope.UI.Core.Diagnostics.ReactorDiagnostics
             .IsFirstOccurrence(parentControl, kind, sample, context);
-        Microsoft.UI.Reactor.Core.Diagnostics.ReactorDiagnostics
+        Isotope.UI.Core.Diagnostics.ReactorDiagnostics
             .Record(parentControl, context, kind, sample, attribution.ComponentName, attribution.CallSite);
 
         var logger = reconciler?._logger;

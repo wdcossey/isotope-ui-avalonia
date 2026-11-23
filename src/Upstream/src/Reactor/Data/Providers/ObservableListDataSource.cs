@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/Providers/ObservableListDataSource.cs, last changed upstream in c5829589ca9d. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/Providers/ObservableListDataSource.cs, last changed upstream in c5829589ca9d; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Microsoft.UI.Reactor.Data.Providers;
+namespace Isotope.UI.Data.Providers;
 
 /// <summary>
 /// An observable data source that watches an ObservableCollection for changes

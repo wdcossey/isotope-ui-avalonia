@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/FieldDescriptor.cs, last changed upstream in fd7c97a74cac. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/FieldDescriptor.cs, last changed upstream in fd7c97a74cac; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Controls.Validation;
+using Isotope.UI.Core;
+using Isotope.UI.Controls.Validation;
 
-namespace Microsoft.UI.Reactor.Data;
+namespace Isotope.UI.Data;
 
 /// <summary>
 /// Describes a single field within a decomposed type.

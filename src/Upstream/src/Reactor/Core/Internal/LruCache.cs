@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/LruCache.cs, last changed upstream in a4dcfdf558aa. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Internal/LruCache.cs, last changed upstream in a4dcfdf558aa; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.UI.Reactor.Core.Internal;
+namespace Isotope.UI.Core.Internal;
 
 /// <summary>
 /// Bounded LRU cache, accessed under a lock. Used by

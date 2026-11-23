@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/Validators/IValidator.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Controls.Validation;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/Validators/IValidator.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// A synchronous validator that checks a value and returns a validation message on failure.

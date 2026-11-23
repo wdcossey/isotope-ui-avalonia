@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ValidationVisualizer.cs, last changed upstream in e1fa2b6e3807. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Core;
-using V1 = Microsoft.UI.Reactor.Core.V1Protocol;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Controls/Validation/ValidationVisualizer.cs, last changed upstream in e1fa2b6e3807; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Core;
+using V1 = Isotope.UI.Core.V1Protocol;
 
-namespace Microsoft.UI.Reactor.Controls.Validation;
+namespace Isotope.UI.Controls.Validation;
 
 /// <summary>
 /// The visual style of a validation visualizer.

@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationLifecycle.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Navigation;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/NavigationLifecycle.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Navigation;
 
 /// <summary>
 /// Context passed to <c>onNavigatingTo</c> destination-side guard callbacks before a page becomes active.

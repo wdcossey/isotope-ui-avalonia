@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/PseudoLocalizer.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Localization/PseudoLocalizer.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.UI.Reactor.Localization;
+namespace Isotope.UI.Localization;
 
 /// <summary>
 /// Transforms strings for pseudolocalization testing:

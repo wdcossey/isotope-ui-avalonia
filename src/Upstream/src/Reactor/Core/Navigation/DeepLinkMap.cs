@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/DeepLinkMap.cs, last changed upstream in c53ab496183b. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Navigation/DeepLinkMap.cs, last changed upstream in c53ab496183b; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Microsoft.UI.Reactor.Navigation;
+namespace Isotope.UI.Navigation;
 
 /// <summary>
 /// Provides typed access to parameters extracted from a URI pattern match.

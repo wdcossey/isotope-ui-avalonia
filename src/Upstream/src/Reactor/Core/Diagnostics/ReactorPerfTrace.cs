@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs, last changed upstream in ad0ab15f2795. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/ReactorPerfTrace.cs, last changed upstream in ad0ab15f2795; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Microsoft.UI.Reactor.Core.Diagnostics;
+namespace Isotope.UI.Core.Diagnostics;
 
 /// <summary>
 /// Reactor's performance spans, written as TraceLogging events through a raw ETW provider

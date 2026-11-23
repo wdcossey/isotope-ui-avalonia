@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ContentOwner.cs, last changed upstream in 5ba98bf79841. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Core;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ContentOwner.cs, last changed upstream in 5ba98bf79841; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Core;
 
 /// <summary>Result of resolving the window that owns a host's content (see <see cref="IContentOwner"/>).</summary>
 internal enum ContentOwnerStatus
@@ -23,7 +23,7 @@ internal enum ContentOwnerStatus
 internal interface IContentOwner
 {
     /// <summary>
-    /// The <see cref="Microsoft.UI.Reactor.ReactorWindow"/> that owns the host, or null for a
+    /// The <see cref="Isotope.UI.ReactorWindow"/> that owns the host, or null for a
     /// <c>ReactorHostControl</c> or a <c>ReactorHost</c> constructed over a raw window.
     /// </summary>
     ReactorWindow? ReactorWindow { get; }

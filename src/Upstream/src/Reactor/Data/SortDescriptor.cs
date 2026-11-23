@@ -1,5 +1,5 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/SortDescriptor.cs, last changed upstream in ca65995135d5. Do not edit: change the tools/sync rules.
-namespace Microsoft.UI.Reactor.Data;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Data/SortDescriptor.cs, last changed upstream in ca65995135d5; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+namespace Isotope.UI.Data;
 
 /// <summary>
 /// Describes a sort operation on a field.

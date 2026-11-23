@@ -243,8 +243,8 @@
     },
     {
       "path": "src/Reactor/Core/SourceLocation.cs",
-      "tier": 1,
-      "note": "Spike A: unmodified, compiles"
+      "tier": 2,
+      "note": "Spike A: unmodified, compiles; the library (#1) drops DeclaredName (tier 3 diagnostics)"
     },
     {
       "path": "src/Reactor/Core/Context.cs",
@@ -383,8 +383,8 @@
     },
     {
       "path": "src/Reactor/Core/ContextScope.cs",
-      "tier": 1,
-      "note": "Spike A: unmodified, compiles"
+      "tier": 2,
+      "note": "Spike A: unmodified, compiles (with Spike A's placeholder namespaces); the library (#1) needs transform winui-usings"
     },
     {
       "path": "src/Reactor/Core/ColorScheme.cs",
@@ -428,8 +428,8 @@
     },
     {
       "path": "src/Reactor/Core/IItemsRepeaterFactorySource.cs",
-      "tier": 1,
-      "note": "Spike A: unmodified, compiles"
+      "tier": 2,
+      "note": "Spike A: unmodified, compiles (with Spike A's placeholder namespaces); transform winui-usings"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs",
@@ -438,8 +438,8 @@
     },
     {
       "path": "src/Reactor/Core/V1HandlerRegistry.cs",
-      "tier": 1,
-      "note": "Spike A: unmodified, compiles"
+      "tier": 2,
+      "note": "Spike A: unmodified, compiles (with Spike A's placeholder namespaces); transform winui-usings"
     },
     {
       "path": "src/Reactor/Core/DragAttached.cs",
@@ -570,6 +570,66 @@
       "path": "src/Reactor/Core/Polyfills/ClosedTypeAttributes.cs",
       "tier": 1,
       "note": "Spike A: unmodified, compiles"
+    },
+    {
+      "path": "src/Reactor/Core/ChildSlots.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/ChildDiffHints.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/HookOrderException.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/UIThreadMarshal.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Hosting/WindowKey.cs",
+      "tier": 1,
+      "note": "the library (#1) links it: a window identity value type, compiles unmodified (the rest of Hosting/ is tier 3)"
+    },
+    {
+      "path": "src/Reactor/Core/Navigation/NavigationTransition.cs",
+      "tier": 2,
+      "note": "the library (#1) links it; transform winui-usings"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/LogCategory.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/DiagnosticLog.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/ComponentNames.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
+    },
+    {
+      "path": "src/Reactor/Core/ObservableTreeTracker.cs",
+      "tier": 2,
+      "note": "the library (#1) links it; transform dispatcher-queue"
+    },
+    {
+      "path": "src/Reactor/Core/PersistedStateCache.cs",
+      "tier": 2,
+      "note": "the library (#1) links it; transform memory-manager"
+    },
+    {
+      "path": "src/Reactor/Core/Diagnostics/DiagnosticText.cs",
+      "tier": 1,
+      "note": "the library (#1) links it; compiles unmodified"
     },
     {
       "path": "tests/Reactor.Tests/YogaValueExtensionsTests.cs",

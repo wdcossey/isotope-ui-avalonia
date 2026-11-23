@@ -1,11 +1,11 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildReconciler.cs, last changed upstream in 7258869cc711. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildReconciler.cs, last changed upstream in 7258869cc711; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Buffers;
 using System.Collections.Concurrent;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Reactor.Core.Internal;
-using WinUI = Microsoft.UI.Xaml.Controls;
 
-namespace Microsoft.UI.Reactor.Core;
+using Isotope.UI.Core.Internal;
+
+
+namespace Isotope.UI.Core;
 
 // AI-HINT: React-like child list diffing. Two strategies:
 //   Unkeyed: O(n) positional match by index — simple but can't detect reorders.

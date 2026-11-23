@@ -1,8 +1,8 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/YogaLayoutResultsTests.cs, last changed upstream in 4e211bec48b1. Do not edit: change the tools/sync rules.
-using Microsoft.UI.Reactor.Layout;
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/YogaLayoutResultsTests.cs, last changed upstream in 4e211bec48b1; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+using Isotope.UI.Layout;
 using Xunit;
 
-namespace Microsoft.UI.Reactor.Tests;
+namespace Isotope.UI.Tests;
 
 /// <summary>
 /// Pure-data tests for the internal LayoutResults / CachedMeasurement structs.

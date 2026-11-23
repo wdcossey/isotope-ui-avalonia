@@ -1,10 +1,10 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseElementRef.cs, last changed upstream in 46ae19bf32f1. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Hooks/UseElementRef.cs, last changed upstream in 46ae19bf32f1; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
-using Microsoft.UI.Reactor.Core;
-using Microsoft.UI.Reactor.Input;
-using Microsoft.UI.Xaml;
+using Isotope.UI.Core;
+using Isotope.UI.Input;
 
-namespace Microsoft.UI.Reactor.Hooks;
+
+namespace Isotope.UI.Hooks;
 
 /// <summary>
 /// Hook that returns a strongly-typed <see cref="ElementRef{T}"/> for binding to a
