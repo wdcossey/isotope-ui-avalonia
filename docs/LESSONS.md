@@ -68,6 +68,10 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **Plain `[Fact]` and `[AvaloniaFact]` tests share process-wide engine state** (`ReactorApp.UIDispatcher`); tests that
   set it run in a non-parallel collection. (2026-11-23)
 
+- **An exception escaping an Avalonia dispatcher job also faults the job's task, which nothing observes.** Collected
+  later, it failed upstream's `UseResourceThreadingTests`, which count unobserved task exceptions. A test that lets one
+  escape forces a collection while it runs alone. (2026-11-23)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would
