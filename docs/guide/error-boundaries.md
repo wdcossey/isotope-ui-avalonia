@@ -47,15 +47,15 @@ public static Element Dashboard(RenderContext ctx)
 - **What failed is torn down.** The part of the child that mounted before the error is unmounted and its effects'
   cleanups run, as when a child is removed. The same happens when a retry fails: the child it replaced is unmounted.
   An effect cleanup that throws during this teardown is logged, and the other cleanups still run.
-- **Errors outside every boundary go to the host**, as before: the `ReactorHostControl` shows the exception, or what its
-  `RenderErrorHandler` returns, in place of its whole content (see
-  [Running an app](writing-components.md#running-an-app)). An error a boundary caught never reaches that handler.
+- **Errors outside every boundary go to the host's `RenderErrorHandler`** (see
+  [Running an app](writing-components.md#running-an-app)). A child component that fails there is replaced in its own
+  place, with what the handler returns or the exception, as Reactor does. The rest of the tree keeps its state. Other
+  errors, such as the root's render or a control that fails to mount, replace the host's whole content. When such a
+  pass fails, what it mounted is torn down and its effects' cleanups run, as a boundary does for its child. An error a
+  boundary caught never reaches that handler.
 
 ## What differs from Reactor
 
-- **A failing child component outside every boundary replaces the host's content.** Reactor instead shows a fallback in
-  that component's place only, and reports it to the handler with `IsHostLevel` false. Here it is reported as a
-  `Reconcile` error of the host, as it was before boundaries arrived (#16).
 - **A retry doesn't reuse the fallback.** Reactor diffs the retried child against the fallback it replaced, so a child and
   a fallback of the same element type share controls and hook state, and a fallback shown again after a failed retry is
   remounted, losing its state. Here the child is mounted afresh and the fallback is updated in place.
@@ -65,3 +65,7 @@ public static Element Dashboard(RenderContext ctx)
   run. In Reactor it escapes the boundary.
 - **Fatal errors pass through.** A boundary doesn't catch `OutOfMemoryException` or `StackOverflowException`, as the
   host doesn't; Reactor's boundaries catch every exception.
+- **A failed component's built-in placeholder is plain text.** It has Reactor's wording (the exception's type, message
+  and stack) in a scroll viewer, but the text isn't selectable or monospaced yet.
+- **`Propagate()` has no app-level hook.** Reactor first offers the exception to `ReactorApplication.OnUnhandledException`,
+  which can mark it handled. Here it is rethrown out of the dispatcher, as for the host's own errors (#16).
