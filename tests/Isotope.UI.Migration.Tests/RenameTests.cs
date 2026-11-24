@@ -269,32 +269,32 @@ public class RenameTests
         // table's, so the switch is the table's status, not the analyzer's code.
         var tables = Migrate.WithRenames(t =>
         {
-            t.Factories.Add(new NameEntry { Reactor = "ScrollView", Avalonia = "ScrollViewer", Status = "applied" });
-            t.Types.Add(new NameEntry { Reactor = "ScrollViewElement", Avalonia = "ScrollViewerElement", Status = "applied" });
+            t.Factories.Add(new NameEntry { Reactor = "WrapGrid", Avalonia = "WrapPanel", Status = "applied" });
+            t.Types.Add(new NameEntry { Reactor = "WrapGridElement", Avalonia = "WrapPanelElement", Status = "applied" });
             t.Modifiers.Add(new NameEntry { Reactor = "Margins", Avalonia = "Margin", Status = "applied" });
         });
         const string reactor = Usings + """
             static class C
             {
-                public static Element Render() => ScrollView(TextBlock("x").Margins(4));
-                public static ScrollViewElement? Last;
+                public static Element Render() => WrapGrid(TextBlock("x").Margins(4));
+                public static WrapGridElement? Last;
             }
             """;
         Assert.Equal([
-            "ISOMIG009: Factory 'ScrollView' is 'ScrollViewer' in Isotope",
+            "ISOMIG009: Factory 'WrapGrid' is 'WrapPanel' in Isotope",
             "ISOMIG009: Modifier 'Margins' is 'Margin' in Isotope",
-            "ISOMIG009: Type 'ScrollViewElement' is 'ScrollViewerElement' in Isotope",
+            "ISOMIG009: Type 'WrapGridElement' is 'WrapPanelElement' in Isotope",
         ], Migrate.Analyze(reactor, tables).Describe());
         var fixedText = Migrate.Fix(reactor, tables);
-        Assert.Contains("ScrollViewer(TextBlock(\"x\").Margin(4))", fixedText);
-        Assert.Contains("public static ScrollViewerElement? Last;", fixedText);
+        Assert.Contains("WrapPanel(TextBlock(\"x\").Margin(4))", fixedText);
+        Assert.Contains("public static WrapPanelElement? Last;", fixedText);
         Assert.Empty(Migrate.Errors(fixedText));
 
         // The same entries as proposed: nothing renames.
         var proposed = Migrate.WithRenames(t =>
         {
-            t.Factories.Add(new NameEntry { Reactor = "ScrollView", Avalonia = "ScrollViewer", Status = "proposed" });
-            t.Types.Add(new NameEntry { Reactor = "ScrollViewElement", Avalonia = "ScrollViewerElement", Status = "proposed" });
+            t.Factories.Add(new NameEntry { Reactor = "WrapGrid", Avalonia = "WrapPanel", Status = "proposed" });
+            t.Types.Add(new NameEntry { Reactor = "WrapGridElement", Avalonia = "WrapPanelElement", Status = "proposed" });
             t.Modifiers.Add(new NameEntry { Reactor = "Margins", Avalonia = "Margin", Status = "proposed" });
         });
         Assert.DoesNotContain(Migrate.Analyze(reactor, proposed), d => d.Id == "ISOMIG009");

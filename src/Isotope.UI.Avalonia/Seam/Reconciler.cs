@@ -158,11 +158,14 @@ public sealed partial class Reconciler
     //  Skip decisions
     // ════════════════════════════════════════════════════════════════════
 
-    /// <summary>True during a hot-reload force pass. Hot reload is tier 3: never.</summary>
-    internal bool ForceFullRenderActive => false;
+    /// <summary>
+    /// True during a force pass: a resource-refresh pass (Theme.NotifyResourcesChanged, #41, Reconciler.Theme.cs). Hot
+    /// reload's force pass is tier 3.
+    /// </summary>
+    internal bool ForceFullRenderActive => _resourceRefreshActive;
 
-    /// <summary>Whether a force pass must render through this wrapper. Hot reload is tier 3: never.</summary>
-    internal bool ForceRenderThroughWrapper(Element el) => false;
+    /// <summary>Whether a force pass must render through this element: every element, in a resource-refresh pass.</summary>
+    internal bool ForceRenderThroughWrapper(Element el) => _resourceRefreshActive;
 
     // Depth of subtrees being reconciled under an element whose provided values changed since the last
     // pass (a provider added, removed or re-valued). A removed provider leaves the scope empty, so this is
@@ -227,7 +230,7 @@ public sealed partial class Reconciler
     /// closures rather than the ones captured when the control was last updated.
     /// </summary>
     internal void RefreshSkippedChildState(FrameworkElement control, Element oldElement, Element newElement)
-        => GetOrCreateReactorState(control).Element = newElement;
+        => SetMountedElement(control, newElement);
 
     internal bool CanUpdate(Element oldEl, Element newEl)
     {
@@ -441,10 +444,10 @@ public sealed partial class Reconciler
         try
         {
             if (Element.CanSkipUpdate(oldInner, newInner) && Element.ModifiersEqual(oldModifiers, newModifiers)
-                && !IsOnDirtyAncestorPath(control) && !ShouldDeclineSkip(control))
+                && !IsOnDirtyAncestorPath(control) && !ShouldDeclineSkip(control) && !_resourceRefreshActive)
             {
                 DebugElementsSkipped++;
-                GetOrCreateReactorState(control).Element = newInner;
+                SetMountedElement(control, newInner);
                 return null;
             }
             switch (newInner)
@@ -471,7 +474,8 @@ public sealed partial class Reconciler
                         var updated = entry.Update(oldInner, newInner, target, requestRerender, this);
                         if (!ReferenceEquals(updated, target))
                         {
-                            if (NeedsPanelChrome(newInner, newModifiers)) updated = WrapInPanelChrome(updated);
+                            // Mount already put a panel that needs one in its chrome border.
+                            if (updated is not PanelChrome && NeedsPanelChrome(newInner, newModifiers)) updated = WrapInPanelChrome(updated);
                             // The adapter mounted the unwrapped element: give the new control the wrapper's modifiers too.
                             ApplyModifiers(updated, null, null, newInner, newModifiers);
                             ApplyRichToolTip(updated, null, newInner, null, newModifiers, requestRerender);
@@ -582,6 +586,7 @@ public sealed partial class Reconciler
         var outerKey = element.Key;
         ElementModifiers? wrapped = null;
         Dictionary<ContextBase, object?>? provided = null;
+        Dictionary<string, ThemeRef>? themeBindings = null;
         while (element is ModifiedElement mod)
         {
             wrapped = wrapped is null ? mod.WrappedModifiers : wrapped.Merge(mod.WrappedModifiers);
@@ -589,6 +594,11 @@ public sealed partial class Reconciler
             // WrappedModifiers; dropping these silently would surprise.
             if (mod.Modifiers is not null) wrapped = wrapped.Merge(mod.Modifiers);
             AddProvided(ref provided, mod.ContextValues);
+            if (mod.ThemeBindings is { Count: > 0 } wrapperTokens)
+            {
+                themeBindings ??= new Dictionary<string, ThemeRef>(StringComparer.Ordinal);
+                foreach (var (k, v) in wrapperTokens) themeBindings[k] = v;
+            }
             element = mod.Inner;
         }
         modifiers = element.Modifiers is null ? wrapped : wrapped!.Merge(element.Modifiers);
@@ -597,6 +607,12 @@ public sealed partial class Reconciler
         var key = outerKey ?? element.Key;
         if (key != element.Key || provided is not null)
             element = element with { Key = key, ContextValues = provided ?? element.ContextValues };
+        // #41: the wrappers' theme tokens apply to the control too, inner ones winning.
+        if (themeBindings is not null)
+        {
+            if (element.ThemeBindings is { } own) foreach (var (k, v) in own) themeBindings[k] = v;
+            element = element with { ThemeBindings = themeBindings };
+        }
         return element;
     }
 
@@ -626,6 +642,8 @@ public sealed partial class Reconciler
 
     private static void ApplyModifiers(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
     {
+        // #41: the element's theme tokens (Reconciler.Theme.cs), below the modifiers' own brushes.
+        ApplyThemeBindings(control, newEl.ThemeBindings);
         // Background has two sources on a Border element, its own and the modifier: written as one value, the
         // element's first, so neither overwrites the other (upstream folds them in Border's descriptor).
         if (BackgroundProperty(control) is { } background)
@@ -871,7 +889,7 @@ public sealed partial class Reconciler
         bool depsChanged = oldDeps is null && newDeps is null
             ? false // both null: render once, never re-render from the parent
             : oldDeps is null || newDeps is null || !RenderContext.DepsEqual(oldDeps, newDeps);
-        if (!selfTriggered && !depsChanged && !HasConsumedContextChanged(node))
+        if (!selfTriggered && !depsChanged && !HasConsumedContextChanged(node) && !_resourceRefreshActive)
         {
             DescendOnly(node, wrapper, requestRerender);
             return;
@@ -888,7 +906,7 @@ public sealed partial class Reconciler
         node.SelfTriggered = false;
         node.Element = comp;
         var component = node.Component!;
-        if (!selfTriggered)
+        if (!selfTriggered && !_resourceRefreshActive)
         {
             bool propsChanged = component is IPropsComparable comparable
                 ? comparable.CompareProps(node.PreviousProps, comp.Props)

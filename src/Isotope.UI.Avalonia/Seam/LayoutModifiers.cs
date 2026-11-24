@@ -20,9 +20,6 @@ public partial record ElementModifiers
     /// <summary>The border's brush, on a templated control or a border (and a panel, as <see cref="Padding"/>).</summary>
     public IBrush? BorderBrush { get; init; }
 
-    /// <summary>The border's width per side, where <see cref="BorderBrush"/> is written.</summary>
-    public Thickness? BorderThickness { get; init; }
-
     /// <summary>The corners' radii, where <see cref="BorderBrush"/> is written.</summary>
     public CornerRadius? CornerRadius { get; init; }
 

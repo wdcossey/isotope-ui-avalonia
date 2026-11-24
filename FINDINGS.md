@@ -210,6 +210,39 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Theme tokens (issue #41, 2026-11-24)
+
+- **Upstream's `Theme` is brush tokens only:** `ThemeRef` and `Theme`'s 36 tokens, `Theme.Ref(key)` and
+  `NotifyResourcesChanged()`. It has no spacing, corner-radius or type-ramp tokens.
+  - The corner radii are `ThemeResource.CornerRadius("ControlCornerRadius")` (57 uses in the samples).
+  - The type ramp is the named-style factories (#44).
+- **Tier 2 for `Theme.cs`:** `ThemeRef` is `partial`, and its WinUI resolution is dropped (7 Roslyn `drop-member` rules, 2
+  text rules). The tokens and the resolution cache compile as upstream's. `ThemeResourceListeners.cs` (tier 1) is
+  compiled, and upstream's `ChildDiffHints` theme-bindings test runs again.
+- **Tier 3 for the resolution, the bindings and `ThemeResource`.** Avalonia's Fluent theme defines none of the 36 keys
+  (Avalonia.Themes.Fluent 12.1.6). So a key resolves from the resources the control sees, else from WinUI's Fluent values:
+  light, dark, Windows' high-contrast colours when the platform asks for high contrast, and accent tokens from the Fluent
+  theme's `SystemAccentColor` shades.
+  - `Element.ThemeBindings` binds at style priority, so a brush the element sets wins.
+  - A bound token follows the theme variant, resource changes and the contrast preference without a re-render.
+  - `Theme.NotifyResourcesChanged()` renders each host's whole tree once, past memoization.
+  - The built-in colours are WinUI's Fluent values from memory, not checked against WinUI's source; app resources win.
+- **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`, 561c5573, after the fixes; before is main at
+  00692f0, before #42 merged):
+
+  | | Before #41 | After #41 |
+  |---|---|---|
+  | Compile errors | 5,544 | 4,202 |
+  | Files that build | 62 of 358 | 64 of 358 |
+  | Projects that build | 2 of 36 | 2 of 36 |
+  | Migration diagnostics left | 2,948 | 2,624 |
+  | ISOMIG002 | 249 | 199 (no `Theme`) |
+  | ISOMIG013 | 1,466 | 1,192 |
+
+  CS0103 `Theme` (830) and `ThemeResource` (47) are gone. Chains that now bind show what follows them, e.g. 61 CS1955
+  `BorderElement.CornerRadius`.
+- **Tests:** 26 new, all proven to fail. Guide: `docs/guide/theme-tokens.md`.
+
 ## Text styling (issue #42, 2026-11-24)
 
 - **Upstream's text members and modifiers, with Avalonia's names and types** (#31):
@@ -258,6 +291,48 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   ci's `--check` on the branch checks the vendored bytes themselves.
 - **The glue:** 63 tests (was 22); 41 deliberate breaks each turned their tests red. A full dry run on a probe branch:
   plan 18 s, prepare 47 s, publish-dry-run 11 s.
+
+## Next controls by migration count (issue #43, 2026-11-24)
+
+- **What landed** (the top of ISOMIG012 without the text styles, #44), with Avalonia's names for what is new (the
+  developer's naming decision of 2026-11-24, recorded `applied` in `tools/naming/renames.json`):
+  - Reactor's `ScrollView` is Avalonia's `ScrollViewer`. The migration writes `(ScrollViewer(x) with {
+    HorizontalScrollBarVisibility = Disabled })`, which keeps WinUI ScrollView's layout (content as wide as the view), from
+    a new `with` field on a factory entry. `ScrollViewElement` is `ScrollViewerElement`; its `ContentOrientation` is
+    left for a hand fix (ISOMIG007, with a note).
+  - `TreeView` as Avalonia's TreeView. A node is `TreeViewItemData` (Reactor's `TreeViewNodeData`) with `Header`,
+    `Items` and `IsExpanded`, built by `TreeViewItem(...)` (Reactor's `TreeNode`).
+    - Nodes keep their items by header, so the user's expansions survive sorts, inserts and removals. Upstream
+      rebuilds the tree on any change.
+    - `OnItemInvoked` fires on a tap, or on an unmodified Enter or Space. `OnExpanding` fires on the user's
+      expansions only.
+  - `Viewbox`, as Avalonia's.
+  - Upstream's `When`, `If`, `Expr` and `ForEach` helpers, and `Accelerator(key, modifiers)` for the existing
+    `KeyboardAcceleratorData`.
+- **Measured** with `node tools/migration/measure-samples.mjs --out <empty temp folder>` (upstream's 36 samples, 358
+  files, upstream 561c5573). Columns are after the fixes, on main before this branch and on the branch:
+
+  | | main | #43 |
+  |---|---|---|
+  | Files that build | 62 | 63 |
+  | Compile errors | 5,544 | 5,394 |
+  | Projects that build | 2 | 2 |
+  | Migration diagnostics left | 2,948 | 2,724 |
+  | ISOMIG012 (controls not ported) | 877 | 645 |
+
+  - ISOMIG012 lost 232 diagnostics: ScrollView 139, When 31, Accelerator 22, TreeNode 20, Viewbox 9, TreeView 4,
+    Expr 4 and ForEach 3.
+  - Some code that compiles further now shows errors that were hidden (`TextBlockElement` members +30, `Theme` +19).
+  - No file that built before the fixes fails after them, and no `dotnet format` run failed.
+- **Next by count** (not in this issue): the rich text family (`Run` 39, `Paragraph` 14, `RichTextBlock` 9,
+  `InlineUI` 8), icons (`Icon` 14, `FontIcon` 10), `ListView` with element items (12), and the typed
+  `TreeView<T>`.
+- **Measured** (headless, Avalonia 12.1.6):
+  - Enter on a TreeViewItem with children expands it.
+  - A TreeViewItem's `Expanded` routes Tunnel and Bubble, raised inside the `IsExpanded` write.
+  - The migration fix must not add `using Avalonia.Controls.Primitives`. It makes Reactor's `Popup` and
+    `UniformGrid` name Avalonia types, which hid 4 ISOMIG012 diagnostics.
+- **Tests:** 16 library tests and 3 migration tests, all proven to fail.
 
 ## Migration tool (issue #33, 2026-11-24)
 

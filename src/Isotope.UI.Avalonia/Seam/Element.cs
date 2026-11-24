@@ -28,6 +28,13 @@ public abstract record Element
     /// <summary>Resource overrides for this element's subtree (tier 3: not applied on Avalonia yet).</summary>
     public Isotope.UI.Elements.ResourceOverrides? ResourceOverrides { get; init; }
 
+    /// <summary>
+    /// Brush properties of this element's control bound to theme tokens, by property name (upstream's member, set by
+    /// <c>.Background(Theme.CardBackground)</c> and the other <see cref="ThemeRef"/> modifiers). They follow the
+    /// control's theme with no re-render (#41).
+    /// </summary>
+    public IReadOnlyDictionary<string, ThemeRef>? ThemeBindings { get; init; }
+
     /// <summary>Context values provided to this element's subtree (see <c>ElementExtensions.Provide</c>).</summary>
     public IReadOnlyDictionary<ContextBase, object?>? ContextValues { get; init; }
 
@@ -81,6 +88,7 @@ public abstract record Element
         if (!ModifiersEqual(a.Modifiers, b.Modifiers)) return false;
         if (!ReferenceEquals(a.ElementTransition, b.ElementTransition) && !Equals(a.ElementTransition, b.ElementTransition)) return false;
         if (!Equals(a.ResourceOverrides, b.ResourceOverrides)) return false;
+        if (!DictionariesEqual(a.ThemeBindings, b.ThemeBindings)) return false;
         if (!ContextValuesEqual(a.ContextValues, b.ContextValues)) return false;
         if (!DictionariesEqual(a.Attached, b.Attached)) return false;
         return (a, b) switch
@@ -246,6 +254,13 @@ public partial record ElementModifiers
     public double? Opacity { get; init; }
     public bool? IsEnabled { get; init; }
     public IBrush? Background { get; init; }
+
+    /// <summary>
+    /// The border's width per side (#41, #49: <c>.WithBorder(...)</c>, <c>.BorderThickness(...)</c>), where
+    /// <see cref="BorderBrush"/> is written; a Border element's own width wins over it.
+    /// </summary>
+    public Thickness? BorderThickness { get; init; }
+
     public string? AutomationName { get; init; }
 
     /// <summary>The text of the control's tooltip (Avalonia's <c>ToolTip.Tip</c>, #26).</summary>
@@ -274,6 +289,7 @@ public partial record ElementModifiers
         Opacity = other.Opacity ?? Opacity,
         IsEnabled = other.IsEnabled ?? IsEnabled,
         Background = other.Background ?? Background,
+        BorderThickness = other.BorderThickness ?? BorderThickness,
         AutomationName = other.AutomationName ?? AutomationName,
         ToolTip = other.ToolTip ?? ToolTip,
         RichToolTip = other.RichToolTip ?? RichToolTip,
@@ -285,7 +301,6 @@ public partial record ElementModifiers
         FontFamily = other.FontFamily ?? FontFamily,
         Padding = other.Padding ?? Padding,
         BorderBrush = other.BorderBrush ?? BorderBrush,
-        BorderThickness = other.BorderThickness ?? BorderThickness,
         CornerRadius = other.CornerRadius ?? CornerRadius,
         MinWidth = other.MinWidth ?? MinWidth,
         MinHeight = other.MinHeight ?? MinHeight,

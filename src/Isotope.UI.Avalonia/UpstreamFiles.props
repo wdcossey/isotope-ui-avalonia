@@ -11,6 +11,8 @@
     <Compile Include="$(UpstreamSrc)Core\RenderContext.cs" Link="Upstream\Core\RenderContext.cs" />
     <Compile Include="$(UpstreamSrc)Core\ChildReconciler.cs" Link="Upstream\Core\ChildReconciler.cs" />
     <Compile Include="$(UpstreamSrc)Core\Internal\KeyedListDiff.cs" Link="Upstream\Core\Internal\KeyedListDiff.cs" />
+    <!-- IReactorKeyed: the item key ForEach (#43) gives an element. -->
+    <Compile Include="$(UpstreamSrc)Core\IReactorKeyed.cs" Link="Upstream\Core\IReactorKeyed.cs" />
     <Compile Include="$(UpstreamSrc)Core\Polyfills\ClosedTypeAttributes.cs" Link="Upstream\Core\Polyfills\ClosedTypeAttributes.cs" />
     <Compile Include="$(UpstreamSrc)Core\SourceLocation.cs" Link="Upstream\Core\SourceLocation.cs" />
     <Compile Include="$(UpstreamSrc)Core\ContentOwner.cs" Link="Upstream\Core\ContentOwner.cs" />
@@ -27,6 +29,9 @@
     <Compile Include="$(UpstreamSrc)Core\HookOrderException.cs" Link="Upstream\Core\HookOrderException.cs" />
     <!-- RenderError, RenderErrorSource, RenderErrorHandler: what the host (#16) hands a render-error handler. -->
     <Compile Include="$(UpstreamSrc)Core\RenderError.cs" Link="Upstream\Core\RenderError.cs" />
+    <!-- Theme tokens (#41): ThemeRef (its Avalonia part in Seam/ThemeRef.Avalonia.cs), Theme, and the hosts that Theme.NotifyResourcesChanged() re-renders. -->
+    <Compile Include="$(UpstreamSrc)Core\Theme.cs" Link="Upstream\Core\Theme.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ThemeResourceListeners.cs" Link="Upstream\Core\ThemeResourceListeners.cs" />
     <Compile Include="$(UpstreamSrc)Core\UIThreadMarshal.cs" Link="Upstream\Core\UIThreadMarshal.cs" />
     <Compile Include="$(UpstreamSrc)Core\WindowPersistedScope.cs" Link="Upstream\Core\WindowPersistedScope.cs" />
     <Compile Include="$(UpstreamSrc)Hosting\WindowKey.cs" Link="Upstream\Hosting\WindowKey.cs" />

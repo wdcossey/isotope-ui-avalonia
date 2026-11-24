@@ -411,6 +411,55 @@ public sealed class LayoutModifierTests
     }
 
     [AvaloniaFact]
+    public void A_padded_stack_remounted_for_a_foreign_control_gets_one_border()
+    {
+        // The handler remounts an element paired with a control of another type (upstream's #919 guard): the mount puts
+        // the panel in its border, and the update doesn't put that border in a second one.
+        var reconciler = new Reconciler();
+        Element Padded() => VStack(TextBlock("a")).Padding(4).WithBorder("Red", 2);
+        var foreign = new PanelChrome { Child = new AvTextBlock() };
+        var chrome = Assert.IsType<PanelChrome>(reconciler.Reconcile(Padded(), Padded(), foreign, () => { }));
+        Assert.IsType<StackPanel>(chrome.Child);
+        Assert.Equal((new Thickness(4), new Thickness(2)), (chrome.Padding, chrome.BorderThickness));
+    }
+
+    [AvaloniaFact]
+    public void A_skipped_component_root_refreshes_the_element_on_the_border_and_its_panel()
+    {
+        Element[] children = [TextBlock("a")]; // one array, so the stack compares equal and is skipped
+        Action<int>? set = null;
+        StackElement? latest = null;
+        var host = new TestHost(() => Component(ctx =>
+        {
+            var (_, s) = ctx.UseState(0);
+            set = s;
+            return latest = new StackElement(Orientation.Vertical, children).Padding(4);
+        }));
+        var panel = host.All<StackPanel>()[0];
+        var chrome = ChromeOf(panel);
+        var skipped = host.Reconciler.DebugElementsSkipped;
+
+        set!(1);
+        host.Flush();
+        Assert.Equal(skipped + 1, host.Reconciler.DebugElementsSkipped);
+        Assert.Same(latest, Reconciler.GetMountedElement(chrome));
+        Assert.Same(latest, Reconciler.GetMountedElement(panel));
+    }
+
+    [AvaloniaFact]
+    public void A_theme_token_border_on_a_stack_goes_on_its_border()
+    {
+        var host = new TestHost(() => VStack(
+            VStack(TextBlock("a")).WithBorder(Theme.CardStroke, 2),
+            HStack(TextBlock("b")).BorderBrush(Theme.CardStroke)));
+        var withBorder = ChromeOf(host.All<StackPanel>()[1]);
+        Assert.Equal(new Thickness(2), withBorder.BorderThickness);
+        Assert.Equal(["BorderBrush"], Reconciler.BoundThemeProperties(withBorder));
+        // A token brush alone puts the panel in a border too, as a brush modifier does.
+        Assert.Equal(["BorderBrush"], Reconciler.BoundThemeProperties(ChromeOf(host.All<StackPanel>()[2])));
+    }
+
+    [AvaloniaFact]
     public void A_padded_child_s_flex_and_grid_data_go_on_its_border()
     {
         var host = new TestHost(() => VStack(

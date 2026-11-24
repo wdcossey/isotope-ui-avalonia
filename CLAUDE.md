@@ -74,7 +74,9 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
 - **Controls behave as upstream's:** a controlled value equal to the last render's isn't re-applied; `ISOTOPEGEN001`
   (a record member with no Avalonia counterpart) is a build error; no control pooling until #14 measures it.
 - **Element factories and modifiers** are our own tier 3 version of upstream's `Dsl.cs`/`ElementExtensions.cs` (#17),
-  with upstream's factory names (parameters take the members' Avalonia names); add a factory when its control arrives. Doc C# blocks must be `#region`s of the test project
+  with Avalonia's names where they differ from Reactor's (2026-11-24; recorded `applied` in `tools/naming/renames.json`;
+  existing Reactor names are renamed by #46), callbacks keeping the `On` prefix and `VStack`/`HStack` kept as Reactor's
+  shortcuts for `StackPanel`; add a factory when its control arrives. Doc C# blocks must be `#region`s of the test project
   (`DocSnippetTests`).
 - **Member drops stay text-based** (the lexer in `tools/sync/lib/csharp.mjs`; #4, 2026-11-24). A `roslyn` rule kind
   (drop-member, retarget-type, drop-attribute; `tools/sync/roslyn`, run before the text rules) complements them for new

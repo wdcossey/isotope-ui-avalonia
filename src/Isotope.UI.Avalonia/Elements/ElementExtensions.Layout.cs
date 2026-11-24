@@ -8,8 +8,8 @@ namespace Isotope.UI;
 // Our own version (tier 3) of upstream's layout modifiers (src/Reactor/Elements/ElementExtensions.cs, #49): upstream's
 // names and overloads, Avalonia's value types. Upstream's names are Avalonia's here (Padding, CornerRadius, BorderBrush,
 // BorderThickness, MinWidth…, IsVisible, HorizontalContentAlignment), so none is renamed; WithBorder and Center are
-// upstream's shorthands. Where each is written: Reconciler.ApplyLayoutModifiers. Not here yet: the ThemeRef overloads
-// of WithBorder and BorderBrush (#41), the BiDi-aware MarginInlineStart/PaddingInlineStart family and BorderInlineStart,
+// upstream's shorthands (their ThemeRef overloads are in ElementExtensions.Theme.cs, #41). Where each is written:
+// Reconciler.ApplyLayoutModifiers. Not here yet: the BiDi-aware MarginInlineStart/PaddingInlineStart family and BorderInlineStart,
 // the obsolete Visible, and upstream's HorizontalAlignment/VerticalAlignment aliases of HAlign/VAlign (#46 names those).
 
 public static partial class ElementExtensions

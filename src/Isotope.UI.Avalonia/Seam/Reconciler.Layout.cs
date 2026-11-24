@@ -13,12 +13,21 @@ public sealed partial class Reconciler
     // Which elements' controls lack the four properties is known from the element type, so the choice can be made from
     // the elements alone (CanUpdate): a change in it mounts the element afresh, as a change of control type does.
     internal static bool NeedsPanelChrome(Element element, ElementModifiers? modifiers) =>
-        modifiers is { HasPanelChrome: true } && element is StackElement or GridElement or WrapPanelElement;
+        element is StackElement or GridElement or WrapPanelElement
+        && (modifiers is { HasPanelChrome: true } || element.ThemeBindings?.ContainsKey("BorderBrush") == true);
 
     // The control a handler mounted for the element in this slot: the panel inside a chrome border, or the control.
     private static UIElement HandlerControl(UIElement control) => control is PanelChrome { Child: { } panel } ? panel : control;
 
     private static PanelChrome WrapInPanelChrome(UIElement panel) => new() { Child = panel };
+
+    // The element a slot's control represents is recorded on the control, and on the panel inside a chrome border too:
+    // the handler tags its panel when it mounts or updates it, and a skip, which doesn't reach the handler, refreshes both.
+    private static void SetMountedElement(UIElement control, Element element)
+    {
+        GetOrCreateReactorState(control).Element = element;
+        if (control is PanelChrome { Child: { } panel }) GetOrCreateReactorState(panel).Element = element;
+    }
 
     private static void ApplyLayoutModifiers(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
     {

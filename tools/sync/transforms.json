@@ -56,6 +56,91 @@
       ]
     },
     {
+      "id": "drop-ThemeRef-Resolve-element",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "Resolve",
+        "parameters": "(string, FrameworkElement)"
+      },
+      "why": "Resolves through WinUI's element theme (RequestedTheme, VisualTreeHelper, ActualTheme). Our part declares the same member, reading the control's ActualThemeVariant and the resources it sees (Seam/ThemeRef.Avalonia.cs, #41).",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "drop-ThemeRef-ResolveForTheme",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "ResolveForTheme"
+      },
+      "why": "Reads WinUI's Application.Resources. Our part declares the same member over the vendored cache, reading Avalonia's application resources and Isotope's built-in tokens (Seam/ThemeRef.Avalonia.cs, #41).",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "drop-ThemeRef-ResolveForThemeUncached",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "ResolveForThemeUncached"
+      },
+      "why": "Uses ThemeResourceProbe, a WinUI XAML probe: WinUI's resource lookup; ThemeRef's Avalonia part (Seam/ThemeRef.Avalonia.cs) resolves keys from Avalonia's resources and Isotope's built-in tokens instead (#41).",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "drop-ThemeRef-ResolveFromDictionaries",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "ResolveFromDictionaries"
+      },
+      "why": "Walks WinUI's ThemeDictionaries: WinUI's resource lookup; ThemeRef's Avalonia part (Seam/ThemeRef.Avalonia.cs) resolves keys from Avalonia's resources and Isotope's built-in tokens instead (#41).",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "drop-ThemeRef-GetEffectiveThemeName",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "GetEffectiveThemeName"
+      },
+      "why": "Reads WinUI's RequestedTheme and visual tree: WinUI's resource lookup; ThemeRef's Avalonia part (Seam/ThemeRef.Avalonia.cs) resolves keys from Avalonia's resources and Isotope's built-in tokens instead (#41).",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "drop-ThemeRef-TryResolveFromThemeDictionaries",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "TryResolveFromThemeDictionaries"
+      },
+      "why": "Walks WinUI's ThemeDictionaries and XamlControlsResources: WinUI's resource lookup; ThemeRef's Avalonia part (Seam/ThemeRef.Avalonia.cs) resolves keys from Avalonia's resources and Isotope's built-in tokens instead (#41).",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "drop-ThemeRef-ResolveFromDictionariesForTest",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ThemeRef",
+        "member": "ResolveFromDictionariesForTest"
+      },
+      "why": "The test seam of the dictionary walk dropped above.",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
       "id": "drop-winuiex-notice",
       "find": "\\n+-+ WinUIEx -+\\n[\\s\\S]*?\\n-{20,}(?=\\r?\\n|$)",
       "replace": "",
@@ -273,6 +358,25 @@
         "tests/Reactor.Tests/ContextSystemUnitTests.cs",
         "tests/Reactor.Tests/ErrorBoundaryTests.cs",
         "tests/Reactor.Tests/MemoizationPropagationTests.cs"
+      ]
+    },
+    {
+      "id": "theme-ref-partial",
+      "find": "public readonly record struct ThemeRef\\(string ResourceKey\\)",
+      "replace": "public readonly partial record struct ThemeRef(string ResourceKey)",
+      "why": "ThemeRef gets an Avalonia part (Seam/ThemeRef.Avalonia.cs, #41) in place of the WinUI resolution dropped above.",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
+      ]
+    },
+    {
+      "id": "theme-brush-alias",
+      "find": "^using Microsoft\\.UI\\.Xaml\\.Media;(\\r?)$(?=[\\s\\S]*\\brecord struct ThemeRef\\()",
+      "flags": "m",
+      "replace": "using Brush = Avalonia.Media.IBrush;$1",
+      "why": "The resolved brush and the cache keep upstream's Brush, as Avalonia's IBrush (#41). Only in the file that declares ThemeRef (other files import the same namespace); runs before winui-usings, which removes the file's other WinUI using.",
+      "files": [
+        "src/Reactor/Core/Theme.cs"
       ]
     },
     {
@@ -1146,14 +1250,6 @@
       "why": "StackElement takes Avalonia's Orientation (Avalonia value types on the seam).",
       "files": [
         "tests/Reactor.Tests/ChildReconcilerTests.cs"
-      ]
-    },
-    {
-      "id": "drop-test-ThemeBindings-not-theme-sensitive",
-      "drop": "public void IsThemeSensitive_False_For_ThemeBindings_SelfHealing\\(",
-      "why": "Uses TextBlockElement.ThemeBindings: theme bindings are tier 3.",
-      "files": [
-        "tests/Reactor.Tests/ChildDiffHintsTests.cs"
       ]
     },
     {
