@@ -410,9 +410,11 @@ public sealed class ErrorBoundaryTests : IDisposable
         };
         Pump();
 
+        // A component outside every boundary is replaced in its own slot (#28); the host's handler is told.
         var error = Assert.Single(errors);
-        Assert.Equal(RenderErrorSource.Reconcile, error.Source);
-        Assert.Equal(["host: outside"], Texts(host));
+        Assert.Equal(RenderErrorSource.ComponentRender, error.Source);
+        Assert.False(error.IsHostLevel);
+        Assert.Equal(["guarded", "host: outside"], Texts(host));
     }
 
     [AvaloniaFact]

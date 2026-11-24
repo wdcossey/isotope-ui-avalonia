@@ -20,15 +20,26 @@ namespace Isotope.UI.Hosting;
 /// during a pass (by the render or an effect) queues one more pass, at <see cref="DispatcherPriority.Background"/> so
 /// input, layout and rendering run first; so does any request after a pass slower than one frame (16 ms).</para>
 /// <para><b>Errors.</b> An exception from the root's render (<see cref="RenderErrorSource.RootRender"/>), the reconcile
-/// after it (<see cref="RenderErrorSource.Reconcile"/>, which includes the renders of child components outside every
-/// error boundary: an <see cref="ErrorBoundaryElement"/> shows its own fallback for what its subtree throws) or the root's effects, flushed once the tree is committed (<see cref="RenderErrorSource.Effects"/>), goes to
-/// <see cref="EffectiveRenderErrorHandler"/>. With no handler, or one that returns <c>null</c>, a built-in panel shows
-/// the exception text. After a root render or effects failure the tree is kept, so the next good pass reconciles against
-/// it and child state survives; after a reconcile failure the half-updated tree is released (its cleanups run). An element the handler returns replaces
-/// the content. A handler that throws, or whose element fails, gets a neutral "Something went wrong." panel. A handler
-/// that calls <see cref="RenderError.Propagate"/> gets nothing shown, and the exception is rethrown out of the
-/// dispatcher callback (Avalonia's <c>Dispatcher.UnhandledException</c>; Avalonia also faults the dispatcher operation's
-/// task with it, which surfaces as an unobserved task exception). Every later pass retries the root.</para>
+/// after it (<see cref="RenderErrorSource.Reconcile"/>: a control's mount or update, a modifier) or the root's effects,
+/// flushed once the tree is committed (<see cref="RenderErrorSource.Effects"/>), goes to
+/// <see cref="EffectiveRenderErrorHandler"/> with <see cref="RenderError.IsHostLevel"/> true, and its outcome replaces
+/// the whole content. With no handler, or one that returns <c>null</c>, a built-in panel shows the exception text; after
+/// a root render or effects failure the tree is then kept, so the next good pass reconciles against it and child state
+/// survives. After a reconcile failure the half-updated tree is released (its cleanups run, and so do those of what the
+/// pass mounted but never attached). An element the handler returns replaces the content, and the tree it replaces is
+/// unmounted; it is mounted inside a guard, as upstream's, so a component in it that throws shows the neutral text. A
+/// handler that throws, or whose element fails, gets a neutral "Something went wrong." panel.</para>
+/// <para>A child component whose render or effects throw outside every error boundary is replaced in its own slot, as
+/// upstream's: the handler gets <see cref="RenderErrorSource.ComponentRender"/> or <see cref="RenderErrorSource.Effects"/>
+/// with <see cref="RenderError.IsHostLevel"/> false and the component's name (a class component's), and the rest of the
+/// tree keeps its controls and state. The slot shows the handler's element, or the exception text when there is none,
+/// or the neutral text when the handler throws or its element does. Every later render of that component retries it.
+/// Inside an <see cref="ErrorBoundaryElement"/>, the boundary shows its own fallback instead, and the handler isn't
+/// told.</para>
+/// <para>A handler that calls <see cref="RenderError.Propagate"/>, for either kind of error, gets nothing shown (the
+/// tree is released), and the exception is rethrown out of the dispatcher callback (Avalonia's
+/// <c>Dispatcher.UnhandledException</c>; Avalonia also faults the dispatcher operation's task with it, which surfaces as
+/// an unobserved task exception). Every later pass retries the root.</para>
 /// <para><b>Lifetime.</b> Leaving the visual tree does not unmount (it may be a move); <see cref="Dispose"/> does:
 /// it runs every effect cleanup (each isolated from the others' failures) and stops rendering, also when called during
 /// a pass. A cleanup that throws is reported to the handler as
@@ -64,7 +75,8 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         Dispatcher.UIThread.VerifyAccess();
         _logger = logger;
         // The owner of the content: the platform hooks find this host (and its window) through it.
-        _reconciler = new Reconciler(logger) { Owner = this };
+        // The handler a child component's failure is reported to, from the reconciler (#28), resolved when it fails.
+        _reconciler = new Reconciler(logger) { Owner = this, RenderErrorHandlerProvider = () => EffectiveRenderErrorHandler };
         _queue = DispatcherQueue.ForUIThread;
         _requestRender = RequestRender;
         _renderLoop = RenderLoop;
@@ -196,9 +208,15 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
             if (_disposed)
+            {
                 _logger?.LogError(ex, "Render failed ({Source}) after the host was disposed", phase);
+                // A child component's failure the handler asked to propagate still leaves the dispatcher (#28).
+                if (_reconciler.ConsumePropagation(ex)) ExceptionDispatchInfo.Capture(ex).Throw();
+            }
             else
+            {
                 ShowRenderError(ex, phase);
+            }
         }
         finally
         {
@@ -210,6 +228,15 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
     // Upstream's host-level fallback (RenderErrorDispatch.BuildHostFallback), for one host.
     private void ShowRenderError(Exception ex, RenderErrorSource source)
     {
+        if (_reconciler.ConsumePropagation(ex))
+        {
+            // A child component's failure the handler asked to propagate (#28): as for the host's own, nothing is shown,
+            // and the handler isn't asked again.
+            _logger?.LogError(ex, "Render failed ({Source}); propagated by the render-error handler", source);
+            ReleaseTree();
+            Child = null;
+            ExceptionDispatchInfo.Capture(ex).Throw();
+        }
         _logger?.LogError(ex, "Render failed ({Source})", source);
         var error = new RenderError(ex, source, componentName: null, isHostLevel: true);
         // A reconcile that threw part-way left the tree in an unknown state: release it rather than diff against it.
@@ -248,9 +275,11 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
             try
             {
                 // Reconciled against the current tree, so a repeated failure updates the fallback in place and the
-                // replaced tree is unmounted (its cleanups run).
-                var control = _reconciler.Reconcile(_currentTree, appElement, _currentControl, _requestRender);
-                _currentTree = appElement;
+                // replaced tree is unmounted (its cleanups run). Guarded as upstream's: a component in it that throws
+                // gets the neutral text rather than a second call to the handler (#28).
+                var guarded = Reconciler.GuardFallback(appElement);
+                var control = _reconciler.Reconcile(_currentTree, guarded, _currentControl, _requestRender);
+                _currentTree = guarded;
                 _currentControl = control;
                 Child = control;
             }
@@ -264,6 +293,9 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
             }
             return;
         }
+        // The built-in panel. A tree the pass kept stays for the next good pass to reconcile against, but a handler's
+        // fallback from an earlier failure is released rather than left mounted out of sight (as upstream's).
+        if (Reconciler.IsGuardedFallback(_currentTree)) ReleaseTree();
         Child = ErrorPanel(ex);
     }
 
@@ -351,7 +383,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
     internal static string ErrorText(Exception ex) => "Render error\n\n" + ex;
 
     /// <summary>The neutral message shown when the error handler itself failed (no exception details).</summary>
-    internal const string SafeText = "Something went wrong.";
+    internal const string SafeText = Reconciler.NeutralFallbackText;
 
     private static Control ErrorPanel(Exception ex) => new Border
     {

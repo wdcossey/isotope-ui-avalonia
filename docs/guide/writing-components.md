@@ -351,9 +351,23 @@ default title is "Isotope App", `configure` gets a `ReactorHostControl` (Reactor
 
 The window's content is a `ReactorHostControl` (`using Isotope.UI.Hosting;`), which can also hold a root component
 anywhere in an existing Avalonia layout. It renders on Avalonia's dispatcher: however many state changes arrive before
-a pass runs, the root renders once. When a render throws, the host shows the exception (or what the
-`RenderErrorHandler` returns, or `ReactorApp.DefaultRenderErrorHandler` for every host), and the next state change
-renders again. An [error boundary](error-boundaries.md) keeps a failing part from replacing the whole content. Leaving the visual tree doesn't unmount it; `Dispose` does.
+a pass runs, the root renders once. Leaving the visual tree doesn't unmount it; `Dispose` does.
+
+When a render throws, the host's `RenderErrorHandler` is told (or `ReactorApp.DefaultRenderErrorHandler`, for every
+host that has none), and what it returns is shown instead. With no handler, or one that returns `null`, the exception
+is shown.
+
+- **A child component that throws** while it renders, or in an effect that render runs, is replaced in its own place.
+  The rest of the window keeps its controls and state. The handler gets `IsHostLevel` false, with the source
+  `ComponentRender` or `Effects`, and what it returns fills that component's place. Each later render of the
+  component tries it again: a change of its own state, or a render of its parent that renders it again (a function
+  component always is; a memo component when its dependencies change, a class component when its props do).
+- **The root's render, its effects, or a control that fails to mount or update** replaces the host's whole content
+  (`IsHostLevel` true). The next state change renders again.
+- **A handler that throws, or whose element throws,** gets a neutral "Something went wrong." in that place instead. A
+  handler that calls `error.Propagate()` gets nothing shown, and the exception is rethrown out of the dispatcher.
+- **An [error boundary](error-boundaries.md)** shows a fallback of your own for its part of the tree. The handler isn't
+  told about an error a boundary caught.
 
 <!-- snippet: host-control -->
 ```csharp

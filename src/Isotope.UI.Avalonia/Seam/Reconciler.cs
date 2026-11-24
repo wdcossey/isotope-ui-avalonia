@@ -67,14 +67,26 @@ public sealed partial class Reconciler
     public UIElement? Reconcile(Element? oldElement, Element newElement, UIElement? existingControl, Action requestRerender)
     {
         BuildDirtyAncestorPath();
+        // A pass that throws tears down what it mounted but never attached (#28).
+        var record = BeginRootPass();
+        bool completed = false;
         try
         {
-            return ReconcileSlot(oldElement, newElement, existingControl, requestRerender);
+            var control = ReconcileSlot(oldElement, newElement, existingControl, requestRerender);
+            completed = true;
+            return control;
         }
         finally
         {
-            _dirtyAncestorPath = null;
-            _dirtyPathChildren = null;
+            try
+            {
+                EndRootPass(record, completed, existingControl);
+            }
+            finally
+            {
+                _dirtyAncestorPath = null;
+                _dirtyPathChildren = null;
+            }
         }
     }
 
@@ -348,6 +360,8 @@ public sealed partial class Reconciler
     public UIElement? Mount(Element element, Action requestRerender)
     {
         element = Unwrap(element, out var modifiers);
+        // A mount outside any pass (#28): an exception propagated earlier is an ordinary error again.
+        if (_boundaryMountRoots is null) _propagating = null;
         int pushed = PushContext(element);
         // While an error boundary records completed mounts (#25): where this mount's completed roots start.
         int boundaryRootsStart = BoundaryRootsMark;
@@ -733,14 +747,6 @@ public sealed partial class Reconciler
         finally { t_rerenderDepth--; }
     }
 
-    private Element Render(RenderContext ctx, Action componentRerender, Func<Element> render)
-    {
-        ctx.BeginRender(componentRerender, _contextScope, Owner);
-        var element = render() ?? EmptyElement.Instance;
-        ctx.FlushEffects();
-        return element;
-    }
-
     private Border MountNode(ComponentNode node, RenderContext ctx, Action requestRerender, Func<Element> render)
     {
         var wrapper = new Border();
@@ -748,14 +754,15 @@ public sealed partial class Reconciler
         _renderStack.Add(node);
         try
         {
-            var child = Render(ctx, componentRerender, render);
+            // Outside every error boundary, a render or effect that throws gives the fallback for it here (#28).
+            var child = RenderComponent(node, ctx, componentRerender, render);
             wrapper.Child = Mount(child, componentRerender);
             node.RenderedElement = child;
         }
         catch
         {
-            // Its render (and effects) ran, but no node is registered: inside an error boundary, the boundary runs its
-            // cleanups when it discards the failed child (#25).
+            // Its render (and effects) ran, but no node is registered: the enclosing error boundary (#25), or else the
+            // root pass (#28), runs its cleanups when it discards what failed.
             NoteAbandonedNode(node);
             throw;
         }
@@ -763,10 +770,9 @@ public sealed partial class Reconciler
         {
             _renderStack.RemoveAt(_renderStack.Count - 1);
         }
-        // Registered once the subtree mounted: a render that throws leaves no node behind. Inside an error boundary,
-        // the boundary discards what a failed subtree left (the nodes of siblings mounted before it, its own
-        // cleanups). Outside one, nothing reaches this node's cleanups, nor the completed subtrees under it: the host
-        // releases only the tree it had.
+        // Registered once the subtree mounted: a mount that throws leaves no node behind. The enclosing error boundary,
+        // or else the root pass, discards what a failed subtree left (the subtrees mounted before the failure, the
+        // cleanups of the components whose mount failed).
         _componentNodes[wrapper] = node;
         return wrapper;
     }
@@ -800,7 +806,7 @@ public sealed partial class Reconciler
         _renderStack.Add(node);
         try
         {
-            var child = Render(ctx, componentRerender, render);
+            var child = RenderComponent(node, ctx, componentRerender, render);
             var existing = wrapper.Child;
             var next = ReconcileSlot(node.RenderedElement, child, existing, componentRerender);
             if (!ReferenceEquals(next, existing)) wrapper.Child = next;
@@ -910,6 +916,8 @@ public sealed partial class Reconciler
     /// </summary>
     public void UnmountChild(UIElement control)
     {
+        // Already torn down by a control teardown that failed part-way and is being recovered (isolated teardown only).
+        if (SkipOrTrackIsolatedTeardown(control)) return;
         CountPerfChanges();
         _exitingControls?.Remove(control);
         _errorBoundaryNodes.Remove(control);
@@ -927,10 +935,24 @@ public sealed partial class Reconciler
             }
         }
         // A control a handler mounted: the handler tears down what it owns (its children strategy, its unmount
-        // hooks) and says whether the generic walk below still visits the children (a panel strategy's).
-        if (GetMountedElement(control) is { } mounted && TryGetV1Handler(mounted.GetType(), out var entry)
-            && entry.Unmount(control, this) != V1Protocol.V1UnmountDisposition.ContinueDefaultTraversal)
-            return;
+        // hooks) and says whether the generic walk below still visits the children (a panel strategy's). Inside an
+        // isolated teardown, a handler that throws is reported and the children it didn't reach are torn down (#28).
+        if (GetMountedElement(control) is { } mounted && TryGetV1Handler(mounted.GetType(), out var entry))
+        {
+            V1Protocol.V1UnmountDisposition disposition;
+            if (!IsolatesUnmountCleanupFailures)
+                disposition = entry.Unmount(control, this);
+            else if (!RunIsolatedTeardown(control, entry, out disposition))
+                return;
+            if (disposition != V1Protocol.V1UnmountDisposition.ContinueDefaultTraversal)
+                return;
+        }
+        UnmountChildren(control);
+    }
+
+    // The generic walk over a control's children: a panel's, a decorator's child, a content control's content.
+    private void UnmountChildren(UIElement control)
+    {
         switch (control)
         {
             case Avalonia.Controls.Panel panel:
