@@ -193,7 +193,11 @@ public sealed class ButtonFamilyTests : IDisposable
         Assert.True(toggle.IsThreeState);
         Assert.Null(toggle.IsChecked);
 
-        state = true; // only the three-state value changes: the update isn't skipped
+        state = false; // only the three-state value changes (IsChecked stays false): the update isn't skipped
+        host.Render();
+        Assert.False(toggle.IsChecked);
+
+        state = true;
         host.Render();
         Assert.True(toggle.IsChecked);
 
