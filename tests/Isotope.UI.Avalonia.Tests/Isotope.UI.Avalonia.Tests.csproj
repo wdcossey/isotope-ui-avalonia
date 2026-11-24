@@ -29,6 +29,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
+    <!-- The one-line startup and its default app builder (#32), tested headless through ReactorApp's start seam. -->
+    <ProjectReference Include="..\..\src\Isotope.UI.Avalonia.Desktop\Isotope.UI.Avalonia.Desktop.csproj" />
     <!-- The generator as a plain assembly, so GeneratorTests can run it through Roslyn's generator driver. -->
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia.Generators\Isotope.UI.Avalonia.Generators.csproj" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
