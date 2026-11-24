@@ -20,6 +20,7 @@
     "ScrollViewerElement": "Avalonia.Controls.ScrollViewer",
     "ExpanderElement": "Avalonia.Controls.Expander",
     "WrapPanelElement": "Avalonia.Controls.WrapPanel",
+    "ViewboxElement": "Avalonia.Controls.Viewbox",
     "DatePickerElement": "Avalonia.Controls.DatePicker",
     "TimePickerElement": "Avalonia.Controls.TimePicker",
     "NumberBoxElement": "Avalonia.Controls.NumericUpDown",
