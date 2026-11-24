@@ -306,16 +306,28 @@ public sealed class ComponentErrorTests : IDisposable
 
     // ── Isolated control teardown ───────────────────────────────────────
 
-    // A content control whose descriptor's unmount hook throws.
+    // A content control, and a panel, whose descriptor's unmount hook throws. The content control's strategy tears its
+    // content down itself; the panel's children are left to the engine's walk.
     private sealed record ThrowingUnmountElement(Element Child) : Element;
 
+    private sealed record ThrowingUnmountPanelElement(params Element[] Children) : Element;
+
     static ComponentErrorTests()
-        => ControlRegistry.Register<ThrowingUnmountElement, ContentControl>(static () =>
+    {
+        ControlRegistry.Register<ThrowingUnmountElement, ContentControl>(static () =>
             new DescriptorHandler<ThrowingUnmountElement, ContentControl>(
                 new ControlDescriptor<ThrowingUnmountElement, ContentControl>()
                     .WithContent(static e => e.Child, static _ => null)
                     .WithUnmount(static (in UnmountContext _, ContentControl _) =>
                         throw new InvalidOperationException("unmount hook"))));
+        ControlRegistry.Register<ThrowingUnmountPanelElement, StackPanel>(static () =>
+            new DescriptorHandler<ThrowingUnmountPanelElement, StackPanel>(
+                new ControlDescriptor<ThrowingUnmountPanelElement, StackPanel>
+                {
+                    Children = new Panel<ThrowingUnmountPanelElement, StackPanel>(static e => e.Children, static p => p.Children),
+                }.WithUnmount(static (in UnmountContext _, StackPanel _) =>
+                    throw new InvalidOperationException("panel unmount hook"))));
+    }
 
     [AvaloniaFact]
     public void A_control_unmount_hook_that_throws_in_an_isolated_teardown_leaves_the_other_cleanups_running()
@@ -339,5 +351,30 @@ public sealed class ComponentErrorTests : IDisposable
         var error = Assert.Single(reported); // reported once
         Assert.Equal(RenderErrorSource.Cleanup, error.Source);
         Assert.Equal("unmount hook", error.Exception.Message);
+    }
+
+    [AvaloniaFact]
+    public void A_panel_whose_unmount_hook_throws_still_has_its_children_torn_down_once()
+    {
+        var first = new StrongBox<int>(0);
+        var second = new StrongBox<int>(0);
+        var sibling = new StrongBox<int>(0);
+        var reported = new List<RenderError>();
+        var host = new ReactorHostControl(_ => VStack(
+            new ThrowingUnmountPanelElement(Tracked(first, "first"), Tracked(second, "second")),
+            Tracked(sibling, "sibling")))
+        {
+            RenderErrorHandler = e => { reported.Add(e); return null; },
+        };
+        Pump();
+        Assert.Equal(["first", "second", "sibling"], Texts(host));
+
+        host.Dispose();
+
+        // The hook threw before the engine's walk reached the panel's children: the recovery walk tears them down.
+        Assert.Equal(1, first.Value);
+        Assert.Equal(1, second.Value);
+        Assert.Equal(1, sibling.Value);
+        Assert.Equal("panel unmount hook", Assert.Single(reported).Exception.Message);
     }
 }
