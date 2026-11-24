@@ -1,0 +1,351 @@
+[
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.Border",
+      "to": "Avalonia.Controls.Border"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "A WinUI control named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias, retargeted to the Avalonia control of the same name (code only; the diagnostic strings keep their text)."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.StackPanel",
+      "to": "Avalonia.Controls.StackPanel"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "A WinUI control named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias, retargeted to the Avalonia control of the same name (code only; the diagnostic strings keep their text)."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.Grid",
+      "to": "Avalonia.Controls.Grid"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "A WinUI control named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias, retargeted to the Avalonia control of the same name (code only; the diagnostic strings keep their text)."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.RelativePanel",
+      "to": "Avalonia.Controls.RelativePanel"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "A WinUI control named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias, retargeted to the Avalonia control of the same name (code only; the diagnostic strings keep their text)."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.SplitButton",
+      "to": "Avalonia.Controls.SplitButton"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "A WinUI control named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias, retargeted to the Avalonia control of the same name (code only; the diagnostic strings keep their text)."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.Button",
+      "to": "Avalonia.Controls.Button"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "A WinUI control named through upstream's `using WinUI = Microsoft.UI.Xaml.Controls;` alias, retargeted to the Avalonia control of the same name (code only; the diagnostic strings keep their text)."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "WinUI.Control",
+      "to": "Control"
+    },
+    "files": [
+      "Core/Diagnostics/AppliedModifierMap.cs"
+    ],
+    "why": "WinUI's templated Control: the Step1 alias maps the bare name to Avalonia's TemplatedControl."
+  },
+  {
+    "roslyn": {
+      "op": "retarget-type",
+      "from": "global::Windows.UI.Color",
+      "to": "Avalonia.Media.Color"
+    },
+    "files": [
+      "Controls/PropertyGrid/TypeRegistry.cs"
+    ],
+    "why": "The colour editor's type test: WinRT's Color is Avalonia's Color."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseSystemBackButton"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseWindowSize",
+      "parameters": "(Microsoft.UI.Xaml.Window)"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseWindowSize",
+      "parameters": "()"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseWindowPosition"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseDisplays"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseWindowState"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseIsActive"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseDpi"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseTrayIcon"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseBreakpoint",
+      "parameters": "(Microsoft.UI.Xaml.Window, double)"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "RenderContext",
+      "member": "UseBreakpoint",
+      "parameters": "(double)"
+    },
+    "files": [
+      "Core/RenderContext.cs"
+    ],
+    "why": "A WinUI window/display/tray hook: tier 3, the member the library drops too (tools/sync/transforms.json)."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseSystemBackButton"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseWindowSize",
+      "parameters": "(Microsoft.UI.Xaml.Window)"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseWindowSize",
+      "parameters": "()"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseWindowPosition"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseDisplays"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseWindowState"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseIsActive"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseDpi"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseTrayIcon"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseBreakpoint",
+      "parameters": "(Microsoft.UI.Xaml.Window, double)"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseBreakpoint",
+      "parameters": "(double)"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  },
+  {
+    "roslyn": {
+      "op": "drop-member",
+      "type": "Component",
+      "member": "UseAnnounce"
+    },
+    "files": [
+      "Core/Component.cs"
+    ],
+    "why": "Component's wrapper of a tier 3 hook (UseAnnounce: Hooks/UseAnnounce.cs is a rewrite), dropped by the library too."
+  }
+]
