@@ -87,9 +87,9 @@ token, a value read this way doesn't follow a theme change on its own.
 - **Style priority.** Upstream applies a token as a synthesized `{ThemeResource}` style; here it is a binding at
   Avalonia's style priority. In both, a brush set on the element wins.
 - **Borders on panels.** Avalonia's panels (`VStack`, `Grid`…) have no border, so a stack, grid or wrap panel given
-  `WithBorder` (a border width) is mounted inside a `Border` that takes its token (#49,
-  [Writing components](writing-components.md)); `BorderBrush` alone, with no width, draws nothing.
+  `WithBorder` (a border width) is mounted inside a `Border` that takes its token
+  ([Writing components](writing-components.md)); `BorderBrush` alone, with no width, draws nothing.
   A property a control doesn't have, or whose type isn't a brush, is skipped, as is `Foreground` on a `Border`.
-- **Not ported yet:** per-control resource overrides (`.Resources(r => r.Set(key, themeRef))`), and the type-ramp
-  factories (`Title`, `Body`, `Caption`…, #44). Upstream's `Theme` has no spacing or corner-radius tokens: its corner
-  radii are `ThemeResource.CornerRadius(...)`, above.
+- **Not ported yet:** per-control resource overrides (`.Resources(r => r.Set(key, themeRef))`). The type ramp is the
+  named text styles (`Title`, `Body`, `Caption`…, [text styles](text-styles.md)). Upstream's `Theme` has no spacing or
+  corner-radius tokens: its corner radii are `ThemeResource.CornerRadius(...)`, above.

@@ -119,7 +119,8 @@ public class RenameTableTests
     public void Type_factory_and_modifier_entries_match_their_status()
     {
         // An applied entry is in the code under its Avalonia name only; a proposed one is still under Reactor's, so
-        // applying it later is a rename in the code and a status change here.
+        // applying it later is a rename in the code and a status change here. A kept one has no Avalonia counterpart,
+        // so it is in the code under Reactor's name, with the reason (#44).
         var table = RenameTable.Load();
         var types = Library.GetExportedTypes().Select(t => t.Name).ToHashSet();
         var factories = typeof(Factories).GetMethods(BindingFlags.Public | BindingFlags.Static).Select(m => m.Name).ToHashSet();
@@ -143,8 +144,10 @@ public class RenameTableTests
                     problems.Add($"{section}: {e.Reactor} -> {e.Avalonia} is applied, so only {e.Avalonia} exists");
                 else if (e.Status == "proposed" && !present.Contains(e.Reactor))
                     problems.Add($"{section}: {e.Reactor} -> {e.Avalonia} is proposed, so {e.Reactor} exists");
-                else if (e.Status is not ("applied" or "proposed"))
-                    problems.Add($"{section}: {e.Reactor}: status '{e.Status}' is not applied or proposed");
+                else if (e.Status == "kept" && (e.Avalonia != e.Reactor || !present.Contains(e.Reactor) || e.Note is null))
+                    problems.Add($"{section}: {e.Reactor} is kept, so it keeps its name, exists, and says why (note)");
+                else if (e.Status is not ("applied" or "proposed" or "kept"))
+                    problems.Add($"{section}: {e.Reactor}: status '{e.Status}' is not applied, proposed or kept");
             }
         }
     }
