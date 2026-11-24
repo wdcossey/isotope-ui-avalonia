@@ -135,6 +135,9 @@ public abstract record Element
                 && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
             (HyperlinkButtonElement x, HyperlinkButtonElement y) => x.Content == y.Content && x.NavigateUri == y.NavigateUri
                 && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+            (NumberBoxElement x, NumberBoxElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
+                && x.SmallChange == y.SmallChange && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
+                && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
             _ => false,
         };
     }
