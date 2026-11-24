@@ -66,7 +66,7 @@ The analyzer binds to Isotope's types, so it runs in the project *after* its ref
 | ID | Fix | What |
 |---|---|---|
 | ISOMIG001 | yes | A Reactor namespace: `Isotope.UI.*` |
-| ISOMIG002 | no | A Reactor namespace or type Isotope doesn't have (Charting, Docking, Advanced, `Theme`) |
+| ISOMIG002 | no | A Reactor namespace or type Isotope doesn't have (Charting, Docking, Advanced) |
 | ISOMIG003 | yes | A WinUI using: removed, with the Avalonia namespaces the file's WinUI types need |
 | ISOMIG004 | yes | A WinUI type or member with an Avalonia counterpart |
 | ISOMIG005 | no | A WinUI type or member with no Avalonia counterpart, with what to use where there is one |
@@ -97,23 +97,23 @@ Measured on 2026-11-24:
 
 | | Before the fixes | After |
 |---|---|---|
-| Files that build | 51 of 358 | 62 of 358 |
-| Compile errors | 13,699 | 5,544 |
+| Files that build | 51 of 358 | 64 of 358 |
+| Compile errors | 13,699 | 4,202 |
 | Projects that build | 1 of 36 | 2 of 36 |
 
 - No file that built before the fixes fails after them, and no `dotnet format` run failed.
 - The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
 - The two projects that build after are the hello-world app and the chat sample's model.
-- Diagnostics left: 2,948.
-  - 1,466 ISOMIG013: members and modifiers Isotope lacks. The commonest are `Foreground` (375), `FontSize` (157) and
-    `SemiBold` (144) on `TextBlockElement`.
+- Diagnostics left: 2,624.
+  - 1,192 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FontSize` (193) and `SemiBold` (154) on
+    `TextBlockElement`, and `Padding` (88) on `StackElement`.
   - 877 ISOMIG012: controls not ported yet. The commonest are `Caption` (221), `SubHeading` (149) and
     `ScrollView` (139).
-  - 249 ISOMIG002: Charting (159), `Theme` (50) and Advanced (11).
+  - 199 ISOMIG002: Charting (159) and Advanced (11).
   - 171 ISOMIG011 and 113 ISOMIG005: WinUI-only controls and types.
   - 59 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.
-- Most compile errors left are names Isotope doesn't have yet. The largest group is 830 uses of Reactor's `Theme`
-  tokens.
+- Most compile errors left are names Isotope doesn't have yet. The largest group is 443 members `TextBlockElement`
+  lacks (CS1061). Reactor's `Theme` tokens (830 errors before #41) now migrate as they are.
 - The samples' other upstream projects (Charting, Advanced, Devtools…) and their NuGet packages are dropped, and the
   script lists them.
