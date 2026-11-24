@@ -526,6 +526,7 @@ public sealed class PlatformHooksTests : IDisposable
         Mount(ctx => { seen = ctx.UseDisplays(); return "x"; });
         // Headless has one primary 1920 x 1280 screen at scaling 1.
         var display = Assert.Single(seen!);
+        Assert.Equal("1", display.Id); // the platform handle (headless numbers its one screen 1), not the name
         Assert.True(display.IsPrimary);
         Assert.Equal(new Rect(0, 0, 1920, 1280), display.BoundsDip);
         Assert.Equal(96u, display.Dpi);

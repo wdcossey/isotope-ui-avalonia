@@ -21,11 +21,15 @@ internal readonly record struct PlatformView(ReactorHostControl? Host, TopLevel?
     /// <summary>The view of <paramref name="host"/> right now.</summary>
     public static PlatformView Of(ReactorHostControl? host) => new(host, OwningTopLevel(host));
 
-    // A popup (flyout, tooltip, menu) is a top level of its own; its content belongs to the window that opened it.
-    private static TopLevel? OwningTopLevel(Visual? host)
+    /// <summary>
+    /// The top level <paramref name="host"/> is in; for a popup (flyout, tooltip, menu), which is a top level of its
+    /// own, the top level that opened it.
+    /// </summary>
+    public static TopLevel? OwningTopLevel(Visual? host)
     {
         var topLevel = host is null ? null : TopLevel.GetTopLevel(host);
-        while (topLevel is PopupRoot popup && !ReferenceEquals(popup.ParentTopLevel, popup)) topLevel = popup.ParentTopLevel;
+        while (topLevel is PopupRoot popup && popup.ParentTopLevel is { } parent && !ReferenceEquals(parent, popup))
+            topLevel = parent;
         return topLevel;
     }
 
@@ -155,7 +159,18 @@ internal sealed class HostLink : IDisposable
         Signal();
     }
 
-    private void OnTopLevelClosed(object? sender, EventArgs e) => Move(new PlatformView(_host, null));
+    // A closed top level is left for good: drop its subscriptions without asking for a render (the window is gone).
+    // (Avalonia detaches a closing window's content first, which already moved the link; this covers a top level
+    // that closes without detaching its content.)
+    private void OnTopLevelClosed(object? sender, EventArgs e)
+    {
+        if (_disposed) return;
+        _inner?.Dispose();
+        _inner = null;
+        _closed?.Dispose();
+        _closed = null;
+        _view = new PlatformView(_host, null);
+    }
 
     private void Attach(PlatformView view)
     {
@@ -343,7 +358,9 @@ internal static class PlatformReads
         if (v.TopLevel?.Screens is not { } screens) return [];
         return screens.All.Select((s, i) => new DisplayInfo
         {
-            Id = string.IsNullOrEmpty(s.DisplayName) ? s.TryGetPlatformHandle()?.Handle.ToString() ?? i.ToString() : s.DisplayName,
+            // The platform handle is unique per display; a display name isn't (two monitors of one model share it).
+            Id = s.TryGetPlatformHandle()?.Handle.ToString()
+                ?? (string.IsNullOrEmpty(s.DisplayName) ? i.ToString() : s.DisplayName + "#" + i),
             IsPrimary = s.IsPrimary,
             BoundsDip = s.Bounds.ToRect(s.Scaling),
             WorkAreaDip = s.WorkingArea.ToRect(s.Scaling),

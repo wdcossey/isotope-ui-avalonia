@@ -81,7 +81,7 @@ What differs from upstream's hooks:
 
 - **Avalonia's types:** `UseWindow` returns Avalonia's `Window` (upstream: `ReactorWindow`), `UseWindowState` Avalonia's
   `WindowState` (the same four states), and the explicit overloads take a `TopLevel` (upstream: a WinUI `Window`).
-  `DisplayInfo` keeps upstream's members with Avalonia's `Rect`; its `Id` is the platform's display name.
+  `DisplayInfo` keeps upstream's members with Avalonia's `Rect`; its `Id` is the display's platform handle.
 - **The host's window, also in a `ReactorHostControl`.** Upstream's window hooks return their fallbacks in a
   `ReactorHostControl` (it has no `ReactorWindow`); here they read the window the host control is in.
 - **The theme is the host's, not only the app's.** Upstream's `UseColorScheme` reads the application's theme and misses
