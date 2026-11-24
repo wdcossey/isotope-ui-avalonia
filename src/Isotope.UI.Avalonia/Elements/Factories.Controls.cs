@@ -91,10 +91,10 @@ public static partial class Factories
     // ── Progress and media ──────────────────────────────────────────
 
     /// <summary>A progress bar at <paramref name="value"/> (0 to 100 by default), as an Avalonia <see cref="Avalonia.Controls.ProgressBar"/>.</summary>
-    public static ProgressElement Progress(double value) => new(value);
+    public static ProgressBarElement ProgressBar(double value) => new(value);
 
     /// <summary>A progress bar with no value: Avalonia's indeterminate animation.</summary>
-    public static ProgressElement ProgressIndeterminate() => new(null);
+    public static ProgressBarElement ProgressIndeterminate() => new(null);
 
     /// <summary>
     /// An image from a file path, a <c>file://</c> URI or an <c>avares://</c> resource URI, as an Avalonia

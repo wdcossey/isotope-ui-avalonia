@@ -15,7 +15,7 @@ public static partial class Factories
     /// <see cref="double.NaN"/> is an empty box. Upstream's <c>header</c> parameter isn't here: Avalonia's control has no
     /// header.
     /// </summary>
-    public static NumberBoxElement NumberBox(Optional<double> value = default, Action<double>? onValueChanged = null)
+    public static NumericUpDownElement NumericUpDown(Optional<double> value = default, Action<double>? onValueChanged = null)
         => new(value, onValueChanged);
 
     /// <summary>A horizontal line between controls, as an Avalonia <see cref="Avalonia.Controls.Separator"/>.</summary>

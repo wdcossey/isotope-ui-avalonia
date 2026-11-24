@@ -101,7 +101,7 @@ public abstract record Element
             (ButtonElement x, ButtonElement y) => SameTextContent(x.Content, y.Content) && x.IsEnabled == y.IsEnabled
                 && ReferenceEquals(x.Setters, y.Setters)
                 && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
-            (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
+            (StackPanelElement x, StackPanelElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
             (FlexElement x, FlexElement y) => x.Direction == y.Direction && x.JustifyContent == y.JustifyContent
                 && x.AlignItems == y.AlignItems && x.AlignContent == y.AlignContent && x.Wrap == y.Wrap
@@ -129,7 +129,7 @@ public abstract record Element
                 && (x.OnSelectedIndexChanged is null) == (y.OnSelectedIndexChanged is null)
                 && (x.OnDropDownOpened is null) == (y.OnDropDownOpened is null)
                 && (x.OnDropDownClosed is null) == (y.OnDropDownClosed is null),
-            (ProgressElement x, ProgressElement y) => x.Value == y.Value && x.Minimum == y.Minimum && x.Maximum == y.Maximum
+            (ProgressBarElement x, ProgressBarElement y) => x.Value == y.Value && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && ReferenceEquals(x.Setters, y.Setters),
             (ImageElement x, ImageElement y) => x.Source == y.Source && x.Stretch == y.Stretch && ReferenceEquals(x.Setters, y.Setters),
             (BorderElement x, BorderElement y) => Equals(x.Background, y.Background) && Equals(x.BorderBrush, y.BorderBrush)
@@ -154,7 +154,7 @@ public abstract record Element
             (HyperlinkButtonElement x, HyperlinkButtonElement y) => SameTextContent(x.Content, y.Content) && x.NavigateUri == y.NavigateUri
                 && ReferenceEquals(x.Setters, y.Setters)
                 && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
-            (NumberBoxElement x, NumberBoxElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
+            (NumericUpDownElement x, NumericUpDownElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && x.Increment == y.Increment && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
                 && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
             _ => false,

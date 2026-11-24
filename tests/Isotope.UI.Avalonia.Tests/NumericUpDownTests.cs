@@ -8,14 +8,14 @@ using AvSeparator = Avalonia.Controls.Separator;
 namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
-/// NumberBox as an Avalonia NumericUpDown, and the Separator (#26): the controlled value, whose engine writes don't echo
+/// NumericUpDown (Reactor's NumberBox), and the Separator (#26): the controlled value, whose engine writes don't echo
 /// while the user's changes reach the state; bounds, their coercion echo and stranded tokens; NaN as an empty box; the
 /// double-to-decimal conversion.
 /// </summary>
-public class NumberBoxTests
+public class NumericUpDownTests
 {
     [AvaloniaFact]
-    public void NumberBox_user_change_reaches_the_state_and_an_engine_write_does_not_echo()
+    public void NumericUpDown_user_change_reaches_the_state_and_an_engine_write_does_not_echo()
     {
         var reported = new List<double>();
         Action<double>? set = null;
@@ -23,7 +23,7 @@ public class NumberBoxTests
         {
             var (n, setN) = ctx.UseState(2.5);
             set = setN;
-            return VStack(TextBlock("n " + n), NumberBox(n, v => { reported.Add(v); setN(v); }));
+            return VStack(TextBlock("n " + n), NumericUpDown(n, v => { reported.Add(v); setN(v); }));
         }));
         var box = host.All<NumericUpDown>()[0];
         Assert.Equal(2.5m, box.Value);
@@ -44,13 +44,13 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
-    public void NumberBox_value_that_does_not_round_trip_through_decimal_leaves_no_token_behind()
+    public void NumericUpDown_value_that_does_not_round_trip_through_decimal_leaves_no_token_behind()
     {
         // 0.1 + 0.2 is 0.30000000000000004 as a double and 0.3 as the decimal the control holds: not drift, so no write
         // (whose token would swallow the next user change, since writing the same decimal raises no event).
         var reported = new List<double>();
         var tick = 0;
-        var host = new TestHost(() => NumberBox(0.1 + 0.2, v => reported.Add(v)) with { PlaceholderText = "t" + tick });
+        var host = new TestHost(() => NumericUpDown(0.1 + 0.2, v => reported.Add(v)) with { PlaceholderText = "t" + tick });
         var box = host.All<NumericUpDown>()[0];
 
         tick = 1;
@@ -60,10 +60,10 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
-    public void NumberBox_writes_its_bounds_step_and_value_and_NaN_is_an_empty_box()
+    public void NumericUpDown_writes_its_bounds_step_and_value_and_NaN_is_an_empty_box()
     {
         double value = 150;
-        var host = new TestHost(() => NumberBox(value) with { Minimum = 100, Maximum = 200, Increment = 5 });
+        var host = new TestHost(() => NumericUpDown(value) with { Minimum = 100, Maximum = 200, Increment = 5 });
         var box = host.All<NumericUpDown>()[0];
         Assert.Equal((100m, 200m, 150m, 5m), (box.Minimum, box.Maximum, box.Value, box.Increment));
 
@@ -73,13 +73,13 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
-    public void NumberBox_bound_moved_past_the_value_leaves_no_token_behind()
+    public void NumericUpDown_bound_moved_past_the_value_leaves_no_token_behind()
     {
         // Avalonia's NumericUpDown doesn't clip its value to a new bound (ClipValueToMinMax is off by default), so the
         // bound's write raises no change event and must not expect one.
         var reported = new List<double>();
         double min = 0;
-        var host = new TestHost(() => NumberBox(5, v => reported.Add(v)) with { Minimum = min });
+        var host = new TestHost(() => NumericUpDown(5, v => reported.Add(v)) with { Minimum = min });
         var box = host.All<NumericUpDown>()[0];
 
         min = 10;
@@ -90,13 +90,13 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
-    public void NumberBox_bound_that_clips_the_value_drops_the_coercion_echo()
+    public void NumericUpDown_bound_that_clips_the_value_drops_the_coercion_echo()
     {
         // With ClipValueToMinMax on (here from a setter), a bound moved past the value clips it and raises ValueChanged:
         // the engine's, not the user's.
         var reported = new List<double>();
         double min = 0;
-        var host = new TestHost(() => NumberBox(onValueChanged: v => reported.Add(v)) with
+        var host = new TestHost(() => NumericUpDown(onValueChanged: v => reported.Add(v)) with
         {
             Minimum = min, Setters = [c => c.ClipValueToMinMax = true],
         });
@@ -113,19 +113,19 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
-    public void NumberBox_default_bounds_are_decimal_range()
+    public void NumericUpDown_default_bounds_are_decimal_range()
     {
-        var host = new TestHost(() => NumberBox(1));
+        var host = new TestHost(() => NumericUpDown(1));
         var box = host.All<NumericUpDown>()[0];
         Assert.Equal((decimal.MinValue, decimal.MaxValue), (box.Minimum, box.Maximum));
     }
 
     [AvaloniaFact]
-    public void NumberBox_without_a_value_leaves_it_to_the_control_and_writes_its_other_members()
+    public void NumericUpDown_without_a_value_leaves_it_to_the_control_and_writes_its_other_members()
     {
         var reported = new List<double>();
         string? format = "F2";
-        var host = new TestHost(() => NumberBox(onValueChanged: v => reported.Add(v)) with
+        var host = new TestHost(() => NumericUpDown(onValueChanged: v => reported.Add(v)) with
         {
             PlaceholderText = "Amount", FormatString = format, ShowButtonSpinner = false,
         });

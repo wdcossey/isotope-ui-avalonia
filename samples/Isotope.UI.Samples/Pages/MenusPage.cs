@@ -65,7 +65,7 @@ public static class MenusPage
                 Background = Brushes.Transparent, // so a right-click anywhere on the row finds it
                 BorderBrush = Brushes.Gray, BorderThickness = 1, CornerRadius = 3, Padding = new Thickness(8, 4),
             })
-                .WithContextFlyout(menu)
+                .ContextFlyout(menu)
                 .Tip(tips, "Right-click for this file's menu")
                 .WithKey("file-" + row.Id);
         }

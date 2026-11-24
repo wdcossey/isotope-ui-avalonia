@@ -16,7 +16,7 @@ namespace Isotope.UI.Core;
 /// doesn't pair it with RangeBase's ValueChanged.
 /// </summary>
 [GenerateReactorDescriptor(typeof(ProgressBar))]
-public partial record ProgressElement(double? Value = null) : Element
+public partial record ProgressBarElement(double? Value = null) : Element
 {
     public bool IsIndeterminate => Value is null;
     public double Minimum { get; init; } = 0;

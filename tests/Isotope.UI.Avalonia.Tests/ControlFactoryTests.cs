@@ -94,7 +94,7 @@ public class ControlFactoryTests
         Assert.Throws<ArgumentNullException>(() => Grid([], null!));
         Assert.Equal(new GridAttached(1, 2, 3, 4), child.Grid(1, 2, 3, 4).Attached![typeof(GridAttached)]);
 
-        Assert.Equal((40.0, false), (Progress(40).Value, Progress(40).IsIndeterminate));
+        Assert.Equal((40.0, false), (ProgressBar(40).Value, ProgressBar(40).IsIndeterminate));
         Assert.Equal(((double?)null, true), (ProgressIndeterminate().Value, ProgressIndeterminate().IsIndeterminate));
         Assert.Equal("a.png", Image("a.png").Source);
     }
@@ -134,7 +134,7 @@ public class ControlFactoryTests
             () => ToggleSwitch(true, content: "h"),
             () => RadioButton("a", true, groupName: "g"),
             () => ComboBox(items, 0) with { PlaceholderText = "p" },
-            () => Progress(5),
+            () => ProgressBar(5),
             () => Image("none.png"),
             () => Border(child) with { CornerRadius = 2 },
             () => new GridElement(star, star, none) { RowSpacing = 1 },

@@ -61,6 +61,20 @@ public class FactoryTests
     }
 
     [Fact]
+    public void Factories_named_like_Avalonia_controls_are_the_factories_in_calls_and_the_controls_as_types()
+    {
+        // This file imports Avalonia.Controls and the factories (#46). A call names the factory, a type names Avalonia's
+        // control, and the alignment modifiers leave the enums' simple names alone.
+        var tabs = TabControl(TabItem("A", NumericUpDown(1)), TabItem("B", AutoCompleteBox("x")));
+        Assert.Equal(["A", "B"], tabs.Items.Select(t => t.Header));
+        TabControl control = new TabControl();
+        Assert.IsType<global::Avalonia.Controls.TabControl>(control);
+        Assert.Equal(typeof(global::Avalonia.Controls.ProgressBar), typeof(ProgressBar));
+        var bar = ProgressBar(0.5).HorizontalAlignment(HorizontalAlignment.Center).VerticalAlignment(VerticalAlignment.Bottom);
+        Assert.Equal((HorizontalAlignment.Center, VerticalAlignment.Bottom), (bar.Modifiers?.HorizontalAlignment, bar.Modifiers?.VerticalAlignment));
+    }
+
+    [Fact]
     public void VStack_and_HStack_build_stacks_with_default_or_given_spacing()
     {
         Element a = TextBlock("a"), b = TextBlock("b");
@@ -189,7 +203,7 @@ public class FactoryTests
         Assert.Equal((10.0, 20.0), (m.Width, m.Height));
         var s = TextBlock("a").Size(30, 40).Modifiers!;
         Assert.Equal((30.0, 40.0), (s.Width, s.Height));
-        var al = TextBlock("a").HAlign(HorizontalAlignment.Right).VAlign(VerticalAlignment.Bottom).Modifiers!;
+        var al = TextBlock("a").HorizontalAlignment(HorizontalAlignment.Right).VerticalAlignment(VerticalAlignment.Bottom).Modifiers!;
         Assert.Equal((HorizontalAlignment.Right, VerticalAlignment.Bottom), (al.HorizontalAlignment, al.VerticalAlignment));
     }
 

@@ -49,17 +49,17 @@ public static partial class Factories
     // ── Layout ──────────────────────────────────────────────────────
 
     /// <summary>Children stacked top to bottom (a vertical <see cref="Avalonia.Controls.StackPanel"/>; spacing 8).</summary>
-    public static StackElement VStack(params Element?[] children) => new(Orientation.Vertical, FilterChildren(children));
+    public static StackPanelElement VStack(params Element?[] children) => new(Orientation.Vertical, FilterChildren(children));
 
     /// <summary>Children stacked top to bottom, <paramref name="spacing"/> DIPs apart.</summary>
-    public static StackElement VStack(double spacing, params Element?[] children)
+    public static StackPanelElement VStack(double spacing, params Element?[] children)
         => new(Orientation.Vertical, FilterChildren(children)) { Spacing = spacing };
 
     /// <summary>Children stacked left to right (a horizontal <see cref="Avalonia.Controls.StackPanel"/>; spacing 8).</summary>
-    public static StackElement HStack(params Element?[] children) => new(Orientation.Horizontal, FilterChildren(children));
+    public static StackPanelElement HStack(params Element?[] children) => new(Orientation.Horizontal, FilterChildren(children));
 
     /// <summary>Children stacked left to right, <paramref name="spacing"/> DIPs apart.</summary>
-    public static StackElement HStack(double spacing, params Element?[] children)
+    public static StackPanelElement HStack(double spacing, params Element?[] children)
         => new(Orientation.Horizontal, FilterChildren(children)) { Spacing = spacing };
 
     /// <summary>A flexbox container (direction <see cref="FlexDirection.Row"/>); set each child's flex data with <c>.Flex(...)</c>.</summary>

@@ -15,7 +15,7 @@ public sealed partial class Reconciler
     // Which elements' controls lack the four properties is known from the element type, so the choice can be made from
     // the elements alone (CanUpdate): a change in it mounts the element afresh, as a change of control type does.
     internal static bool NeedsPanelChrome(Element element, ElementModifiers? modifiers) =>
-        modifiers is { HasPanelChrome: true } && element is StackElement or GridElement or WrapPanelElement;
+        modifiers is { HasPanelChrome: true } && element is StackPanelElement or GridElement or WrapPanelElement;
 
     // The control a handler mounted for the element in this slot: the panel inside a chrome border, or the control.
     private static UIElement HandlerControl(UIElement control) => control is PanelChrome { Child: { } panel } ? panel : control;

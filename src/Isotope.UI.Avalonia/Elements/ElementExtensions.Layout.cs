@@ -10,7 +10,8 @@ namespace Isotope.UI;
 // BorderThickness, MinWidth…, IsVisible, HorizontalContentAlignment), so none is renamed; WithBorder and Center are
 // upstream's shorthands (their ThemeRef overloads are in ElementExtensions.Theme.cs, #41). Where each is written:
 // Reconciler.ApplyLayoutModifiers. Not here yet: the BiDi-aware MarginInlineStart/PaddingInlineStart family and BorderInlineStart,
-// the obsolete Visible, and upstream's HorizontalAlignment/VerticalAlignment aliases of HAlign/VAlign (#46 names those).
+// and the obsolete Visible. Upstream's HAlign and VAlign are HorizontalAlignment and VerticalAlignment here, the names of
+// upstream's aliases of them (#46, in ElementExtensions.cs).
 
 public static partial class ElementExtensions
 {
@@ -51,7 +52,7 @@ public static partial class ElementExtensions
 
     // ── Alignment ───────────────────────────────────────────────────
 
-    /// <summary>Centred both ways in the space its parent gives it (<c>HAlign</c> and <c>VAlign</c> <c>Center</c>).</summary>
+    /// <summary>Centred both ways in the space its parent gives it (<c>HorizontalAlignment</c> and <c>VerticalAlignment</c> <c>Center</c>).</summary>
     public static T Center<T>(this T el) where T : Element =>
         el.WithModifiers(m => m with
         {
@@ -116,7 +117,7 @@ public static partial class ElementExtensions
     // ── Stack and flex sugar ────────────────────────────────────────
 
     /// <summary>Space between the stack's children, in DIPs.</summary>
-    public static StackElement Spacing(this StackElement el, double spacing) => el with { Spacing = spacing };
+    public static StackPanelElement Spacing(this StackPanelElement el, double spacing) => el with { Spacing = spacing };
 
     /// <summary>The flex container's padding (Yoga's), on every side.</summary>
     public static FlexElement FlexPadding(this FlexElement el, double uniform) => el with { FlexPadding = new Thickness(uniform) };

@@ -4,7 +4,7 @@ namespace Isotope.UI.Core.V1Protocol;
 /// The per-control event payload of an <see cref="Avalonia.Controls.AutoCompleteBox"/> (#29): its text, selection and
 /// Enter-key trampolines, in one payload because a control holds one, and the state they share.
 /// </summary>
-internal sealed class AutoSuggestBoxEventPayload
+internal sealed class AutoCompleteBoxEventPayload
 {
     public EventHandler<Avalonia.Controls.TextChangedEventArgs>? TextChangedTrampoline;
     public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;

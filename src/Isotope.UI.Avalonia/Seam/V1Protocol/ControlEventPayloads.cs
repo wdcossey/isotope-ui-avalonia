@@ -31,7 +31,7 @@ internal sealed class ComboBoxEventPayload
 }
 
 /// <summary>The per-control event payload of a <see cref="Avalonia.Controls.NumericUpDown"/> (#26): its value change.</summary>
-internal sealed class NumberBoxEventPayload
+internal sealed class NumericUpDownEventPayload
 {
     public EventHandler<Avalonia.Controls.NumericUpDownValueChangedEventArgs>? ValueChangedTrampoline;
 }
@@ -44,7 +44,7 @@ internal sealed class SplitViewEventPayload
 }
 
 /// <summary>The per-control event payload of a <see cref="Avalonia.Controls.TabControl"/> (#26): its selection.</summary>
-internal sealed class TabViewEventPayload
+internal sealed class TabControlEventPayload
 {
     public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;
 }
