@@ -22,7 +22,7 @@ the library's tests use them, .NET SDK 11.0.100 targeting `net10.0`, Release. Pr
     (`Seam/Reconciler.V1.cs`), so the seam can pass its own `IChildCollection` and no vendored file changes.
     - The change is `spikes/I-pooling/move-collection.patch`: one new 50-line class and one changed line.
     - All 811 library tests pass with it applied.
-    - Porting it, with tests, is a follow-up.
+    - Ported with tests in #23 (see "Ported (#23)" below).
 
 ## Method
 
@@ -267,9 +267,17 @@ brackets. Every check passed in all 6 invocations.
 
 ## Reproduce
 
+With #23 (the engine moves with `Controls.Move`):
+
 ```sh
 dotnet run -c Release --project spikes/I-pooling/Measure            # [-- <rows> <runs>], default 1000 7; exit 0 = all checks passed
-git apply spikes/I-pooling/move-collection.patch                    # the engine with Controls.Move (before #23 only)
+```
+
+The report's sections 1 to 4, on a commit before #23 (the patch doesn't apply after it):
+
+```sh
+dotnet run -c Release --project spikes/I-pooling/Measure
+git apply spikes/I-pooling/move-collection.patch                    # the engine with Controls.Move
 dotnet run -c Release --project spikes/I-pooling/Measure
 dotnet test tests/Isotope.UI.Avalonia.Tests                         # 811 with the patch applied
 git apply -R spikes/I-pooling/move-collection.patch

@@ -19,8 +19,8 @@ internal sealed class MovingPanelChildCollection(UIElementCollection children) :
     public UIElement Get(int index) => children[index];
     public int IndexOf(UIElement element) => children.IndexOf(element);
 
-    // Upstream's edits made through this wrapper, which its reconciler's perf ChildReconcile span reads. Each reconcile
-    // of a container gets a fresh wrapper, so these are that reconcile's own edits.
+    // Upstream's counts of the edits made through this wrapper (each reconcile of a container gets a fresh one), kept for
+    // parity: upstream's perf ChildReconcile span reads them, and nothing here does until that span is ported.
     internal uint InsertCount { get; private set; }
     internal uint RemoveCount { get; private set; }
     internal uint MoveCount { get; private set; }
