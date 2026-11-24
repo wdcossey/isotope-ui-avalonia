@@ -160,9 +160,10 @@
         "gen-missing-counterpart-check",
         "gen-missing-counterpart-report",
         "gen-drop-try-register-assembly",
+        "gen-reference-clear-channel-of",
         "namespace-isotope"
       ],
-      "sha256": "4d75695434c12733365a22e3fc6355b9c03d321b734127b397a1215abdeb467c"
+      "sha256": "dbda8e36ea427a36b5c623ef57004de1a2b403277ce04f1155365c23d764cd76"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",
@@ -427,10 +428,11 @@
       "tier": 2,
       "lastChanged": "ffe1de4d884d09f54a3938f04904620f8137ce9c",
       "transforms": [
+        "drop-ColorScheme-ColorSchemeContext",
         "winui-usings",
         "namespace-isotope"
       ],
-      "sha256": "857886f5e15000f0ef9e9f0a6956a18967d9c72ef5baf211646a2c872522a7ad"
+      "sha256": "2d73792d80dc458f483e927402e435bb24a29264b871d97518115305266a51db"
     },
     {
       "path": "src/Reactor/Core/Command.cs",
@@ -475,9 +477,10 @@
         "drop-Component-UseAnnounce",
         "drop-Component-UseHighContrast",
         "drop-Component-UseHighContrastScheme",
+        "partial-component",
         "namespace-isotope"
       ],
-      "sha256": "9a17ff3babc6d4fad1656e5b6ed579a4c9dd9c2c190266980072d44dcd3963a7"
+      "sha256": "089f13ee6c02dd3340f0ab2e7c79e2415f9f2cc344cc66c8fd07ff3a1c25f86e"
     },
     {
       "path": "src/Reactor/Core/ContentOwner.cs",
@@ -1385,6 +1388,25 @@
       "sha256": "c0ed7a5ae316c96885f7c311a38f1fa1ff83b1aac689d629deaced0b0a28a93d"
     },
     {
+      "path": "src/Reactor/Elements/GridSize.cs",
+      "tier": 2,
+      "lastChanged": "60774b9cfae3030030cf6503717cd2087264ff40",
+      "transforms": [
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "6405739b8dca1ebead5f06be5f22bb8e607b76cedb93332ba33e7eecaeeb9e1b"
+    },
+    {
+      "path": "src/Reactor/Elements/GridSizeExtensions.cs",
+      "tier": 1,
+      "lastChanged": "60774b9cfae3030030cf6503717cd2087264ff40",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "67255f38741b57981cdbd887c47837561f89bfa6fc07508385d3133ff0308e4c"
+    },
+    {
       "path": "src/Reactor/Hooks/Pending.cs",
       "tier": 2,
       "lastChanged": "27ed666262354a6ac56c81491f341e7dd6d170ef",
@@ -1915,14 +1937,12 @@
     },
     {
       "path": "tests/Reactor.Tests/RenderContextHookOrderTests.cs",
-      "tier": 2,
+      "tier": 1,
       "lastChanged": "c65a9df5ea32c6de7f9a420df07fe0584a057361",
       "transforms": [
-        "drop-test-UseColorScheme-NoApplication",
-        "drop-test-UseIsDarkTheme-NoApplication",
         "namespace-isotope"
       ],
-      "sha256": "928f0f6e6afeee43bcdbc8ee3fd1ed363767be977002fc09844df328a3eecd5e"
+      "sha256": "ff505d91bcaedb17f38a12161976c7011d7776581cbe9d84806a9309ce280af7"
     },
     {
       "path": "tests/Reactor.Tests/TestIsolationCollections.cs",
@@ -1968,6 +1988,19 @@
         "namespace-isotope"
       ],
       "sha256": "870d5426aa2057cac5f72f77262b1b46a4eb2c6193f9d1580dd3bd80dd55e7fa"
+    },
+    {
+      "path": "tests/Reactor.Tests/WindowHookFallbackTests.cs",
+      "tier": 2,
+      "lastChanged": "2a519275fcc4ecdf203b656b7c16ba2a0734f368",
+      "transforms": [
+        "drop-test-WindowHookFallback-WindowBranchShapes",
+        "drop-test-WindowHookFallback-slot-shape",
+        "test-window-state-avalonia",
+        "test-window-hook-fallback-orphan-comment",
+        "namespace-isotope"
+      ],
+      "sha256": "6df5e2dc9f10ca263f167baf9b1cfd91b9f7a52f72d26eec490d2f856f5eb8ec"
     },
     {
       "path": "tests/Reactor.Tests/YogaAutoMinSizeTests.cs",

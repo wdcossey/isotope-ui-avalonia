@@ -22,7 +22,7 @@ the library's tests use them, .NET SDK 11.0.100 targeting `net10.0`, Release. Pr
     (`Seam/Reconciler.V1.cs`), so the seam can pass its own `IChildCollection` and no vendored file changes.
     - The change is `spikes/I-pooling/move-collection.patch`: one new 50-line class and one changed line.
     - All 811 library tests pass with it applied.
-    - Porting it, with tests, is a follow-up.
+    - Ported with tests in #23 (see "Ported (#23)" below).
 
 ## Method
 
@@ -234,10 +234,50 @@ Border, so a row is 4 controls.
 - **WinUI wasn't measured.** Whether upstream's `RemoveAt` + `Insert` drops focus on WinUI isn't verified. Spike G's
   review said WinUI defers `Unloaded` within a tick.
 
+## Ported (#23)
+
+`Seam/MovingPanelChildCollection.cs` is the patch's class, and `ReconcilePanelChildrenInto` builds it, so the
+engine moves with `Controls.Move` and section 1 now measures what section 4 did. `move-collection.patch` only applies
+to the commits before #23.
+
+Measured 2026-11-24, same machine and program as above: `spikes/I-pooling/Measure` built with `dotnet build -c
+Release` and run 3 times (`dotnet Measure.dll`, 1,000 rows, 7 runs) on the commit before #23, then built and run 3
+times with #23 committed, straight after. Lowest and highest median, ms of the change plus layout and posted jobs, change alone in
+brackets. Every check passed in all 6 invocations.
+
+| Case (window) | Before #23 | With #23 | Allocated | Notes, with #23 (7 runs each) |
+|---|---|---|---|---|
+| reverse | 136 to 137 (71 to 72) | **6.7 to 7.1** (1.6 to 1.7) | 49,405 KB to 711 KB | 0 detached (was 999); focus kept 7 of 7 (was 0 of 7) |
+| shuffle (seeded) | 131 to 133 (69 to 73) | **8.5 to 12.8** (2.1 to 2.3) | 46,555 KB to 692 KB | 0 detached (was 941); focus kept 7 of 7 (was 0 of 7) |
+| move last to first | 5.6 to 6.1 (0.55 to 0.63) | 6.3 to 9.0 (0.43 to 0.55) | 422 KB to 371 KB | 0 detached (was 1); focus kept 7 of 7 (was 0 of 7) |
+| move first to last | 5.7 to 6.0 (0.54 to 0.64) | 5.5 to 8.3 (0.37 to 0.59) | 422 KB to 371 KB | 0 detached (was 1); focus kept 7 of 7 (was 0 of 7) |
+
+| Case (detached) | Before #23 | With #23 |
+|---|---|---|
+| reverse | 12.8 to 19.9 | **1.2 to 2.1** |
+| shuffle (seeded) | 13.4 to 14.2 | **1.5 to 2.7** |
+
+- The machine was faster for these sets than for the report's (reverse in a window before #23: 136 to 137 ms, against
+  193 to 212 ms), so compare within this table. With #23 the reverse is about 20 times faster in a window, as section 4
+  predicted (7.3 to 10.7 ms there).
+- A one-row move sits on the floor of any change in a window (section 1's note); its with-#23 range overlaps the before
+  range, inside the margins under Limits.
+- The cases that make no move (mount, re-render, re-key, unmount) allocate the same to the KB before and with #23.
+- Tests: `KeyedMoveTests` (7), each failing with the seam back on `PanelChildCollection`, and a guard that fails when a
+  sync changes upstream's `PanelChildCollection`, which the seam class copies.
+
 ## Reproduce
+
+With #23 (the engine moves with `Controls.Move`):
 
 ```sh
 dotnet run -c Release --project spikes/I-pooling/Measure            # [-- <rows> <runs>], default 1000 7; exit 0 = all checks passed
+```
+
+The report's sections 1 to 4, on a commit before #23 (the patch doesn't apply after it):
+
+```sh
+dotnet run -c Release --project spikes/I-pooling/Measure
 git apply spikes/I-pooling/move-collection.patch                    # the engine with Controls.Move
 dotnet run -c Release --project spikes/I-pooling/Measure
 dotnet test tests/Isotope.UI.Avalonia.Tests                         # 811 with the patch applied

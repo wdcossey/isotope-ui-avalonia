@@ -100,6 +100,14 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **The first case timed in a fresh process runs cold.** A mount timed first took about 5 times as long as the same work
   later. Warm the JIT with an unprinted pass of every case before timing. (2026-11-24)
 
+- **Roslyn `drop-member` keeps a `//` comment above the member** (only `///` and attributes go), so the comment
+  outlives what it describes. Blank it with a text rule. (2026-11-24)
+- **Replacing our type with upstream's can move a check from construction to render.** A setter that clears and then
+  converts leaves the control half-built when the conversion throws. Convert first, then clear. (2026-11-24)
+
+- **A keyed-move test must check that each key keeps its own control:** a wrong Move index left the texts in order,
+  because the reconcile updated the swapped rows in place with each other's elements. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

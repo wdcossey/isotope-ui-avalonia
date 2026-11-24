@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/RenderContextHookOrderTests.cs, last changed upstream in c65a9df5ea32; transforms: drop-test-UseColorScheme-NoApplication, drop-test-UseIsDarkTheme-NoApplication, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/RenderContextHookOrderTests.cs, last changed upstream in c65a9df5ea32; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 using Isotope.UI.Core;
 using Xunit;
@@ -225,34 +225,34 @@ public class RenderContextHookOrderTests
     //  hook never throws when there's no Application.Current.
     // ════════════════════════════════════════════════════════════════
 
+    [Fact]
+    public void UseColorScheme_When_NoApplication_Returns_Default_Without_Throwing()
+    {
+        // Bug shape: if a regression dereferenced `theme.Value` without a
+        // null check, every headless test hosting a Reactor RenderContext
+        // would NRE at startup. The contract is "graceful default".
+        var ctx = new RenderContext();
+        ctx.BeginRender(() => { });
 
+        var scheme = ctx.UseColorScheme();
+        // The default-arm output of ColorSchemeContext.FromActualTheme(Default)
+        // is a stable concrete value; just assert it doesn't throw and the
+        // hook is callable. The exact ColorScheme value is the
+        // FromActualTheme(Default) result, which is observable.
+        Assert.True(scheme == ColorScheme.Light || scheme == ColorScheme.Dark,
+            "UseColorScheme must return a concrete ColorScheme; the default-arm " +
+            "path translates ElementTheme.Default into one of Light/Dark, never " +
+            "throwing.");
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    [Fact]
+    public void UseIsDarkTheme_When_NoApplication_Returns_False_Or_True_Without_Throwing()
+    {
+        // Wrapper over UseColorScheme — just confirms the wrapper doesn't
+        // add its own NRE on the null-Application.Current path.
+        var ctx = new RenderContext();
+        ctx.BeginRender(() => { });
+        var result = ctx.UseIsDarkTheme();
+        Assert.IsType<bool>(result);
+    }
 }

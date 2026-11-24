@@ -414,7 +414,7 @@
     {
       "path": "src/Reactor/Core/ColorScheme.cs",
       "tier": 2,
-      "note": "Spike A: shims"
+      "note": "#21: the ColorScheme enum, compiled by the library; drops the WinUI-only ColorSchemeContext"
     },
     {
       "path": "src/Reactor/Core/Pickers.cs",
@@ -673,8 +673,13 @@
     },
     {
       "path": "tests/Reactor.Tests/RenderContextHookOrderTests.cs",
+      "tier": 1,
+      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests); its two theme-hook tests run since #21"
+    },
+    {
+      "path": "tests/Reactor.Tests/WindowHookFallbackTests.cs",
       "tier": 2,
-      "note": "#2: upstream's engine test, run on Avalonia by the library tests; drops the two theme-hook tests (UseColorScheme, UseIsDarkTheme: tier 3)"
+      "note": "#21: upstream's engine test, run on Avalonia by the library tests; drops the slot-shape theory (ours take UseRef + UseEffect) and names Avalonia's WindowState"
     },
     {
       "path": "tests/Reactor.Tests/HookDelegateCachingTests.cs",
@@ -950,6 +955,16 @@
       "glob": "src/Reactor/Core/V1Protocol/**",
       "tier": 3,
       "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
+    },
+    {
+      "path": "src/Reactor/Elements/GridSize.cs",
+      "tier": 2,
+      "note": "#22: the Grid factory's track type, compiled by the library; GridLength and GridUnitType are Avalonia's (global aliases)"
+    },
+    {
+      "path": "src/Reactor/Elements/GridSizeExtensions.cs",
+      "tier": 1,
+      "note": "#22: GridSize's MinSize/MaxSize, compiled by the library; no listed rules (only the namespace rename)"
     },
     {
       "glob": "src/Reactor/Elements/**",
