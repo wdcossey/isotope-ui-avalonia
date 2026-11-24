@@ -25,8 +25,10 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
   </ItemGroup>
   <ItemGroup>
-    <!-- PrivateAssets none: the package's dependency on Isotope.UI.Avalonia flows all its assets, so an app that
-         references only this package still gets the library's bundled generator (NuGet would exclude analyzers). -->
+    <!-- PrivateAssets none: the package's dependency on Isotope.UI.Avalonia says it flows every asset (include="All"),
+         the bundled generator included, instead of NuGet's default exclude="Build,Analyzers". Today's NuGet restores
+         the library's analyzers for an app either way (measured with the smoke app, which references only this
+         package); the dependency now says what the package means. -->
     <ProjectReference Include="..\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" PrivateAssets="none" />
   </ItemGroup>
   <ItemGroup>

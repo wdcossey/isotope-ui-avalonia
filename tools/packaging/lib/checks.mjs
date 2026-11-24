@@ -12,7 +12,7 @@ export const COMMON_FILES = ['README.md', 'LICENSE', 'licenses/microsoft-ui-reac
 /**
  * The packages, in pack order. files: what the package must hold besides COMMON_FILES. symbols: the PDBs its .snupkg
  * must hold (null: the PDB is embedded in its DLL). dependsOn: the Isotope packages it depends on, at its own version
- * and with every asset (so the library's generator reaches an app that references only the desktop package).
+ * and with every asset (the library's generator included, for an app that references only the desktop package).
  */
 export const PACKAGES = [
   {
@@ -200,7 +200,7 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
       if (!spec.dependsOn.includes(d.id)) problems.push(where + ': unexpected dependency on ' + d.id);
       else {
         if (d.version !== m.version) problems.push(where + ': depends on ' + d.id + ' ' + d.version + ', not its own version ' + m.version);
-        if (d.exclude) problems.push(where + ': its dependency on ' + d.id + ' excludes ' + d.exclude + ' (the generator would not reach apps)');
+        if (d.exclude) problems.push(where + ': its dependency on ' + d.id + ' excludes ' + d.exclude + ' (it must flow every asset, the generator included)');
       }
     }
     for (const id of spec.dependsOn) if (!isotopeDeps.some((d) => d.id === id)) problems.push(where + ': no dependency on ' + id);
