@@ -147,9 +147,10 @@ public abstract record Element
     }
 
     /// <summary>
-    /// Value equality of two modifier records (null equals an empty record). As upstream's, an element tooltip
-    /// (<see cref="ElementModifiers.RichToolTip"/>, #29) never compares equal, so its subtree is always reconciled: it
-    /// isn't under the control, so the skip path's checks for state and context changes below can't see into it.
+    /// Value equality of two modifier records (null equals an empty record). As upstream's, two records holding an
+    /// element tooltip (<see cref="ElementModifiers.RichToolTip"/>, #29) compare equal only when they are the same record,
+    /// so a changed tooltip element is always reconciled. The skip path's checks for state and context changes below a
+    /// control see into its element tooltip (the dirty path and the context check go through its owner).
     /// </summary>
     internal static bool ModifiersEqual(ElementModifiers? a, ElementModifiers? b)
         => ReferenceEquals(a, b)

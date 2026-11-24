@@ -101,6 +101,47 @@ public sealed class ToolTipElementTests
     }
 
     [AvaloniaFact]
+    public void A_state_change_inside_the_tooltip_renders_under_a_memo_that_skips()
+    {
+        // The memo's dependencies don't change, so only the dirty path, which goes from the tooltip to its owner, brings
+        // the render down to the tooltip.
+        Action<int>? bump = null;
+        var host = new TestHost(() => Memo(_ => TextBlock("owner").WithToolTip(Component(ctx =>
+        {
+            var (n, setN) = ctx.UseState(0);
+            bump = setN;
+            return TextBlock("count " + n);
+        })), "fixed"));
+        var owner = host.All<TextBlock>()[0];
+        bump!(4);
+        host.Flush();
+        Assert.Equal(["count 4"], Texts(Tip(owner)));
+    }
+
+    private static readonly Context<string> s_theme = new("light");
+
+    [AvaloniaFact]
+    public void A_tooltip_that_reads_a_context_follows_it_under_a_memo_that_skips()
+    {
+        var theme = "light";
+        var host = new TestHost(() => VStack(Memo(_ => TextBlock("owner").WithToolTip(Component(ctx => TextBlock("theme " + ctx.UseContext(s_theme)))), "fixed"))
+            .Provide(s_theme, theme));
+        var owner = host.All<TextBlock>()[0];
+        Assert.Equal(["theme light"], Texts(Tip(owner)));
+
+        theme = "dark";
+        host.Render();
+        Assert.Equal(["theme dark"], Texts(Tip(owner)));
+    }
+
+    [AvaloniaFact]
+    public void A_tooltip_that_renders_nothing_leaves_the_slot_to_the_text_tooltip()
+    {
+        var host = new TestHost(() => TextBlock("owner").ToolTip("plain").WithToolTip(Empty()));
+        Assert.Equal("plain", AvToolTip.GetTip(host.All<TextBlock>()[0]));
+    }
+
+    [AvaloniaFact]
     public void Removing_the_tooltip_unmounts_it_and_gives_the_slot_to_the_text_tooltip()
     {
         var log = new List<string>();

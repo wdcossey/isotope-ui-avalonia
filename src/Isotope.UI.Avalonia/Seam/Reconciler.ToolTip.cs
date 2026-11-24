@@ -16,11 +16,38 @@ public sealed partial class Reconciler
     private static readonly AttachedProperty<Control?> OwnedToolTipProperty =
         AvaloniaProperty.RegisterAttached<ToolTipOwner, Control, Control?>("IsotopeOwnedToolTip");
 
+    // On that control, its owner: the tooltip isn't the owner's child, so the walks up and down the tree that must see
+    // it as part of its owner (the dirty path, the context check) go through these two.
+    private static readonly AttachedProperty<Control?> ToolTipOwnerProperty =
+        AvaloniaProperty.RegisterAttached<ToolTipOwner, Control, Control?>("IsotopeToolTipOwner");
+
+    /// <summary>The element tooltip this reconciler mounted on <paramref name="control"/>, or null.</summary>
+    internal static Control? OwnedToolTipOf(UIElement control) => control.GetValue(OwnedToolTipProperty);
+
+    /// <summary>
+    /// The next control up from <paramref name="child"/> on a dirty path: the owner of an element tooltip, else the
+    /// logical parent.
+    /// </summary>
+    private static Control? DirtyPathParent(UIElement child, out bool viaToolTip)
+    {
+        if (child.GetValue(ToolTipOwnerProperty) is { } owner)
+        {
+            viaToolTip = true;
+            return owner;
+        }
+        viaToolTip = false;
+        return child.Parent as Control;
+    }
+
+    /// <summary>The text tooltip of an element: its modifier's, else its command's description (#29).</summary>
+    private static string? TextToolTipOf(Element? element, ElementModifiers? modifiers)
+        => modifiers?.ToolTip ?? CommandBindings.CommandOf(element)?.Description;
+
     /// <summary>
     /// Writes the element tooltip: mounts it, reconciles it with the last one, or unmounts it and gives the slot back to
     /// the text tooltip.
     /// </summary>
-    private void ApplyRichToolTip(UIElement control, ElementModifiers? oldM, ElementModifiers? newM, Action requestRerender)
+    private void ApplyRichToolTip(UIElement control, Element newEl, ElementModifiers? oldM, ElementModifiers? newM, Action requestRerender)
     {
         var oldTip = oldM?.RichToolTip;
         var newTip = newM?.RichToolTip;
@@ -30,7 +57,7 @@ public sealed partial class Reconciler
             // Its tip is cleared only if it is still the one it mounted; the text tooltip is written after the setters, as
             // the other modifiers are.
             UnmountOwnedToolTip(control);
-            if (newM?.ToolTip is { } text) control.SetValue(ToolTip.TipProperty, text);
+            if (TextToolTipOf(newEl, newM) is { } text) control.SetValue(ToolTip.TipProperty, text);
             return;
         }
         var owned = control.GetValue(OwnedToolTipProperty);
@@ -43,12 +70,18 @@ public sealed partial class Reconciler
         var next = ReconcileSlot(owned is null ? null : oldTip, newTip, owned, requestRerender);
         if (next is null)
         {
-            // The tooltip rendered nothing (ReconcileSlot unmounted what it had).
+            // The tooltip rendered nothing (ReconcileSlot unmounted what it had): the text tooltip, if any, takes the slot.
             control.ClearValue(OwnedToolTipProperty);
-            if (owned is not null && ReferenceEquals(ToolTip.GetTip(control), owned)) control.ClearValue(ToolTip.TipProperty);
+            if (TextToolTipOf(newEl, newM) is { } text) control.SetValue(ToolTip.TipProperty, text);
+            else if (owned is not null && ReferenceEquals(ToolTip.GetTip(control), owned)) control.ClearValue(ToolTip.TipProperty);
             return;
         }
-        if (!ReferenceEquals(owned, next)) control.SetValue(OwnedToolTipProperty, next);
+        if (!ReferenceEquals(owned, next))
+        {
+            owned?.ClearValue(ToolTipOwnerProperty);
+            control.SetValue(OwnedToolTipProperty, next);
+            next.SetValue(ToolTipOwnerProperty, (Control)control);
+        }
         if (!ReferenceEquals(ToolTip.GetTip(control), next)) control.SetValue(ToolTip.TipProperty, next);
     }
 
@@ -57,6 +90,7 @@ public sealed partial class Reconciler
     {
         if (control.GetValue(OwnedToolTipProperty) is not { } tip) return;
         control.ClearValue(OwnedToolTipProperty);
+        tip.ClearValue(ToolTipOwnerProperty);
         UnmountChild(tip);
         if (ReferenceEquals(ToolTip.GetTip(control), tip)) control.ClearValue(ToolTip.TipProperty);
     }

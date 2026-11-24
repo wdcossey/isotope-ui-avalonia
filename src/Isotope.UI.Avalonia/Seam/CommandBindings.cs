@@ -18,8 +18,9 @@ namespace Isotope.UI.Core;
 /// command's <see cref="Command.Description"/> is the tooltip and help text, and its
 /// <see cref="Command.Accelerator"/> the keyboard shortcut (Avalonia's <c>HotKey</c>); the metadata is written when it
 /// changes, never for a change of the delegates alone. Unlike upstream's: the access key isn't written (Avalonia's come
-/// from an underscore in the content), a tooltip modifier wins over the description, and only what the command wrote
-/// is cleared when it goes.
+/// from an underscore in the content); the tooltip is written with the tooltip modifier, as one value whose modifier
+/// wins (<c>Reconciler.ApplyModifiers</c>), so either can come and go; and only what the command wrote is cleared when
+/// it goes.
 /// </remarks>
 internal static class CommandBindings
 {
@@ -51,6 +52,16 @@ internal static class CommandBindings
             && Equals(a.Accelerator, b.Accelerator);
     }
 
+    /// <summary>The command a button-family element carries, or null.</summary>
+    internal static Command? CommandOf(Element? element) => element switch
+    {
+        ButtonElement b => b.Command,
+        ToggleButtonElement t => t.Command,
+        RepeatButtonElement r => r.Command,
+        HyperlinkButtonElement h => h.Command,
+        _ => null,
+    };
+
     /// <summary>Avalonia's gesture for an accelerator.</summary>
     internal static KeyGesture? Gesture(KeyboardAcceleratorData? accelerator) =>
         accelerator is null ? null : new KeyGesture(accelerator.Key, accelerator.Modifiers);
@@ -67,12 +78,12 @@ internal static class CommandBindings
         where TElement : Element
         where TControl : Button, new()
         => d.ImperativeBridged(
-            mount: (_, c, e) => Apply(c, e, null, getCommand(e), getCommand, hasUserCallback),
+            mount: (_, c, e) => Apply(c, null, getCommand(e), getCommand, hasUserCallback),
             update: (_, c, o, n) =>
             {
                 var oldCmd = getCommand(o);
                 var newCmd = getCommand(n);
-                if (!CommandsEqual(oldCmd, newCmd)) Apply(c, n, oldCmd, newCmd, getCommand, hasUserCallback);
+                if (!CommandsEqual(oldCmd, newCmd)) Apply(c, oldCmd, newCmd, getCommand, hasUserCallback);
             });
 
     private sealed class CommandOwner;
@@ -81,10 +92,9 @@ internal static class CommandBindings
     private static readonly AttachedProperty<ElementCommand?> AdapterProperty =
         AvaloniaProperty.RegisterAttached<CommandOwner, Button, ElementCommand?>("IsotopeCommand");
 
-    private static void Apply<TElement>(Button c, TElement element, Command? oldCmd, Command? newCmd,
+    private static void Apply<TElement>(Button c, Command? oldCmd, Command? newCmd,
         Func<TElement, Command?> getCommand, Func<TElement, bool> hasUserCallback) where TElement : Element
     {
-        var hasTipModifier = element.Modifiers is { } m && (m.ToolTip is not null || m.RichToolTip is not null);
         if (newCmd is null)
         {
             if (c.GetValue(AdapterProperty) is { } gone && ReferenceEquals(c.Command, gone)) c.ClearValue(Button.CommandProperty);
@@ -108,11 +118,7 @@ internal static class CommandBindings
         }
         if (oldCmd?.Description != newCmd.Description)
         {
-            if (newCmd.Description is { } description)
-            {
-                if (!hasTipModifier) ToolTip.SetTip(c, description);
-                AutomationProperties.SetHelpText(c, description);
-            }
+            if (newCmd.Description is { } description) AutomationProperties.SetHelpText(c, description);
             else ClearMetadata(c, oldCmd, acceleratorToo: false);
         }
     }
@@ -121,11 +127,8 @@ internal static class CommandBindings
     private static void ClearMetadata(Button c, Command? oldCmd, bool acceleratorToo = true)
     {
         if (oldCmd is null) return;
-        if (oldCmd.Description is { } description)
-        {
-            if (Equals(ToolTip.GetTip(c), description)) c.ClearValue(ToolTip.TipProperty);
-            if (AutomationProperties.GetHelpText(c) == description) c.ClearValue(AutomationProperties.HelpTextProperty);
-        }
+        if (oldCmd.Description is { } description && AutomationProperties.GetHelpText(c) == description)
+            c.ClearValue(AutomationProperties.HelpTextProperty);
         if (acceleratorToo && Gesture(oldCmd.Accelerator) is { } gesture && Equals(c.HotKey, gesture))
             c.ClearValue(Button.HotKeyProperty);
     }

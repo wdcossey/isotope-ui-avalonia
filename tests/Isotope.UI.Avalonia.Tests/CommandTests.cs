@@ -226,6 +226,51 @@ public sealed class CommandTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void Removing_a_tooltip_modifier_gives_the_tip_back_to_the_command_description()
+    {
+        var cmd = new Command { Label = "Save", Description = "Save the file" };
+        var modifier = 0; // 0: none, 1: text, 2: element
+        var host = new TestHost(() => modifier switch
+        {
+            1 => Button(cmd).ToolTip("Custom"),
+            2 => Button(cmd).WithToolTip(TextBlock("Rich")),
+            _ => Button(cmd),
+        });
+        var button = host.All<Button>()[0];
+        Assert.Equal("Save the file", AvToolTip.GetTip(button));
+        foreach (var next in new[] { 1, 0, 2, 0 })
+        {
+            modifier = next;
+            host.Render();
+            if (next == 0) Assert.Equal("Save the file", AvToolTip.GetTip(button));
+        }
+    }
+
+    [AvaloniaFact]
+    public void Removing_the_command_keeps_a_tooltip_modifier_that_equals_its_description()
+    {
+        var on = true;
+        var host = new TestHost(() => (on ? Button(new Command { Label = "Save", Description = "Save" }) : Button("Save")).ToolTip("Save"));
+        var button = host.All<Button>()[0];
+        on = false;
+        host.Render();
+        Assert.Equal("Save", AvToolTip.GetTip(button));
+    }
+
+    [AvaloniaFact]
+    public void A_wrapper_tooltip_wins_over_the_command_description()
+    {
+        var description = "A";
+        var host = new TestHost(() => new ModifiedElement(Button(new Command { Label = "Go", Description = description }),
+            new ElementModifiers { ToolTip = "Mine" }));
+        var button = host.All<Button>()[0];
+        description = "B";
+        host.Render();
+        Assert.Equal("Mine", AvToolTip.GetTip(button));
+        Assert.Equal("B", AutomationProperties.GetHelpText(button));
+    }
+
+    [AvaloniaFact]
     public void ToggleButton_with_a_command_runs_it_on_each_toggle()
     {
         var log = new List<string>();
