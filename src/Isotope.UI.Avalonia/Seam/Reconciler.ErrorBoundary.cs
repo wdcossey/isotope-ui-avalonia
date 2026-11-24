@@ -25,13 +25,13 @@ public sealed partial class Reconciler
     /// <summary>The number of mounted error boundaries (diagnostics and tests).</summary>
     internal int ErrorBoundaryNodeCount => _errorBoundaryNodes.Count;
 
-    // While a boundary mounts or retries its child (null otherwise, so ordinary mounts pay nothing):
+    // While a root pass runs (#28), and so while a boundary mounts or retries its child (null between passes):
     // - the controls whose Mount completed, collapsed as they nest: a completed mount replaces the roots its children
     //   left with its own control, which reaches them through the unmount walk. After a failure, the roots past the
     //   boundary's start are the completed subtrees the failed child left behind, attached to nothing that survives.
     // - the component nodes whose mount failed: their render ran (and flushed its effects) but no wrapper was
     //   registered, so no unmount can reach them. The boundary runs their cleanups.
-    // Nested boundaries share both lists; each one owns what lies past its start.
+    // Nested boundaries and the root pass share both lists; each one owns what lies past its start.
     private List<UIElement>? _boundaryMountRoots;
     private List<ComponentNode>? _boundaryAbandonedNodes;
 
@@ -73,7 +73,35 @@ public sealed partial class Reconciler
     /// <summary>A component's mount failed: inside a boundary, the boundary runs its cleanups when it discards the child.</summary>
     private void NoteAbandonedNode(ComponentNode node) => _boundaryAbandonedNodes?.Add(node);
 
+    // Everything a boundary mounts or reconciles, its child and its fallback, is inside it: a component that fails there
+    // goes to the nearest boundary rather than showing the in-tree fallback (#28), as upstream's _errorBoundaryDepth.
     private UIElement MountErrorBoundary(ErrorBoundaryElement boundary, Action requestRerender)
+    {
+        _errorBoundaryDepth++;
+        try
+        {
+            return MountErrorBoundaryCore(boundary, requestRerender);
+        }
+        finally
+        {
+            _errorBoundaryDepth--;
+        }
+    }
+
+    private void UpdateErrorBoundary(ErrorBoundaryElement boundary, Border wrapper, Action requestRerender)
+    {
+        _errorBoundaryDepth++;
+        try
+        {
+            UpdateErrorBoundaryCore(boundary, wrapper, requestRerender);
+        }
+        finally
+        {
+            _errorBoundaryDepth--;
+        }
+    }
+
+    private UIElement MountErrorBoundaryCore(ErrorBoundaryElement boundary, Action requestRerender)
     {
         var wrapper = new Border();
         Element rendered;
@@ -88,7 +116,8 @@ public sealed partial class Reconciler
             wrapper.Child = Mount(boundary.Child, requestRerender);
             settled = true;
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        // An exception the app's handler asked to propagate passes every boundary (#28).
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException && !IsPropagating(ex))
         {
             _logger?.LogWarning(ex, "ErrorBoundary caught render error");
             caught = ex;
@@ -115,7 +144,7 @@ public sealed partial class Reconciler
     }
 
     // An update with a new boundary element retries the child (upstream: "Always retry the child on re-render").
-    private void UpdateErrorBoundary(ErrorBoundaryElement boundary, Border wrapper, Action requestRerender)
+    private void UpdateErrorBoundaryCore(ErrorBoundaryElement boundary, Border wrapper, Action requestRerender)
     {
         var node = _errorBoundaryNodes[wrapper];
         var existing = wrapper.Child;
@@ -153,7 +182,7 @@ public sealed partial class Reconciler
             }
             settled = true;
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException && !IsPropagating(ex))
         {
             _logger?.LogWarning(ex, "ErrorBoundary caught render error during update");
             caught = ex;
@@ -246,7 +275,7 @@ public sealed partial class Reconciler
     }
 
     private void LogRollbackFailure(Exception ex)
-        => _logger?.LogWarning(ex, "Teardown threw while discarding a failed ErrorBoundary child");
+        => _logger?.LogWarning(ex, "Teardown threw while discarding a failed mount");
 
     // True when control sits in ancestor's subtree (logical parent first, then visual).
     private static bool IsAttachedUnder(UIElement control, UIElement ancestor)

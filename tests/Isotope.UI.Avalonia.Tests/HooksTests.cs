@@ -199,12 +199,14 @@ public class HooksTests
         var reconciler = new Reconciler();
         Element? last = null;
         global::Avalonia.Controls.Control? root = null;
-        Element App() => Component(ctx =>
+        Exception? caught = null;
+        // In a boundary, so the error reaches the test (outside one, the component's slot would show it, #28).
+        Element App() => ErrorBoundary(Component(ctx =>
         {
             var (value, set) = ctx.UseState(0);
             set(value + 1);
             return TextBlock(value.ToString());
-        });
+        }), ex => { caught ??= ex; return TextBlock(ex.Message); });
         void Render()
         {
             var element = App();
@@ -212,7 +214,8 @@ public class HooksTests
             last = element;
         }
 
-        var error = Assert.Throws<InvalidOperationException>(Render);
+        Render();
+        var error = Assert.IsType<InvalidOperationException>(caught);
         Assert.Contains("Render loop detected", error.Message);
     }
 
@@ -228,7 +231,9 @@ public class HooksTests
         }));
 
         useRefFirst = true;
-        Assert.Throws<HookOrderException>(host.Render);
+        // Outside every error boundary, the component shows the error in its slot (#28).
+        host.Render();
+        Assert.StartsWith("⚠ Render error: HookOrderException", Assert.Single(host.Texts()));
     }
 
     [AvaloniaFact]
