@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/Data/DataPageCacheParityTests.cs, last changed upstream in f518b05b6e45; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/Data/DataPageCacheParityTests.cs, last changed upstream in e24d1a498a55; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 using Isotope.UI.Data;
 using Isotope.UI.Hooks;
@@ -8,7 +8,7 @@ namespace Isotope.UI.Tests.Data;
 
 /// <summary>
 /// Instantiates the legacy <see cref="DataPageCache{T}"/> and the hook-based
-/// <see cref="UseDataSourceExtensions"/> pipeline against the same
+/// <see cref="DataSourceResourceExtensions"/> pipeline against the same
 /// <see cref="IDataSource{T}"/> and asserts they report observably identical
 /// behaviour across the invariants that DataGrid depends on.
 /// </summary>

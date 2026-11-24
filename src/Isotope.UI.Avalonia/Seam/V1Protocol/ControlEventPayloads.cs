@@ -9,3 +9,23 @@ internal sealed class TextBoxEventPayload
 {
     public EventHandler<Avalonia.Controls.TextChangedEventArgs>? TextChangedTrampoline;
 }
+
+/// <summary>
+/// The per-control event payload of a <see cref="Avalonia.Controls.ListBox"/> (#19): the trampoline subscribed to
+/// <c>SelectionChanged</c>, which reports both the selected index and the multiple-selection snapshot.
+/// </summary>
+internal sealed class ListBoxEventPayload
+{
+    public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;
+}
+
+/// <summary>
+/// The per-control event payload of a <see cref="Avalonia.Controls.ComboBox"/> (#19): its selection and its two drop-down
+/// events, in one payload because a control holds one (<c>Reconciler.GetOrCreateControlEventPayload</c>).
+/// </summary>
+internal sealed class ComboBoxEventPayload
+{
+    public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;
+    public EventHandler? DropDownOpenedTrampoline;
+    public EventHandler? DropDownClosedTrampoline;
+}

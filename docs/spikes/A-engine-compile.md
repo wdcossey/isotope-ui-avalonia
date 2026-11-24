@@ -159,3 +159,103 @@ The full list is in `seam.json`.
 ## Update: .NET 11 SDK (2026-11-22)
 
 With SDK 11.0.100 installed, `global.json` pins 11.0.100 and the spike compiles with `LangVersion 15` (still targeting `net10.0`), linking upstream's `Core/Polyfills/ClosedTypeAttributes.cs`. `Core/AsyncValue.cs`, `Core/InfiniteResource.cs` and the polyfill now link unmodified from `EngineFiles.props`; the edited copies are gone. The step-3b total is unchanged (567). The tables above reflect this.
+
+## Update: Roslyn transforms (issue #4, 2026-11-24)
+
+**Step 4** adds 31 Roslyn rules (`roslyn-rules.json`) on top of step 3 (`node spikes/A-engine/run-spike.mjs 4`). Edit
+lines are counted by `node spikes/A-engine/count-edits.mjs <step>`, which classifies each error from `seam.json` and
+reproduces `outcomes.json` exactly at step 3: 89 edit lines in the 18 files, with the same seam and shim counts.
+
+| | Errors | Edit lines in the 18 files | Files with edits |
+|---|---|---|---|
+| Step 3 | 567 | 89 | 18 |
+| Step 4 (Roslyn rules) | 500 | **53** | 15 |
+| Step 4 with the same changes as text rules | 500 | 53 | 15 |
+
+- **Retargets** (8 `retarget-type` rules) keep the behaviour. They take 23 lines:
+  - `AppliedModifierMap.cs`: 21 to 0. `WinUI.Border`, `StackPanel`, `Grid`, `RelativePanel`, `SplitButton` and
+    `Button` become Avalonia's, and `WinUI.Control` becomes the `Control` alias.
+  - `TypeRegistry.cs`: 11 to 9. WinRT's `Color` becomes Avalonia's.
+- **Drops** (23 `drop-member` rules) take 13 lines: `RenderContext.cs` 12 to 0, and `Component.cs` 1 to 0.
+  - They remove the window, display, DPI, tray, breakpoint and announce hooks, and Component's wrappers of them.
+  - These are the members the library already drops as tier 3 (`tools/sync/transforms.json`), so the code moves to
+    our side rather than compiling.
+- **The Roslyn step itself removes no edit line that text rules can't.** The same 31 changes, written as regex finds
+  and the library's own text drops, give the same 500 errors and 53 edit lines.
+  - The text form needed its drop regexes widened, because step 3's first rule had already rewritten
+    `Microsoft.UI.Xaml.Window` in the signatures.
+  - Roslyn rules run first, on upstream's text, so they didn't need that.
+- **The 53 lines left need the seam or tier 3, not a better transform:**
+
+  | Cause | Lines | Files |
+  |---|---|---|
+  | Upstream factories and V1 handlers that the stubs lack (`TextBlock`, `ComboBox`, `NumberBox`, `ComponentWithKey`, `Factories.Grid`, `V1.Handlers.*`) | 22 | Pending, FormField, ValidationRule, ValidationVisualizer, VirtualListFactories, PropertyGridFactories, TypeRegistry |
+  | WinUI APIs with no mechanical Avalonia form (`RequestedTheme`, `ScrollViewer.ChangeView`, `LosingFocus`, `XamlRoot`, `DispatcherQueue`, `PropertyMetadata`) | 19 | Theme, VirtualListElement, UseFocusTrap, ReactorDiagnostics.Components, DragAttached |
+  | Stub limits (flyout records that don't derive from `Element`, `Animation.*`, the stubbed Input layer's `FocusManager`, types inferred through stubbed calls) | 12 | ChildReconciler, ReactorSourceMap, ReactorDiagnostics.Components, UseElementFocus |
+
+### Replace or complement the text drops: measured
+
+`node tools/measure-roslyn.mjs [--history N]` re-expresses each of tools/sync's 88 text `drop` rules as a Roslyn
+`drop-member`. It finds the member where the text rule matches, and names it by member and type (with its parameter
+types when the name is overloaded). Then it regenerates the vendored tree.
+
+- **All 88 convert.** 10 need `parameters`.
+- **The output is identical.**
+  - 228 C# files are byte-identical.
+  - 5 differ only in the header's rule order, because Roslyn rules run first.
+  - 0 differ otherwise.
+  - Three find rules would stop matching a file (`winui-qualified-element` in RenderContext, `routed-event-handler`
+    in ControlDescriptor and PropEntry), because they only matched inside members that now drop first. Their `files`
+    lists would need trimming.
+- **Both forms survive upstream's edits equally.** Each drop was replayed on the upstream commits before the baseline
+  that changed its files:
+  - 40 commits (2026-06-29 to 2026-11-19): in 3,278 rule-and-commit pairs both forms hold, in 242 neither does (the
+    member is newer), and there is no pair where only one holds.
+  - With `--history 100`, it found 93 commits, all of them since 2026-04-17: 5,919 pairs hold in both forms,
+    2,265 in neither, and none in only one.
+- **Cost:** `generate()` takes 611 to 674 ms with the text drops and 1,394 to 1,509 ms with Roslyn drops, over two runs
+  with the tool already built.
+- **Regex outside code:** the 34 listed find rules on C# files match 99 times in code and 20 times in comments or
+  strings.
+  - 16 of the 20 are the generator's `gen-*` rules. They target C# that the generator emits as strings, on purpose.
+  - The other 4 rewrite doc-comment text (`winui-alias-panel` 3, `winui-qualified-panel` 1). They are harmless, but a
+    Roslyn `retarget-type` leaves them as upstream wrote them.
+
+**Decision: complement, not replace.**
+- The 88 text drops stay. Converting them gives the same bytes and the same survival, costs about 0.9 s per
+  regeneration, and rewrites 88 rules, 3 file lists and 5 headers.
+- The Roslyn rule kind is kept for new rules. It suits:
+  - retargets that must stay out of comments and strings;
+  - attribute drops;
+  - drops named by member rather than by regex, written against upstream's own text.
+- **What pays now is the syntax check** (`syntaxCheck` in `tools/sync/sync.json`).
+  - Every C# file a rule changes must parse with no syntax error that upstream's own text lacks.
+  - 15 of the 51 tier 2 C# files that rules change beyond the rename are compiled by no project, so this is their only
+    check.
+  - It adds about 1.25 s to `--check`: 0.95 to 0.97 s without it (3 runs) and 2.19 to 2.25 s with it (3 runs), with the
+    tool already built.
+
+### The Roslyn step
+
+- **The tool:** `tools/sync/roslyn`, a `net10.0` console tool on Microsoft.CodeAnalysis.CSharp 5.12.0, the version
+  the pinned SDK ships, so C# 15 parses.
+  - It uses syntax only, with no compilation.
+  - It reads a JSON request on stdin and writes JSON on stdout.
+  - `tools/sync/lib/roslyn.mjs` builds it on demand (an incremental `dotnet build`) and runs it once per sync.
+- **Rules** have the form `{"id", "roslyn": {"op", ...}, "files"}`, in `tools/sync/transforms.json` (described in
+  `tools/sync/lib/transforms.mjs`) or in a Spike A rules file.
+  - **`drop-member`** takes `member`, `type` and optional `parameters` (the types with their modifiers, such as
+    `(ref int)`). It must match exactly once. It blanks the lines like a text drop, from the doc comment to the end of
+    the body.
+  - **`retarget-type`** takes `from` and `to`. It rewrites dotted names, `global::`, generic names and member-access
+    chains in code, and must match at least once.
+    - `from` must be qualified (`A.B`). Without a compilation, a bare name can't be told from a local or property of
+      the same name.
+    - Like a find rule, it fails the sync when a C# file it doesn't list uses the type in code.
+  - **`drop-attribute`** takes `attribute`. It removes the attribute, or its whole list, and must match at least once.
+  - A rule that fails stops the sync, and nothing is written. A file a rule changes must still parse.
+  - **`#if`:** files are parsed with a `net10.0` Debug build's symbols, so code under `#if DEBUG` is transformed.
+    - An op whose target also appears in code an `#if` leaves out fails, and says so. A text rule has to handle that
+      code.
+    - The syntax check also parses files that have an `#if` without `DEBUG`.
+    - Upstream's `src/Reactor` has 7 `#if` lines, in 6 files.

@@ -17,6 +17,7 @@ export const USAGE = [
   'Usage: node tools/sync/sync.mjs [<upstream commit>] [options]',
   '  <upstream commit>  commit or ref in the upstream cache (default: <remote>/main, the remote whose URL is in UPSTREAM.lock)',
   '  --check            regenerate from the commit in UPSTREAM.lock and fail if src/Upstream differs (for CI)',
+  '                     (the sync and --check need dotnet when sync.json has syntaxCheck or a rule is a "roslyn" rule)',
   '  --dry-run          do everything except writing to the repo; print the report',
   '  --no-fetch         do not fetch the upstream cache',
   '  --skip-verify      do not build and run the upstream tests for the vendored paths',
@@ -95,6 +96,7 @@ function sync(opts, log, err, defaultRepo) {
     throw new Fail('sync.json: watch must be a list of upstream folders ending in "/"');
   if (typeof cfg.reportDir !== 'string' || !cfg.reportDir || path.isAbsolute(cfg.reportDir) || cfg.reportDir.split('/').includes('..'))
     throw new Fail('sync.json: reportDir must be a relative folder inside the repo');
+  if (cfg.syntaxCheck !== undefined && typeof cfg.syntaxCheck !== 'boolean') throw new Fail('sync.json: syntaxCheck must be true or false');
   if (cfg.verify !== undefined && !(Array.isArray(cfg.verify) && cfg.verify.every((v) => v && typeof v.name === 'string' && typeof v.project === 'string')))
     throw new Fail('sync.json: verify must be a list of {"name", "project"}');
 
@@ -107,7 +109,7 @@ function sync(opts, log, err, defaultRepo) {
     log('fetching ' + remote + ' in the upstream cache');
     git(upstreamDir, ['fetch', '--quiet', remote]);
   };
-  const gen = (sha) => generate({ upstreamDir, commit: sha, tierMap, transforms, repoName, repoUrl, allow });
+  const gen = (sha) => generate({ upstreamDir, commit: sha, tierMap, transforms, repoName, repoUrl, allow, syntaxCheck: cfg.syntaxCheck === true });
   const failWith = (head, errors) => { throw new Fail(head + '\n  ' + errors.join('\n  ')); };
 
   // --check: regenerate from the pinned commit and compare.
