@@ -28,7 +28,8 @@ public class ContainerControlTests
     public void Border_mounts_its_child_and_chrome_and_updates_them_in_place()
     {
         var radius = 4.0;
-        var host = new TestHost(() => Border(TextBlock("inside")) with
+        Element inside = TextBlock("inside"); // the same child each render, so only the radius changes
+        var host = new TestHost(() => Border(inside) with
         {
             CornerRadius = radius, BorderThickness = 2, BorderBrush = Brushes.Red, Padding = new Thickness(3),
         });

@@ -69,14 +69,12 @@ public partial record ImageElement(string Source) : Element
         if (string.IsNullOrWhiteSpace(source)) return null;
         try
         {
-            // Only text with a scheme is a URI: a plain path is used as it is, so '#' and '%' in a file name stay.
-            if (source.Contains("://", StringComparison.Ordinal) && Uri.TryCreate(source, UriKind.Absolute, out var uri))
+            if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && !uri.IsFile)
             {
-                if (uri.IsFile) return new Bitmap(uri.LocalPath);
                 using var stream = AssetLoader.Open(uri);
                 return new Bitmap(stream);
             }
-            return new Bitmap(source);
+            return new Bitmap(uri is { IsFile: true } ? uri.LocalPath : source);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
             or UriFormatException or NotSupportedException or InvalidOperationException)
