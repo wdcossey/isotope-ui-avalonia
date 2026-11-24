@@ -493,8 +493,15 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
     return out;
   };
   const refused = (out, why) => {
-    assert.throws(() => verifyBundle({ repo: f.repo, dir: out }), (e) => e instanceof Fail && e.message.startsWith('refused the sync bundle: ') && why.test(e.message));
-    assert.equal(QUARANTINE_REFS(), '', 'no quarantine ref is left behind');
+    let left;
+    try {
+      assert.throws(() => verifyBundle({ repo: f.repo, dir: out }), (e) => e instanceof Fail && e.message.startsWith('refused the sync bundle: ') && why.test(e.message));
+    } finally {
+      // A bundle accepted by mistake leaves its ref, which must not fail the next case.
+      left = QUARANTINE_REFS();
+      if (left) f.gitAt(f.repo, 'update-ref', '-d', 'refs/isotope-sync/candidate');
+    }
+    assert.equal(left, '', 'no quarantine ref is left behind');
   };
   const lockAt = (commit) => at('show', commit + ':UPSTREAM.lock') + '\n';
 
@@ -553,7 +560,21 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
     refused(variant({ heads: { [p.branch]: p.commit, 'sync/00000000-11111111': p.commit } }), /must hold one head, refs\/heads\/sync\/[0-9a-f-]+ at [0-9a-f]{8}; it holds .*, /);
   });
   test('bundle: its head is not the commit in the metadata', () => {
-    refused(variant({ heads: { [p.branch]: craft() } }), /must hold one head/);
+    // Another commit (commit-tree with the same tree, message, parent and second is the same commit).
+    refused(variant({ heads: { [p.branch]: craft({ add: { 'src/Upstream/extra.txt': 'x\n' } }) } }), /must hold one head/);
+  });
+  test('bundle: a head that is not a commit (an annotated tag)', () => {
+    const tag = execFileSync('git', [...G, 'mktag'], { cwd: prep, encoding: 'utf8',
+      input: 'object ' + p.commit + '\ntype commit\ntag t\ntagger sync-fixture <sync-fixture@example.invalid> 0 +0000\n\nt\n' }).trim();
+    // git refuses to point a branch at a tag, so the ref is written as a file (the files backend reads it as it is).
+    const out = path.join(f.root, 'case-tag');
+    mkdirSync(out);
+    const refFile = path.join(prep, '.git', 'refs', 'heads', ...p.branch.split('/'));
+    mkdirSync(path.dirname(refFile), { recursive: true });
+    writeFileSync(refFile, tag + '\n');
+    try { at('bundle', 'create', '--quiet', path.join(out, BUNDLE), '^' + p.base, 'refs/heads/' + p.branch); } finally { rmSync(refFile); }
+    writeFileSync(path.join(out, META), JSON.stringify({ base: p.base, branch: p.branch, commit: tag, new: p.new, old: p.old, reportPath: p.reportPath }));
+    refused(out, /its head is not [0-9a-f]{8}/);
   });
   test('bundle: an object git\'s fsck refuses (a ".git" folder in the vendored tree)', () => {
     const run = (args, input) => execFileSync('git', [...G, ...args], { cwd: prep, encoding: 'utf8', input }).trim();
