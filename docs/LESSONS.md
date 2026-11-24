@@ -130,6 +130,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 
 ## Git, GitHub and merging
 
+- **Actions minutes run out fast on a private repo:** one full CI run bills about 26 minutes (Windows jobs count 2x), and a
+  day of agent work pushed about 90 runs. Branch pushes run Ubuntu only; main and manual runs add Windows. (2026-11-24)
+
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would
   sweep up untracked planning folders.
 - **Never `git checkout -- <file>` or `git restore` over uncommitted work** to undo a deliberate break: it once threw

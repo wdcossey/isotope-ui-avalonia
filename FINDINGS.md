@@ -198,7 +198,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 - **The job:** `.github/workflows/upstream-sync.yml` runs weekly (Monday 05:17 UTC), and on `workflow_dispatch` with a
   `dry_run` input. A push touching the workflow or `tools/sync/**` gets a dry run.
-  - **Runner:** `vars.SYNC_RUNNER || 'ubuntu-latest'`.
+  - **Runner:** `vars.SYNC_RUNNER || 'ubuntu-latest'`. CI's Linux jobs use `vars.LINUX_RUNNER || 'ubuntu-latest'` the same way;
+    Windows jobs stay GitHub-hosted.
   - **When upstream changed:** it pushes `sync/<old>-<new>` with the regenerated files, starts CI on it, and opens an issue
     with the report (upstream references are put in code spans, so nobody upstream is pinged). Duplicate ranges are skipped.
   - **The glue:** `tools/sync/ci/upstream-sync.mjs`, with 22 tests.

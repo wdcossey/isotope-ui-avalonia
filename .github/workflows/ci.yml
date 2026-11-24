@@ -2,7 +2,7 @@ name: ci
 
 # Builds and tests what exists today against upstream at the commit pinned in UPSTREAM.lock.
 on:
-  # Every branch push, so agent branches get CI. A pull_request trigger joins with the PR flow (#7);
+  # Every branch push, so agent branches get CI (Ubuntu only; main and manual runs add Windows). A pull_request trigger joins with the PR flow (#7);
   # adding it now would run every PR commit twice.
   push:
   workflow_dispatch:
@@ -21,8 +21,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        # Windows only on main and manual runs: it bills at 2x, and branch work is already run on Windows locally.
+        os: ${{ fromJSON((github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -95,8 +97,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        # Windows only on main and manual runs: it bills at 2x, and branch work is already run on Windows locally.
+        os: ${{ fromJSON((github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -129,8 +133,10 @@ jobs:
       fail-fast: false
       matrix:
         # Windows matters most here: its checkouts use core.autocrlf=true, which the byte-exact check must survive.
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+        # Windows only on main and manual runs: it bills at 2x, and branch work is already run on Windows locally.
+        os: ${{ fromJSON((github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]') }}
+    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
