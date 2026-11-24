@@ -12,6 +12,10 @@ namespace Isotope.UI.Core;
 /// focused control in it loses focus. <c>Controls.Move</c> raises a single Move change, which <c>Panel</c> applies by
 /// moving its logical and visual children, so nothing leaves the trees (Spike I: reversing 1,000 keyed rows in a
 /// headless window fell from about 200 ms to about 10 ms).
+/// <para>
+/// The rest is a copy of upstream's class, which tools/sync doesn't see: a test fails when a sync changes upstream's
+/// <c>PanelChildCollection</c>, so this copy is brought in line with it.
+/// </para>
 /// </remarks>
 internal sealed class MovingPanelChildCollection(UIElementCollection children) : IChildCollection
 {

@@ -263,7 +263,8 @@ brackets. Every check passed in all 6 invocations.
 - A one-row move sits on the floor of any change in a window (section 1's note); its with-#23 range overlaps the before
   range, inside the margins under Limits.
 - The cases that make no move (mount, re-render, re-key, unmount) allocate the same to the KB before and with #23.
-- Tests: `KeyedMoveTests` (6), each failing with the seam back on `PanelChildCollection`.
+- Tests: `KeyedMoveTests` (7), each failing with the seam back on `PanelChildCollection`, and a guard that fails when a
+  sync changes upstream's `PanelChildCollection`, which the seam class copies.
 
 ## Reproduce
 

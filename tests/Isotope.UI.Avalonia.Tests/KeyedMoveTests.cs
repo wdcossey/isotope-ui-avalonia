@@ -174,4 +174,57 @@ public sealed class KeyedMoveTests : IDisposable
             left += widths[box.Text!];
         }
     }
+
+    // A reconcile that also inserts and removes: the reconciler's Move indices are then relative to a collection its
+    // earlier edits already changed.
+    [AvaloniaFact]
+    public void A_reorder_with_an_insert_and_removals_in_one_render_moves_the_surviving_rows_without_detaching_them()
+    {
+        string[] keys = ["a", "b", "c", "d", "e"];
+        var host = ShowRows(() => keys);
+        var panel = List(host);
+        var before = panel.Children.ToDictionary(KeyOf);
+        var surviving = new HashSet<string> { "a", "b", "d" };
+        int survivorsDetached = 0;
+        foreach (var (key, row) in before)
+            if (surviving.Contains(key)) row.DetachedFromVisualTree += (_, _) => survivorsDetached++;
+        var (_, edits) = Watch(panel);
+
+        keys = ["d", "x", "b", "a"]; // c and e removed, x inserted, d, b and a reordered
+        host.Render();
+        Layout(host);
+
+        Assert.Contains(edits, e => e.Action == NotifyCollectionChangedAction.Move);
+        Assert.Equal(0, survivorsDetached);
+        var children = panel.Children.ToList();
+        Assert.Equal(keys, children.Select(KeyOf));
+        Assert.All(surviving, key => Assert.Same(before[key], Row(host, key)));
+        Assert.Equal(children, panel.GetVisualChildren().Cast<Control>());
+        Assert.Equal(children, ((ILogical)panel).LogicalChildren.Cast<Control>());
+    }
+}
+
+/// <summary>
+/// Not in <see cref="KeyedMoveTests"/>: a plain test there would run that class's dispatcher teardown off the UI thread.
+/// </summary>
+public sealed class MovingPanelChildCollectionMirrorTests
+{
+    // MovingPanelChildCollection is a hand-made copy of upstream's PanelChildCollection with another Move, which
+    // tools/sync can't see. This fails when a sync changes upstream's class, so the copy is reviewed against it.
+    [Fact]
+    public void Upstreams_PanelChildCollection_is_the_one_MovingPanelChildCollection_mirrors()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(root.FullName, "UPSTREAM.lock"))) root = root.Parent!;
+        var vendored = Path.Combine(root.FullName, "src", "Upstream", "src", "Reactor", "Core", "ChildCollection.cs");
+        var text = File.ReadAllText(vendored).Replace("\r\n", "\n");
+        var start = text.IndexOf("internal sealed class PanelChildCollection", StringComparison.Ordinal);
+        Assert.True(start >= 0, "upstream's PanelChildCollection is gone from Core/ChildCollection.cs");
+        var bytes = System.Text.Encoding.UTF8.GetBytes(text[start..]);
+        var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes));
+        Assert.True(hash == MirroredPanelChildCollection,
+            $"upstream's PanelChildCollection changed (sha256 {hash}): bring Seam/MovingPanelChildCollection.cs in line, then record the new hash");
+    }
+
+    private const string MirroredPanelChildCollection = "e55e4b198bfaf2218b8307120d6bd41c5b5c7759b9befcde4756489fee3e760b";
 }
