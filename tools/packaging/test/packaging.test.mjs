@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
-import { PACKAGES, checkPackages, checkReadmeSnippets, embeddedPdb, findLocalPaths, parseNuspec, regions } from '../lib/checks.mjs';
+import { PACKAGES, checkPackages, embeddedPdb, findLocalPaths, parseNuspec } from '../lib/checks.mjs';
 import { readZip } from '../lib/zip.mjs';
 
 const VERSION = '0.1.0-preview.1';
@@ -13,7 +13,6 @@ const LOCAL = '/work/checkout/isotope';
 // Built at run time, so this file holds no drive-letter path or email for the repo-wide personal-data scan.
 const DRIVE = String.fromCharCode(67) + ':';
 const EMAIL = 'dev' + String.fromCharCode(64) + 'mail.org';
-const COUNTER = 'public static Element Counter(RenderContext ctx)\n{\n    return VStack();\n}';
 
 // A ZIP writer for the tests (stored and deflated entries; the reader ignores CRCs).
 function makeZip(files) {
@@ -61,7 +60,7 @@ function nuspec(spec, over = {}) {
 }
 
 // The three packages as they must ship; change(id, entries, spec) edits one before it is zipped.
-function fixture({ change = () => {}, readme = '# Package\n\n<!-- snippet: counter -->\n\x60\x60\x60csharp\n' + COUNTER + '\n\x60\x60\x60\n', nuspecOver = {} } = {}) {
+function fixture({ change = () => {}, readme = '# Package\n\nA package.\n', nuspecOver = {} } = {}) {
   const packages = [], symbols = [];
   for (const spec of PACKAGES) {
     const entries = new Map([
@@ -76,7 +75,7 @@ function fixture({ change = () => {}, readme = '# Package\n\n<!-- snippet: count
     packages.push({ file, entries: readZip(makeZip([...entries].map(([n, c]) => [n, c, true]))) });
     if (sym) symbols.push({ file: spec.id + '.' + VERSION + '.snupkg', entries: readZip(makeZip([...sym].map(([n, c]) => [n, c, false]))) });
   }
-  return { packages, symbols, localPaths: [LOCAL], identities: ['some-login'], regions: { counter: COUNTER } };
+  return { packages, symbols, localPaths: [LOCAL], identities: ['some-login'] };
 }
 
 const problems = (opts) => checkPackages(fixture(opts));
@@ -128,6 +127,12 @@ test('personal data in a nuspec or README is reported', () => {
   has(problems({ readme: '# Package\n\nBuilt by some-login.\n' }), /README\.md: contains this machine's user or git identity/);
 });
 
+test('an identity matches as a whole word only', () => {
+  // A user named "dev" is not in <developmentDependency>, which the analyzer package's nuspec has.
+  assert.deepEqual(checkPackages({ ...fixture(), identities: ['dev'] }), []);
+  has(checkPackages({ ...fixture({ readme: '# Package\n\nBuilt by dev.\n' }), identities: ['dev'] }), /contains this machine's user or git identity/);
+});
+
 test("the repository URL may hold the owner's name, but no user info, and needs a commit", () => {
   // The identity check skips the repository URL: it is the public repository's, read from git.
   const owned = { projectUrl: 'https://github.com/some-login/repo', repository: '<repository type="git" url="https://github.com/some-login/repo.git" commit="' + COMMIT + '" />' };
@@ -169,14 +174,4 @@ test('a local path in a DLL or PDB is reported, embedded PDBs included', () => {
 test('the embedded PDB is found in a DLL', () => {
   assert.equal(embeddedPdb(dllWithEmbeddedPdb()).toString(), pdb().toString());
   assert.equal(embeddedPdb(Buffer.from('MZ MPDB garbage')), null);
-});
-
-test("a README's C# blocks must be the smoke app's regions", () => {
-  const map = regions(['class S\n{\n    #region counter\n    int x = 1;\n    #endregion\n}\n']);
-  assert.deepEqual(map, { counter: 'int x = 1;' });
-  assert.deepEqual(checkReadmeSnippets('<!-- snippet: counter -->\n\x60\x60\x60csharp\nint x = 1;\n\x60\x60\x60\n', map, 'r'), []);
-  has(checkReadmeSnippets('<!-- snippet: counter -->\n\x60\x60\x60csharp\nint x = 2;\n\x60\x60\x60\n', map, 'r'), /differs/);
-  has(checkReadmeSnippets('\x60\x60\x60csharp\nint x = 1;\n\x60\x60\x60\n', map, 'r'), /no snippet marker/);
-  has(checkReadmeSnippets('<!-- snippet: other -->\n\x60\x60\x60cs\nint x = 1;\n\x60\x60\x60\n', map, 'r'), /has no #region/);
-  has(problems({ readme: '# P\n\n<!-- snippet: counter -->\n\x60\x60\x60csharp\nchanged\n\x60\x60\x60\n' }), /README\.md: snippet 'counter' differs/);
 });

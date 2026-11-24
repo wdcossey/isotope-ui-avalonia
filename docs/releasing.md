@@ -41,13 +41,18 @@ node --test tools/packaging/test/*.test.mjs   # the checks' own tests (no dotnet
 The script packs with `ContinuousIntegrationBuild`, which maps source paths to `/_/`, so no local path reaches a DLL
 or PDB; a plain `dotnet pack` of a package fails on purpose and says so. Then it checks each package (layout,
 metadata, the Isotope dependencies, SourceLink in every PDB at the package's commit, personal data in the nuspecs and
-READMEs, local paths in every DLL and PDB, and that the library README's C# block is a region of the smoke app), and
-builds and runs `tests/Isotope.UI.PackageSmoke` against the packed packages alone, from a fresh packages folder:
+READMEs, and local paths in every DLL and PDB), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
+packages alone: a fresh packages folder, and a `nuget.config` that takes `Isotope.*` from the packed folder only (never
+nuget.org's copy of the same version):
 
 - `App`: a headless counter (mount, click, re-render), a consumer-written `[GenerateReactorDescriptor]` element that
   only compiles if the bundled generator ran, and the desktop package's default app builder, set up headless. It
   references only the desktop package and builds with the consumer's default C# version and warnings as errors.
 - `Migration`: `dotnet format analyzers` must find `ISOMIG001` and offer its fix, from the analyzer package.
+
+The output folder is emptied of earlier builds of these packages first; a folder holding anything else is refused,
+so `--out` can't point at an existing feed. The package READMEs' C# blocks are checked by the library tests
+(`DocSnippetTests`), as the README's and the guide's are.
 
 To try the local packages in an app, add the folder as a source:
 `dotnet add package Isotope.UI.Avalonia --version <version> --source bin/packages`.

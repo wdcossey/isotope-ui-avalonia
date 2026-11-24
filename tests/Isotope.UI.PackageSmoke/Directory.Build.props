@@ -2,12 +2,15 @@
   <!-- The package smoke test (#52) is a consumer from outside this repository: it builds against the packed packages
        only, from a local folder, never against the projects. This file stops the search for the repo's build files
        (there are none above tests/ today, and src/'s don't reach here); global.json still applies, as it would to any
-       app built with that SDK. tools/packaging/pack.mjs passes IsotopeVersion and the folder. -->
+       app built with that SDK. tools/packaging/pack.mjs passes IsotopeVersion, and the folder (nuget.config). -->
   <PropertyGroup>
     <IsotopeVersion Condition="'$(IsotopeVersion)' == ''">0.0.0-run-tools-packaging-pack</IsotopeVersion>
     <IsPackable>false</IsPackable>
     <!-- A consumer's warnings are failures here: an analyzer that can't load in a consumer's compiler (CS8032) is only a
          warning, and would hide a generator that isn't running. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Except NuGet's audit of dependencies: an advisory published for Avalonia or one of its dependencies stays a
+         warning, so it can't stop CI or a release with no change here. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
 </Project>

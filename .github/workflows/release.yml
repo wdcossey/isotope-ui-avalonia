@@ -103,15 +103,20 @@ jobs:
           [ "${#packages[@]}" -eq 3 ] || { echo "expected 3 packages of version $VERSION, found ${#packages[@]}"; exit 1; }
 
           # GitHub's OIDC token for nuget.org, then nuget.org's short-lived key for it (what NuGet's login action does).
-          oidc="$(curl -sS --fail-with-body -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https%3A%2F%2Fwww.nuget.org" | jq -r '.value // empty')"
-          [ -n "$oidc" ] || { echo "no OIDC token from GitHub (is id-token: write granted?)"; exit 1; }
+          # Each response is read whole first, so a refusal's message is printed (a refusal carries no secret).
+          resp="$(curl -sS --fail-with-body -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https%3A%2F%2Fwww.nuget.org")" ||
+            { echo "GitHub gave no OIDC token (is id-token: write granted?): $resp"; exit 1; }
+          oidc="$(jq -r '.value // empty' <<<"$resp")"
+          [ -n "$oidc" ] || { echo "GitHub's OIDC response has no token"; exit 1; }
           echo "::add-mask::$oidc"
-          key="$(jq -cn --arg user "$NUGET_USER" '{username: $user, tokenType: "ApiKey"}' |
-            curl -sS --fail-with-body -X POST https://www.nuget.org/api/v2/token \
-              -H "Authorization: Bearer $oidc" -H 'Content-Type: application/json' -H 'User-Agent: isotope-release' \
-              --data-binary @- | jq -r '.apiKey // empty')"
-          [ -n "$key" ] || { echo "nuget.org gave no API key (check the trusted publishing policy: owner, repository, workflow file, environment)"; exit 1; }
+          body="$(jq -cn --arg user "$NUGET_USER" '{username: $user, tokenType: "ApiKey"}')"
+          resp="$(curl -sS --fail-with-body -X POST https://www.nuget.org/api/v2/token \
+            -H "Authorization: Bearer $oidc" -H 'Content-Type: application/json' -H 'User-Agent: isotope-release' \
+            --data-binary "$body")" ||
+            { echo "nuget.org refused the token exchange (check the trusted publishing policy: owner, repository, workflow file, environment): $resp"; exit 1; }
+          key="$(jq -r '.apiKey // empty' <<<"$resp")"
+          [ -n "$key" ] || { echo "nuget.org's response has no API key"; exit 1; }
           echo "::add-mask::$key"
 
           # Each .nupkg's .snupkg, next to it, is pushed with it. --skip-duplicate makes a re-run safe.

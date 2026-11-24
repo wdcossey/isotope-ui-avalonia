@@ -105,52 +105,21 @@ export function findLocalPaths(buf, localPaths) {
   return found;
 }
 
-/** #region name ... #endregion in C# sources, dedented: {name: code}. */
-export function regions(sources) {
-  const out = {};
-  for (const src of sources) {
-    const lines = src.replace(/\r\n/g, '\n').split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const m = lines[i].match(/^\s*#region (?<name>[\w-]+)\s*$/);
-      if (!m) continue;
-      const end = lines.findIndex((l, j) => j > i && l.trim() === '#endregion');
-      if (end < 0) throw new Error('#region ' + m.groups.name + ' has no #endregion');
-      const body = lines.slice(i + 1, end);
-      const indent = Math.min(...body.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length));
-      out[m.groups.name] = body.map((l) => l.slice(Math.min(indent, l.length))).join('\n');
-      i = end;
-    }
-  }
-  return out;
-}
-
-/** A README's C# blocks must each follow a snippet marker and equal that region of the smoke app, which compiles and runs. */
-export function checkReadmeSnippets(markdown, regionMap, where) {
-  const problems = [];
-  const block = /(?:<!-- snippet: (?<name>[\w-]+) -->\n)?\x60\x60\x60(?:csharp|cs|c#)[ \t]*\n(?<code>[\s\S]*?)\n\x60\x60\x60/gi;
-  for (const m of markdown.replace(/\r\n/g, '\n').matchAll(block)) {
-    const name = m.groups.name;
-    if (!name) problems.push(where + ': a C# block with no snippet marker');
-    else if (!(name in regionMap)) problems.push(where + ": snippet '" + name + "' has no #region in the smoke app");
-    else if (regionMap[name] !== m.groups.code) problems.push(where + ": snippet '" + name + "' differs from the smoke app's region");
-  }
-  return problems;
-}
-
-// Identity strings (the machine's git name and email, the OS user) anywhere but the repository URL, which is the
-// public repository's and comes from git.
+// Identity strings (the machine's git name and email, the OS user), as whole words, anywhere but the repository URL,
+// which is the public repository's and comes from git.
 function checkIdentities(text, identities, where) {
   const scrubbed = text.replace(/<repository\s[^>]*\/?>/g, '').replace(/<projectUrl>[^<]*<\/projectUrl>/g, '').toLowerCase();
-  return identities.filter((s) => s && s.length >= 3 && scrubbed.includes(s.toLowerCase())).map(() => where + ': contains this machine\'s user or git identity');
+  const word = (s) => new RegExp('(?<![a-z0-9])' + s.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![a-z0-9])');
+  return identities.filter((s) => s && s.length >= 3 && word(s).test(scrubbed)).map(() => where + ': contains this machine\'s user or git identity');
 }
 
 const isDll = (name) => /\.(dll|pdb)$/i.test(name);
 
 /**
  * Every check. input: {packages: [{file, entries: Map}], symbols: [{file, entries: Map}], expectVersion?,
- * localPaths: [], identities: [], regions: {name: code}}. Returns problems (strings).
+ * localPaths: [], identities: []}. Returns problems (strings). The READMEs' C# blocks are DocSnippetTests' (the library tests).
  */
-export function checkPackages({ packages, symbols = [], expectVersion, localPaths = [], identities = [], regions: regionMap = {} }) {
+export function checkPackages({ packages, symbols = [], expectVersion, localPaths = [], identities = [] }) {
   const problems = [];
   const byId = new Map();
   for (const pkg of packages) {
@@ -210,7 +179,6 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
       for (const h of scanText(text)) problems.push(where + ' ' + name + ':' + h.line + ': ' + h.kind);
       problems.push(...checkIdentities(text, identities, where + ' ' + name));
     }
-    if (pkg.entries.has('README.md')) problems.push(...checkReadmeSnippets(pkg.entries.get('README.md').toString('utf8'), regionMap, where + ' README.md'));
 
     // Symbols: the .snupkg's PDBs, or the PDB embedded in the DLL, carry SourceLink.
     if (spec.symbols) {

@@ -60,8 +60,7 @@ public partial record SelectableTextElement(string Text) : Element
 
 static class Smoke
 {
-    // The package README's example (tools/packaging/pack.mjs checks the README's C# blocks are regions here).
-    #region counter
+    // The package README's example (which DocSnippetTests checks against the library tests' own copy).
     public static Element Counter(RenderContext ctx)
     {
         var (count, setCount) = ctx.UseState(0);
@@ -69,7 +68,6 @@ static class Smoke
             TextBlock($"Clicked {count} times"),
             Button("Click", () => setCount(count + 1)));
     }
-    #endregion
 
     public static List<string?> Texts(Control? root) =>
         [.. Controls(root).OfType<TextBlock>().Select(t => t.Text)];
