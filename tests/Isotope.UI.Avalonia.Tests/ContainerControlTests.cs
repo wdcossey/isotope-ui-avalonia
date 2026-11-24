@@ -243,6 +243,8 @@ public class ContainerControlTests
 
         definition = new GridDefinition([new GridSize(double.NaN, GridUnitType.Auto)], [GridSize.Star()]);
         Assert.ThrowsAny<ArgumentException>(() => host.Render());
+        // The failed element isn't kept as the rendered one: the same definition fails again rather than being skipped.
+        Assert.ThrowsAny<ArgumentException>(() => host.Render());
         Assert.Equal([new GridLength(100), new GridLength(1, GridUnitType.Star)], grid.ColumnDefinitions.Select(c => c.Width).ToArray());
         Assert.Equal([GridLength.Auto], grid.RowDefinitions.Select(r => r.Height).ToArray());
     }

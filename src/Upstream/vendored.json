@@ -1997,9 +1997,10 @@
         "drop-test-WindowHookFallback-WindowBranchShapes",
         "drop-test-WindowHookFallback-slot-shape",
         "test-window-state-avalonia",
+        "test-window-hook-fallback-orphan-comment",
         "namespace-isotope"
       ],
-      "sha256": "53a05360bc8dc5d3dbeb2472837200e9a34037abfc6d0d087177cd924fe1a013"
+      "sha256": "6df5e2dc9f10ca263f167baf9b1cfd91b9f7a52f72d26eec490d2f856f5eb8ec"
     },
     {
       "path": "tests/Reactor.Tests/YogaAutoMinSizeTests.cs",

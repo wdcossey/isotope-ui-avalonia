@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/WindowHookFallbackTests.cs, last changed upstream in 2a519275fcc4; transforms: drop-test-WindowHookFallback-WindowBranchShapes, drop-test-WindowHookFallback-slot-shape, test-window-state-avalonia, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/WindowHookFallbackTests.cs, last changed upstream in 2a519275fcc4; transforms: drop-test-WindowHookFallback-WindowBranchShapes, drop-test-WindowHookFallback-slot-shape, test-window-state-avalonia, test-window-hook-fallback-orphan-comment, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 using Xunit;
 
@@ -80,11 +80,11 @@ public class WindowHookFallbackTests
         Assert.False(ctx.UseBreakpoint(640));
     }
 
-    // Issue #1396 — the no-window branch must reserve the same hook slots, with the same
-    // state types, as the window branch (UseState(T) + UseEffect), so one context can cross
-    // the no-window ↔ window transition without a hook-order mismatch. The window branch
-    // needs a live ReactorWindow, so its shape is pinned here from the source and the
-    // transition itself is exercised by the WindowHookOwner selftests.
+
+
+
+
+
 
 
 

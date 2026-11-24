@@ -108,6 +108,8 @@ namespace Isotope.UI.Core
         }
 
         /// <summary>Tracks from strings: <c>"Auto"</c>, <c>"*"</c>, <c>"2*"</c> or a size in DIPs (<see cref="GridSize.Parse"/>).</summary>
+        /// <exception cref="FormatException">A string that isn't a track.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">An infinite size or weight (upstream's <c>GridSize</c>: it parses, then its constructor rejects it).</exception>
         public GridDefinition(string[] columns, string[] rows)
             : this(Parse(columns, nameof(columns)), Parse(rows, nameof(rows)))
         {

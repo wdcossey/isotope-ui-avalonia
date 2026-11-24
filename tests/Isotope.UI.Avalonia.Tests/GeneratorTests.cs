@@ -129,7 +129,8 @@ public class GeneratorTests
             }
             """, "ProbeBorderElement");
 
-        // The generated descriptor compiles (CS0173 without the gen-reference-clear-channel-of rule), on the ClearValue channel.
+        // The generated descriptor compiles (without the gen-reference-clear-channel-of rule its get lambda doesn't), on the
+        // ClearValue channel.
         Assert.Empty(errors);
         Assert.DoesNotContain(diagnostics, d => d.Id == "ISOTOPEGEN001");
         Assert.Contains("Optional<global::Avalonia.Media.IBrush>.Of(e.BorderBrush)", generated);
