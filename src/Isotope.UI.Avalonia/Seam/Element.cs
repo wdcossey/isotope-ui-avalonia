@@ -255,7 +255,10 @@ public partial record ElementModifiers
     public bool? IsEnabled { get; init; }
     public IBrush? Background { get; init; }
 
-    /// <summary>The border's width on a templated control (#41, set by <c>.WithBorder(...)</c>); a Border element has its own.</summary>
+    /// <summary>
+    /// The border's width per side (#41, #49: <c>.WithBorder(...)</c>, <c>.BorderThickness(...)</c>), where
+    /// <see cref="BorderBrush"/> is written; a Border element's own width wins over it.
+    /// </summary>
     public Thickness? BorderThickness { get; init; }
 
     public string? AutomationName { get; init; }
@@ -296,6 +299,16 @@ public partial record ElementModifiers
         FontSize = other.FontSize ?? FontSize,
         FontWeight = other.FontWeight ?? FontWeight,
         FontFamily = other.FontFamily ?? FontFamily,
+        Padding = other.Padding ?? Padding,
+        BorderBrush = other.BorderBrush ?? BorderBrush,
+        CornerRadius = other.CornerRadius ?? CornerRadius,
+        MinWidth = other.MinWidth ?? MinWidth,
+        MinHeight = other.MinHeight ?? MinHeight,
+        MaxWidth = other.MaxWidth ?? MaxWidth,
+        MaxHeight = other.MaxHeight ?? MaxHeight,
+        HorizontalContentAlignment = other.HorizontalContentAlignment ?? HorizontalContentAlignment,
+        VerticalContentAlignment = other.VerticalContentAlignment ?? VerticalContentAlignment,
+        IsVisible = other.IsVisible ?? IsVisible,
     };
 }
 

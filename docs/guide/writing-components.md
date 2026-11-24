@@ -148,6 +148,32 @@ public static Element Notice(string title, string body, bool urgent, Action dism
 > `.HAlign(...)` modifier. A text block has no `IsTextSelectionEnabled` (Avalonia's `SelectableTextBlock` is another
 > control), and no `CharacterSpacing` or `TextDecorations` yet.
 
+Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:
+`.Padding(top: 8)`), `.WithBorder("Gray", 2)`, `.BorderBrush(...)`, `.BorderThickness(...)`, `.CornerRadius(...)`,
+`.MinWidth`, `.MaxWidth`, `.MinHeight` and `.MaxHeight`, `.Center()`, `.HorizontalContentAlignment(...)`,
+`.VerticalContentAlignment(...)` and `.IsVisible(false)` (`.WithBorder` and `.BorderBrush` also take a theme token, as in
+[Theme tokens](theme-tokens.md)). A stack, grid or wrap panel has no padding, border or corners
+on Avalonia, so one that is given them is mounted inside a `Border` that has them, which takes its margin, size,
+alignment and background too. As Reactor's, they do nothing on a flex container (`.FlexPadding(...)` is its padding).
+
+<!-- snippet: layout-modifiers -->
+```csharp
+public static Element Card(string title, string body, bool selected) =>
+    VStack(4,
+        TextBlock(title).SemiBold(),
+        TextBlock(body).TextWrapping())
+        .Padding(12)
+        .WithBorder(selected ? "DodgerBlue" : "LightGray", 2)
+        .CornerRadius(8)
+        .MaxWidth(320);
+```
+
+> **Coming from Reactor?** A panel that gains or loses its padding, border width or corner radius between renders is
+> mounted again, and the state of the components inside it is lost: give it `.Padding(0)` rather than none. A border
+> brush alone draws nothing without a width, so it doesn't need the `Border`, and a brush that comes and goes (a
+> selection highlight) keeps the panel. The BiDi-aware
+> `MarginInlineStart` family isn't here.
+
 More factories arrive with their controls. An app host that opens a window on a component is #16; the tests mount
 components with a test host.
 

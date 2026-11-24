@@ -25,22 +25,12 @@ public static partial class ElementExtensions
 
     /// <summary>
     /// A border from a theme token, <paramref name="thickness"/> wide on every side:
-    /// <c>Border(child).WithBorder(Theme.CardStroke)</c>. On a border element the width is its own
-    /// <see cref="BorderElement.BorderThickness"/>; on a templated control, the modifier's. Avalonia's panels have no border.
+    /// <c>Border(child).WithBorder(Theme.CardStroke)</c>. The width is the <c>BorderThickness</c> modifier, as upstream's
+    /// (#49: it reaches a border element too, whose own <see cref="BorderElement.BorderThickness"/> wins over it), so a
+    /// later <c>.BorderThickness(...)</c> replaces it. A stack, grid or wrap panel gets a border around it (#49).
     /// </summary>
     public static T WithBorder<T>(this T el, ThemeRef theme, double thickness = 1) where T : Element
-        => ModifyTheme((T)WithBorderWidth(el, thickness), "BorderBrush", theme);
-
-    // A border element's own width, also one a ModifiedElement wraps (whose control is the border's); else the modifier.
-    private static Element WithBorderWidth(Element el, double thickness) => el switch
-    {
-        BorderElement border => border with { BorderThickness = thickness },
-        ModifiedElement { Inner: var inner } wrapper when Innermost(inner) is BorderElement =>
-            wrapper with { Inner = WithBorderWidth(inner, thickness) },
-        _ => el.WithModifiers(m => m with { BorderThickness = new Thickness(thickness) }),
-    };
-
-    private static Element Innermost(Element el) => el is ModifiedElement m ? Innermost(m.Inner) : el;
+        => ModifyTheme(el.WithModifiers(m => m with { BorderThickness = new Thickness(thickness) }), "BorderBrush", theme);
 
     /// <summary>The brush behind a split view's pane, from a theme token; the element's own pane brush wins.</summary>
     public static SplitViewElement PaneBackground(this SplitViewElement el, ThemeRef theme) => ModifyTheme(el, "PaneBackground", theme);
