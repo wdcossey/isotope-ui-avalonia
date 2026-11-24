@@ -18,13 +18,17 @@ public static class ThemeResource
 {
     /// <summary>
     /// The brush for <paramref name="key"/>; a key the resources lack falls back to Isotope's built-in theme tokens
-    /// (WinUI's Fluent values: <c>ThemeResource.Brush("SystemFillColorSuccessBrush")</c>), as <see cref="ThemeRef"/>s do.
+    /// (WinUI's Fluent values: <c>ThemeResource.Brush("SystemFillColorSuccessBrush")</c>), as <see cref="ThemeRef"/>s do;
+    /// with no application, the light theme's.
     /// </summary>
     /// <exception cref="KeyNotFoundException">Neither the resources nor the tokens have a brush of that key.</exception>
     public static IBrush Brush(string key)
     {
         var app = Application.Current;
-        return (app is null ? null : ThemeTokens.Resolve(app, key, app.ActualThemeVariant, ThemeTokens.IsHighContrast(app.PlatformSettings?.GetColorValues())))
+        var brush = app is null
+            ? ThemeTokens.Resolve(null, key, ThemeVariant.Light, highContrast: false)
+            : ThemeTokens.Resolve(app, key, app.ActualThemeVariant, ThemeTokens.IsHighContrast(app.PlatformSettings?.GetColorValues()));
+        return brush
             ?? throw new KeyNotFoundException($"Theme resource '{key}' not found or is not a Brush");
     }
 

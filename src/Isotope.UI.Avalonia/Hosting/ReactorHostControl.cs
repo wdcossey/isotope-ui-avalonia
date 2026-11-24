@@ -183,6 +183,9 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         _isRendering = true;
         var clock = Stopwatch.StartNew();
         var phase = RenderErrorSource.RootRender;
+        // #41: a requested resource refresh (Theme.NotifyResourcesChanged) is this pass, if it reconciles.
+        _reconciler.BeginResourceRefreshPass();
+        bool reconciled = false;
         try
         {
             _reconciler.BeginRootRender(ctx, _requestRender);
@@ -194,6 +197,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
             {
                 phase = RenderErrorSource.Reconcile;
                 var control = _reconciler.Reconcile(_currentTree, tree, _currentControl, _requestRender);
+                reconciled = true;
                 if (_disposed)
                 {
                     // Disposed during the reconcile (a child's effect closed the window): drop what this pass mounted.
@@ -223,6 +227,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         }
         finally
         {
+            _reconciler.EndResourceRefreshPass(reconciled);
             _isRendering = false;
             Volatile.Write(ref _lastRenderMs, clock.Elapsed.TotalMilliseconds);
         }

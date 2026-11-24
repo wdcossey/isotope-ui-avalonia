@@ -15,13 +15,33 @@ public sealed partial class Reconciler
 {
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, ThemeBindingSet> s_themeBindings = new();
 
+    // Theme.NotifyResourcesChanged() (upstream's resource refresh): the host's next root pass renders the whole tree,
+    // past memoized components and the skip of unchanged elements, so a token a render resolves (ThemeRef.Resolve) is
+    // resolved again everywhere. Requested from any thread; taken by the host's root pass, and put back when that pass
+    // doesn't reconcile, so a request isn't lost.
+    private int _resourceRefreshPending;
+    private bool _resourceRefreshActive;
+
+    /// <summary>Asks for a resource-refresh pass (upstream's member). Thread-safe.</summary>
+    internal void RequestResourceRefresh() => Interlocked.Exchange(ref _resourceRefreshPending, 1);
+
+    /// <summary>Called by a host before its root render: a requested refresh is this pass. UI thread.</summary>
+    internal void BeginResourceRefreshPass() => _resourceRefreshActive = Interlocked.Exchange(ref _resourceRefreshPending, 0) != 0;
+
+    /// <summary>Ends a host's root pass; a refresh it took but didn't reconcile is requested again.</summary>
+    internal void EndResourceRefreshPass(bool reconciled)
+    {
+        if (_resourceRefreshActive && !reconciled) RequestResourceRefresh();
+        _resourceRefreshActive = false;
+    }
+
     /// <summary>
     /// Applies an element's <see cref="Element.ThemeBindings"/> to its control (upstream's member): each property named
     /// is bound to its token's brush, resolved for the control (<see cref="ThemeRef.Resolve(string, FrameworkElement)"/>)
     /// and resolved again when the control's theme variant, the resources it sees or the platform's contrast preference
     /// change, with no re-render. Bound at style priority, as upstream's synthesized style is, so a brush the element sets
-    /// itself (a modifier or a member) wins. A property the control doesn't have is skipped, as are properties that
-    /// don't take a brush. Bindings equal to the last ones change nothing.
+    /// itself (a modifier or a member) wins. A property the control doesn't have is skipped, as are properties whose
+    /// type isn't a brush. Bindings equal to the last ones change nothing.
     /// </summary>
     internal static void ApplyThemeBindings(UIElement control, IReadOnlyDictionary<string, ThemeRef>? bindings)
     {
@@ -149,7 +169,7 @@ public sealed partial class Reconciler
         // The control's brush property of that name (Background, Foreground, BorderBrush, PaneBackground, …).
         private static AvaloniaProperty? BrushProperty(Control control, string name) =>
             AvaloniaPropertyRegistry.Instance.FindRegistered(control, name) is { IsReadOnly: false } p
-                && p.PropertyType.IsAssignableFrom(typeof(IBrush))
+                && p.PropertyType == typeof(IBrush)
                 ? p
                 : null;
     }

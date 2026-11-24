@@ -66,7 +66,7 @@ public static Element Swatch(RenderContext ctx)
 ```
 
 After editing the application's resources in a way that isn't a theme change, call `Theme.NotifyResourcesChanged()`:
-every live host renders again from its root.
+every live host renders its whole tree once, past memoized components, as upstream's does.
 
 ## Other theme resources
 
@@ -87,10 +87,8 @@ token, a value read this way doesn't follow a theme change on its own.
 - **Style priority.** Upstream applies a token as a synthesized `{ThemeResource}` style; here it is a binding at
   Avalonia's style priority. In both, a brush set on the element wins.
 - **Borders on panels.** Avalonia's panels (`VStack`, `Grid`…) have no border, so `WithBorder` and `BorderBrush` on
-  one do nothing: wrap it in a `Border`. A property a control doesn't have is skipped, as is `Foreground` on a
-  `Border`.
-- **`NotifyResourcesChanged`** renders each host from its root, but a memoized component whose inputs didn't change
-  still skips (upstream renders past memoization). Bound tokens don't need it.
+  one do nothing: wrap it in a `Border`. A property a control doesn't have, or whose type isn't a brush, is skipped,
+  as is `Foreground` on a `Border`.
 - **Not ported yet:** per-control resource overrides (`.Resources(r => r.Set(key, themeRef))`), and the type-ramp
   factories (`Title`, `Body`, `Caption`…, #44). Upstream's `Theme` has no spacing or corner-radius tokens: its corner
   radii are `ThemeResource.CornerRadius(...)`, above.

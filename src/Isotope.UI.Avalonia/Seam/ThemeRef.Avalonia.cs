@@ -26,7 +26,8 @@ public readonly partial record struct ThemeRef
     private static IBrush? ResolveForTheme(string resourceKey, string themeName)
     {
         if (Application.Current is not { } app) return null;
-        WatchApplication(app);
+        // Off the UI thread before anything subscribed, nothing would clear what is cached: resolve, don't cache.
+        bool watched = WatchApplication(app);
         var cacheKey = (resourceKey, themeName);
         int generation = Volatile.Read(ref s_resolutionGeneration);
         if (TryGetCurrentResolution(cacheKey, generation, out var cached))
@@ -34,7 +35,7 @@ public readonly partial record struct ThemeRef
         var variant = themeName == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
         var resolved = ThemeTokens.Resolve(app, resourceKey, variant, ThemeTokens.IsHighContrast(app.PlatformSettings?.GetColorValues()));
         // As upstream: only a found brush is cached, so a key added to the resources later is found then.
-        if (resolved is not null)
+        if (resolved is not null && watched)
             s_resolutionCache[cacheKey] = (generation, resolved);
         return resolved;
     }
@@ -44,14 +45,19 @@ public readonly partial record struct ThemeRef
     // on their theme-change events; here the application's own events do, once per application.
     private static Application? s_watched;
 
-    private static void WatchApplication(Application app)
+    // Whether the cache is cleared on app's changes. Resolve is called on the UI thread, as upstream's; a call from
+    // elsewhere resolves but doesn't subscribe.
+    private static bool WatchApplication(Application app)
     {
-        // Resolve is called on the UI thread, as upstream's; a call from elsewhere resolves but doesn't subscribe.
-        if (ReferenceEquals(s_watched, app) || !app.CheckAccess()) return;
-        s_watched = app;
+        if (ReferenceEquals(Volatile.Read(ref s_watched), app)) return true;
+        if (!app.CheckAccess()) return false;
+        // What was cached before (for an application no longer current) isn't covered by its events.
+        InvalidateResolutionCache();
+        Volatile.Write(ref s_watched, app);
         app.ResourcesChanged += static (_, _) => InvalidateResolutionCache();
         if (app.PlatformSettings is { } settings)
             settings.ColorValuesChanged += static (_, _) => InvalidateResolutionCache();
+        return true;
     }
 
     /// <summary>

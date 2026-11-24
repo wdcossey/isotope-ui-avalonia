@@ -331,6 +331,92 @@ public sealed class ThemeTokenTests : IDisposable
         Assert.Equal(7.5, ThemeResource.Get("IsotopeTestNoSuchDouble", 7.5));
     }
 
+    [AvaloniaFact]
+    public void NotifyResourcesChanged_resolves_again_a_token_a_memoized_component_reads()
+    {
+        var m = Mount(_ => VStack(Memo(_ =>
+            TextBlock("memo").Background(ThemeRef.Resolve("IsotopeTestBrandBrush", isDark: false)), 1)));
+        Assert.Null(m.First<TextBlock>().Background);
+
+        var app = Application.Current!;
+        try
+        {
+            app.Resources["IsotopeTestBrandBrush"] = Brushes.Orange;
+            Theme.NotifyResourcesChanged();
+            Pump();
+            Assert.Equal(Colors.Orange, ColorOf(m.First<TextBlock>().Background));
+        }
+        finally
+        {
+            app.Resources.Remove("IsotopeTestBrandBrush");
+        }
+    }
+
+    [AvaloniaFact]
+    public void A_memo_skips_an_ordinary_root_pass_but_not_a_resource_refresh()
+    {
+        int memoRenders = 0;
+        Element Tree(RenderContext ctx)
+        {
+            var (n, setN) = ctx.UseState(0);
+            return VStack(
+                Button($"root {n}", () => setN(n + 1)),
+                Memo(_ => { memoRenders++; return TextBlock("memo"); }, 1));
+        }
+        var m = Mount(Tree);
+        Assert.Equal(1, memoRenders);
+
+        TestHost.Click(m.First<Button>());
+        Pump();
+        Assert.Equal(2, m.Renders);
+        Assert.Equal(1, memoRenders);
+
+        Theme.NotifyResourcesChanged();
+        Pump();
+        Assert.Equal(3, m.Renders);
+        Assert.Equal(2, memoRenders);
+
+        TestHost.Click(m.First<Button>());
+        Pump();
+        Assert.Equal(2, memoRenders);
+    }
+
+    [AvaloniaFact]
+    public void Tokens_on_a_ModifiedElement_wrapper_reach_its_control_inner_ones_winning()
+    {
+        var inner = TextBlock("a").Foreground(Theme.SecondaryText);
+        var wrapped = new ModifiedElement(inner, new ElementModifiers { Margin = new Thickness(4) })
+            .Foreground(Theme.PrimaryText).Background(Theme.CardBackground);
+        var m = Mount(_ => wrapped, ThemeVariant.Light);
+        var text = m.First<TextBlock>();
+        Assert.Equal(Hex(0x9E000000), ColorOf(text.Foreground));
+        Assert.Equal(Hex(0xB3FFFFFF), ColorOf(text.Background));
+        Assert.Equal(new Thickness(4), text.Margin);
+    }
+
+    [AvaloniaFact]
+    public void WithBorder_on_a_component_gives_its_wrapper_border_a_width()
+    {
+        var m = Mount(_ => Component(_ => TextBlock("inside")).WithBorder(Theme.CardStroke, thickness: 2), ThemeVariant.Light);
+        var wrapper = Assert.IsType<Border>(m.Host.Child);
+        Assert.Equal(new Thickness(2), wrapper.BorderThickness);
+        Assert.Equal(Hex(0x0F000000), ColorOf(wrapper.BorderBrush));
+    }
+
+    [AvaloniaFact]
+    public void A_binding_to_a_property_that_isnt_a_brush_is_skipped()
+    {
+        var el = Button("b") with
+        {
+            ThemeBindings = new Dictionary<string, ThemeRef> { ["Content"] = Theme.Accent, ["Tag"] = Theme.Accent, ["Background"] = Theme.Accent },
+        };
+        var m = Mount(_ => el, ThemeVariant.Light);
+        var button = m.First<Button>();
+        Assert.Equal("b", button.Content);
+        Assert.Null(button.Tag);
+        Assert.Equal(["Background"], Reconciler.BoundThemeProperties(button));
+    }
+
     // ── Precedence and changes ──
 
     [AvaloniaFact]
