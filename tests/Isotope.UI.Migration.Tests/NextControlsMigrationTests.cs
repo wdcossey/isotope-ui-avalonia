@@ -33,4 +33,25 @@ public class NextControlsMigrationTests
         Assert.Contains(Migrate.Analyze(fixedText).Describe(), d =>
             d.StartsWith("ISOMIG007: 'ScrollViewerElement.ContentOrientation'", StringComparison.Ordinal) && d.Contains("Disabled horizontal scroll bar", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void A_Reactor_tree_view_takes_the_Avalonia_names_and_builds()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element Render(Action<string> open) =>
+                    TreeView(TreeNode("Documents", TreeNode("Report.docx")), TreeNode(content: "Music"))
+                        with { OnItemInvoked = node => open(node.Content), OnExpanding = node => open(node.Children?[0].Content ?? "") };
+
+                public static TreeViewNodeData Leaf(string name) => new(Content: name) { IsExpanded = true };
+            }
+            """;
+        var fixedText = Migrate.Fix(reactor);
+        Assert.Contains("TreeView(TreeViewItem(\"Documents\", TreeViewItem(\"Report.docx\")), TreeViewItem(header: \"Music\"))", fixedText);
+        Assert.Contains("OnItemInvoked = node => open(node.Header), OnExpanding = node => open(node.Items?[0].Header ?? \"\")", fixedText);
+        Assert.Contains("public static TreeViewItemData Leaf(string name) => new(Header: name) { IsExpanded = true };", fixedText);
+        Assert.Empty(Migrate.Errors(fixedText));
+        Assert.Empty(Migrate.Analyze(fixedText));
+    }
 }

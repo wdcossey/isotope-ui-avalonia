@@ -23,7 +23,7 @@ public class RenameTableTests
         var problems = new List<string>();
         foreach (var (recordName, controlName) in table.Records)
         {
-            var record = Record(recordName);
+            var record = Record(table.IsotopeName(recordName));
             var control = Control(controlName);
             var kept = table.Members.Where(m => m.Record == recordName && m.Kind == "kept").Select(m => m.Avalonia[0]).ToHashSet();
             var renamedAway = table.Members.Where(m => m.Record == recordName && !m.Avalonia.Contains(m.Reactor)).Select(m => m.Reactor).ToHashSet();
@@ -49,7 +49,7 @@ public class RenameTableTests
             var descriptor = type.GetCustomAttributesData().FirstOrDefault(a => a.AttributeType.Name == "GenerateReactorDescriptorAttribute");
             if (descriptor?.ConstructorArguments.FirstOrDefault().Value is not Type control) continue;
             found++;
-            if (!table.Records.TryGetValue(type.Name, out var listed))
+            if (!table.Records.TryGetValue(table.ReactorName(type.Name), out var listed))
                 problems.Add($"{type.Name} ({control.FullName}) is not in the table's records");
             else if (listed != control.FullName)
                 problems.Add($"{type.Name}: the table says {listed}, the record's descriptor {control.FullName}");
@@ -78,7 +78,7 @@ public class RenameTableTests
                 problems.Add($"{entry.Record}.{entry.Reactor}: a kept member keeps its name and says why (note)");
             if (entry.Kind == "shape" && entry.Note is null)
                 problems.Add($"{entry.Record}.{entry.Reactor}: a shape change says what changed (note)");
-            var members = Members(Record(entry.Record)).ToHashSet();
+            var members = Members(Record(table.IsotopeName(entry.Record))).ToHashSet();
             foreach (var name in entry.Avalonia.Where(n => !members.Contains(n)))
                 problems.Add($"{entry.Record}.{entry.Reactor}: {entry.Record} has no member {name}");
         }
@@ -93,7 +93,7 @@ public class RenameTableTests
         var problems = new List<string>();
         foreach (var factory in factories)
         {
-            var record = factory.ReturnType.Name;
+            var record = table.ReactorName(factory.ReturnType.Name);
             foreach (var parameter in factory.GetParameters())
             {
                 var name = parameter.Name!;
@@ -212,6 +212,18 @@ internal sealed record RenameTable(
     internal sealed record Member(string Record, string Reactor, string[] Avalonia, string Kind, string? Note);
 
     internal sealed record Parameter(string Factory, string Reactor, string Avalonia);
+
+    /// <summary>
+    /// The library's name for a Reactor record: the Avalonia name an applied type rename gives it (TreeViewNodeData is
+    /// TreeViewItemData, #43), else the same. Records and member entries stay under Reactor's name, as the analyzer reads
+    /// them.
+    /// </summary>
+    internal string IsotopeName(string reactor) =>
+        Types.FirstOrDefault(t => t.Status == "applied" && t.Reactor == reactor && t.Avalonia is not null)?.Avalonia ?? reactor;
+
+    /// <summary>Reactor's name for a library type that an applied type rename gave its Avalonia name, else the same.</summary>
+    internal string ReactorName(string isotope) =>
+        Types.FirstOrDefault(t => t.Status == "applied" && t.Avalonia == isotope)?.Reactor ?? isotope;
 
     /// <summary>A rename, or a removal when <see cref="Avalonia"/> is null (then <see cref="Note"/> says what replaces it).</summary>
     internal sealed record Rename(string Reactor, string? Avalonia, string Status, string? Note);

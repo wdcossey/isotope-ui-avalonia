@@ -22,7 +22,7 @@ names in camel case (`text`, `onTextChanged`).
 
 | Section | Entry | Meaning |
 |---|---|---|
-| `records` | `"<record>": "<control>"` | Each element or data record (by Reactor's type name) and the full name of the Avalonia type its members are named after. Every record with `[GenerateReactorDescriptor]` is listed, with the control in that attribute. |
+| `records` | `"<record>": "<control>"` | Each element or data record (by Reactor's type name, also when an applied `types` entry gives it an Avalonia name: `TreeViewNodeData` is `TreeViewItemData` in the code) and the full name of the Avalonia type its members are named after. Every record with `[GenerateReactorDescriptor]` is listed, with the control in that attribute. |
 | `members` | `{ "record", "reactor", "avalonia", "kind", "note"? }` | A record member whose Reactor name or shape differs, or that keeps Reactor's name. |
 | `parameters` | `{ "factory", "reactor", "avalonia" }` | A factory parameter renamed, in every overload of that factory. |
 | `modifiers` | `{ "reactor", "avalonia", "target"?, "status", "note"? }` | An extension method on elements (`target`: the record it extends, when only one). |
