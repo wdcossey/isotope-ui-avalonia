@@ -427,10 +427,11 @@
       "tier": 2,
       "lastChanged": "ffe1de4d884d09f54a3938f04904620f8137ce9c",
       "transforms": [
+        "drop-ColorScheme-ColorSchemeContext",
         "winui-usings",
         "namespace-isotope"
       ],
-      "sha256": "857886f5e15000f0ef9e9f0a6956a18967d9c72ef5baf211646a2c872522a7ad"
+      "sha256": "2d73792d80dc458f483e927402e435bb24a29264b871d97518115305266a51db"
     },
     {
       "path": "src/Reactor/Core/Command.cs",
@@ -1916,14 +1917,12 @@
     },
     {
       "path": "tests/Reactor.Tests/RenderContextHookOrderTests.cs",
-      "tier": 2,
+      "tier": 1,
       "lastChanged": "c65a9df5ea32c6de7f9a420df07fe0584a057361",
       "transforms": [
-        "drop-test-UseColorScheme-NoApplication",
-        "drop-test-UseIsDarkTheme-NoApplication",
         "namespace-isotope"
       ],
-      "sha256": "928f0f6e6afeee43bcdbc8ee3fd1ed363767be977002fc09844df328a3eecd5e"
+      "sha256": "ff505d91bcaedb17f38a12161976c7011d7776581cbe9d84806a9309ce280af7"
     },
     {
       "path": "tests/Reactor.Tests/TestIsolationCollections.cs",
@@ -1969,6 +1968,18 @@
         "namespace-isotope"
       ],
       "sha256": "870d5426aa2057cac5f72f77262b1b46a4eb2c6193f9d1580dd3bd80dd55e7fa"
+    },
+    {
+      "path": "tests/Reactor.Tests/WindowHookFallbackTests.cs",
+      "tier": 2,
+      "lastChanged": "2a519275fcc4ecdf203b656b7c16ba2a0734f368",
+      "transforms": [
+        "drop-test-WindowHookFallback-WindowBranchShapes",
+        "drop-test-WindowHookFallback-slot-shape",
+        "test-window-state-avalonia",
+        "namespace-isotope"
+      ],
+      "sha256": "53a05360bc8dc5d3dbeb2472837200e9a34037abfc6d0d087177cd924fe1a013"
     },
     {
       "path": "tests/Reactor.Tests/YogaAutoMinSizeTests.cs",
