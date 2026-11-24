@@ -259,7 +259,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             var model = ctx.SemanticModel;
             var receiverSymbol = model.GetSymbolInfo(ma.Expression, ctx.CancellationToken).Symbol;
             if (receiverSymbol is INamespaceSymbol) return;
-            var receiver = receiverSymbol as INamedTypeSymbol ?? model.GetTypeInfo(ma.Expression, ctx.CancellationToken).Type;
+            var receiver = Constraint(receiverSymbol as INamedTypeSymbol ?? model.GetTypeInfo(ma.Expression, ctx.CancellationToken).Type);
             if (receiver is null or IErrorTypeSymbol) return;
             var text = name.Identifier.ValueText;
             if (ma.Parent is InvocationExpressionSyntax inv && inv.Expression == ma)
@@ -467,6 +467,10 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             record = type.Name;
             return null;
         }
+
+        /// <summary>A type parameter's first constraint (`T` in `where T : Element` is an Element here), else the type.</summary>
+        static ITypeSymbol? Constraint(ITypeSymbol? type) =>
+            type is ITypeParameterSymbol p ? p.ConstraintTypes.FirstOrDefault() : type;
 
         static IPropertySymbol? FindProperty(ITypeSymbol type, string name)
         {
