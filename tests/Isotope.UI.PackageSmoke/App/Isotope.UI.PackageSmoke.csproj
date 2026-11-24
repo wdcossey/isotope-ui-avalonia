@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A tiny app on the packed packages (#52), run headless by tools/packaging/pack.mjs: see Program.cs. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- No LangVersion: a consumer's default for net10.0 (C# 14), not the C# 15 the library is built with. -->
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Only the desktop package: the library, and its bundled generator, must come with it. -->
+    <PackageReference Include="Isotope.UI.Avalonia.Desktop" Version="$(IsotopeVersion)" />
+    <PackageReference Include="Avalonia.Headless" Version="12.1.6" />
+  </ItemGroup>
+</Project>
