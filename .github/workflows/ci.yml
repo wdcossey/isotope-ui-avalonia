@@ -22,8 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
+    runs-on: ${{ matrix.os }} # GitHub-hosted only (public repo; CLAUDE.md)
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -97,8 +96,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
+    runs-on: ${{ matrix.os }} # GitHub-hosted only (public repo; CLAUDE.md)
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -141,8 +139,7 @@ jobs:
       matrix:
         # Windows matters most here: its checkouts use core.autocrlf=true, which the byte-exact check must survive.
         os: [ubuntu-latest, windows-latest]
-    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
+    runs-on: ${{ matrix.os }} # GitHub-hosted only (public repo; CLAUDE.md)
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7

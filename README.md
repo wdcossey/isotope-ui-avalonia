@@ -50,10 +50,11 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   ([`samples/Isotope.UI.Samples`](samples/Isotope.UI.Samples)).
 - **A Reactor → Isotope migration tool:** a Roslyn analyzer with code fixes, run with `dotnet format analyzers`
   ([guide](docs/guide/migrating-from-reactor.md)).
-- **Tests:** 1,183 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,186 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
 Not there yet: more controls (rich text, icons, list views…), tracked from what the migration tool finds missing in
-upstream's samples (#35); animation; and packages.
+upstream's samples (#35); animation; and published packages (they build and are checked on every push;
+[releasing](docs/releasing.md)).
 
 ## Try it
 
@@ -99,6 +100,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `docs/sync/` | Sync reports (what changed upstream, and the tier 3 PRs to port) |
 | `tools/sync/` | Vendor and regenerate (`node tools/sync/sync.mjs --help`), and the weekly sync job's glue |
 | `tools/migration/` | Measures the migration on upstream's samples, and lists what is left in a project |
+| `tools/packaging/`, `tests/Isotope.UI.PackageSmoke/` | Pack and check the NuGet packages, and a consumer app built against them alone ([releasing](docs/releasing.md)) |
 | `UPSTREAM.lock` | The upstream commit everything is built and compared against |
 | `upstream/` | Git-ignored cache of the upstream repo, needed only for `tools/sync` (see below) |
 
@@ -111,7 +113,7 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1183 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1186 tests; needs no upstream/)
 dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (45 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)

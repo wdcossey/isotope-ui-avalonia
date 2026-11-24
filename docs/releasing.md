@@ -42,7 +42,7 @@ The script packs with `ContinuousIntegrationBuild`, which maps source paths to `
 or PDB; a plain `dotnet pack` of a package fails on purpose and says so. Then it checks each package (layout,
 metadata, the Isotope dependencies, SourceLink in every PDB at the package's commit, personal data in the nuspecs and
 READMEs, local paths in every DLL, and every PDB's source documents under the deterministic `/_/` root), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
-packages alone: a fresh packages folder, and a `nuget.config` that takes `Isotope.*` from the packed folder only (never
+packages alone: a fresh packages folder, and a `nuget.config` that takes `Isotope.UI.*` from the packed folder only (never
 nuget.org's copy of the same version):
 
 - `App`: a headless counter (mount, click, re-render), a consumer-written `[GenerateReactorDescriptor]` element that
@@ -63,7 +63,7 @@ CI's `packages` job (`.github/workflows/ci.yml`, Ubuntu and Windows) runs the sa
 ## One-time setup (the developer, before the first release)
 
 1. **nuget.org account.** Sign in to nuget.org with the account that will own the packages.
-2. **Reserve the `Isotope.` prefix** for that account, so no one else can publish `Isotope.*` packages:
+2. **Reserve the `Isotope.UI.` prefix** for that account, so no one else can publish `Isotope.UI.*` packages:
    [ID prefix reservation](https://learn.microsoft.com/nuget/nuget-org/id-prefix-reservation) explains the request and
    its criteria. The first release doesn't need it, but a reservation only covers packages pushed after it is granted.
 3. **Trusted publishing policy** ([NuGet trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing)):

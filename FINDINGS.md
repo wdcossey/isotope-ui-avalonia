@@ -199,7 +199,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The job:** `.github/workflows/upstream-sync.yml` runs weekly (Monday 05:17 UTC), and on `workflow_dispatch` with a
   `dry_run` input. A push touching the workflow or `tools/sync/**` gets a dry run.
   - **Runner:** GitHub-hosted. The `vars.SYNC_RUNNER` option was removed in #36 (public repo: no self-hosted runners).
-    CI's Linux jobs keep a `vars.LINUX_RUNNER || 'ubuntu-latest'` fallback, which must stay unset.
+    CI's `vars.LINUX_RUNNER` fallback was removed in #52 too: every job is GitHub-hosted.
   - **When upstream changed:** it pushes `sync/<old>-<new>` with the regenerated files, starts CI on it, and opens an issue
     with the report (upstream references are put in code spans, so nobody upstream is pinged). Duplicate ranges are skipped.
   - **The glue:** `tools/sync/ci/upstream-sync.mjs`, with 63 tests (#36).
@@ -209,6 +209,29 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - 3 tier 3 PRs were read; none needs porting.
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
+
+## Packaging (issue #52, 2026-11-24)
+
+- **Three packages:** `Isotope.UI.Avalonia` (the library, with the wrappers generator bundled as an analyzer, as
+  upstream's package bundles its own), `Isotope.UI.Avalonia.Desktop` (depends on the library at the same version) and
+  `Isotope.UI.Migration` (analyzer only). Each carries its README, our LICENSE, and upstream's LICENSE and
+  ThirdPartyNoticeText. Authors is "The Isotope.UI.Avalonia authors".
+- **Build:** `src/Directory.Build.props`/`.targets`; versions from git tags by MinVer (prefix `v`); SourceLink from the
+  SDK; deterministic (8 of 8 DLLs, PDBs and XML docs byte-identical between two checkouts at different paths, by
+  sha256). A plain `dotnet pack` fails on purpose, so no local path reaches a package.
+- **Checks:** `tools/packaging/pack.mjs` packs and checks layout, metadata, dependencies, SourceLink, personal data and
+  local paths (PDB document names decoded, all under `/_/`), then builds and runs `tests/Isotope.UI.PackageSmoke`
+  against the packed packages only (a headless counter, a consumer `[GenerateReactorDescriptor]` element that only
+  compiles if the bundled generator ran, the desktop default builder headless, and the migration's ISOMIG001). CI's
+  `packages` job runs it on Ubuntu (61 s) and Windows (99 s).
+- **Release:** `release.yml` runs only on a pushed `v*` tag; `pack` (read-only) refuses a tag that isn't `v<semver>`, isn't
+  on `main` or doesn't match MinVer's version; `publish` (`id-token: write` only, environment `nuget`) uses NuGet trusted
+  publishing with plain `curl`, since only `actions/*` are allowed: no API key secret. Not run yet; the setup is the
+  developer's (`docs/releasing.md`).
+- **Sizes:** library 567,254 bytes (symbols 138,792), desktop 10,847, migration 56,797.
+- **Learned:** NuGet restores a dependency's analyzers even with `exclude="Analyzers"`; PDB document names are stored in
+  parts and need decoding before a path search.
+- **Also:** CI's last runner variable (`vars.LINUX_RUNNER`) was removed; every job is GitHub-hosted.
 
 ## Named text styles (issue #44, 2026-11-24)
 

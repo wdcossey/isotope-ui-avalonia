@@ -25,9 +25,9 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   Commits use the developer's GitHub noreply address (history rewritten to it on 2026-11-24, before the repo went
   public): set it per machine with `git config user.email` (see `CLAUDE.local.md`), and never add other names or emails.
 - **The repo is public: workflows and Actions settings follow these rules** (2026-11-24).
-  - **GitHub-hosted runners only.** Never add a self-hosted label or register a runner on this repo, and never set
-    `vars.LINUX_RUNNER`: a fork PR's workflow could reach the machine. If it is ever set, treat it as a security issue
-    and tell the developer. The sync job has no runner variable at all (#36).
+  - **GitHub-hosted runners only.** Never add a self-hosted label or register a runner on this repo, and no
+    workflow reads a runner variable (removed in #36 and #52): a fork PR's workflow could reach the machine. If one is
+    ever added or set, treat it as a security issue and tell the developer.
   - **Triggers:** `push`, `pull_request`, `workflow_dispatch`, `schedule` only. Never `pull_request_target`,
     `issue_comment` or `workflow_run`: they run with this repo's token but a stranger can start them.
   - **Least privilege:** keep a top-level `permissions:` block (`contents: read` or `{}`); grant more only on the job
