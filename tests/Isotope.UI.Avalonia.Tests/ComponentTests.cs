@@ -98,11 +98,11 @@ public class ComponentTests
     }
 
     [AvaloniaFact]
-    public void A_component_whose_first_render_throws_leaves_no_node_behind()
+    public void A_component_whose_first_render_throws_inside_a_boundary_leaves_no_node_behind()
     {
         var host = new TestHost(() => VStack(TextBlock("ok")));
-        Assert.Throws<InvalidOperationException>(() =>
-            host.Reconciler.Mount(Component(_ => throw new InvalidOperationException("boom")), () => { }));
+        host.Reconciler.Mount(
+            ErrorBoundary(Component(_ => throw new InvalidOperationException("boom")), ex => TextBlock(ex.Message)), () => { });
 
         Assert.Equal(0, host.Reconciler.ComponentNodeCount);
     }

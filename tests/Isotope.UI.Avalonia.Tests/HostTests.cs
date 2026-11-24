@@ -245,25 +245,41 @@ public sealed class HostTests : IDisposable
             ctx.UseEffect(() => throw new InvalidOperationException("effect"), Array.Empty<object>());
             return TextBlock("x");
         });
+        // A child component's render: shown in its slot (#28).
         new ReactorHostControl(_ => Component(_ => throw new InvalidOperationException("child")));
+        // A control that fails to mount: the host's reconcile.
+        new ReactorHostControl(_ => TextBlock("x").Width(-1));
         Pump();
-        Assert.Equal([RenderErrorSource.Effects, RenderErrorSource.Reconcile], sources);
+        Assert.Equal([RenderErrorSource.Effects, RenderErrorSource.ComponentRender, RenderErrorSource.Reconcile], sources);
+    }
+
+    // A component whose control fails to mount once it's broken (a width Avalonia rejects): a reconcile error of the
+    // host, since only a component's own render and effects are shown in its slot (#28).
+    private sealed class BreakingControl
+    {
+        public Action<bool>? SetBroken;
+
+        public Element Render(RenderContext ctx)
+        {
+            var (broken, setBroken) = ctx.UseState(false);
+            SetBroken = setBroken;
+            return broken ? Button("broken").Width(-1) : TextBlock("working");
+        }
     }
 
     [AvaloniaFact]
     public void A_throwing_handler_shows_the_neutral_message_and_releases_the_tree()
     {
         int cleanups = 0;
-        var app = new Failing();
+        var app = new BreakingControl();
         var host = new ReactorHostControl(ctx => VStack(
             Component(c => { c.UseEffect(() => () => cleanups++, Array.Empty<object>()); return TextBlock("child"); }),
-            Component(app.Root)))
+            Component(app.Render)))
         {
             RenderErrorHandler = _ => throw new InvalidOperationException("handler"),
         };
         Pump();
-        app.Fail = true;
-        app.Rerender!(1); // the child component's failure reaches the host: a reconcile error
+        app.SetBroken!(true); // a control that fails to mount: a reconcile error
         Pump();
         Assert.Equal([ReactorHostControl.SafeText], Texts(host));
         Assert.Equal(1, cleanups);
@@ -357,13 +373,12 @@ public sealed class HostTests : IDisposable
     public void A_reconcile_error_releases_the_half_updated_tree()
     {
         int cleanups = 0;
-        var app = new Failing();
+        var app = new BreakingControl();
         var host = new ReactorHostControl(_ => VStack(
             Component(c => { c.UseEffect(() => () => cleanups++, Array.Empty<object>()); return TextBlock("sibling"); }),
-            Component(app.Root)));
+            Component(app.Render)));
         Pump();
-        app.Fail = true;
-        app.Rerender!(1); // a child component throws: the reconcile fails part-way
+        app.SetBroken!(true); // a control fails to mount: the reconcile fails part-way
         Pump();
         Assert.IsType<Border>(host.Child);
         Assert.Equal(1, cleanups);
@@ -398,10 +413,11 @@ public sealed class HostTests : IDisposable
     [AvaloniaFact]
     public void The_sample_renders_in_a_window_and_closing_it_disposes_the_host()
     {
-        var window = ReactorApp.OpenWindow("Isotope samples", SampleApp.Root, width: 520, height: 640);
+        var window = ReactorApp.OpenWindow("Isotope samples", SampleApp.Root, width: SampleApp.WindowWidth, height: SampleApp.WindowHeight);
         Pump();
         var host = Assert.IsType<ReactorHostControl>(window.Content);
-        var texts = Texts(host);
+        // The counter and the todo app are the first tab's content, which only the visual tree reaches.
+        var texts = host.GetSelfAndVisualDescendantsOfType<TextBlock>().Select(t => t.Text).ToList();
         Assert.Contains("Clicked 0 times", texts);
         Assert.Contains("0 of 0 left", texts);
 

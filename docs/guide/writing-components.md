@@ -346,16 +346,70 @@ changes. See [Platform hooks](platform-hooks.md) for what each returns, examples
 
 ## Running an app
 
-An app is a root component in a window. `ReactorApp.Run` takes the app's Avalonia `AppBuilder` (its `Application`,
-platform and theme), opens one window around the root component and runs until it closes; the sample app
-([`samples/Isotope.UI.Samples`](../../samples/Isotope.UI.Samples/Program.cs)) does this with the counter and the todo
-app. Run it with `dotnet run` in that folder.
+An app is a root component in a window. With the `Isotope.UI.Avalonia.Desktop` package, one line in `Program.cs`
+starts it, as in Reactor (`using Isotope.UI;`; top-level statements are fine):
+
+<!-- snippet: run-app -->
+```csharp
+ReactorApp.Run<CounterApp>("Counter", width: 400, height: 300);
+```
+
+Here the root is a class component:
+
+<!-- snippet: counter-app -->
+```csharp
+public sealed class CounterApp : Component
+{
+    public override Element Render()
+    {
+        var (count, setCount) = UseState(0);
+        return VStack(
+            TextBlock($"Clicked {count} times"),
+            Button("Click", () => setCount(count + 1)));
+    }
+}
+```
+
+`ReactorApp.Run("Counter", Counter, width: 400, height: 300)` does the same for a function component. Both build the
+default app builder, `ReactorApp.CreateDefaultAppBuilder()` (Avalonia's platform detection and the Fluent theme), open
+one window and run until it closes, then return the exit code. Their other parameters are Reactor's: `fullScreen`,
+`icon` and `configure`, which gets the window's `ReactorHostControl` before the root mounts. The icon is a factory,
+`icon: () => new WindowIcon("app.ico")`, called when the window opens, because Avalonia can only build a `WindowIcon`
+once the platform is set up. On Windows, a `Main` on an MTA thread (top-level statements, an async `Main`) is moved
+to an STA thread, as Reactor does, because the clipboard and drag-and-drop need one.
+
+**Desktop only for now:** Windows, macOS and Linux, with Avalonia's classic desktop lifetime. The browser and mobile
+lifetimes aren't hosted yet.
+
+An app that sets Avalonia up itself (its own `Application`, resources or theme) passes its `AppBuilder` instead:
+`ReactorApp.Run(builder, title, root, args)`, or `ReactorApp.Run<TRoot>(builder, title, args)`, with the same options.
+These need only the `Isotope.UI.Avalonia` library. The sample app ([`samples/Isotope.UI.Samples`](../../samples/Isotope.UI.Samples/Program.cs))
+does this with the counter and the todo app. Run it with `dotnet run` in that folder.
+
+Coming from Reactor: `Run` returns the exit code (Reactor's returns nothing, so its calls compile as they are), the
+default title is "Isotope App", `configure` gets a `ReactorHostControl` (Reactor's `ReactorHost`), and an icon is
+`() => new WindowIcon(path)` (Reactor's `WindowIcon.FromPath(path)`). The `WindowSpec` overloads and the multi-window
+`Run(Action<ReactorAppContext>)` aren't here yet.
 
 The window's content is a `ReactorHostControl` (`using Isotope.UI.Hosting;`), which can also hold a root component
 anywhere in an existing Avalonia layout. It renders on Avalonia's dispatcher: however many state changes arrive before
-a pass runs, the root renders once. When a render throws, the host shows the exception (or what the
-`RenderErrorHandler` returns, or `ReactorApp.DefaultRenderErrorHandler` for every host), and the next state change
-renders again. An [error boundary](error-boundaries.md) keeps a failing part from replacing the whole content. Leaving the visual tree doesn't unmount it; `Dispose` does.
+a pass runs, the root renders once. Leaving the visual tree doesn't unmount it; `Dispose` does.
+
+When a render throws, the host's `RenderErrorHandler` is told (or `ReactorApp.DefaultRenderErrorHandler`, for every
+host that has none), and what it returns is shown instead. With no handler, or one that returns `null`, the exception
+is shown.
+
+- **A child component that throws** while it renders, or in an effect that render runs, is replaced in its own place.
+  The rest of the window keeps its controls and state. The handler gets `IsHostLevel` false, with the source
+  `ComponentRender` or `Effects`, and what it returns fills that component's place. Each later render of the
+  component tries it again: a change of its own state, or a render of its parent that renders it again (a function
+  component always is; a memo component when its dependencies change, a class component when its props do).
+- **The root's render, its effects, or a control that fails to mount or update** replaces the host's whole content
+  (`IsHostLevel` true). The next state change renders again.
+- **A handler that throws, or whose element throws,** gets a neutral "Something went wrong." in that place instead. A
+  handler that calls `error.Propagate()` gets nothing shown, and the exception is rethrown out of the dispatcher.
+- **An [error boundary](error-boundaries.md)** shows a fallback of your own for its part of the tree. The handler isn't
+  told about an error a boundary caught.
 
 <!-- snippet: host-control -->
 ```csharp

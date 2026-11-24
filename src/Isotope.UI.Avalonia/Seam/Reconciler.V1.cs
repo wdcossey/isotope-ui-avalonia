@@ -10,8 +10,8 @@ namespace Isotope.UI.Core;
 /// <see cref="ControlRegistry"/>.
 /// </summary>
 /// <remarks>
-/// Control pooling, stagger scopes and isolated unmount teardown are tier 3: controls are always created fresh and
-/// dropped on unmount, a stagger scope does nothing, and an unmount failure propagates.
+/// Control pooling and stagger scopes are tier 3: controls are always created fresh and dropped on unmount, and a
+/// stagger scope does nothing.
 /// </remarks>
 public sealed partial class Reconciler
 {
@@ -201,14 +201,6 @@ public sealed partial class Reconciler
     /// <summary>True during a theme-resource refresh pass. Theme resources are tier 3: never.</summary>
     internal bool ResourceRefreshActive => false;
 
-    // ════════════════════════════════════════════════════════════════════
-    //  Unmount isolation (tier 3: failures propagate)
-    // ════════════════════════════════════════════════════════════════════
-
-    /// <summary>Whether unmount failures are collected rather than thrown. Not on Avalonia yet: never.</summary>
-    internal bool IsolatesUnmountCleanupFailures => false;
-
-    internal void ReportIsolatedUnmountFailure(Exception ex) { }
-
-    internal void SkippingIsolatedTornDown<TState>(TState state, Action<TState> teardown) => teardown(state);
+    // Unmount isolation (IsolatesUnmountCleanupFailures and the members the handler adapter calls) is in
+    // Reconciler.ComponentErrors.cs (#28).
 }
