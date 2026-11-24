@@ -63,15 +63,12 @@
     {"factory": "ContentFlyout", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Flyout)."},
     {"factory": "DropDownButton", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: DropDownButton)."},
     {"factory": "Ellipse", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Ellipse)."},
-    {"factory": "Expr", "status": "not-ported", "alternative": "Not in Isotope yet: use a C# expression."},
     {"factory": "FlipView", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Carousel)."},
     {"factory": "Flyout", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Flyout)."},
     {"factory": "FontIcon", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: PathIcon)."},
-    {"factory": "ForEach", "status": "not-ported", "alternative": "Not in Isotope yet: map the items with LINQ (items.Select(...))."},
     {"factory": "GridView", "status": "not-ported", "alternative": "Not in Isotope yet: use a ListBox, or a WrapPanel of items."},
     {"factory": "Hyperlink", "status": "not-ported", "alternative": "Not in Isotope yet: use HyperlinkButton."},
     {"factory": "Icon", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: PathIcon)."},
-    {"factory": "If", "status": "not-ported", "alternative": "Not in Isotope yet: use C#'s conditional operator."},
     {"factory": "ImageIcon", "status": "not-ported", "alternative": "Not in Isotope yet: use an Image."},
     {"factory": "InlineUI", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: InlineUIContainer)."},
     {"factory": "InterspersedGrid", "status": "not-ported", "alternative": "Not in Isotope yet: use a Grid."},
@@ -106,7 +103,6 @@
     {"factory": "UniformGrid", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: UniformGrid)."},
     {"factory": "Viewbox", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Viewbox)."},
     {"factory": "VirtualList", "status": "not-ported", "alternative": "Not in Isotope yet: use a ListBox (virtualised)."},
-    {"factory": "When", "status": "not-ported", "alternative": "Not in Isotope yet: use C#'s conditional operator."},
     {"factory": "WrapGrid", "status": "not-ported", "alternative": "Not in Isotope yet: use WrapPanel."}
   ]
 }
