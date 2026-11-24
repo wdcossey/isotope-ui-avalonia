@@ -33,12 +33,15 @@
     <PackageReference Include="MessageFormat" Version="8.0.0" />
   </ItemGroup>
 
-  <!-- Step 3a: mechanical rewrite on import. Rewritten copies replace their upstream originals in the compile. -->
+  <!-- Step 3a: mechanical rewrite on import. Rewritten copies replace their upstream originals in the compile.
+       Step 4 (issue #4) adds the Roslyn rules in roslyn-rules.json: retargeted type references, and the members the
+       library already drops as tier 3. -->
   <PropertyGroup>
     <RewriteDir>$(BaseIntermediateOutputPath)rewritten\</RewriteDir>
+    <_MoreRewriteRules Condition="$(SpikeStep) &gt;= 4"> &quot;$(MSBuildThisFileDirectory)roslyn-rules.json&quot;</_MoreRewriteRules>
   </PropertyGroup>
   <Target Name="_RewriteUpstream" BeforeTargets="BeforeBuild;CoreCompile" Condition="$(SpikeStep) &gt;= 3">
-    <Exec Command="node &quot;$(MSBuildThisFileDirectory)..\..\tools\rewrite-upstream.mjs&quot; &quot;$(MSBuildThisFileDirectory)EngineFiles.props&quot; &quot;$(MSBuildThisFileDirectory)rewrite-rules.json&quot; &quot;$(UpstreamSrc.TrimEnd('\'))&quot; &quot;$(RewriteDir.TrimEnd('\'))&quot;" StandardOutputImportance="low" />
+    <Exec Command="node &quot;$(MSBuildThisFileDirectory)..\..\tools\rewrite-upstream.mjs&quot; &quot;$(MSBuildThisFileDirectory)EngineFiles.props&quot; &quot;$(MSBuildThisFileDirectory)rewrite-rules.json&quot; &quot;$(UpstreamSrc.TrimEnd('\'))&quot; &quot;$(RewriteDir.TrimEnd('\'))&quot;$(_MoreRewriteRules)" StandardOutputImportance="low" />
     <ReadLinesFromFile File="$(RewriteDir)manifest.txt">
       <Output TaskParameter="Lines" ItemName="_RewriteLine" />
     </ReadLinesFromFile>

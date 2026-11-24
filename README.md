@@ -30,8 +30,8 @@ This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it 
 - **Hooks for state management:** `UseState`, `UseReducer`, `UseEffect`, `UseMemo`, `UseCallback`, `UseRef`,
   `UseContext`, plus async data (`UseResource`, `UseMutation`, `UseInfiniteResource`). These come from Reactor's own
   engine, vendored unchanged or through deterministic transforms, so their semantics and fixes track upstream.
-- **Platform hooks** keep Reactor's names but are written for Avalonia: theme and colour scheme, high contrast and
-  reduced motion, windows, displays, DPI and the tray icon.
+- **Platform hooks** keep Reactor's names but are written for Avalonia: theme and colour scheme, high contrast,
+  windows, displays and DPI (reduced motion and the tray icon later).
 - **An Avalonia-native element vocabulary and layout:** Avalonia's controls and types, and flexbox through Reactor's Yoga
   port.
 
@@ -95,10 +95,11 @@ git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
-node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (567 recorded)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 605 of upstream's engine tests (756 tests; needs no upstream/)
+node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (569 at `1f078436`; 567 at `28a87225`)
+node spikes/A-engine/run-spike.mjs 4                        # Spike A step 4: + Roslyn rules (502 at `1f078436`)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 605 of upstream's engine tests (811 tests; needs no upstream/)
 node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
-node tools/sync/test/all.mjs                                # the sync harness's own tests
+node tools/sync/test/all.mjs                                # the sync harness's own tests (needs dotnet: the Roslyn step)
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms
 dotnet test tools/sync/verify/Upstream.Yoga.Tests           # upstream's Yoga tests on the vendored code
 ```
