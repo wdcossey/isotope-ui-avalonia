@@ -401,8 +401,10 @@ public sealed partial class Reconciler
     /// returns null, or returns a new control when it had to build one (the caller unmounts the old control,
     /// unless <paramref name="unmountedByUpdate"/>, and puts the new one in its slot).
     /// </summary>
+    // childIndex: upstream passes the child's new panel index for a parent .Stagger() (upstream 561c5573). Animations
+    // aren't on Avalonia yet, so it is accepted for parity and unused.
     internal UIElement? UpdateChildTracked(Element oldEl, Element newEl, UIElement control, Action requestRerender,
-        out bool unmountedByUpdate)
+        out bool unmountedByUpdate, int childIndex = -1)
     {
         unmountedByUpdate = false;
         if (!CanUpdate(oldEl, newEl))
