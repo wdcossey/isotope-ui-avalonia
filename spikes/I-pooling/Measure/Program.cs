@@ -22,9 +22,8 @@ using Avalonia.VisualTree;
 using Isotope.UI.Core;
 using Isotope.UI.Layout;
 
-var rows = args.Length > 0 ? int.Parse(args[0]) : 1000;
-var runs = args.Length > 1 ? int.Parse(args[1]) : 7;
-if (rows < 64 || runs < 1)
+int rows = 1000, runs = 7;
+if ((args.Length > 0 && !int.TryParse(args[0], out rows)) || (args.Length > 1 && !int.TryParse(args[1], out runs)) || rows < 64 || runs < 1)
 {
     Console.Error.WriteLine("usage: [<rows> (at least 64)] [<runs> (at least 1)]");
     return 1;
@@ -164,6 +163,7 @@ sealed class Bench(int n, int runs, bool quiet)
         yield return ("reverse", keys => keys.Reverse().ToArray());
         yield return ("shuffle (seeded)", keys => { var rng = new Random(42); return keys.OrderBy(_ => rng.Next()).ToArray(); });
         yield return ("move last to first", keys => [keys[^1], .. keys[..^1]]);
+        yield return ("move first to last", keys => [.. keys[1..], keys[0]]);
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -173,6 +173,7 @@ sealed class Bench(int n, int runs, bool quiet)
     private readonly Dictionary<string, string[]> _finalOrder = new();
     private readonly Dictionary<string, List<MoveOp>> _engineMoves = new();
     private bool _engineMovesAreMoves; // the engine moved with Controls.Move (move-collection.patch applied)
+    private readonly Dictionary<string, int> _movedRows = new(); // distinct rows each reorder moves
 
     // Records the edits the engine makes for each reorder (detached), for the focus checks and section 3.
     private void RecordMoves()
@@ -209,7 +210,21 @@ sealed class Bench(int n, int runs, bool quiet)
             Check(movesOnly, $"engine {name}: every collection edit is a move (a remove + insert of the same row, or a Move)");
             _engineMoves[name] = moves;
             _finalOrder[name] = host.Keys;
-            Out($"  engine edits for {name,-20} {moves.Count} moves ({events.Count} collection events)");
+            // Which original rows the moves touch, and how many go to a later index (the direction Move's contract is
+            // easiest to get wrong), by replaying the indices on a plain list.
+            var order = Enumerable.Range(0, n).ToList();
+            var movedRows = new HashSet<int>();
+            int forward = 0;
+            foreach (var (from, to) in moves)
+            {
+                var item = order[from];
+                order.RemoveAt(from);
+                order.Insert(to, item);
+                movedRows.Add(item);
+                if (to > from) forward++;
+            }
+            _movedRows[name] = movedRows.Count;
+            Out($"  engine edits for {name,-20} {moves.Count} moves ({events.Count} collection events), {movedRows.Count} distinct rows, {forward} to a later index");
         }
     }
 
@@ -275,7 +290,7 @@ sealed class Bench(int n, int runs, bool quiet)
                             if (inWindow)
                             {
                                 // Each move detaches its row with RemoveAt + Insert and none with Controls.Move; a removal detaches its row.
-                                int expected = _engineMoves.TryGetValue(name, out var mv) ? (_engineMovesAreMoves ? 0 : mv.Count) : n - kept;
+                                int expected = _engineMoves.ContainsKey(name) ? (_engineMovesAreMoves ? 0 : _movedRows[name]) : n - kept;
                                 Check(h.Detached == expected, $"engine {name} {where}: rows detached {h.Detached}, expected {expected}");
                             }
                         }
@@ -315,7 +330,10 @@ sealed class Bench(int n, int runs, bool quiet)
         public Reconciler Reconciler { get; } = new();
         public Border Root { get; } = new();
         public string[] Keys { get; set; } = [];
-        public int Detached { get; private set; }
+        private readonly HashSet<Control> _detached = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>Distinct rows taken out of the visual tree since Snapshot.</summary>
+        public int Detached => _detached.Count;
         public StackPanel List => (StackPanel)Root.Child!;
 
         public void Render()
@@ -334,10 +352,11 @@ sealed class Bench(int n, int runs, bool quiet)
         public void Snapshot(int focusIndex)
         {
             _before = RowControls();
-            foreach (var row in _before.Values) row.DetachedFromVisualTree += (_, _) => Detached++;
+            foreach (var row in _before.Values) row.DetachedFromVisualTree += (s, _) => _detached.Add((Control)s!);
             if (_window is null) return;
             FocusedButton = FocusButton(List, focusIndex);
             FocusedKey = KeyOf(List.Children[focusIndex]);
+            if (FocusedButton is null) throw new InvalidOperationException($"row {focusIndex}'s Button didn't take focus");
         }
 
         /// <summary>The Button focused before the change (window only), or null.</summary>
@@ -388,7 +407,7 @@ sealed class Bench(int n, int runs, bool quiet)
             Print("mount: rent from a full pool", where, Sample(
                 setup: () =>
                 {
-                    var pool = new Pool(int.MaxValue);
+                    var pool = new Pool(int.MaxValue, n);
                     var h = new PanelHost(inWindow, n, n);
                     h.RemoveRows(pool); // the rows were in the tree and laid out; now reset and pooled
                     h.Layout();
@@ -409,7 +428,7 @@ sealed class Bench(int n, int runs, bool quiet)
                     setup: () =>
                     {
                         var h = new PanelHost(inWindow, n, n);
-                        if (cap is { } c) h.Pool = new Pool(c);
+                        if (cap is { } c) h.Pool = new Pool(c, n);
                         return h;
                     },
                     change: h =>
@@ -430,7 +449,7 @@ sealed class Bench(int n, int runs, bool quiet)
                 layout: h => h.Layout(),
                 teardown: (h, _) => h.Close()));
             Print("unmount all: reset and pool", where, Sample(
-                setup: () => new PanelHost(inWindow, n, n) { Pool = new Pool(int.MaxValue) }, // a long-lived pool, made once
+                setup: () => new PanelHost(inWindow, n, n) { Pool = new Pool(int.MaxValue, n) }, // empty, with room for n rows
                 change: h => h.RemoveRows(h.Pool),
                 layout: h => h.Layout(),
                 teardown: (h, _) => h.Close()));
@@ -438,9 +457,19 @@ sealed class Bench(int n, int runs, bool quiet)
     }
 
     /// <summary>A per-type pool of controls, as upstream's ElementPool (which caps each type at 32).</summary>
-    private sealed class Pool(int capPerType)
+    private sealed class Pool
     {
+        private readonly int _capPerType;
         private readonly Dictionary<Type, Stack<Control>> _stacks = new();
+
+        // reserve: room for that many of each row control type up front, as a pool that has been in use has, so a timed
+        // run doesn't pay for growing the stacks.
+        public Pool(int capPerType, int reserve)
+        {
+            _capPerType = capPerType;
+            foreach (var type in new[] { typeof(Border), typeof(StackPanel), typeof(TextBlock), typeof(Button) })
+                _stacks[type] = new Stack<Control>(Math.Min(capPerType, reserve));
+        }
         public int Rented { get; private set; }
         public int Created { get; private set; }
 
@@ -458,7 +487,7 @@ sealed class Bench(int n, int runs, bool quiet)
         public void Return(Control control)
         {
             if (!_stacks.TryGetValue(control.GetType(), out var stack)) _stacks[control.GetType()] = stack = new();
-            if (stack.Count < capPerType) stack.Push(control);
+            if (stack.Count < _capPerType) stack.Push(control);
         }
     }
 
@@ -532,7 +561,10 @@ sealed class Bench(int n, int runs, bool quiet)
 
         public StackPanel Panel { get; } = new();
         public Pool? Pool { get; set; }
-        public int Detached { get; private set; }
+        private readonly HashSet<Control> _detached = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>Distinct rows taken out of the visual tree since WatchDetach.</summary>
+        public int Detached => _detached.Count;
 
         public void AddRows(string prefix, Pool? pool)
         {
@@ -552,7 +584,7 @@ sealed class Bench(int n, int runs, bool quiet)
 
         public void WatchDetach()
         {
-            foreach (var row in Panel.Children) row.DetachedFromVisualTree += (_, _) => Detached++;
+            foreach (var row in Panel.Children) row.DetachedFromVisualTree += (s, _) => _detached.Add((Control)s!);
         }
 
         public void Layout() => _window?.UpdateLayout();
@@ -604,6 +636,7 @@ sealed class Bench(int n, int runs, bool quiet)
                             var h = new PanelHost(inWindow, n, n);
                             h.WatchDetach();
                             focused = inWindow ? FocusButton(h.Panel, moves[0].From) : null; // a row that moves
+                            Check(!inWindow || focused is not null, $"replay {name} {where}: the moved row's Button took focus");
                             return h;
                         },
                         change: h =>
@@ -627,7 +660,7 @@ sealed class Bench(int n, int runs, bool quiet)
                             Check(h.Keys().SequenceEqual(expected), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: final order is the engine's");
                             Check(h.TreesInOrder(), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: visual and logical children in the new order");
                             if (inWindow) Check(h.ArrangedInOrder(), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: rows arranged top to bottom in the new order");
-                            if (inWindow) Check(h.Detached == (useMove ? 0 : moves.Count), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: rows detached {h.Detached}");
+                            if (inWindow) Check(h.Detached == (useMove ? 0 : _movedRows[name]), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: rows detached {h.Detached}");
                             if (!warmup)
                             {
                                 detachedMax = Math.Max(detachedMax, h.Detached);
@@ -644,7 +677,36 @@ sealed class Bench(int n, int runs, bool quiet)
                 }
             }
         }
+        MoveContractCheck();
         FlexMoveCheck();
+    }
+
+    // Controls.Move against the contract of upstream's Move (RemoveAt(from), then Insert(to): to is the final index), in
+    // both directions: seeded random moves on rows in a window, the trees checked after each move, the layout at the end.
+    private void MoveContractCheck()
+    {
+        const int count = 20, steps = 200;
+        var host = new PanelHost(inWindow: true, count, count);
+        var expected = Enumerable.Range(0, count).Select(i => "k" + i).ToList();
+        var rng = new Random(7);
+        int forward = 0, backward = 0;
+        bool ok = true;
+        for (int step = 0; step < steps; step++)
+        {
+            int from = rng.Next(count), to = rng.Next(count);
+            host.Panel.Children.Move(from, to);
+            var item = expected[from];
+            expected.RemoveAt(from);
+            expected.Insert(to, item);
+            if (to > from) forward++;
+            else if (to < from) backward++;
+            ok &= host.Keys().SequenceEqual(expected) && host.TreesInOrder();
+        }
+        host.Layout();
+        ok &= host.ArrangedInOrder();
+        host.Close();
+        Check(ok, "Controls.Move: children, visual and logical order and arrangement follow RemoveAt + Insert's result");
+        Out($"  Controls.Move contract, {steps} seeded moves on {count} rows in a window ({forward} to a later index, {backward} to an earlier one): same result as RemoveAt + Insert {(ok ? "yes" : "NO")}");
     }
 
     // A FlexPanel lays out from its own Yoga tree, rebuilt in Children's order on each measure: check a reverse done
@@ -655,13 +717,20 @@ sealed class Bench(int n, int runs, bool quiet)
         var flex = new FlexPanel();
         for (int i = 0; i < count; i++) flex.Children.Add(new Border { Width = 10, Height = 10, Tag = i });
         var window = ShowWindow(flex);
-        bool before = flex.Children.Select(c => c.Bounds.X).SequenceEqual(Enumerable.Range(0, count).Select(i => i * 10.0));
+        var slots = Enumerable.Range(0, count).Select(i => i * 10.0).ToArray();
+        bool before = flex.Children.Select(c => c.Bounds.X).SequenceEqual(slots);
+        // Reverse with moves to earlier indices, then back with moves to later ones.
         for (int i = 0; i < count - 1; i++) flex.Children.Move(count - 1, i);
         window.UpdateLayout();
-        bool order = flex.Children.Select(c => (int)c.Tag!).SequenceEqual(Enumerable.Range(0, count).Reverse());
-        bool arranged = flex.Children.Select(c => c.Bounds.X).SequenceEqual(Enumerable.Range(0, count).Select(i => i * 10.0));
+        bool reversed = flex.Children.Select(c => (int)c.Tag!).SequenceEqual(Enumerable.Range(0, count).Reverse())
+                        && flex.Children.Select(c => c.Bounds.X).SequenceEqual(slots);
+        for (int i = 0; i < count - 1; i++) flex.Children.Move(0, count - 1 - i);
+        window.UpdateLayout();
+        bool restored = flex.Children.Select(c => (int)c.Tag!).SequenceEqual(Enumerable.Range(0, count))
+                        && flex.Children.Select(c => c.Bounds.X).SequenceEqual(slots);
         window.Close();
-        Check(before && order && arranged, "FlexPanel: a reverse by Controls.Move lays the row out in the new order");
-        Out($"  FlexPanel reverse by Controls.Move, {count} children: laid out in the new order {(before && order && arranged ? "yes" : "NO")}");
+        bool ok = before && reversed && restored;
+        Check(ok, "FlexPanel: reverses by Controls.Move, in both directions, lay the row out in the new order");
+        Out($"  FlexPanel reversed by Controls.Move to earlier indices and back to later ones, {count} children: laid out in the new order {(ok ? "yes" : "NO")}");
     }
 }
