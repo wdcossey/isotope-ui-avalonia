@@ -90,6 +90,29 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
+    public void NumberBox_bound_that_clips_the_value_drops_the_coercion_echo()
+    {
+        // With ClipValueToMinMax on (here from a setter), a bound moved past the value clips it and raises ValueChanged:
+        // the engine's, not the user's.
+        var reported = new List<double>();
+        double min = 0;
+        var host = new TestHost(() => NumberBox(onValueChanged: v => reported.Add(v)) with
+        {
+            Minimum = min, Setters = [c => c.ClipValueToMinMax = true],
+        });
+        var box = host.All<NumericUpDown>()[0];
+        box.Value = 5;
+        Assert.Equal([5.0], reported);
+
+        min = 10;
+        host.Render();
+        Assert.Equal(10m, box.Value);
+        Assert.Equal([5.0], reported);
+        box.Value = 12; // the next user change still arrives
+        Assert.Equal([5.0, 12.0], reported);
+    }
+
+    [AvaloniaFact]
     public void NumberBox_default_bounds_are_decimal_range()
     {
         var host = new TestHost(() => NumberBox(1));

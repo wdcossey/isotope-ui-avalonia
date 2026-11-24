@@ -54,9 +54,10 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
     // in the new range, and a bound that coerces the value drops the change event the coercion raises. Avalonia's
     // control coerces only with ClipValueToMinMax (off by default; a Setters action can turn it on), so only then does
     // a bound expect that event: a token for an event that never comes would swallow the next user change. Value is
-    // controlled on the counter channel (Avalonia raises ValueChanged inside the write). Values compare as the decimals
-    // the control holds, so a double that doesn't round-trip through decimal isn't taken for drift (a write that
-    // changes nothing raises no event, and its suppression token would swallow the next user change).
+    // controlled on the counter channel (Avalonia raises ValueChanged inside the write, and doesn't clip a written
+    // value, even with ClipValueToMinMax). Values compare as the decimals the control holds, so a double that doesn't
+    // round-trip through decimal isn't taken for drift (a write that changes nothing raises no event, and its token
+    // would swallow the next user change).
     private static partial ControlDescriptor<NumberBoxElement, NumericUpDown> Customize(ControlDescriptor<NumberBoxElement, NumericUpDown> d)
         => d.CoercingOneWay(
                 get:               static e => e.Minimum,

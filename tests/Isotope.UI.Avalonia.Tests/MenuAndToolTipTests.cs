@@ -150,6 +150,36 @@ public sealed class MenuAndToolTipTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void ToggleMenuItem_inserted_before_another_gets_its_own_check_state()
+    {
+        // Items are paired by position: the item that takes another's place has its own value written.
+        var reported = new List<bool>();
+        var both = false;
+        var host = new TestHost(() => MenuBar(Menu("Format", both
+            ? [ToggleMenuItem("Bold", false), ToggleMenuItem("Wrap", false, v => reported.Add(v))]
+            : [ToggleMenuItem("Wrap", false, v => reported.Add(v))])));
+        var format = Item(host.All<AvMenu>()[0], 0);
+        Click(host, Item(format, 0)); // the user ticks Wrap; the app keeps its state as it was
+        Assert.Equal([true], reported);
+        format.IsSubMenuOpen = false;
+
+        both = true;
+        host.Render();
+        Assert.Equal(["Bold", "Wrap"], Items(format).Cast<AvMenuItem>().Select(i => i.Header));
+        Assert.False(Item(format, 0).IsChecked);
+    }
+
+    [AvaloniaFact]
+    public void Menu_factories_reject_null_items()
+    {
+        Assert.Throws<ArgumentNullException>(() => Menu("File", null!));
+        Assert.Throws<ArgumentNullException>(() => MenuSubItem("Recent", null!));
+        Assert.Throws<ArgumentNullException>(() => MenuItems(null!));
+        Assert.Throws<ArgumentNullException>(() => MenuItems(PlacementMode.Bottom, null!));
+        Assert.Throws<ArgumentNullException>(() => Tab("A", null!));
+    }
+
+    [AvaloniaFact]
     public void RadioMenuItem_click_checks_it_unchecks_its_group_and_calls_back()
     {
         var log = new List<string>();

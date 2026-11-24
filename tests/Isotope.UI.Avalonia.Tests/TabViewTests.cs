@@ -165,6 +165,24 @@ public class TabViewTests
     }
 
     [AvaloniaFact]
+    public void TabView_index_past_the_end_does_not_swallow_the_next_user_selection()
+    {
+        // An index the control can't take (the app closed a tab and left its index) changes nothing and raises no event,
+        // so it must not leave anything behind to drop the user's next click.
+        var reported = new List<int>();
+        var count = 3;
+        var host = new TestHost(() => TabView(2, i => reported.Add(i),
+            Enumerable.Range(0, count).Select(i => Tab("T" + i, TextBlock("t" + i))).ToArray()));
+        var tabControl = host.All<TabControl>()[0];
+
+        count = 2;
+        host.Render();
+        host.Render();
+        tabControl.SelectedIndex = tabControl.SelectedIndex == 0 ? 1 : 0; // the user's click
+        Assert.Equal([tabControl.SelectedIndex], reported);
+    }
+
+    [AvaloniaFact]
     public void TabView_tab_contents_are_torn_down_with_the_tabs()
     {
         var log = new List<string>();

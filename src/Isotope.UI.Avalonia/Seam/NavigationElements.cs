@@ -42,13 +42,14 @@ public partial record TabViewElement(TabViewItemData[] Tabs) : Element
         var tabs = (TabControl)s!;
         if (!ReferenceEquals(args.Source, tabs)) return;
         if (!Reconciler.TryGetReactorState(tabs, out var state)) return;
-        if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
+        if (ChangeEchoSuppressor.ShouldSuppressEcho(state, tabs.SelectedIndex)) return;
         (state.Element as TabViewElement)?.OnSelectedIndexChanged?.Invoke(tabs.SelectedIndex);
     };
 
     // As upstream's: the TabItemsHost (each TabViewItemData a TabItem, its content mounted as the item's content) and
-    // the controlled SelectedIndex. Unlike upstream's, which diffs by value, the selection uses the counter channel, as
-    // ComboBox's does: Avalonia raises SelectionChanged inside the SelectedIndex write.
+    // the controlled SelectedIndex on the value-diff channel: the write arms the value it expects to read back, and an
+    // index the control doesn't take (past the end) clears the arm rather than leaving a token for the user's next
+    // click to be dropped by.
     private static partial ControlDescriptor<TabViewElement, TabControl> Customize(ControlDescriptor<TabViewElement, TabControl> d)
     {
         d.Children = new TabItemsHost<TabViewElement, TabControl, TabViewItemData>(
@@ -71,7 +72,8 @@ public partial record TabViewElement(TabViewItemData[] Tabs) : Element
             callback:    static e => e.OnSelectedIndexChanged,
             trampoline:  __SelectionChangedTrampoline,
             slotIsNull:  static p => p.SelectionChangedTrampoline is null,
-            setSlot:     static (p, h) => p.SelectionChangedTrampoline = h);
+            setSlot:     static (p, h) => p.SelectionChangedTrampoline = h,
+            valueDiffEcho: true);
     }
 }
 

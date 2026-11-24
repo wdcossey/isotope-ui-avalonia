@@ -142,14 +142,15 @@ internal static class MenuItemsSync
             case ToggleMenuFlyoutItemData t:
                 SetHeader(item, t.Text);
                 item.ToggleType = MenuItemToggleType.CheckBox;
-                // As upstream's: written when the declared value changes, so the control keeps a toggle until then.
-                if (old is not ToggleMenuFlyoutItemData ot || ot.IsChecked != t.IsChecked) item.IsChecked = t.IsChecked;
+                // As upstream's: written when the declared value changes, so the control keeps a toggle until then. Items
+                // are paired by position, so an item whose text changed is another item: its value is written.
+                if (old is not ToggleMenuFlyoutItemData ot || ot.IsChecked != t.IsChecked || ot.Text != t.Text) item.IsChecked = t.IsChecked;
                 break;
             case RadioMenuFlyoutItemData r:
                 SetHeader(item, r.Text);
                 item.ToggleType = MenuItemToggleType.Radio;
                 if (item.GroupName != r.GroupName) item.GroupName = r.GroupName;
-                if (old is not RadioMenuFlyoutItemData or_ || or_.IsChecked != r.IsChecked) item.IsChecked = r.IsChecked;
+                if (old is not RadioMenuFlyoutItemData or_ || or_.IsChecked != r.IsChecked || or_.Text != r.Text) item.IsChecked = r.IsChecked;
                 break;
             case MenuFlyoutSubItemData s:
                 SetHeader(item, s.Text);

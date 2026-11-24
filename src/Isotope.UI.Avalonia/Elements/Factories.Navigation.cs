@@ -40,7 +40,12 @@ public static partial class Factories
     }
 
     /// <summary>One tab: its header text and its content.</summary>
-    public static TabViewItemData Tab(string header, Element content) => new(header, content);
+    /// <exception cref="ArgumentNullException"><paramref name="content"/> is null.</exception>
+    public static TabViewItemData Tab(string header, Element content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        return new(header, content);
+    }
 
     // ── Split view ──────────────────────────────────────────────────
 
@@ -60,7 +65,12 @@ public static partial class Factories
     }
 
     /// <summary>A top-level menu of a <see cref="MenuBar"/>.</summary>
-    public static MenuBarItemData Menu(string title, params MenuFlyoutItemBase[] items) => new(title, items);
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
+    public static MenuBarItemData Menu(string title, params MenuFlyoutItemBase[] items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new(title, items);
+    }
 
     /// <summary>A menu item that runs <paramref name="onClick"/> when chosen.</summary>
     public static MenuFlyoutItemData MenuItem(string text, Action? onClick = null) => new(text, onClick);
@@ -77,12 +87,26 @@ public static partial class Factories
     public static MenuFlyoutSeparatorData MenuSeparator() => new();
 
     /// <summary>A submenu.</summary>
-    public static MenuFlyoutSubItemData MenuSubItem(string text, params MenuFlyoutItemBase[] items) => new(text, items);
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
+    public static MenuFlyoutSubItemData MenuSubItem(string text, params MenuFlyoutItemBase[] items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new(text, items);
+    }
 
     /// <summary>The items of a context menu, for <c>.WithContextFlyout(...)</c>.</summary>
-    public static MenuFlyoutContentElement MenuItems(params MenuFlyoutItemBase[] items) => new(items);
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
+    public static MenuFlyoutContentElement MenuItems(params MenuFlyoutItemBase[] items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new(items);
+    }
 
     /// <summary>The items of a context menu that opens on the given side of its control.</summary>
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
     public static MenuFlyoutContentElement MenuItems(Avalonia.Controls.PlacementMode placement, params MenuFlyoutItemBase[] items)
-        => new(items) { Placement = placement };
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new(items) { Placement = placement };
+    }
 }
