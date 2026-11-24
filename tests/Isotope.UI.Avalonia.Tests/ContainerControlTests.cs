@@ -46,16 +46,21 @@ public class ContainerControlTests
     }
 
     [AvaloniaFact]
-    public void Border_brush_set_back_to_null_returns_to_the_default()
+    public void Border_brush_thickness_and_radius_set_back_to_null_return_to_the_defaults()
     {
         var set = true;
-        var host = new TestHost(() => set ? Border(null) with { BorderBrush = Brushes.Red } : Border(null));
+        var host = new TestHost(() => set
+            ? Border(null) with { BorderBrush = Brushes.Red, BorderThickness = 2, CornerRadius = 8 }
+            : Border(null));
         var border = host.All<Border>()[0];
         Assert.Same(Brushes.Red, border.BorderBrush);
+        Assert.Equal((new Thickness(2), new CornerRadius(8)), (border.BorderThickness, border.CornerRadius));
 
         set = false;
         host.Render();
+        var defaults = new Border();
         Assert.Null(border.BorderBrush);
+        Assert.Equal((defaults.BorderThickness, defaults.CornerRadius), (border.BorderThickness, border.CornerRadius));
     }
 
     [AvaloniaFact]
@@ -204,7 +209,7 @@ public class ContainerControlTests
     }
 
     [AvaloniaFact]
-    public void Grid_moves_a_child_between_cells_in_place_and_rebuilds_tracks_only_for_a_new_definition()
+    public void Grid_moves_a_child_between_cells_in_place_and_rebuilds_tracks_only_when_they_change()
     {
         var definition = new GridDefinition(["*", "*"], ["Auto"]);
         var column = 1;
@@ -214,7 +219,8 @@ public class ContainerControlTests
         var firstTrack = grid.ColumnDefinitions[0];
         Assert.Equal(1, AvaloniaGrid.GetColumn(text));
 
-        column = 0; // the same definition: tracks kept, the cell rewritten
+        column = 0; // an equal definition (a new instance, as the Grid factory builds): tracks kept, the cell rewritten
+        definition = new GridDefinition(["*", "*"], ["Auto"]);
         host.Render();
         Assert.Same(text, host.All<TextBlock>()[0]);
         Assert.Equal(0, AvaloniaGrid.GetColumn(text));

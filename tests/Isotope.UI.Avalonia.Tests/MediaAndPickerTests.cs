@@ -39,7 +39,7 @@ public class MediaAndPickerTests
     {
         var path = Path.Combine(Path.GetTempPath(), "isotope-image-" + Guid.NewGuid().ToString("N") + ".png");
         using (var bitmap = new WriteableBitmap(new PixelSize(3, 2), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul))
-            bitmap.Save(path);
+            bitmap.Save(path, new PngBitmapEncoderOptions());
         try
         {
             var source = path;

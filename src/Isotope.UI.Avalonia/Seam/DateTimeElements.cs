@@ -6,7 +6,8 @@ namespace Isotope.UI.Core;
 
 // The date and time pickers (#19). Records mirror upstream's (Reactor's member names, Avalonia's value types): Reactor's
 // Date and Time are Avalonia's SelectedDate and SelectedTime, which are nullable on Avalonia. Avalonia raises their
-// change events synchronously inside the write, so upstream's counter channel drops the engine's own writes.
+// change events synchronously inside the write; upstream's Controlled entry arms each value it writes and drops the
+// event that reads it back, so the engine's own writes don't echo.
 
 /// <summary>
 /// A date picker, as an Avalonia <see cref="Avalonia.Controls.DatePicker"/>. <see cref="Date"/> defaults to

@@ -8,8 +8,9 @@ namespace Isotope.UI.Core;
 // The toggle controls (#19): CheckBox, ToggleSwitch and RadioButton, which Avalonia derives from ToggleButton. Records
 // mirror upstream's (Reactor's member names, Avalonia's value types); descriptors are generated, with the controlled
 // IsChecked written in Customize because the record's value type differs from the control's (bool? on Avalonia).
-// Avalonia raises IsCheckedChanged synchronously inside the write, so the controlled entries use upstream's counter
-// channel: a write the engine makes is dropped by its suppression scope, a user's click reaches the callback. The
+// Avalonia raises IsCheckedChanged synchronously inside the write. The controlled entries are upstream's Controlled
+// entry, which arms the value it writes and drops the change event that reads that value back, so a write the engine
+// makes doesn't echo and a user's click reaches the callback. The
 // IsCheckedChanged event is excluded from the generated entries, as upstream excludes the events it hand-codes, so
 // OnIsCheckedChanged isn't also wired as a plain event callback.
 
@@ -29,7 +30,10 @@ public partial record CheckBoxElement(
     /// <summary>Whether a click cycles through the indeterminate state (null) too.</summary>
     public bool IsThreeState { get; init; }
 
-    /// <summary>The three-state value (null: indeterminate), as upstream's; the factories set it with <see cref="IsChecked"/>.</summary>
+    /// <summary>
+    /// The three-state value (null: indeterminate), as upstream's. As upstream's, it isn't written: <see cref="IsChecked"/>
+    /// is the value, and <see cref="Factories.ThreeStateCheckBox"/> sets both.
+    /// </summary>
     public bool? CheckedState { get; init; }
 
     /// <summary>The three-state change callback: receives null for indeterminate. Takes precedence over <see cref="OnIsCheckedChanged"/>.</summary>

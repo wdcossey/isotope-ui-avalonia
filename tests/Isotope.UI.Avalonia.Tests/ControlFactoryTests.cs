@@ -47,6 +47,8 @@ public class ControlFactoryTests
         Assert.Equal(Optional<int>.Of(0), list.SelectedIndex);
         Assert.Same(changed, list.OnSelectedIndexChanged);
         Assert.False(ListBox(items).SelectedIndex.HasValue);
+        Assert.Throws<ArgumentNullException>(() => ComboBox(null!));
+        Assert.Throws<ArgumentNullException>(() => ListBox(null!));
 
         var day = new DateTimeOffset(2026, 1, 2, 0, 0, 0, TimeSpan.Zero);
         Action<DateTimeOffset> dateChanged = _ => { };
@@ -92,7 +94,7 @@ public class ControlFactoryTests
         Assert.Equal(["Auto", "*", "2.5*", "120"], new[] { GridSize.Auto, GridSize.Star(), GridSize.Star(2.5), GridSize.Px(120) }.Select(s => s.ToString()));
         Assert.Equal((10.0, 20.0), (GridSize.Star().MinSize(10).MaxSize(20).Min, GridSize.Star().MinSize(10).MaxSize(20).Max));
         Assert.Equal(new GridLength(3, GridUnitType.Star), (GridLength)GridSize.Star(3));
-        foreach (var bad in new[] { "", "x", "*x", "-1", "0*" })
+        foreach (var bad in new[] { "", "x", "*x", "-1", "0*", "Infinity", "Infinity*", "NaN" })
             Assert.Throws<FormatException>(() => GridSize.Parse(bad));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Px(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Star(0));
@@ -117,6 +119,7 @@ public class ControlFactoryTests
             () => Image("none.png"),
             () => Border(child) with { CornerRadius = 2 },
             () => new GridElement(definition, none) { RowSpacing = 1 },
+            () => Grid([GridSize.Star()], [GridSize.Auto]), // a new, equal definition each render
             () => ScrollViewer(child),
         ];
         foreach (var make in equal)

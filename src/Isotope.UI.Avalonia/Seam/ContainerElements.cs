@@ -19,8 +19,8 @@ namespace Isotope.UI.Core;
 [WrapContent("Child")]
 [WrapManual("Background")]
 [WrapManual("BorderBrush")]
-[WrapConvert("CornerRadius")]
-[WrapConvert("BorderThickness")]
+[WrapManual("CornerRadius")]
+[WrapManual("BorderThickness")]
 public partial record BorderElement(Element? Child) : Element
 {
     /// <summary>The same radius on every corner, in DIPs.</summary>
@@ -42,14 +42,25 @@ public partial record BorderElement(Element? Child) : Element
 
     internal Action<Border>[] Setters { get; init; } = [];
 
-    // Background is written by the reconciler with the modifier's (Reconciler.ApplyBackground). BorderBrush is written
-    // here: the generated entry for an interface-typed member (IBrush) converts it to Optional<IBrush> implicitly, which
-    // C# doesn't allow from an interface, so it is the same entry spelled with Optional.Of.
+    // Background is written by the reconciler with the modifier's (Reconciler.ApplyModifiers). The rest go through the
+    // ClearValue channel, so a member set back to null gives the control its default again:
+    // - BorderBrush: the generated entry for an interface-typed member (IBrush) converts it to Optional<IBrush>
+    //   implicitly, which C# doesn't allow from an interface, so it is the same entry spelled with Optional.Of;
+    // - CornerRadius and BorderThickness: upstream's [WrapConvert] (a scalar written through the struct's constructor)
+    //   skips the write for null instead of clearing.
     private static partial ControlDescriptor<BorderElement, Border> Customize(ControlDescriptor<BorderElement, Border> d)
         => d.OneWay<IBrush>(
-            get: static e => e.BorderBrush is null ? Optional<IBrush>.Unset : Optional<IBrush>.Of(e.BorderBrush),
-            set: static (c, v) => c.BorderBrush = v,
-            dp:  Border.BorderBrushProperty);
+                get: static e => e.BorderBrush is null ? Optional<IBrush>.Unset : Optional<IBrush>.Of(e.BorderBrush),
+                set: static (c, v) => c.BorderBrush = v,
+                dp:  Border.BorderBrushProperty)
+            .OneWay<CornerRadius>(
+                get: static e => e.CornerRadius is { } r ? new CornerRadius(r) : Optional<CornerRadius>.Unset,
+                set: static (c, v) => c.CornerRadius = v,
+                dp:  Border.CornerRadiusProperty)
+            .OneWay<Thickness>(
+                get: static e => e.BorderThickness is { } t ? new Thickness(t) : Optional<Thickness>.Unset,
+                set: static (c, v) => c.BorderThickness = v,
+                dp:  Border.BorderThicknessProperty);
 }
 
 /// <summary>
@@ -88,8 +99,8 @@ public partial record ExpanderElement(
     // As upstream's: Content is the single content slot, Header a string, and IsExpanded controlled. Unlike upstream's,
     // the controlled entry listens to IsExpanded's own change: Avalonia raises Expanding and Collapsing before the
     // change (either can be cancelled) and Expanded and Collapsed after a content transition, posted, where WinUI
-    // raises Expanding and Collapsed with the change. The property change is raised inside the write, so upstream's
-    // counter channel drops the echo of the engine's own writes.
+    // raises Expanding and Collapsed with the change. The property change is raised inside the write, where upstream's
+    // Controlled entry, which arms the value it writes, drops it as the echo of the engine's own write.
     private static partial ControlDescriptor<ExpanderElement, Expander> Customize(ControlDescriptor<ExpanderElement, Expander> d)
     {
         d.Children = new SingleContent<ExpanderElement, Expander>(

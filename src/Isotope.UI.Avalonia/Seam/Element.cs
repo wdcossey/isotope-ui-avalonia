@@ -106,9 +106,14 @@ public abstract record Element
                 && x.OffContent == y.OffContent && x.Header == y.Header && ReferenceEquals(x.Setters, y.Setters),
             (RadioButtonElement x, RadioButtonElement y) => x.Label == y.Label && x.IsChecked.Equals(y.IsChecked)
                 && x.GroupName == y.GroupName && ReferenceEquals(x.Setters, y.Setters),
+            // ComboBox's three callbacks are subscribed separately, each when it first appears, so a change in which of
+            // them are present declines the skip (HasCallbacks alone only says whether any is).
             (ComboBoxElement x, ComboBoxElement y) => ReferenceEquals(x.Items, y.Items) && x.SelectedIndex.Equals(y.SelectedIndex)
                 && x.PlaceholderText == y.PlaceholderText && x.IsEditable == y.IsEditable
-                && x.MaxDropDownHeight.Equals(y.MaxDropDownHeight) && ReferenceEquals(x.Setters, y.Setters),
+                && x.MaxDropDownHeight.Equals(y.MaxDropDownHeight) && ReferenceEquals(x.Setters, y.Setters)
+                && (x.OnSelectedIndexChanged is null) == (y.OnSelectedIndexChanged is null)
+                && (x.OnDropDownOpened is null) == (y.OnDropDownOpened is null)
+                && (x.OnDropDownClosed is null) == (y.OnDropDownClosed is null),
             (ProgressElement x, ProgressElement y) => x.Value == y.Value && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && ReferenceEquals(x.Setters, y.Setters),
             (ImageElement x, ImageElement y) => x.Source == y.Source && x.Stretch == y.Stretch && ReferenceEquals(x.Setters, y.Setters),
@@ -116,7 +121,7 @@ public abstract record Element
                 && x.CornerRadius == y.CornerRadius && x.BorderThickness == y.BorderThickness && x.Padding == y.Padding
                 && ReferenceEquals(x.Child, y.Child) && ReferenceEquals(x.Setters, y.Setters),
             (GridElement x, GridElement y) => x.RowSpacing == y.RowSpacing && x.ColumnSpacing == y.ColumnSpacing
-                && ReferenceEquals(x.Definition, y.Definition) && ReferenceEquals(x.Children, y.Children)
+                && Equals(x.Definition, y.Definition) && ReferenceEquals(x.Children, y.Children)
                 && ReferenceEquals(x.Setters, y.Setters),
             (ScrollViewerElement x, ScrollViewerElement y) => x.HorizontalScrollBarVisibility == y.HorizontalScrollBarVisibility
                 && x.VerticalScrollBarVisibility == y.VerticalScrollBarVisibility && ReferenceEquals(x.Child, y.Child)

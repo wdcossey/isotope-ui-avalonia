@@ -117,6 +117,60 @@ public class ItemsControlTests
     }
 
     [AvaloniaFact]
+    public void ComboBox_selection_and_drop_down_callbacks_work_together()
+    {
+        // The three share the control's one event payload: none replaces another's.
+        var events = new List<string>();
+        var host = new TestHost(() => ComboBox(["a", "b"], 0, i => events.Add("selected " + i)) with
+        {
+            OnDropDownOpened = () => events.Add("opened"),
+            OnDropDownClosed = () => events.Add("closed"),
+        });
+        var window = new Window { Content = host.Root };
+        window.Show();
+        try
+        {
+            var combo = host.All<ComboBox>()[0];
+            combo.IsDropDownOpen = true;
+            global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            combo.SelectedIndex = 1;
+            combo.IsDropDownOpen = false;
+            global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Assert.Equal(["opened", "selected 1", "closed"], events);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void ComboBox_callback_added_on_a_later_render_is_wired()
+    {
+        var events = new List<string>();
+        string[] items = ["a", "b"];
+        Action<int> selected = i => events.Add("selected " + i);
+        var withOpened = false;
+        var host = new TestHost(() => withOpened
+            ? ComboBox(items, 0, selected) with { OnDropDownOpened = () => events.Add("opened") }
+            : ComboBox(items, 0, selected));
+        var window = new Window { Content = host.Root };
+        window.Show();
+        try
+        {
+            withOpened = true; // otherwise equal: still not skipped, so the new callback is subscribed
+            host.Render();
+            host.All<ComboBox>()[0].IsDropDownOpen = true;
+            global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Assert.Equal(["opened"], events);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void ListBox_mounts_its_items_and_selection_and_updates_the_items_in_place()
     {
         string[] items = ["a", "b", "c"];
@@ -173,8 +227,21 @@ public class ItemsControlTests
         var list = host.All<ListBox>()[0];
         Assert.Equal(SelectionMode.Multiple, list.SelectionMode);
 
-        list.Selection.Select(0);
         list.Selection.Select(2);
+        list.Selection.Select(0);
         Assert.Equal([0, 2], snapshots[^1]);
+    }
+
+    [AvaloniaFact]
+    public void ListBox_multiple_selection_tells_equal_items_apart()
+    {
+        var snapshots = new List<IReadOnlyList<int>>();
+        var host = new TestHost(() => new ListBoxElement(["x", "y", "x"])
+        {
+            SelectionMode = SelectionMode.Multiple,
+            OnSelectionChanged = snapshots.Add,
+        });
+        host.All<ListBox>()[0].Selection.Select(2);
+        Assert.Equal([2], snapshots[^1]);
     }
 }

@@ -42,22 +42,34 @@ public partial record ComboBoxElement(
     internal override bool HasCallbacks =>
         OnSelectedIndexChanged is not null || OnDropDownOpened is not null || OnDropDownClosed is not null;
 
+    private static readonly EventHandler<SelectionChangedEventArgs> __SelectionChangedTrampoline = (s, _) =>
+    {
+        var cb = (ComboBox)s!;
+        if (!Reconciler.TryGetReactorState(cb, out var state)) return;
+        if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
+        (state.Element as ComboBoxElement)?.OnSelectedIndexChanged?.Invoke(cb.SelectedIndex);
+    };
+
     private static readonly EventHandler __DropDownOpenedTrampoline = (s, _) =>
         (Reconciler.GetElementTag((ComboBox)s!) as ComboBoxElement)?.OnDropDownOpened?.Invoke();
 
     private static readonly EventHandler __DropDownClosedTrampoline = (s, _) =>
         (Reconciler.GetElementTag((ComboBox)s!) as ComboBoxElement)?.OnDropDownClosed?.Invoke();
 
-    // As upstream's: SelectedIndex is the controlled value, the two drop-down events are hand-wired (the generator
-    // pairs no callback with a non-generic EventHandler event), and MaxDropDownHeight's NaN means "leave the control's".
+    // As upstream's: SelectedIndex is the controlled value and the two drop-down events are hand-wired (the generator
+    // pairs no callback with a non-generic EventHandler event), all three through one payload type, because a control
+    // holds one event payload; MaxDropDownHeight's NaN means "leave the control's". Unlike upstream's, the selection
+    // uses the counter channel rather than the value-diff one: Avalonia raises SelectionChanged inside the write.
     private static partial ControlDescriptor<ComboBoxElement, ComboBox> Customize(ControlDescriptor<ComboBoxElement, ComboBox> d)
-        => d.Controlled<int, SelectionChangedEventArgs>(
+        => d.HandCodedControlled<ComboBoxEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
                 get:         static e => e.SelectedIndex,
                 set:         static (c, v) => c.SelectedIndex = v,
-                subscribe:   static (fe, h) => ((ComboBox)fe).SelectionChanged += h,
-                unsubscribe: static (fe, h) => { },
+                readBack:    static c => c.SelectedIndex,
+                subscribe:   static (c, h) => c.SelectionChanged += h,
                 callback:    static e => e.OnSelectedIndexChanged,
-                readBack:    static c => c.SelectedIndex)
+                trampoline:  __SelectionChangedTrampoline,
+                slotIsNull:  static p => p.SelectionChangedTrampoline is null,
+                setSlot:     static (p, h) => p.SelectionChangedTrampoline = h)
             .HandCodedEvent<ComboBoxEventPayload, EventHandler>(
                 subscribe:       static (c, h) => c.DropDownOpened += h,
                 callbackPresent: static e => e.OnDropDownOpened,
@@ -91,7 +103,7 @@ public partial record ListBoxElement(string[] Items) : Element
 
     /// <summary>
     /// The selection callback for a multiple-selection <see cref="SelectionMode"/>: receives every selected index, in
-    /// selection order, after each change.
+    /// ascending order, after each change.
     /// </summary>
     public Action<IReadOnlyList<int>>? OnSelectionChanged { get; init; }
 
@@ -111,16 +123,12 @@ public partial record ListBoxElement(string[] Items) : Element
         if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
         if (state.Element is not ListBoxElement el) return;
         el.OnSelectedIndexChanged?.Invoke(lb.SelectedIndex);
+        // Unlike upstream's, which maps each selected item back with IndexOf, the indexes come from the selection model,
+        // so equal strings at two positions are told apart.
         if (el.OnSelectionChanged is { } h)
         {
-            var selected = lb.SelectedItems;
-            var snapshot = new List<int>(selected?.Count ?? 0);
-            if (selected is not null)
-                for (int i = 0; i < selected.Count; i++)
-                {
-                    var idx = lb.Items.IndexOf(selected[i]);
-                    if (idx >= 0) snapshot.Add(idx);
-                }
+            var snapshot = lb.Selection.SelectedIndexes.ToList();
+            snapshot.Sort();
             h(snapshot);
         }
     };

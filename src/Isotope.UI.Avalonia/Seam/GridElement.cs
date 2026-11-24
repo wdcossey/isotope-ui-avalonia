@@ -53,8 +53,9 @@ namespace Isotope.UI.Core
             else ui.ClearValue(Grid.ColumnSpanProperty);
         }
 
-        // As upstream's: the definition rebuilds the row and column definitions, only when the definition instance
-        // changes (reference identity), so a grid re-rendered with the same definition keeps its tracks.
+        // The definition rebuilds the row and column definitions only when it changes. Unlike upstream's, which compares
+        // the instance, it compares the tracks (GridDefinition's equality), so the definition the Grid factory builds on
+        // every render doesn't rebuild the tracks each time.
         private static partial ControlDescriptor<GridElement, Grid> Customize(ControlDescriptor<GridElement, Grid> d)
             => d.OneWay<GridDefinition>(
                 get: static e => e.Definition,
@@ -65,8 +66,7 @@ namespace Isotope.UI.Core
                     if (v is null) return;
                     foreach (var col in v.Columns) c.ColumnDefinitions.Add(ColumnDefinitionOf(col));
                     foreach (var row in v.Rows) c.RowDefinitions.Add(RowDefinitionOf(row));
-                },
-                comparer: ReferenceEqualityComparer<GridDefinition>.Instance);
+                });
 
         private static ColumnDefinition ColumnDefinitionOf(GridSize size)
         {
@@ -83,18 +83,28 @@ namespace Isotope.UI.Core
             if (size.Max is { } max) def.MaxHeight = max;
             return def;
         }
-
-        private sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T> where T : class
-        {
-            public static readonly ReferenceEqualityComparer<T> Instance = new();
-            public bool Equals(T? x, T? y) => ReferenceEquals(x, y);
-            public int GetHashCode(T obj) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
-        }
     }
 
-    /// <summary>A grid's column and row tracks (upstream's <c>GridDefinition</c>).</summary>
+    /// <summary>
+    /// A grid's column and row tracks (upstream's <c>GridDefinition</c>). Two definitions are equal when their tracks are
+    /// (upstream's record compares the arrays by reference).
+    /// </summary>
     public record GridDefinition(GridSize[] Columns, GridSize[] Rows)
     {
+        public virtual bool Equals(GridDefinition? other)
+            => ReferenceEquals(this, other)
+                || (other is not null && EqualityContract == other.EqualityContract
+                    && Columns.AsSpan().SequenceEqual(other.Columns) && Rows.AsSpan().SequenceEqual(other.Rows));
+
+        public override int GetHashCode()
+        {
+            var hash = new HashCode();
+            foreach (var c in Columns) hash.Add(c);
+            hash.Add(Columns.Length);
+            foreach (var r in Rows) hash.Add(r);
+            return hash.ToHashCode();
+        }
+
         /// <summary>Tracks from strings: <c>"Auto"</c>, <c>"*"</c>, <c>"2*"</c> or a size in DIPs (<see cref="GridSize.Parse"/>).</summary>
         public GridDefinition(string[] columns, string[] rows)
             : this(Parse(columns, nameof(columns)), Parse(rows, nameof(rows)))
@@ -187,11 +197,12 @@ namespace Isotope.UI
             {
                 var numeric = trimmed[..^1];
                 if (numeric.Length > 0
-                    && double.TryParse(numeric, NumberStyles.Float, CultureInfo.InvariantCulture, out var stars) && stars > 0)
+                    && double.TryParse(numeric, NumberStyles.Float, CultureInfo.InvariantCulture, out var stars)
+                    && double.IsFinite(stars) && stars > 0)
                     return Star(stars);
                 throw new FormatException($"Invalid grid track '{s}': could not parse star weight.");
             }
-            if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var px) && px >= 0)
+            if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var px) && double.IsFinite(px) && px >= 0)
                 return Px(px);
             throw new FormatException($"Invalid grid track '{s}'.");
         }

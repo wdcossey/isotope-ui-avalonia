@@ -51,15 +51,23 @@ public static partial class Factories
     /// A drop-down list, as an Avalonia <see cref="Avalonia.Controls.ComboBox"/>. <paramref name="selectedIndex"/>
     /// defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own its selection; -1 selects nothing.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
     public static ComboBoxElement ComboBox(string[] items, Optional<int> selectedIndex = default, Action<int>? onSelectedIndexChanged = null)
-        => new(items, selectedIndex, onSelectedIndexChanged);
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new(items, selectedIndex, onSelectedIndexChanged);
+    }
 
     /// <summary>
     /// A list to select from, as an Avalonia <see cref="Avalonia.Controls.ListBox"/>. <paramref name="selectedIndex"/>
     /// defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own its selection; -1 selects nothing.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
     public static ListBoxElement ListBox(string[] items, Optional<int> selectedIndex = default, Action<int>? onSelectedIndexChanged = null)
-        => new(items) { SelectedIndex = selectedIndex, OnSelectedIndexChanged = onSelectedIndexChanged };
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return new(items) { SelectedIndex = selectedIndex, OnSelectedIndexChanged = onSelectedIndexChanged };
+    }
 
     /// <summary>
     /// A date picker, as an Avalonia <see cref="Avalonia.Controls.DatePicker"/>. <paramref name="date"/> defaults to
