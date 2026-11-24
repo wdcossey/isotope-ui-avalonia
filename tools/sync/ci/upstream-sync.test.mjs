@@ -199,15 +199,14 @@ test('a branch pushed by a run that failed before its issue gets the issue on th
     const branch = 'sync/' + range(f.base, next);
     const pushed = f.remoteHead(branch);
     assert.ok(pushed);
-    f.git('checkout', '-q', 'main'); // the next run starts from a fresh checkout of main
-    f.git('branch', '-q', '-D', branch);
+    assert.equal(f.git('rev-parse', '--abbrev-ref', 'HEAD'), 'main', 'the checkout is back where it was');
     const gh = fakeApi();
     const r = await f.job({}, { api: gh.api });
     assert.equal(r.status, 'opened');
     assert.equal(f.remoteHead(branch), pushed, 'not pushed again');
     const issue = gh.posts().find((c) => c.p.endsWith('/issues'));
     assert.match(issue.body.body, /# Upstream sync/);
-    assert.equal(f.git('branch', '--list', 'sync/*'), '', 'the pushed branch was read, not rebuilt');
+    assert.equal(f.git('branch', '--list', 'sync/*'), '');
   } finally { f.cleanup(); }
 });
 
@@ -407,10 +406,17 @@ test('a very long report is cut in the issue body at a line end, and points at t
   }
 });
 
-test('arguments: unknown ones are refused', () => {
-  assert.deepEqual(parseArgs(['--dry-run', '--no-fetch', '--repo', 'r']), { dryRun: true, fetch: false, help: false, repo: 'r' });
+test('arguments: unknown ones, and options of the other phase, are refused', () => {
+  assert.deepEqual(parseArgs(['--dry-run', '--no-fetch', '--repo', 'r']), { command: 'all', dryRun: true, fetch: false, help: false, repo: 'r' });
+  assert.deepEqual(parseArgs(['prepare', '--no-fetch', '--out', 'o']), { command: 'prepare', dryRun: false, fetch: false, help: false, out: 'o' });
+  assert.deepEqual(parseArgs(['publish', '--dry-run', '--bundle', 'b']), { command: 'publish', dryRun: true, fetch: true, help: false, bundle: 'b' });
   assert.throws(() => parseArgs(['--push']), /unknown argument --push/);
   assert.throws(() => parseArgs(['--repo']), /needs a value/);
+  assert.throws(() => parseArgs(['prepare', '--dry-run', '--out', 'o']), /unknown argument --dry-run for prepare/);
+  assert.throws(() => parseArgs(['publish', '--upstream', 'u', '--bundle', 'b']), /unknown argument --upstream for publish/);
+  assert.throws(() => parseArgs(['--out', 'o']), /unknown argument --out/);
+  assert.throws(() => parseArgs(['prepare']), /prepare needs --out/);
+  assert.throws(() => parseArgs(['publish', '--dry-run']), /publish needs --bundle/);
 });
 
 test('the command line: a dry run writes the step outputs and summary; a failure exits 1 with the reason in the summary', () => {
