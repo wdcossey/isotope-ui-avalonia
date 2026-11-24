@@ -22,8 +22,8 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   removed by a transform rule in `tools/sync/transforms.json`, never by hand. The check can't recognise people's
   names or bare usernames, so after a sync also run `git grep -n -I -i -E '<your username>' -- src/Upstream`
   (must print nothing) and read the sync report's list of new and changed vendored files for names.
-  Commit author identity comes from the machine's git config: the developer chose to keep their own; see
-  `CLAUDE.local.md` on each machine, and never add other names or emails.
+  Commits use the developer's GitHub noreply address (history rewritten to it on 2026-11-24, before the repo went
+  public): set it per machine with `git config user.email` (see `CLAUDE.local.md`), and never add other names or emails.
 - **Upstream is read-only.** Never edit, commit or build inside `upstream/`. Read-only git, `git fetch`, and checking
   out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are the only writes allowed. Send
   nothing upstream: no issues, PRs or comments. Plans must not depend on upstream changing.
