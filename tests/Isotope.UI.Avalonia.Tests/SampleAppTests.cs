@@ -19,7 +19,7 @@ namespace Isotope.UI.Avalonia.Tests;
 /// The sample app's pages (#30), headless: the whole app in a headless window (no real window), each page selected with a
 /// headless click on its tab and its main interaction driven with headless mouse input, then rendered to PNG. What only a
 /// real window shows (hover tooltips appearing, how menus and the split view look) is the developer's check, from
-/// samples/README.md.
+/// samples/Isotope.UI.Samples/README.md.
 /// </summary>
 public sealed class SampleAppTests : IDisposable
 {
@@ -36,7 +36,7 @@ public sealed class SampleAppTests : IDisposable
         var host = new DispatcherHost(() => new FuncElement(SampleApp.Root));
         var window = new Window
         {
-            Width = 640, Height = 680, SizeToContent = SizeToContent.Manual, Background = Brushes.White, Content = host.Root,
+            Width = SampleApp.WindowWidth, Height = SampleApp.WindowHeight, SizeToContent = SizeToContent.Manual, Background = Brushes.White, Content = host.Root,
         };
         _windows.Add(window);
         window.Show();
@@ -97,7 +97,7 @@ public sealed class SampleAppTests : IDisposable
     {
         var (host, window) = Open();
         var tabs = Tabs(host);
-        Assert.Equal(SampleApp.Pages, tabs.Items.Cast<TabItem>().Select(t => (string)t.Header!));
+        Assert.Equal(SampleApp.Pages.Select(p => p.Name), tabs.Items.Cast<TabItem>().Select(t => (string)t.Header!));
         Assert.Equal(0, tabs.SelectedIndex);
 
         Click(Labelled<Button>(host.Root, "Click"));
@@ -228,6 +228,19 @@ public sealed class SampleAppTests : IDisposable
         slider.Value = 70; // as a drag does
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(70m, box.Value);
+        Assert.Contains("Value: 70", Texts(page));
+
+        // Emptied with the keyboard: the box reports no number, and the value stays as it was.
+        var text = All<TextBox>(box).Single();
+        text.Focus();
+        text.SelectAll();
+        window.KeyPressQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Null(box.Value);
+        Assert.Equal(70.0, slider.Value);
         Assert.Contains("Value: 70", Texts(page));
 
         Click(Labelled<Button>(page, "Reset"));

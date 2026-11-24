@@ -14,7 +14,11 @@ public static class NumbersPage
     {
         var tips = ctx.UseContext(SampleApp.ShowTips);
         var (value, setValue) = ctx.UseState(Start);
-        void Set(double v) => setValue(Math.Clamp(v, 0, 100));
+        // An emptied box reports NaN: the value stays as it was.
+        void Set(double v)
+        {
+            if (!double.IsNaN(v)) setValue(v);
+        }
 
         return VStack(12,
             TextBlock("Type a number (then Tab or Enter), use the spinner or the arrow keys, or drag the slider:"),
