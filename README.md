@@ -54,7 +54,8 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
 - **Tests:** 1,187 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
 Not there yet: more controls (rich text, icons, list views…), tracked from what the migration tool finds missing in
-upstream's samples (#35); animation; and packages.
+upstream's samples (#35); animation; and published packages (they build and are checked on every push;
+[releasing](docs/releasing.md)).
 
 ## Try it
 
@@ -100,6 +101,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `docs/sync/` | Sync reports (what changed upstream, and the tier 3 PRs to port) |
 | `tools/sync/` | Vendor and regenerate (`node tools/sync/sync.mjs --help`), and the weekly sync job's glue |
 | `tools/migration/` | Measures the migration on upstream's samples, and lists what is left in a project |
+| `tools/packaging/`, `tests/Isotope.UI.PackageSmoke/` | Pack and check the NuGet packages, and a consumer app built against them alone ([releasing](docs/releasing.md)) |
 | `UPSTREAM.lock` | The upstream commit everything is built and compared against |
 | `upstream/` | Git-ignored cache of the upstream repo, needed only for `tools/sync` (see below) |
 

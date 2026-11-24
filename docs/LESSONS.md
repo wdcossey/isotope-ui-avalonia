@@ -153,6 +153,11 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **`git checkout -- <file>` writes CRLF on Windows,** so an LF-anchored scripted edit made after restoring a break no
   longer matches: normalise line endings in the replace. (2026-11-24)
 
+- **A portable PDB stores document paths in parts on its blob heap:** a byte search for a path finds nothing. Decode
+  the Document table. (2026-11-24)
+- **`dotnet build` keeps MSBuild nodes alive that lock DLLs in a temp `NUGET_PACKAGES` folder:** pass
+  `--disable-build-servers`. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **The harness can block an agent's write to `FINDINGS.md`:** have agents return the section in their reply. (2026-11-24)

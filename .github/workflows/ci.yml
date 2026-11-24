@@ -22,8 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
+    runs-on: ${{ matrix.os }} # GitHub-hosted only (public repo; CLAUDE.md)
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -97,8 +96,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
+    runs-on: ${{ matrix.os }} # GitHub-hosted only (public repo; CLAUDE.md)
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -141,8 +139,7 @@ jobs:
       matrix:
         # Windows matters most here: its checkouts use core.autocrlf=true, which the byte-exact check must survive.
         os: [ubuntu-latest, windows-latest]
-    # The Linux leg runs on vars.LINUX_RUNNER (a repo variable) when set, else GitHub-hosted; job names keep matrix.os.
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.LINUX_RUNNER || 'ubuntu-latest') || matrix.os }}
+    runs-on: ${{ matrix.os }} # GitHub-hosted only (public repo; CLAUDE.md)
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -189,3 +186,38 @@ jobs:
           expected="$(cat tools/sync/verify/Upstream.Yoga.Tests/expected-total.txt)"
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
+
+  packages:
+    # Packs the three packages, checks them, and builds and runs a tiny consumer app against the packed packages alone
+    # (#52; tools/packaging/pack.mjs), so packaging can't silently break. Publishing is release.yml's, on a v* tag only.
+    # Like the library job, it needs no upstream/ checkout. GitHub-hosted runners only.
+    name: packages (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # MinVer reads the version from the v* tags, so it needs the history and the tags.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Package check tests
+        shell: bash
+        run: node --test tools/packaging/test/*.test.mjs
+
+      - name: Pack, check the packages, and run the consumer smoke test against them
+        shell: bash
+        run: node tools/packaging/pack.mjs --out "$RUNNER_TEMP/packages"

@@ -1,0 +1,47 @@
+<Project>
+  <!-- Package metadata and build settings for the shipped projects under src/ (#52): the packages Isotope.UI.Avalonia
+       (with the wrappers generator bundled as an analyzer), Isotope.UI.Avalonia.Desktop and Isotope.UI.Migration, and
+       the generator itself. Only src/: the spikes, tests and tools keep their own settings and measured counts.
+       Packages are built with tools/packaging/pack.mjs; docs/releasing.md says how a release is cut. -->
+
+  <!-- This file hides any Directory.Build.props further up, so import it (there is none today). -->
+  <PropertyGroup>
+    <_IsotopePropsAbove>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..'))</_IsotopePropsAbove>
+  </PropertyGroup>
+  <Import Project="$(_IsotopePropsAbove)" Condition="'$(_IsotopePropsAbove)' != ''" />
+
+  <PropertyGroup>
+    <!-- Nothing packs unless its project says so. -->
+    <IsPackable>false</IsPackable>
+
+    <!-- No person's name or email in any package (CLAUDE.md, hard rules). -->
+    <Authors>The Isotope.UI.Avalonia authors</Authors>
+    <Company>The Isotope.UI.Avalonia authors</Company>
+    <Product>Isotope.UI.Avalonia</Product>
+    <Copyright>Copyright (c) 2026 The Isotope.UI.Avalonia authors</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>avalonia;ui;react;hooks;declarative;mvu</PackageTags>
+    <!-- Each package's own README.md, next to its project file (packed by Directory.Build.targets). -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- SourceLink is part of the .NET SDK: the repository URL and commit come from git when the package is built, so
+         nothing here names the repository. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- Deterministic is the SDK's default. ContinuousIntegrationBuild (which maps source paths to /_/ so no local path
+         reaches a DLL or PDB) is set by tools/packaging/pack.mjs, not here: the test suites keep their local paths. -->
+    <Deterministic>true</Deterministic>
+
+    <!-- Versions from git tags (MinVer): a tag v0.1.0-preview.1 gives 0.1.0-preview.1; a commit after it gives
+         0.1.0-preview.1.<height>; before the first tag, 0.1.0-preview.0.<height>. -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
+    <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="8.0.0" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,128 @@
+name: release
+
+# Publishes the three packages to nuget.org when a v* tag is pushed (#52), with NuGet trusted publishing: GitHub's OIDC
+# token is exchanged for a short-lived nuget.org key, so no API key is stored anywhere. Publishing is the developer's
+# call (CLAUDE.md, ask first): only pushing a tag starts this workflow. docs/releasing.md has the one-time setup on
+# nuget.org and how to cut a release.
+#   pack     (contents: read; builds and runs this repo's code) checks the tag is a version on main, packs with the
+#            version MinVer reads from the tag, checks the packages, runs the consumer smoke test against them, and
+#            hands them on as an artifact. The same script as ci's packages job.
+#   publish  (id-token: write only; runs none of this repo's code, has no checkout) pushes those packages and their
+#            symbols to nuget.org. It runs in the "nuget" environment, which the trusted publishing policy can require
+#            and which can hold a required reviewer.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pack:
+    name: pack and check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read # check out the tagged commit and read main's history
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # MinVer reads the version from the tags; the main check needs main's history.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The tag is a version, on a commit of main
+        id: tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]] || { echo "tag '$TAG' is not v<major>.<minor>.<patch>[-<pre-release>]"; exit 1; }
+          git merge-base --is-ancestor HEAD origin/main || { echo "the tagged commit $(git rev-parse HEAD) is not on main"; exit 1; }
+          # MinVer takes a commit's highest v* tag, so a second one would give the other version.
+          tags="$(git tag --points-at HEAD 'v*' | tr '\n' ' ')"
+          [ "$(git tag --points-at HEAD 'v*' | wc -l)" -eq 1 ] || { echo "the commit has more than one v* tag ($tags): one release per commit"; exit 1; }
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Package check tests
+        shell: bash
+        run: node --test tools/packaging/test/*.test.mjs
+
+      - name: Pack, check (the version must be the tag's) and run the consumer smoke test
+        shell: bash
+        run: node tools/packaging/pack.mjs --out "$RUNNER_TEMP/packages" --expect-version "${{ steps.tag.outputs.version }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: publish to nuget.org
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: nuget
+    permissions:
+      id-token: write # the OIDC token nuget.org exchanges for a short-lived API key (trusted publishing); nothing else
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: packages
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Push to nuget.org (trusted publishing)
+        shell: bash
+        env:
+          # The nuget.org account (profile name, not email) that created the trusted publishing policy. A secret only so
+          # the name stays out of this public file and the logs; docs/releasing.md.
+          NUGET_USER: ${{ secrets.NUGET_USER }}
+          VERSION: ${{ needs.pack.outputs.version }}
+        run: |
+          [ -n "$NUGET_USER" ] || { echo "the NUGET_USER secret is not set (docs/releasing.md)"; exit 1; }
+          shopt -s nullglob
+          packages=(packages/*."$VERSION".nupkg)
+          [ "${#packages[@]}" -eq 3 ] || { echo "expected 3 packages of version $VERSION, found ${#packages[@]}"; exit 1; }
+
+          # GitHub's OIDC token for nuget.org, then nuget.org's short-lived key for it (what NuGet's login action does).
+          # Each response is read whole first, so a refusal's message is printed (a refusal carries no secret).
+          resp="$(curl -sS --fail-with-body -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https%3A%2F%2Fwww.nuget.org")" ||
+            { echo "GitHub gave no OIDC token (is id-token: write granted?): $resp"; exit 1; }
+          oidc="$(jq -r '.value // empty' <<<"$resp")"
+          [ -n "$oidc" ] || { echo "GitHub's OIDC response has no token"; exit 1; }
+          echo "::add-mask::$oidc"
+          body="$(jq -cn --arg user "$NUGET_USER" '{username: $user, tokenType: "ApiKey"}')"
+          resp="$(curl -sS --fail-with-body -X POST https://www.nuget.org/api/v2/token \
+            -H "Authorization: Bearer $oidc" -H 'Content-Type: application/json' -H 'User-Agent: isotope-release' \
+            --data-binary "$body")" ||
+            { echo "nuget.org refused the token exchange (check the trusted publishing policy: owner, repository, workflow file, environment): $resp"; exit 1; }
+          key="$(jq -r '.apiKey // empty' <<<"$resp")"
+          [ -n "$key" ] || { echo "nuget.org's response has no API key"; exit 1; }
+          echo "::add-mask::$key"
+
+          # Each .nupkg's .snupkg, next to it, is pushed with it. --skip-duplicate makes a re-run safe.
+          for p in "${packages[@]}"; do
+            dotnet nuget push "$p" --api-key "$key" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done

@@ -4,18 +4,21 @@ using Xunit;
 namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
-/// The docs show only compiled, tested code (#17): every C# block in the README and the guide follows a
+/// The docs show only compiled, tested code (#17): every C# block in the README, the guide and the package READMEs follows a
 /// <c>&lt;!-- snippet: name --&gt;</c> marker, and its text equals the <c>#region name</c> of that name in this test
 /// project (Examples, GuideExamples), which the tests compile and run.
 /// </summary>
 public class DocSnippetTests
 {
-    // The README and every page of the guide.
+    // The README, every page of the guide, and each package's README (src/Isotope.*/README.md, #52), which nuget.org shows.
     public static TheoryData<string> Docs()
     {
         var data = new TheoryData<string> { "README.md" };
         foreach (var page in Directory.EnumerateFiles(Path.Combine(RepoRoot(), "docs", "guide"), "*.md").Order(StringComparer.Ordinal))
             data.Add("docs/guide/" + Path.GetFileName(page));
+        foreach (var project in Directory.EnumerateDirectories(Path.Combine(RepoRoot(), "src"), "Isotope.*").Order(StringComparer.Ordinal))
+            if (File.Exists(Path.Combine(project, "README.md")))
+                data.Add("src/" + Path.GetFileName(project) + "/README.md");
         return data;
     }
 

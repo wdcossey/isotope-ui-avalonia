@@ -13,6 +13,16 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
+  <!-- The package (#52; shared metadata in src/Directory.Build.props). -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Isotope.UI.Avalonia</PackageId>
+    <!-- XML docs in the package, for IntelliSense. CS1574/CS0419/CS1734: crefs in vendored upstream comments that name
+         WinUI types or members this library doesn't have. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1574;CS0419;CS1734</NoWarn>
+    <Description>React-style function components and hooks for Avalonia 12, on the engine of microsoft/microsoft-ui-reactor: UI as a function of state, in C#, with no XAML, bindings or view models. Includes the wrappers generator, so your own partial element records can wrap any Avalonia control.</Description>
+  </PropertyGroup>
   <!-- Which vendored upstream files (src/Upstream/) are compiled. -->
   <Import Project="UpstreamFiles.props" />
   <ItemGroup>
@@ -32,7 +42,21 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Upstream's wrappers generator, built for Avalonia: generates the descriptors of the element records. -->
+    <!-- PrivateAssets: the generator is no package of its own; the target below bundles it into this one. -->
     <ProjectReference Include="..\Isotope.UI.Avalonia.Generators\Isotope.UI.Avalonia.Generators.csproj"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
+  <!-- The generator ships in this package (analyzers/dotnet/cs), as upstream's does, so a consumer's own
+       [GenerateReactorDescriptor] records get their descriptors too. Read from the resolved reference, which works
+       when packing without a build too. -->
+  <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_IsotopePackGenerator</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+  <Target Name="_IsotopePackGenerator" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <_IsotopeGenerator Include="@(Analyzer)" Condition="'%(Filename)%(Extension)' == 'Isotope.UI.Avalonia.Generators.dll'" />
+      <TfmSpecificPackageFile Include="@(_IsotopeGenerator)" PackagePath="analyzers/dotnet/cs" />
+    </ItemGroup>
+    <Error Condition="'@(_IsotopeGenerator)' == ''" Text="The wrappers generator (Isotope.UI.Avalonia.Generators.dll) was not found among the analyzers: the package would ship without it." />
+  </Target>
 </Project>
