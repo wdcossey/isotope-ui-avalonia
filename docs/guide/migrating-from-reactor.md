@@ -15,6 +15,9 @@ What it changes:
   - The table is `tools/naming/renames.json`.
   - Type, factory and modifier renames apply once the table marks them `applied`.
 - Reactor's `icon: WindowIcon.FromPath(path)` becomes Isotope's icon factory.
+- Reactor's `ScrollView(x)` becomes `(ScrollViewer(x) with { HorizontalScrollBarVisibility = ... Disabled })`. That is a
+  ScrollViewer whose content is as wide as the view, as WinUI's ScrollView is. Its `ContentOrientation` is left for you
+  to set as scroll bar visibilities.
 
 What it reports, with no fix:
 
