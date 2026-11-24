@@ -41,8 +41,14 @@ In `members`:
     `ContentElement` are one `Content`); an entry whose `avalonia` equals `reactor` is a retyped member.
   - `kept`: no Avalonia counterpart, so the name stays (`avalonia` equals `reactor`); `note` says why.
 
-`status` is `applied` (the code has the Avalonia name only) or `proposed` (the code still has Reactor's name, and
-applying it is a rename in the code plus a status change here). An `avalonia` of `null` in `modifiers`, `types` or
+`status` is one of:
+
+- `applied`: the code has the Avalonia name only;
+- `proposed`: the code still has Reactor's name, and applying it is a rename in the code plus a status change here;
+- `kept`: Avalonia has no counterpart, so the code keeps Reactor's name (`avalonia` equals `reactor`) and `note`
+  says why (the named text styles, `Caption` and `Title`, and `ApplyStyle`, #44). A migration leaves it alone.
+
+An `avalonia` of `null` in `modifiers`, `types` or
 `factories` means Reactor's name is gone with no counterpart (`GridDefinition`); it is applied, and `note` says what
 replaces it. Entries in `members` and `parameters` are applied.
 Type and factory renames (`TabView` → `TabControl` and the like) are proposed until the question on #27 is settled.
