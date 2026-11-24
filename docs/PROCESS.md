@@ -1,8 +1,7 @@
 # How work runs
 
-Adapted from `~/.claude/ways-of-working/PROCESS.md` for a **local-first repo** (user's choice, 2026-11-22). A private
-GitHub remote exists since 2026-11-23 (`origin`); until issues, PRs, CI and branch protection are adopted, branches
-are merged locally and `main` is pushed after each merge. The loop is otherwise the same.
+Adapted from `~/.claude/ways-of-working/PROCESS.md`. The repo is public on GitHub (`origin`, since 2026-11-24). Every
+change reaches `main` through a pull request that passes CI (#7); the loop is otherwise the same.
 
 ```
  TASK → BRANCH/WORKTREE → BUILD → SELF-REVIEW ×2 → PROVE THE TESTS → CLEAN RUN → MERGE TO main → TIDY
@@ -50,6 +49,8 @@ Never without the developer's go-ahead in the conversation:
 - **Changes inside `upstream/`:** none, beyond keeping the cache current. Read-only git (log, show, diff, grep,
   rev-parse), `git fetch`, and checking out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are fine. No other
   checkouts, no resets, no edits, no builds there.
+- **Repo and Actions settings:** branch rules, visibility, Actions permissions, secrets, variables, runners,
+  collaborators, a third-party action, and approving a fork PR's workflow run (never an agent's; see `CLAUDE.md`).
 - **Decisions that aren't Claude's:** those under "Decisions already made (don't reopen)" in `CLAUDE.md` are not reopened.
 
 ## 3. Build
@@ -77,10 +78,16 @@ Never without the developer's go-ahead in the conversation:
 
 ## 5. Merging
 
-Claude merges its own branches into `main` (`git merge --no-ff`) once the build, tests, both review passes and the
-clean run hold. The merge commit message records each pass's level, tokens ("not measured" if not visible), what it
+Claude opens a PR for each branch and merges it once the build, tests, both review passes and the clean run hold, and
+the PR's six CI checks pass. Merge with `gh pr merge <n> --merge --subject <subject> --body-file <file>`: the merge
+commit message records each pass's level, tokens ("not measured" if not visible), what it
 found, fixed and waived, tests proven to fail, **For you to decide** and **Hands-on follow-ups**. Then delete the
 branch and its worktree.
+- **Ruleset `main`:** no deletion, no force-push, a PR for every change (no direct push, no bypass), the six CI checks
+  required and the branch up to date with `main`. Merge commits or squash.
+- **Identity:** a merge made on GitHub takes its author from the developer's GitHub profile (the name falls back to the
+  login, and email privacy gives the noreply address). Check the first merge after any profile change.
+- **Up to date:** merge `main` into the branch, re-run the suites, push, wait for CI, then merge.
 
 ## 6. Batches
 
@@ -100,7 +107,7 @@ Update the project memory with what's in flight (branches, worktrees, agents) an
 | Decision | Choice |
 |---|---|
 | Task list | GitHub Issues, labels `P0`…`P3`, type, `self-drive`/`hands-on`/`blocked` (2026-11-23) |
-| Who merges | Claude, after the gate in §4. PRs and branch protection come with #7 |
+| Who merges | Claude, through a PR after the gate in §4 and green CI; the developer can hold any PR (#7, 2026-11-24) |
 | Batch size | 2 or 3 agents, each on an explicit model (`opus`), briefed with `docs/agent-brief.md` |
 | Screenshots | Rendered headless; a real window is ask-first |
 | Away mode | Only when the developer says so; decisions are logged in FINDINGS or the issue |

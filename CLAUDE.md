@@ -24,6 +24,21 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   (must print nothing) and read the sync report's list of new and changed vendored files for names.
   Commits use the developer's GitHub noreply address (history rewritten to it on 2026-11-24, before the repo went
   public): set it per machine with `git config user.email` (see `CLAUDE.local.md`), and never add other names or emails.
+- **The repo is public: workflows and Actions settings follow these rules** (2026-11-24).
+  - **GitHub-hosted runners only.** Never add a self-hosted label or register a runner on this repo, and never set
+    `vars.LINUX_RUNNER` or `vars.SYNC_RUNNER`: a fork PR's workflow could reach the machine. If either variable is ever
+    set, treat it as a security issue and tell the developer.
+  - **Triggers:** `push`, `pull_request`, `workflow_dispatch`, `schedule` only. Never `pull_request_target`,
+    `issue_comment` or `workflow_run`: they run with this repo's token but a stranger can start them.
+  - **Least privilege:** keep a top-level `permissions:` block (`contents: read` or `{}`); grant more only on the job
+    that needs it, with a comment saying why. Upstream code never runs in a job that holds a write token (#36).
+  - **Actions:** GitHub-owned `actions/*` only (the repo allows nothing else). A third-party action needs the
+    developer's OK and is pinned by full commit SHA.
+  - **No secrets, no variables, no collaborators** without the developer: collaborators skip the fork-PR approval gate.
+  - **Approving a fork PR's workflow run is the developer's call,** never an agent's. Don't approve runs or ask to.
+  - **Repo settings** (`gh api -X PUT …`) are ask-first; read-only checks are free.
+  - **Never mention the developer's own infrastructure** (machines, networks, hostnames, IPs, self-hosted services) in
+    files, commits, issues or PRs.
 - **Upstream is read-only.** Never edit, commit or build inside `upstream/`. Read-only git, `git fetch`, and checking
   out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are the only writes allowed. Send
   nothing upstream: no issues, PRs or comments. Plans must not depend on upstream changing.
@@ -85,8 +100,8 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   - docs and chores get one pass: `medium main...<branch> --max-findings all`.
   - Check each finding before acting; findings can be wrong.
 - **Prove each new test fails** with its behaviour broken (on committed work), then run clean from a fresh clone.
-- **Merge** into `main` (`--no-ff`; the message records the review levels, tokens, findings fixed or waived, and
-  `Closes #n`). Check there are no conflict markers, then push `main`. This becomes PR-based once issue #7 lands.
+- **Merge** through a PR (ruleset `main`: no direct pushes; six CI checks required, branch up to date). Merge with
+  `gh pr merge --merge`; the message records the review levels, tokens, findings fixed or waived, and `Closes #n`.
 - **Report numbers that were measured, never estimated.** Say how each was measured.
 - **Lessons:** `docs/LESSONS.md`. Add one when a new trap is hit.
 - **Parallel agents** get `docs/agent-brief.md` and an explicit model.

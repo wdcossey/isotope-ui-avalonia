@@ -210,6 +210,30 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Migration tool (issue #33, 2026-11-24)
+
+- **An analyzer with 16 rules (ISOMIG001–016) and code fixes,** run with `dotnet format analyzers` after the project file
+  is switched to Isotope (`docs/guide/migrating-from-reactor.md`).
+  - It reads `tools/naming/renames.json` (#31): entries marked `proposed` stay off until the table marks them `applied`.
+  - It has two tables of its own, `winui-types.json` (71 types) and `reactor-controls.json` (103 factories Isotope lacks).
+- **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`: 36 projects, 358 files, upstream 561c5573;
+  fixes applied until nothing changed):
+
+  | | Before | After |
+  |---|---|---|
+  | Files that build | 51 | 62 |
+  | Compile errors | 13,699 | 5,544 |
+  | Projects that build | 1 | 2 |
+
+- **The issue's "done when" is not met:** what is left is mostly Isotope API that doesn't exist yet, not migration work.
+  Of the 2,948 migration diagnostics left:
+  - 1,466 are members and modifiers (`Foreground` 375, `FontSize` 157);
+  - 877 are controls not ported (`Caption` 221, `ScrollView` 139);
+  - 249 are Reactor namespaces (Charting 159, `Theme` 50).
+
+  The largest group of compile errors left is 830 uses of Reactor's `Theme` tokens.
+- **Tests:** 38, all proven to fail; CI runs them in the library job.
+
 ## Avalonia member names (issue #31, 2026-11-24)
 
 - **The public API takes Avalonia's member names** (#27 answer 1; Spike H option A). A record member is Avalonia-named
