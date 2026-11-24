@@ -85,7 +85,7 @@ public abstract record Element
             (EmptyElement, EmptyElement) => true,
             (TextBlockElement x, TextBlockElement y) => x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
             (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled
-                && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
             (FlexElement x, FlexElement y) => x.Direction == y.Direction && x.JustifyContent == y.JustifyContent
@@ -126,6 +126,18 @@ public abstract record Element
             (ScrollViewerElement x, ScrollViewerElement y) => x.HorizontalScrollBarVisibility == y.HorizontalScrollBarVisibility
                 && x.VerticalScrollBarVisibility == y.VerticalScrollBarVisibility && ReferenceEquals(x.Child, y.Child)
                 && ReferenceEquals(x.Setters, y.Setters),
+            // #26: as upstream's arms, a declared element content always updates (its child is reconciled). Unlike
+            // upstream's, ToggleButton's compares the three-state members too, so a changed CheckedState is written.
+            (ToggleButtonElement x, ToggleButtonElement y) => x.Label == y.Label && x.IsChecked == y.IsChecked
+                && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+            (RepeatButtonElement x, RepeatButtonElement y) => x.Label == y.Label && x.Delay == y.Delay && x.Interval == y.Interval
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+            (HyperlinkButtonElement x, HyperlinkButtonElement y) => x.Content == y.Content && x.NavigateUri == y.NavigateUri
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+            (NumberBoxElement x, NumberBoxElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
+                && x.SmallChange == y.SmallChange && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
+                && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
             _ => false,
         };
     }
@@ -220,6 +232,15 @@ public record ElementModifiers
     public IBrush? Background { get; init; }
     public string? AutomationName { get; init; }
 
+    /// <summary>The text of the control's tooltip (Avalonia's <c>ToolTip.Tip</c>, #26).</summary>
+    public string? ToolTip { get; init; }
+
+    /// <summary>Which side of the control its tooltip opens on (Avalonia's <c>ToolTip.Placement</c>).</summary>
+    public Avalonia.Controls.PlacementMode? ToolTipPlacement { get; init; }
+
+    /// <summary>The menu the control opens on a right-click or the menu key (Avalonia's <c>ContextFlyout</c>, #26).</summary>
+    public MenuFlyoutContentElement? ContextFlyout { get; init; }
+
     /// <summary>These modifiers, with <paramref name="other"/>'s set values taking precedence.</summary>
     public ElementModifiers Merge(ElementModifiers other) => new()
     {
@@ -232,6 +253,9 @@ public record ElementModifiers
         IsEnabled = other.IsEnabled ?? IsEnabled,
         Background = other.Background ?? Background,
         AutomationName = other.AutomationName ?? AutomationName,
+        ToolTip = other.ToolTip ?? ToolTip,
+        ToolTipPlacement = other.ToolTipPlacement ?? ToolTipPlacement,
+        ContextFlyout = other.ContextFlyout ?? ContextFlyout,
     };
 }
 

@@ -1,0 +1,114 @@
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
+using Isotope.UI.Core.V1Protocol.Descriptor;
+using Isotope.UI.Wrappers;
+
+namespace Isotope.UI.Core;
+
+// The rest of the button family (#26): ToggleButton, RepeatButton and HyperlinkButton. Records mirror upstream's
+// (Reactor's member names, Avalonia's value types); descriptors are generated. Each takes a string or, through
+// ContentElement, any element as its content (WithContent, as upstream's). Upstream's Command members aren't here yet:
+// no button on Avalonia binds a Command so far.
+
+/// <summary>
+/// A button that stays pressed, as an Avalonia <see cref="Avalonia.Controls.Primitives.ToggleButton"/>.
+/// <see cref="IsChecked"/> is written when it changes, as upstream's: a click toggles the control and reaches
+/// <see cref="OnIsCheckedChanged"/>, and the control keeps the toggled state until the element's value changes.
+/// </summary>
+[GenerateReactorDescriptor(typeof(ToggleButton), Exclude = new[] { "IsCheckedChanged" })]
+[WrapManual("Label")]
+[WrapManual("IsThreeState")]
+[WrapManual("IsChecked")]
+[WrapManual("CheckedState")]
+public partial record ToggleButtonElement(string Label, bool IsChecked = false, Action<bool>? OnIsCheckedChanged = null) : Element
+{
+    /// <summary>Whether a click cycles through the indeterminate state (null) too; uses <see cref="CheckedState"/>.</summary>
+    public bool IsThreeState { get; init; }
+
+    /// <summary>The three-state value (null: indeterminate), written instead of <see cref="IsChecked"/> when <see cref="IsThreeState"/>.</summary>
+    public bool? CheckedState { get; init; }
+
+    /// <summary>The three-state change callback: receives null for indeterminate.</summary>
+    public Action<bool?>? OnCheckedStateChanged { get; init; }
+
+    /// <summary>Declarative content, taking precedence over <see cref="Label"/>.</summary>
+    public Element? ContentElement { get; init; }
+
+    internal Action<ToggleButton>[] Setters { get; init; } = [];
+
+    internal override bool HasCallbacks => OnIsCheckedChanged is not null || OnCheckedStateChanged is not null;
+
+    // As upstream's: the click reads the toggled value back and calls both callbacks. Avalonia's ToggleButton toggles in
+    // OnClick before it raises Click, as WinUI's does. Listening to Click, not IsCheckedChanged, means the engine's own
+    // writes never reach the callbacks.
+    private static readonly EventHandler<RoutedEventArgs> __ClickTrampoline = (s, _) =>
+    {
+        var t = (ToggleButton)s!;
+        if (Reconciler.GetElementTag(t) is not ToggleButtonElement live) return;
+        live.OnIsCheckedChanged?.Invoke(t.IsChecked ?? false);
+        live.OnCheckedStateChanged?.Invoke(t.IsChecked);
+    };
+
+    // As upstream's: IsThreeState is written before IsChecked, and IsChecked's source is CheckedState in three-state
+    // mode. One event payload holds the click trampoline (a control holds one payload).
+    private static partial ControlDescriptor<ToggleButtonElement, ToggleButton> Customize(ControlDescriptor<ToggleButtonElement, ToggleButton> d)
+        => d.WithContent(static e => e.ContentElement, static e => e.Label)
+            .OneWay(
+                get: static e => e.IsThreeState,
+                set: static (c, v) => c.IsThreeState = v)
+            .OneWay<bool?>(
+                get: static e => e.IsThreeState ? e.CheckedState : e.IsChecked,
+                set: static (c, v) => c.IsChecked = v)
+            .HandCodedEvent<V1Protocol.ToggleButtonEventPayload, EventHandler<RoutedEventArgs>>(
+                subscribe:       static (c, h) => c.Click += h,
+                callbackPresent: static e => (Delegate?)e.OnIsCheckedChanged ?? e.OnCheckedStateChanged,
+                trampoline:      __ClickTrampoline,
+                slotIsNull:      static p => p.ClickTrampoline is null,
+                setSlot:         static (p, h) => p.ClickTrampoline = h);
+}
+
+/// <summary>
+/// A button that raises its click again and again while held, as an Avalonia <see cref="Avalonia.Controls.RepeatButton"/>:
+/// the first repeat after <see cref="Delay"/> ms, then every <see cref="Interval"/> ms.
+/// </summary>
+[GenerateReactorDescriptor(typeof(RepeatButton))]
+[WrapManual("Label")]
+public partial record RepeatButtonElement(string Label, Action? OnClick = null) : Element
+{
+    /// <summary>Milliseconds before the first repeat (upstream's default, 250).</summary>
+    public int Delay { get; init; } = 250;
+
+    /// <summary>Milliseconds between repeats (upstream's default, 50).</summary>
+    public int Interval { get; init; } = 50;
+
+    /// <summary>Declarative content, taking precedence over <see cref="Label"/>.</summary>
+    public Element? ContentElement { get; init; }
+
+    internal Action<RepeatButton>[] Setters { get; init; } = [];
+
+    internal override bool HasCallbacks => OnClick is not null;
+
+    private static partial ControlDescriptor<RepeatButtonElement, RepeatButton> Customize(ControlDescriptor<RepeatButtonElement, RepeatButton> d)
+        => d.WithContent(static e => e.ContentElement, static e => e.Label);
+}
+
+/// <summary>
+/// A button that looks like a link, as an Avalonia <see cref="Avalonia.Controls.HyperlinkButton"/>. A click calls
+/// <see cref="OnClick"/>, and Avalonia opens <see cref="NavigateUri"/>, when set, with the platform's launcher.
+/// </summary>
+[GenerateReactorDescriptor(typeof(HyperlinkButton), ClearValueOnUnset = true)]
+[WrapManual("Content")]
+[WrapManual("ContentElement")]
+public partial record HyperlinkButtonElement(string Content, Uri? NavigateUri = null, Action? OnClick = null) : Element
+{
+    /// <summary>Declarative content, taking precedence over the text <see cref="Content"/>.</summary>
+    public Element? ContentElement { get; init; }
+
+    internal Action<HyperlinkButton>[] Setters { get; init; } = [];
+
+    internal override bool HasCallbacks => OnClick is not null;
+
+    private static partial ControlDescriptor<HyperlinkButtonElement, HyperlinkButton> Customize(ControlDescriptor<HyperlinkButtonElement, HyperlinkButton> d)
+        => d.WithContent(static e => e.ContentElement, static e => e.Content);
+}

@@ -29,3 +29,28 @@ internal sealed class ComboBoxEventPayload
     public EventHandler? DropDownOpenedTrampoline;
     public EventHandler? DropDownClosedTrampoline;
 }
+
+/// <summary>The per-control event payload of a <see cref="Avalonia.Controls.NumericUpDown"/> (#26): its value change.</summary>
+internal sealed class NumberBoxEventPayload
+{
+    public EventHandler<Avalonia.Controls.NumericUpDownValueChangedEventArgs>? ValueChangedTrampoline;
+}
+
+/// <summary>The per-control event payload of a <see cref="Avalonia.Controls.SplitView"/> (#26): its pane opening and closing.</summary>
+internal sealed class SplitViewEventPayload
+{
+    public EventHandler<Avalonia.Interactivity.CancelRoutedEventArgs>? PaneOpeningTrampoline;
+    public EventHandler<Avalonia.Interactivity.CancelRoutedEventArgs>? PaneClosingTrampoline;
+}
+
+/// <summary>The per-control event payload of a <see cref="Avalonia.Controls.TabControl"/> (#26): its selection.</summary>
+internal sealed class TabViewEventPayload
+{
+    public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;
+}
+
+/// <summary>The per-control event payload of a <see cref="Avalonia.Controls.Primitives.ToggleButton"/> (#26): its click.</summary>
+internal sealed class ToggleButtonEventPayload
+{
+    public EventHandler<Avalonia.Interactivity.RoutedEventArgs>? ClickTrampoline;
+}

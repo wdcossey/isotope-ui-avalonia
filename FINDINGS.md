@@ -209,6 +209,20 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## More controls, batch 2 (issue #26, 2026-11-24)
+
+- **Element content** for the button family (our tier 3 `WithContent`): `Button(element, onClick)` and Expander's
+  `.HeaderContent(...)`. A component inside keeps its state.
+- **ToggleButton, RepeatButton, HyperlinkButton.**
+- **Navigation:** TabView as Avalonia's TabControl (the vendored `TabItemsHost`, with a controlled `SelectedIndex`), and
+  SplitView.
+- **Menus:** `MenuBar`/`Menu`/`MenuItem` and toggle, radio and sub items; context menus via `.WithContextFlyout(...)`.
+- **Input and decoration:** the ToolTip modifier, NumberBox as NumericUpDown (upstream's `double` values, converted), and
+  Separator.
+- **Tests:** 49 new, all proven to fail.
+- **Not done:** AutoSuggestBox, element tooltips, upstream's `MenuFlyout(target)` decorator, `Command` overloads, and menu
+  icons and shortcuts.
+
 ## Error boundaries (issue #25, 2026-11-24)
 
 - **`ErrorBoundary(child, fallback)`:** when a subtree throws (in a render, an effect, a mount or an update), the boundary
