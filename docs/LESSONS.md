@@ -118,6 +118,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **TabControl always keeps a tab selected,** so adding or removing tabs moves the selection inside the engine's update.
   (2026-11-24)
 
+- **A break that crashes the test host (a stack overflow) shows as a smaller Total, not as the failing test.** Rerun
+  that break filtered to the one test. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

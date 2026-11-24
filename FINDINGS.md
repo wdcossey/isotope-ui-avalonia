@@ -209,6 +209,19 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Component errors outside every boundary (issue #28, 2026-11-24)
+
+- **In-slot fallback, as upstream's:** when a component's render or effects throw outside every boundary, that component's
+  slot shows a fallback, and the rest of the tree keeps its state. Each later render retries it.
+  - The fallback is the handler's element (guarded), or the exception text, or a neutral text.
+- **A failed pass rolls back:** what a failing root pass mounted but never attached is torn down, and the cleanups of
+  components whose mount failed run once.
+- **Isolated control teardown:** a control's unmount hook that throws during the host's or a boundary's teardown is
+  reported once, and the rest still runs.
+- **Cost:** none measured. Spike G's 1,000-row mount, 15 runs each, alternating: median 47.26 ms on main and 45.83 ms on
+  the branch.
+- **Tests:** 16 new, all proven to fail.
+
 ## More controls, batch 2 (issue #26, 2026-11-24)
 
 - **Element content** for the button family (our tier 3 `WithContent`): `Button(element, onClick)` and Expander's
@@ -228,7 +241,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **`ErrorBoundary(child, fallback)`:** when a subtree throws (in a render, an effect, a mount or an update), the boundary
   shows `fallback(ex)` in its place, and the rest of the tree keeps its controls and state.
   - The nearest boundary catches, and a fallback that throws goes to the next boundary out.
-  - Errors outside every boundary still reach the host (#16).
+  - Outside every boundary, a failing component is replaced in its own slot, as upstream's, and the host's handler is
+    told with `IsHostLevel` false; other errors (the root's render, a control's mount) replace the host's content (#16, #28).
   - Every re-render with a new boundary element retries the child; a new key remounts it.
 - **Differences from upstream** (guide, "What differs from Reactor"):
   - a retry mounts the child afresh;
