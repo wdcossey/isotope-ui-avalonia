@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Reactor -> Isotope migration analyzer and code fixes (#33), run with `dotnet format analyzers` in a project
+       whose references have been switched from Reactor to Isotope. It reads the rename table (tools/naming/renames.json,
+       #31) and its own tables (WinUI types, Reactor controls with no Isotope counterpart) as embedded data. -->
+  <PropertyGroup>
+    <!-- Roslyn loads analyzers into the compiler and dotnet format, so netstandard2.0, as the generator project. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>15</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <AssemblyName>Isotope.UI.Migration</AssemblyName>
+    <RootNamespace>Isotope.UI.Migration</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- RS2008: analyzer release tracking; RS1038: the code fixes share the analyzer's assembly (one file to reference). -->
+    <NoWarn>$(NoWarn);RS2008;RS1038</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 4.14: no newer than the compiler of the pinned .NET 11 SDK, as the generator. Workspaces: the code fixes. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\tools\naming\renames.json" LogicalName="Isotope.UI.Migration.renames.json" Link="Tables\renames.json" />
+    <EmbeddedResource Include="Tables\winui-types.json" LogicalName="Isotope.UI.Migration.winui-types.json" />
+    <EmbeddedResource Include="Tables\reactor-controls.json" LogicalName="Isotope.UI.Migration.reactor-controls.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Isotope.UI.Migration.Tests" />
+  </ItemGroup>
+</Project>
