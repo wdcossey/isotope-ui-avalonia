@@ -3,15 +3,18 @@ name: upstream-sync
 # The weekly upstream sync (issues #5 and #36). When upstream main has moved past UPSTREAM.lock, tools/sync regenerates
 # the vendored files as one commit on a branch "sync/<old>-<new>"; the branch is pushed, ci is dispatched on it and an
 # issue opens with the sync report (the tier 3 PRs to port). When nothing moved it writes nothing. A failing sync fails
-# the run and writes nothing. The glue and its tests: tools/sync/ci/.
+# the run and writes nothing. A range that already has an issue is not synced again. The glue and its tests:
+# tools/sync/ci/.
 #
 # The sync runs upstream's code (its Yoga tests, on the regenerated files), so no job that runs it holds a write token:
-#   mode             works out from the event alone whether this is a real run.
-#   prepare          (read-only) syncs and hands the commit on as an artifact: a git bundle and a metadata file.
-#   publish          (real runs; the write token) runs no upstream code and no dotnet. It checks the bundle against its
-#                    own checkout (one commit on this commit, by the bot, changing only src/Upstream/, UPSTREAM.lock and
-#                    the range's report), then pushes that commit, dispatches ci on it and opens the issue. ci's
-#                    "tools/sync --check" on the branch then checks the vendored bytes against upstream and main's rules.
+#   plan             (read-only; no upstream code) real or dry run, from the event; upstream main (git ls-remote); and
+#                    what to do: nothing, sync (build), or only open the issue of a branch already pushed (publish).
+#   prepare          (read-only; runs upstream's code) syncs to the commit plan found and hands the commit on as an
+#                    artifact: a git bundle and a metadata file.
+#   publish          (real runs; the write token; no upstream code, no dotnet) checks the bundle against its own
+#                    checkout and plan's commit (one commit on this commit, by the bot, changing only src/Upstream/,
+#                    UPSTREAM.lock and the range's report), then pushes that commit, dispatches ci on it and opens the
+#                    issue. ci's "tools/sync --check" on the branch then checks the vendored bytes.
 #   publish-dry-run  (dry runs; read-only) the same check, then says what a real run would do.
 #
 # Runners: GitHub-hosted. prepare takes vars.SYNC_RUNNER (a repo variable) when it is set; it is unset.
@@ -46,12 +49,16 @@ env:
   GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
 
 jobs:
-  mode:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions: {} # reads only the event
+    timeout-minutes: 10
+    permissions:
+      contents: read # check out this repo, and see whether the sync branch is pushed
+      issues: read # see whether the range has an issue
     outputs:
       real: ${{ steps.mode.outputs.real }}
+      status: ${{ steps.plan.outputs.status }} # up-to-date, exists, publish or build
+      new: ${{ steps.plan.outputs.new }} # the upstream commit to sync to
     steps:
       - name: Mode
         id: mode
@@ -71,23 +78,44 @@ jobs:
           echo "real=$real" >> "$GITHUB_OUTPUT"
           echo "event=$EVENT real=$real"
 
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Glue tests (they run tools/sync on small fixtures, never on upstream)
+        shell: bash
+        run: node --test tools/sync/ci/upstream-sync.test.mjs
+
+      - name: Plan
+        id: plan
+        shell: bash
+        env:
+          REAL: ${{ steps.mode.outputs.real }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          args=()
+          if [ "$REAL" != true ]; then args+=(--dry-run); fi
+          node tools/sync/ci/upstream-sync.mjs plan "${args[@]}"
+
   prepare:
+    needs: plan
+    if: needs.plan.outputs.status == 'build'
     runs-on: ${{ vars.SYNC_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     permissions:
       contents: read # check out this repo; this job runs upstream's code, so it gets nothing more
-    outputs:
-      status: ${{ steps.prepare.outputs.status }} # up-to-date or built
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false # nothing here talks to this repo's remote
 
-      - name: Check out upstream main with full history (tools/sync refuses a shallow cache)
+      - name: Check out upstream at the commit plan found, with full history (tools/sync refuses a shallow cache)
         uses: actions/checkout@v7
         with:
           repository: microsoft/microsoft-ui-reactor
-          ref: main
+          ref: ${{ needs.plan.outputs.new }}
           path: upstream
           fetch-depth: 0
           persist-credentials: false
@@ -102,17 +130,13 @@ jobs:
         with:
           node-version: 22
 
-      - name: Glue tests
-        shell: bash
-        run: node --test tools/sync/ci/upstream-sync.test.mjs
-
       - name: Sync, and bundle the commit
-        id: prepare # outputs: status (up-to-date, built), branch
         shell: bash
-        run: node tools/sync/ci/upstream-sync.mjs prepare --no-fetch --out "$RUNNER_TEMP/sync"
+        env:
+          NEW: ${{ needs.plan.outputs.new }}
+        run: node tools/sync/ci/upstream-sync.mjs prepare --no-fetch --target "$NEW" --out "$RUNNER_TEMP/sync"
 
       - name: Hand the bundle to the publish job
-        if: steps.prepare.outputs.status == 'built'
         uses: actions/upload-artifact@v7
         with:
           name: sync
@@ -121,8 +145,9 @@ jobs:
           retention-days: 7
 
   publish:
-    needs: [mode, prepare]
-    if: needs.mode.outputs.real == 'true' && needs.prepare.outputs.status == 'built'
+    needs: [plan, prepare]
+    # Also when prepare was skipped because plan found the branch pushed (status publish): no bundle then.
+    if: ${{ !cancelled() && needs.plan.outputs.real == 'true' && (needs.plan.outputs.status == 'publish' || (needs.plan.outputs.status == 'build' && needs.prepare.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -130,28 +155,33 @@ jobs:
       issues: write # read the sync issues, and open the one with the report
       actions: write # dispatch ci on the sync branch: a push made with this job's token starts no workflow
     steps:
-      - uses: actions/checkout@v7 # the same commit prepare checked out; its credentials push the branch
+      - uses: actions/checkout@v7 # the same commit the other jobs checked out; its credentials push the branch
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Take the bundle (outside the checkout)
+        if: needs.plan.outputs.status == 'build'
         uses: actions/download-artifact@v8
         with:
           name: sync
           path: ${{ runner.temp }}/sync
 
       - name: Check the bundle, push it, dispatch ci and open the issue
-        id: publish # outputs: status (exists, opened), branch, issue
         shell: bash
         env:
+          NEW: ${{ needs.plan.outputs.new }}
+          BUILT: ${{ needs.plan.outputs.status == 'build' }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node tools/sync/ci/upstream-sync.mjs publish --bundle "$RUNNER_TEMP/sync"
+        run: |
+          args=(--target "$NEW")
+          if [ "$BUILT" = true ]; then args+=(--bundle "$RUNNER_TEMP/sync"); fi
+          node tools/sync/ci/upstream-sync.mjs publish "${args[@]}"
 
   publish-dry-run:
-    needs: [mode, prepare]
-    if: needs.mode.outputs.real != 'true' && needs.prepare.outputs.status == 'built'
+    needs: [plan, prepare]
+    if: needs.plan.outputs.real != 'true' && needs.plan.outputs.status == 'build'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -171,8 +201,8 @@ jobs:
           path: ${{ runner.temp }}/sync
 
       - name: Check the bundle and say what a real run would do
-        id: publish # outputs: status (dry-run), branch
         shell: bash
         env:
+          NEW: ${{ needs.plan.outputs.new }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: node tools/sync/ci/upstream-sync.mjs publish --dry-run --bundle "$RUNNER_TEMP/sync"
+        run: node tools/sync/ci/upstream-sync.mjs publish --dry-run --target "$NEW" --bundle "$RUNNER_TEMP/sync"

@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runJob, prepare, publish, verifyBundle, BUNDLE, META, neutralise, issueBody, parseArgs, githubApi, summarise, Fail } from './upstream-sync.mjs';
+import { runJob, plan, prepare, publish, verifyBundle, badPath, BUNDLE, META, neutralise, issueBody, parseArgs, githubApi, summarise, Fail } from './upstream-sync.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(here, 'upstream-sync.mjs');
@@ -113,6 +113,8 @@ function fakeApi({ issues = [], fail = {} } = {}) {
 }
 
 const range = (a, b) => a.slice(0, 8) + '-' + b.slice(0, 8);
+// A sync script that doesn't exist: a run given it fails if it syncs, so it proves a run didn't.
+const NO_SYNC = path.join(os.tmpdir(), 'isotope-no-such-sync-script.mjs');
 
 test('nothing to do when UPSTREAM.lock is upstream main: no branch, no API call', async () => {
   const f = fixture();
@@ -190,7 +192,7 @@ test('a re-run for the same range pushes and opens nothing again', async () => {
     const first = await f.job({}, { api: gh.api });
     const pushed = f.remoteHead(first.branch);
     f.git('checkout', '-q', 'main'); // the next scheduled run starts from a fresh checkout of main
-    const again = await f.job({}, { api: gh.api });
+    const again = await f.job({ syncScript: NO_SYNC }, { api: gh.api });
     assert.equal(again.status, 'exists');
     assert.equal(again.issue, first.issue);
     assert.equal(gh.posts().length, 2, 'only the first run dispatched and opened');
@@ -209,7 +211,7 @@ test('a branch pushed by a run that failed before its issue gets the issue on th
     assert.ok(pushed);
     assert.equal(f.git('rev-parse', '--abbrev-ref', 'HEAD'), 'main', 'the checkout is back where it was');
     const gh = fakeApi();
-    const r = await f.job({}, { api: gh.api });
+    const r = await f.job({ syncScript: NO_SYNC }, { api: gh.api });
     assert.equal(r.status, 'opened');
     assert.equal(f.remoteHead(branch), pushed, 'not pushed again');
     const issue = gh.posts().find((c) => c.p.endsWith('/issues'));
@@ -224,7 +226,7 @@ test('a range whose issue was closed and whose branch is gone is not pushed or o
     const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
     const title = 'Upstream sync ' + f.base.slice(0, 8) + ' → ' + next.slice(0, 8);
     const gh = fakeApi({ issues: [{ number: 7, title, state: 'closed' }] });
-    const r = await f.job({}, { api: gh.api });
+    const r = await f.job({ syncScript: NO_SYNC }, { api: gh.api }); // a done range is not synced again
     assert.equal(r.status, 'exists');
     assert.equal(r.issue, 7);
     assert.deepEqual(gh.posts(), []);
@@ -417,14 +419,16 @@ test('a very long report is cut in the issue body at a line end, and points at t
 test('arguments: unknown ones, and options of the other phase, are refused', () => {
   assert.deepEqual(parseArgs(['--dry-run', '--no-fetch', '--repo', 'r']), { command: 'all', dryRun: true, fetch: false, help: false, repo: 'r' });
   assert.deepEqual(parseArgs(['prepare', '--no-fetch', '--out', 'o']), { command: 'prepare', dryRun: false, fetch: false, help: false, out: 'o' });
-  assert.deepEqual(parseArgs(['publish', '--dry-run', '--bundle', 'b']), { command: 'publish', dryRun: true, fetch: true, help: false, bundle: 'b' });
+  assert.deepEqual(parseArgs(['publish', '--dry-run', '--target', 't', '--bundle', 'b']), { command: 'publish', dryRun: true, fetch: true, help: false, target: 't', bundle: 'b' });
+  assert.deepEqual(parseArgs(['plan', '--dry-run']), { command: 'plan', dryRun: true, fetch: true, help: false });
+  assert.throws(() => parseArgs(['plan', '--out', 'o']), /unknown argument --out for plan/);
   assert.throws(() => parseArgs(['--push']), /unknown argument --push/);
   assert.throws(() => parseArgs(['--repo']), /needs a value/);
   assert.throws(() => parseArgs(['prepare', '--dry-run', '--out', 'o']), /unknown argument --dry-run for prepare/);
-  assert.throws(() => parseArgs(['publish', '--upstream', 'u', '--bundle', 'b']), /unknown argument --upstream for publish/);
+  assert.throws(() => parseArgs(['publish', '--upstream', 'u', '--target', 't']), /unknown argument --upstream for publish/);
   assert.throws(() => parseArgs(['--out', 'o']), /unknown argument --out/);
   assert.throws(() => parseArgs(['prepare']), /prepare needs --out/);
-  assert.throws(() => parseArgs(['publish', '--dry-run']), /publish needs --bundle/);
+  assert.throws(() => parseArgs(['publish', '--dry-run', '--bundle', 'b']), /publish needs --target/);
 });
 
 test('the command line: a dry run writes the step outputs and summary; a failure exits 1 with the reason in the summary', () => {
@@ -438,7 +442,7 @@ test('the command line: a dry run writes the step outputs and summary; a failure
     const cli = (...a) => spawnSync(process.execPath, [SCRIPT, '--repo', f.repo, '--upstream', f.up, '--no-fetch', ...a], { encoding: 'utf8', env });
     let r = cli('--dry-run');
     assert.equal(r.status, 0, r.stderr);
-    assert.match(readFileSync(outFile, 'utf8'), new RegExp('^status=dry-run\nbranch=sync/' + range(f.base, next) + '\nissue=\n$'));
+    assert.match(readFileSync(outFile, 'utf8'), new RegExp('^status=dry-run\nbranch=sync/' + range(f.base, next) + '\nissue=\nnew=' + next + '\n$'));
     assert.match(readFileSync(sumFile, 'utf8'), /Dry run: upstream moved[^]*The issue it would open[^]*# Upstream sync/);
     assert.match(r.stdout, /dry run: a real run would push sync\//);
     r = cli();
@@ -492,10 +496,10 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
     writeFileSync(path.join(out, META), rawMeta ?? JSON.stringify({ base: p.base, branch: p.branch, commit, new: p.new, old: p.old, reportPath: p.reportPath, ...meta }));
     return out;
   };
-  const refused = (out, why) => {
+  const refused = (out, why, target = p.new) => {
     let left;
     try {
-      assert.throws(() => verifyBundle({ repo: f.repo, dir: out }), (e) => e instanceof Fail && e.message.startsWith('refused the sync bundle: ') && why.test(e.message));
+      assert.throws(() => verifyBundle({ repo: f.repo, dir: out, target }), (e) => e instanceof Fail && e.message.startsWith('refused the sync bundle: ') && why.test(e.message));
     } finally {
       // A bundle accepted by mistake leaves its ref, which must not fail the next case.
       left = QUARANTINE_REFS();
@@ -506,7 +510,7 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
   const lockAt = (commit) => at('show', commit + ':UPSTREAM.lock') + '\n';
 
   test('accepts the bundle prepare wrote (the control for the cases below)', () => {
-    const c = verifyBundle({ repo: f.repo, dir: variant() });
+    const c = verifyBundle({ repo: f.repo, dir: variant(), target: p.new });
     assert.equal(c.commit, p.commit);
     assert.equal(c.branch, p.branch);
     assert.match(c.report, /# Upstream sync/);
@@ -515,7 +519,7 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
 
   test('a real run with a refused bundle pushes nothing and makes no API call', async () => {
     const gh = fakeApi();
-    await assert.rejects(publish({ repo: f.repo, bundle: variant({ commit: craft({ add: { '.github/workflows/x.yml': 'on: push\n' } }) }), repoSlug: SLUG, serverUrl: SERVER }, { api: gh.api, log: () => {} }),
+    await assert.rejects(publish({ repo: f.repo, target: p.new, bundle: variant({ commit: craft({ add: { '.github/workflows/x.yml': 'on: push\n' } }) }), repoSlug: SLUG, serverUrl: SERVER }, { api: gh.api, log: () => {} }),
       /refused the sync bundle: it changes \.github\/workflows\/x\.yml/);
     assert.deepEqual(gh.calls, []);
     assert.equal(f.git('ls-remote', '--heads', 'origin', 'sync/*'), '');
@@ -538,11 +542,14 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
     const range = old.slice(0, 8) + '-' + p.new.slice(0, 8);
     refused(variant({ meta: { old, branch: 'sync/' + range, reportPath: 'docs/sync/' + range + '.md' } }), /old aaaaaaaa is not the baseline in UPSTREAM\.lock/);
   });
+  test('metadata: new is not the upstream commit the plan found', () => {
+    refused(variant(), /new [0-9a-f]{8} is not the upstream commit the plan found \(dddddddd\)/, 'd'.repeat(40));
+  });
   test('metadata: base is not the checkout\'s HEAD', () => {
     refused(variant({ meta: { base: 'b'.repeat(40) } }), /base bbbbbbbb is not this checkout's HEAD/);
   });
   test('metadata and bundle: a branch other than sync/<old>-<new>', () => {
-    refused(variant({ heads: { main: p.commit }, meta: { branch: 'main' } }), /meta\.json: branch is not sync\/[0-9a-f]{8}-[0-9a-f]{8}$/);
+    refused(variant({ heads: { other: p.commit }, meta: { branch: 'other' } }), /meta\.json: branch is not sync\/[0-9a-f]{8}-[0-9a-f]{8}$/);
   });
   test('metadata: a report path other than the range\'s', () => {
     refused(variant({ meta: { reportPath: 'docs/sync/other.md' } }), /reportPath is not docs\/sync\/[0-9a-f-]+\.md/);
@@ -623,13 +630,28 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
     refused(variant({ commit: craft({ remove: [p.reportPath] }) }), /it has no report at docs\/sync\//);
   });
   test('lock: a baseline other than the new commit', () => {
-    refused(variant({ commit: craft({ add: { 'UPSTREAM.lock': lockAt(p.commit).replace(/^baseline=.*$/m, 'baseline=' + 'c'.repeat(40)) } }) }), /UPSTREAM\.lock: baseline is not [0-9a-f]{8}/);
+    refused(variant({ commit: craft({ add: { 'UPSTREAM.lock': lockAt(p.commit).replace(/^baseline=.*$/m, 'baseline=' + 'c'.repeat(40)) } }) }), /UPSTREAM\.lock is not the old lock with baseline [0-9a-f]{8}/);
   });
   test('lock: a baseline_note tools/sync would not write', () => {
     refused(variant({ commit: craft({ add: { 'UPSTREAM.lock': lockAt(p.commit).replace(/^baseline_note=.*$/m, 'baseline_note=thanks @someone') } }) }), /baseline_date or baseline_note is not what tools\/sync writes/);
   });
   test('lock: another line changed', () => {
-    refused(variant({ commit: craft({ add: { 'UPSTREAM.lock': lockAt(p.commit).replace(/^repo=.*$/m, 'repo=https://example.invalid/other') } }) }), /lines other than baseline, baseline_date and baseline_note changed/);
+    refused(variant({ commit: craft({ add: { 'UPSTREAM.lock': lockAt(p.commit).replace(/^repo=.*$/m, 'repo=https://example.invalid/other') } }) }), /UPSTREAM\.lock is not the old lock with baseline/);
+  });
+  test('lock: a second baseline_note line, before the one tools/sync writes', () => {
+    refused(variant({ commit: craft({ add: { 'UPSTREAM.lock': lockAt(p.commit).replace(/^baseline_note=/m, 'baseline_note=thanks @someone\nbaseline_note=') } }) }), /UPSTREAM\.lock is not the old lock with baseline/);
+  });
+  test('report: personal data', () => {
+    refused(variant({ commit: craft({ add: { [p.reportPath]: at('show', p.commit + ':' + p.reportPath) + '\nmailto someone@mail.example.net.au\n' } }) }), /the report has personal data: line \d+ \(email\)/);
+  });
+  test('paths: a ".git" or ".." component, in any case or 8.3 form, whatever git\'s fsck lets through', () => {
+    for (const bad of ['src/Upstream/.git/config', 'src/Upstream/.GIT/x', 'src/Upstream/.git. /x', 'src/Upstream/git~1/x', 'src/Upstream/../x', 'src/Upstream/./x', 'src/Upstream//x'])
+      assert.ok(badPath(bad), bad);
+    for (const good of ['src/Upstream/.gitattributes', 'src/Upstream/a.git/x', 'src/Upstream/.github/x', 'src/Upstream/..x/y', 'src/Upstream/git~x'])
+      assert.ok(!badPath(good), good);
+  });
+  test('publish with no bundle when the branch is not pushed', async () => {
+    await assert.rejects(publish({ repo: f.repo, target: p.new, dryRun: true }, { log: () => {} }), /nothing to push: sync\/[0-9a-f-]+ is not pushed, and no bundle was given/);
   });
 });
 
@@ -646,7 +668,7 @@ test('prepare and publish in separate checkouts, as in CI: publish pushes the co
     assert.equal(f.gitAt(prep, 'branch', '--list', 'sync/*'), '');
     assert.equal(f.gitAt(prep, 'ls-remote', '--heads', f.root + '/origin.git', 'sync/*'), '', 'prepare pushes nothing');
     const gh = fakeApi();
-    const r = await publish({ repo: f.repo, bundle: out, repoSlug: SLUG, serverUrl: SERVER }, { api: gh.api, log: () => {} });
+    const r = await publish({ repo: f.repo, target: next, bundle: out, repoSlug: SLUG, serverUrl: SERVER }, { api: gh.api, log: () => {} });
     assert.equal(r.status, 'opened');
     assert.equal(f.remoteHead(p.branch), p.commit, 'the checked commit is what was pushed');
     assert.equal(f.git('rev-parse', p.commit + '~1'), f.git('rev-parse', 'main'));
@@ -664,7 +686,7 @@ test('prepare refuses an --out folder inside the repo, which its clean-up would 
   } finally { f.cleanup(); }
 });
 
-test('the command line, as the workflow runs it: prepare writes status=built; publish --dry-run checks and writes nothing', () => {
+test('the command line, as the workflow runs it: plan, prepare --target, then publish --dry-run checks and writes nothing', () => {
   const f = fixture();
   try {
     const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
@@ -673,17 +695,56 @@ test('the command line, as the workflow runs it: prepare writes status=built; pu
     const outFile = path.join(f.root, 'out.txt');
     const env = { ...process.env, GITHUB_OUTPUT: outFile };
     delete env.GITHUB_TOKEN;
-    let r = spawnSync(process.execPath, [SCRIPT, 'prepare', '--repo', prep, '--upstream', f.up, '--no-fetch', '--out', out], { encoding: 'utf8', env });
+    const cli = (...a) => spawnSync(process.execPath, [SCRIPT, ...a], { encoding: 'utf8', env });
+    const outputs = () => { const t = readFileSync(outFile, 'utf8'); rmSync(outFile); return t; };
+    let r = cli('plan', '--dry-run', '--repo', f.repo, '--upstream', f.up, '--no-fetch');
     assert.equal(r.status, 0, r.stderr);
-    assert.equal(readFileSync(outFile, 'utf8'), 'status=built\nbranch=sync/' + range(f.base, next) + '\nissue=\n');
+    assert.equal(outputs(), 'status=build\nbranch=sync/' + range(f.base, next) + '\nissue=\nnew=' + next + '\n');
+    r = cli('prepare', '--repo', prep, '--upstream', f.up, '--no-fetch', '--target', next, '--out', out);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(outputs(), 'status=built\nbranch=sync/' + range(f.base, next) + '\nissue=\nnew=' + next + '\n');
     assert.ok(existsSync(path.join(out, BUNDLE)) && existsSync(path.join(out, META)));
-    r = spawnSync(process.execPath, [SCRIPT, 'publish', '--dry-run', '--repo', f.repo, '--bundle', out], { encoding: 'utf8', env });
+    r = cli('publish', '--dry-run', '--repo', f.repo, '--target', next, '--bundle', out);
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /the sync bundle is valid[^]*dry run: a real run would push sync\//);
-    assert.match(readFileSync(outFile, 'utf8'), /status=dry-run\n/);
+    assert.match(outputs(), /^status=dry-run\n/);
     assert.equal(f.git('ls-remote', '--heads', 'origin', 'sync/*'), '');
-    r = spawnSync(process.execPath, [SCRIPT, 'publish', '--repo', f.repo, '--bundle', out], { encoding: 'utf8', env });
+    r = cli('publish', '--repo', f.repo, '--target', next, '--bundle', out);
     assert.equal(r.status, 1);
     assert.match(r.stderr, /needs GITHUB_TOKEN/);
+    r = cli('prepare', '--repo', prep, '--upstream', f.up, '--no-fetch', '--target', 'e'.repeat(40), '--out', out);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /--target e{40} is not a full commit sha in the upstream cache/);
+  } finally { f.cleanup(); }
+});
+
+test('plan: a dry run always builds; a real run skips a range with an issue, and only publishes a pushed branch with none', async () => {
+  const f = fixture();
+  try {
+    assert.equal((await plan({ repo: f.repo, upstream: f.up, fetch: false, dryRun: true }, { log: () => {} })).status, 'up-to-date');
+    const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    const title = 'Upstream sync ' + f.base.slice(0, 8) + ' → ' + next.slice(0, 8);
+    const run = (dryRun, issues) => plan({ repo: f.repo, upstream: f.up, fetch: false, dryRun, repoSlug: SLUG }, { api: fakeApi({ issues }).api, log: () => {} });
+    assert.deepEqual(await run(false, []), { status: 'build', branch: 'sync/' + range(f.base, next), old: f.base, new: next });
+    assert.equal((await run(true, [{ number: 7, title, state: 'open' }])).status, 'build');
+    assert.deepEqual(await run(false, [{ number: 7, title, state: 'closed' }]),
+      { status: 'exists', branch: 'sync/' + range(f.base, next), issue: 7, issueState: 'closed', pushed: false, old: f.base, new: next });
+    f.git('push', '-q', 'origin', 'main:refs/heads/sync/' + range(f.base, next));
+    assert.equal((await run(false, [])).status, 'publish');
+    await assert.rejects(plan({ repo: f.repo, upstream: f.up, fetch: false }, { log: () => {} }), /needs GITHUB_TOKEN/);
+  } finally { f.cleanup(); }
+});
+
+test('plan with no upstream cache asks the lock\'s repo for its main (git ls-remote)', async () => {
+  const f = fixture();
+  try {
+    const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    const lock = readFileSync(path.join(f.repo, 'UPSTREAM.lock'), 'utf8').replace(/^repo=.*$/m, 'repo=' + f.up);
+    writeFileSync(path.join(f.repo, 'UPSTREAM.lock'), lock);
+    const r = await plan({ repo: f.repo, dryRun: true }, { log: () => {} });
+    assert.equal(r.new, next);
+    assert.equal(r.status, 'build');
+    writeFileSync(path.join(f.repo, 'UPSTREAM.lock'), lock.replace(/^repo=.*$/m, 'repo=' + path.join(f.root, 'nowhere')));
+    await assert.rejects(plan({ repo: f.repo, dryRun: true }, { log: () => {} }), /could not read main of .*nowhere \(git ls-remote\)/);
   } finally { f.cleanup(); }
 });

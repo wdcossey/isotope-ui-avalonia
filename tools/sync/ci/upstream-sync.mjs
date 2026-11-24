@@ -1,21 +1,24 @@
 #!/usr/bin/env node
-// The scheduled upstream sync (issues #5 and #36), run by .github/workflows/upstream-sync.yml in two phases, each in its
-// own job, because the sync runs upstream's code (its Yoga tests, on the regenerated files) and that code must never
-// share a job with a write token:
-//   prepare  (read-only job): when upstream main has moved past UPSTREAM.lock, regenerates the vendored files with
-//            tools/sync and commits them on a local branch "sync/<old>-<new>", then writes that one commit as a git bundle
-//            with a small metadata file into a folder outside the checkout, for the next job. No GitHub access at all.
-//   publish  (the job with the write token, which runs no upstream code and no dotnet): validates the bundle (the
-//            folder came from a job that ran untrusted code), then pushes the branch, dispatches CI on it (a push made
-//            with the job's token starts no workflow) and opens an issue with the sync report. --dry-run validates and
-//            says what it would do, and writes nothing.
-// With no command, both run in one process (a local run). When nothing moved, prepare writes nothing and there is
-// nothing to publish. A failing sync (a transform that stops matching, a file to classify, a failing upstream test,
-// personal data) fails the run, and nothing is pushed or opened. A branch or issue that already exists for the same
-// range is not pushed or opened again, so a re-run finishes what a failed run started.
+// The scheduled upstream sync (issues #5 and #36), run by .github/workflows/upstream-sync.yml in three phases, each in
+// its own job, because the sync runs upstream's code (its Yoga tests, on the regenerated files) and that code must
+// never share a job with a write token:
+//   plan     (read-only; runs no upstream code) finds upstream main and works out what to do for the range
+//            UPSTREAM.lock → main: nothing (up to date, or a real run whose range has an issue), open the missing issue
+//            of a branch already pushed, or build.
+//   prepare  (read-only; runs upstream's code) syncs to the commit plan found, commits on a local branch
+//            "sync/<old>-<new>" and writes that one commit as a git bundle with a small metadata file into a folder
+//            outside the checkout, for the next job. No GitHub access at all.
+//   publish  (the write token; runs no upstream code and no dotnet) checks the bundle (the folder came from a job that
+//            ran untrusted code), then pushes the branch, dispatches CI on it (a push made with the job's token starts
+//            no workflow) and opens an issue with the sync report. --dry-run checks, says what it would do and writes
+//            nothing.
+// With no command, all three run in one process (a local run). A failing sync (a transform that stops matching, a file
+// to classify, a failing upstream test, personal data) fails the run, and nothing is pushed or opened. A branch or
+// issue that already exists for the same range is not pushed or opened again, so a re-run finishes what a failed run
+// started. A dry run always syncs: testing the sync is what it is for.
 //
 // Run each phase in a disposable checkout with a clean working tree; prepare needs the upstream cache in <repo>/upstream.
-// Both phases leave the checkout as they found it. GitHub is reached through its REST API (GITHUB_TOKEN,
+// Every phase leaves the checkout as it found it. GitHub is reached through its REST API (GITHUB_TOKEN,
 // GITHUB_REPOSITORY), so the runner needs no gh CLI.
 // Tests: node --test tools/sync/ci/upstream-sync.test.mjs
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -24,20 +27,24 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normUrl } from '../lib/run.mjs';
-import { parseLock } from '../lib/lock.mjs';
+import { parseLock, updateLock } from '../lib/lock.mjs';
+import { scanText } from '../lib/personal.mjs';
 
 export const USAGE = [
-  'Usage: node tools/sync/ci/upstream-sync.mjs [prepare|publish] [options]',
-  '  (no command)      prepare, then publish, in one process',
+  'Usage: node tools/sync/ci/upstream-sync.mjs [plan|prepare|publish] [options]',
+  '  (no command)      plan, prepare and publish in one process',
+  '  plan              work out what to do for the range (up-to-date, exists, publish or build); write nothing',
   '  prepare           sync on a local branch and write the commit as a bundle into --out; push and open nothing',
-  '  publish           validate the bundle in --bundle, then push the branch, dispatch CI and open the issue',
-  '  --dry-run         (publish, or no command) validate and print what would be pushed and opened; write nothing',
-  '  --no-fetch        (prepare, or no command) do not fetch the upstream cache first',
+  '  publish           check the bundle in --bundle, then push the branch, dispatch CI and open the issue',
+  '  --dry-run         (plan, publish, no command) a dry run: always build; check, and print what would be pushed and',
+  '                    opened; write nothing',
+  '  --target <sha>    (prepare, publish) the upstream commit plan found (prepare: default <remote>/main of the cache)',
   '  --out <dir>       (prepare) the folder to write the bundle and its metadata to, outside the repo',
-  '  --bundle <dir>    (publish) the folder prepare wrote',
+  '  --bundle <dir>    (publish) the folder prepare wrote (none when plan said "publish": the branch is pushed)',
+  '  --no-fetch        (plan, prepare, no command) do not fetch the upstream cache first',
   '  --repo <dir>      this repo (default: three levels above this script)',
-  '  --upstream <dir>  (prepare, or no command) the upstream cache (default: <repo>/upstream)',
-  'Environment: GITHUB_TOKEN and GITHUB_REPOSITORY (owner/name; needed to publish unless --dry-run), GITHUB_API_URL,',
+  '  --upstream <dir>  the upstream cache (default: <repo>/upstream). plan without it asks the lock\'s repo (git ls-remote)',
+  'Environment: GITHUB_TOKEN and GITHUB_REPOSITORY (owner/name; needed for a real plan or publish), GITHUB_API_URL,',
   'GITHUB_SERVER_URL, GITHUB_RUN_ID, GITHUB_OUTPUT and GITHUB_STEP_SUMMARY (all set by GitHub Actions).',
 ].join('\n');
 
@@ -58,14 +65,15 @@ const BRANCH = /^sync\/[0-9a-f]{8}-[0-9a-f]{8}$/;
 
 const ALLOWED = {
   all: ['dry-run', 'no-fetch', 'repo', 'upstream'],
-  prepare: ['no-fetch', 'repo', 'upstream', 'out'],
-  publish: ['dry-run', 'repo', 'bundle'],
+  plan: ['dry-run', 'no-fetch', 'repo', 'upstream'],
+  prepare: ['target', 'out', 'no-fetch', 'repo', 'upstream'],
+  publish: ['dry-run', 'target', 'bundle', 'repo'],
 };
 
 export function parseArgs(argv) {
   const o = { command: 'all', dryRun: false, fetch: true, help: false };
   let i = 0;
-  if (argv[0] === 'prepare' || argv[0] === 'publish') o.command = argv[i++];
+  if (argv[0] in ALLOWED && argv[0] !== 'all') o.command = argv[i++];
   const allowed = ALLOWED[o.command];
   for (; i < argv.length; i++) {
     const a = argv[i];
@@ -80,7 +88,7 @@ export function parseArgs(argv) {
     }
   }
   if (!o.help && o.command === 'prepare' && !o.out) throw new Fail('prepare needs --out');
-  if (!o.help && o.command === 'publish' && !o.bundle) throw new Fail('publish needs --bundle');
+  if (!o.help && o.command === 'publish' && !o.target) throw new Fail('publish needs --target');
   return o;
 }
 
@@ -165,10 +173,83 @@ function readLockText(text) {
   try { return parseLock(text); } catch (e) { throw new Fail(e.message); }
 }
 
+/** The range from the lock's baseline to target: its branch, issue title and report path. */
+function rangeOf(old, target, cfg) {
+  const range = short(old) + '-' + short(target);
+  return { old, new: target, branch: 'sync/' + range, title: 'Upstream sync ' + short(old) + ' → ' + short(target), reportPath: cfg.reportDir + '/' + range + '.md' };
+}
+
+/** Upstream main: the cache's <remote>/main (fetched first if asked) when a cache is given, else asked of the lock's repo. */
+function upstreamMain({ lock, upstream, fetch, log }) {
+  if (!upstream) {
+    // From outside the checkout, so its git config (a token for this repo's remote) plays no part.
+    const line = tryRun(() => execFileSync('git', ['ls-remote', lock.repo, 'refs/heads/main'], { cwd: os.tmpdir(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
+    const sha = /^([0-9a-f]{40})\trefs\/heads\/main$/.exec(line ?? '')?.[1];
+    if (!sha) throw new Fail('could not read main of ' + lock.repo + ' (git ls-remote)');
+    return sha;
+  }
+  const up = gitIn(upstream);
+  const remote = tryRun(() => up('remote', '-v'))?.split('\n')
+    .map((l) => /^(\S+)\s+(\S+)\s+\(fetch\)$/.exec(l.trim())).find((m) => m && normUrl(m[2]) === normUrl(lock.repo))?.[1];
+  if (!remote) throw new Fail('no remote in the upstream cache points at ' + lock.repo);
+  if (fetch) { log('fetching ' + remote + ' in the upstream cache'); up('fetch', '--quiet', remote); }
+  const target = tryRun(() => up('rev-parse', '--verify', '--quiet', remote + '/main^{commit}'));
+  if (!target) throw new Fail(remote + '/main is not in the upstream cache');
+  return target;
+}
+
+/** What is already done for the range: its branch on origin, its issue, older open sync issues, and so what a real run would do. */
+async function rangeState({ git, api, repoSlug, r, log }) {
+  const onRemote = git('ls-remote', '--heads', 'origin', 'refs/heads/' + r.branch) !== '';
+  let issues = null;
+  if (api) {
+    const page = await api('GET', '/repos/' + repoSlug + '/issues?state=all&per_page=100');
+    issues = page.filter((i) => !i.pull_request && typeof i.title === 'string');
+  } else log('GitHub not checked (no GITHUB_TOKEN): an existing issue for this range would not be seen');
+  const existing = issues?.find((i) => i.title === r.title);
+  const superseded = (issues ?? []).filter((i) => i.state === 'open' && i.title !== r.title && i.title.startsWith('Upstream sync '));
+  // An issue for the range, open or closed, means it was handled: a closed one whose branch is gone was turned down,
+  // and is not opened again. A branch with no issue is a run that failed after its push: open the issue now.
+  const plan = existing
+    ? 'do nothing: issue #' + existing.number + ' (' + existing.state + ') is for this range' + (onRemote ? ', and ' + r.branch + ' is pushed' : '')
+    : (onRemote ? 'open the issue only (' + r.branch + ' is already pushed)' : 'push ' + r.branch) + ', dispatch ' + CI_WORKFLOW + ' on it and open the issue "' + r.title + '"';
+  return { onRemote, existing, superseded, plan };
+}
+
+const existsResult = (r, s) => ({ status: 'exists', branch: r.branch, issue: s.existing.number, issueState: s.existing.state, pushed: s.onRemote, old: r.old, new: r.new });
+
 /**
- * The read-only phase. opts: { repo, upstream, fetch, syncScript, out }. When upstream main has moved past
- * UPSTREAM.lock, commits the sync on a local branch, writes that commit as <out>/sync.bundle (prerequisite: the
- * checkout's HEAD) with <out>/meta.json, and puts the checkout back as it was. Resolves { status: 'up-to-date' | 'built', ... }.
+ * The first phase; runs no upstream code. opts: { repo, upstream (none: git ls-remote), fetch, dryRun, repoSlug }.
+ * deps: { api (null: no GitHub access), log }. Resolves { status, old, new, branch? }, the status being what to do:
+ * up-to-date (nothing moved), exists (a real run whose range has an issue), publish (a real run whose branch is
+ * pushed but has no issue: open it, no sync) or build (sync, then publish; always, when something moved, on a dry run).
+ */
+export async function plan(opts, { api = null, log = console.log } = {}) {
+  const repo = path.resolve(opts.repo);
+  const git = gitIn(repo);
+  if (!opts.dryRun && !api) throw new Fail('a real run needs GITHUB_TOKEN and GITHUB_REPOSITORY (or pass --dry-run)');
+  const lock = readLockText(readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8'));
+  const target = upstreamMain({ lock, upstream: opts.upstream && path.resolve(opts.upstream), fetch: opts.fetch, log });
+  if (target === lock.baseline) {
+    log('up to date: UPSTREAM.lock is upstream main (' + short(target) + '); nothing to do');
+    return { status: 'up-to-date', old: lock.baseline, new: target };
+  }
+  const r = rangeOf(lock.baseline, target, JSON.parse(readFileSync(path.join(repo, 'tools', 'sync', 'sync.json'), 'utf8')));
+  log('upstream moved: ' + short(r.old) + ' → ' + short(r.new) + '; branch ' + r.branch);
+  if (opts.dryRun) return { status: 'build', branch: r.branch, old: r.old, new: r.new };
+  const s = await rangeState({ git, api, repoSlug: opts.repoSlug, r, log });
+  if (s.existing) {
+    log('already done: ' + s.plan.replace(/^do nothing: /, '') + '; nothing to do');
+    return existsResult(r, s);
+  }
+  log('plan: ' + s.plan);
+  return { status: s.onRemote ? 'publish' : 'build', branch: r.branch, old: r.old, new: r.new };
+}
+
+/**
+ * The read-only phase. opts: { repo, upstream, fetch, syncScript, target, out }. Commits the sync to target (default:
+ * the cache's <remote>/main) on a local branch, writes that commit as <out>/sync.bundle (prerequisite: the checkout's
+ * HEAD) with <out>/meta.json, and puts the checkout back as it was. Resolves { status: 'up-to-date' | 'built', ... }.
  * It runs upstream's code (tools/sync's verify step), so nothing it writes is trusted: publish checks it all.
  */
 export async function prepare(opts, { log = console.log } = {}) {
@@ -176,36 +257,28 @@ export async function prepare(opts, { log = console.log } = {}) {
   const upstream = path.resolve(opts.upstream ?? path.join(repo, 'upstream'));
   const out = path.resolve(opts.out);
   const git = gitIn(repo);
-  const up = gitIn(upstream);
   const syncScript = opts.syncScript ?? path.join(repo, 'tools', 'sync', 'sync.mjs');
   const inside = path.relative(repo, out);
   if (!inside || (!inside.startsWith('..') && !path.isAbsolute(inside))) throw new Fail('--out must be outside the repo (the checkout is cleaned after the sync)');
 
   const lock = readLockText(readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8'));
-  const baseline = lock.baseline;
-  const remote = tryRun(() => up('remote', '-v'))?.split('\n')
-    .map((l) => /^(\S+)\s+(\S+)\s+\(fetch\)$/.exec(l.trim())).find((m) => m && normUrl(m[2]) === normUrl(lock.repo))?.[1];
-  if (!remote) throw new Fail('no remote in the upstream cache points at ' + lock.repo);
-  if (opts.fetch) { log('fetching ' + remote + ' in the upstream cache'); up('fetch', '--quiet', remote); }
-  const target = tryRun(() => up('rev-parse', '--verify', '--quiet', remote + '/main^{commit}'));
-  if (!target) throw new Fail(remote + '/main is not in the upstream cache');
-
-  if (target === baseline) {
+  let target = opts.target;
+  if (target === undefined) target = upstreamMain({ lock, upstream, fetch: opts.fetch, log });
+  else if (!SHA.test(target) || tryRun(() => gitIn(upstream)('rev-parse', '--verify', '--quiet', target + '^{commit}')) !== target)
+    throw new Fail('--target ' + target + ' is not a full commit sha in the upstream cache');
+  if (target === lock.baseline) {
     log('up to date: UPSTREAM.lock is upstream main (' + short(target) + '); nothing to do');
-    return { status: 'up-to-date', old: baseline, new: target };
+    return { status: 'up-to-date', old: lock.baseline, new: target };
   }
-  const range = short(baseline) + '-' + short(target);
-  const branch = 'sync/' + range;
-  const cfg = JSON.parse(readFileSync(path.join(repo, 'tools', 'sync', 'sync.json'), 'utf8'));
-  const reportPath = cfg.reportDir + '/' + range + '.md';
-  log('upstream moved: ' + short(baseline) + ' → ' + short(target) + '; branch ' + branch);
+  const r = rangeOf(lock.baseline, target, JSON.parse(readFileSync(path.join(repo, 'tools', 'sync', 'sync.json'), 'utf8')));
+  log('syncing ' + short(r.old) + ' → ' + short(r.new) + ' on ' + r.branch);
 
   if (git('status', '--porcelain') !== '') throw new Fail('the working tree is not clean; run in a fresh checkout');
   const base = git('rev-parse', 'HEAD');
   // The branch to return to, or the commit when HEAD is detached.
   const start = tryRun(() => git('symbolic-ref', '--quiet', '--short', 'HEAD')) || base;
   try {
-    git('checkout', '--quiet', '-b', branch);
+    git('checkout', '--quiet', '-b', r.branch);
     const sync = spawnSync(process.execPath, [syncScript, target, '--commit', '--no-fetch', '--no-checkout', '--repo', repo, '--upstream', upstream],
       { encoding: 'utf8', maxBuffer: 1 << 28 });
     if (sync.stdout) log(sync.stdout.trimEnd());
@@ -214,12 +287,12 @@ export async function prepare(opts, { log = console.log } = {}) {
     if (sync.stderr) log(sync.stderr.trimEnd()); // its warnings
     const commit = git('rev-parse', 'HEAD');
     if (commit === base) throw new Fail('tools/sync committed nothing');
-    const report = readFileSync(path.join(repo, ...reportPath.split('/')), 'utf8');
+    const report = readFileSync(path.join(repo, ...r.reportPath.split('/')), 'utf8');
     mkdirSync(out, { recursive: true });
-    git('bundle', 'create', '--quiet', path.join(out, BUNDLE), '^' + base, 'refs/heads/' + branch);
-    const meta = { base, branch, commit, new: target, old: baseline, reportPath };
+    git('bundle', 'create', '--quiet', path.join(out, BUNDLE), '^' + base, 'refs/heads/' + r.branch);
+    const meta = { base, branch: r.branch, commit, new: r.new, old: r.old, reportPath: r.reportPath };
     writeFileSync(path.join(out, META), JSON.stringify(meta, null, 2) + '\n');
-    log('built ' + branch + ' (' + short(commit) + ' on ' + short(base) + '): ' + path.join(out, BUNDLE));
+    log('built ' + r.branch + ' (' + short(commit) + ' on ' + short(base) + '): ' + path.join(out, BUNDLE));
     return { status: 'built', ...meta, report };
   } finally {
     // The tree was clean, so whatever the sync wrote goes (ignored files such as upstream/ stay), and so does the
@@ -227,27 +300,36 @@ export async function prepare(opts, { log = console.log } = {}) {
     tryRun(() => git('reset', '--quiet', '--hard'));
     tryRun(() => git('clean', '--quiet', '-fd'));
     tryRun(() => git('checkout', '--quiet', start));
-    tryRun(() => git('branch', '--quiet', '-D', branch));
+    tryRun(() => git('branch', '--quiet', '-D', r.branch));
   }
 }
 
+/** Why a changed path can't be in the commit whatever its folder: a component git or a filesystem would read as
+ * something else (".git" in any case or 8.3 form, "." or ".."), or an empty one. Checked as well as git's fsck, which
+ * not every git applies to a bundle. */
+export function badPath(p) {
+  return p.split('/').some((c) => c === '' || c === '.' || c === '..' || /^(\.git|git~\d+)[. ]*$/i.test(c));
+}
+
 /**
- * Checks what prepare wrote into dir before anything is pushed, with nothing but this checkout as the reference: a job
- * that ran upstream's code made it. Fetches the commit into a quarantine ref and resolves { branch, old, new, commit,
- * base, reportPath, report }; anything else throws a Fail and leaves no ref behind.
+ * Checks what prepare wrote into dir before anything is pushed, with nothing but this checkout and target (the upstream
+ * commit plan found, in a job that runs no upstream code) as the reference: a job that ran upstream's code made it.
+ * Fetches the commit into a quarantine ref and resolves { branch, old, new, commit, base, reportPath, report };
+ * anything else throws a Fail and leaves no ref behind.
  *
- * The rules: the metadata has exactly its keys and names this checkout's baseline and HEAD; the bundle holds one head,
- * refs/heads/sync/<old8>-<new8>, at that commit, and git's fsck passes it; the commit is the only one on HEAD, made by
- * the identity this job commits with, with the sync's own message; it changes only the vendored tree, UPSTREAM.lock
- * (baseline, baseline_date and baseline_note, to the new commit) and the range's report, all as regular files.
- * The vendored bytes themselves are not checked here (that needs dotnet): CI's "tools/sync --check" on the branch
- * regenerates them from the lock with main's transform rules, which this commit can't touch.
+ * The rules: the metadata has exactly its keys and names this checkout's baseline and HEAD, and target; the bundle
+ * holds one head, refs/heads/sync/<old8>-<new8>, at that commit, and git's fsck passes it; the commit is the only one
+ * on HEAD, made by the identity this job commits with, with the sync's own message; it changes only the vendored tree,
+ * UPSTREAM.lock (exactly as tools/sync updates it, to target) and the range's report, all as regular files; the report
+ * has no personal data. The vendored bytes themselves are not checked here (that needs dotnet): CI's
+ * "tools/sync --check" on the branch regenerates them from the lock with main's transform rules, which this commit
+ * can't touch.
  */
-export function verifyBundle({ repo, dir }) {
+export function verifyBundle({ repo, dir, target }) {
   const git = gitIn(repo);
   const refuse = (why) => { throw new Fail('refused the sync bundle: ' + why); };
   const head = git('rev-parse', 'HEAD');
-  const lockText = git('show', head + ':UPSTREAM.lock');
+  const lockText = git('show', head + ':UPSTREAM.lock') + '\n';
   const lock = readLockText(lockText);
   const cfg = JSON.parse(git('show', head + ':tools/sync/sync.json'));
 
@@ -257,13 +339,12 @@ export function verifyBundle({ repo, dir }) {
     refuse(META + ' must have exactly the keys ' + META_KEYS.join(', '));
   for (const k of ['base', 'commit', 'new', 'old']) if (typeof meta[k] !== 'string' || !SHA.test(meta[k])) refuse(META + ': ' + k + ' is not a 40-character commit sha');
   if (meta.old !== lock.baseline) refuse(META + ': old ' + short(meta.old) + ' is not the baseline in UPSTREAM.lock (' + short(lock.baseline) + ')');
-  if (meta.new === meta.old) refuse(META + ': new is old');
+  if (meta.new !== target) refuse(META + ': new ' + short(meta.new) + ' is not the upstream commit the plan found (' + short(target) + ')');
   if (meta.base !== head) refuse(META + ': base ' + short(meta.base) + ' is not this checkout\'s HEAD (' + short(head) + ')');
-  const range = short(meta.old) + '-' + short(meta.new);
-  const branch = 'sync/' + range;
+  const r = rangeOf(meta.old, meta.new, cfg);
+  const branch = r.branch;
   if (typeof meta.branch !== 'string' || meta.branch !== branch || !BRANCH.test(branch)) refuse(META + ': branch is not ' + branch);
-  const reportPath = cfg.reportDir + '/' + range + '.md';
-  if (meta.reportPath !== reportPath) refuse(META + ': reportPath is not ' + reportPath);
+  if (meta.reportPath !== r.reportPath) refuse(META + ': reportPath is not ' + r.reportPath);
 
   const file = path.join(dir, BUNDLE);
   if (!existsSync(file)) refuse('no ' + BUNDLE);
@@ -297,26 +378,28 @@ export function verifyBundle({ repo, dir }) {
       entries.push({ mode: m[1], status: m[2], path: tokens[i + 1] });
     }
     for (const e of entries) {
+      if (badPath(e.path)) refuse('it changes ' + JSON.stringify(e.path) + ', a path no commit may hold');
       if (e.path === '.github' || e.path.startsWith('.github/')) refuse('it changes ' + e.path + ': nothing under .github/ may change');
       const ok = e.path.startsWith(cfg.vendorDir + '/') || (e.path === 'UPSTREAM.lock' && e.status === 'M') ||
-        (e.path === reportPath && (e.status === 'A' || e.status === 'M'));
-      if (!ok) refuse('it changes ' + e.path + ' (' + e.status + '); only ' + cfg.vendorDir + '/, UPSTREAM.lock and ' + reportPath + ' may change');
+        (e.path === r.reportPath && (e.status === 'A' || e.status === 'M'));
+      if (!ok) refuse('it changes ' + e.path + ' (' + e.status + '); only ' + cfg.vendorDir + '/, UPSTREAM.lock and ' + r.reportPath + ' may change');
       if (e.status !== 'D' && e.mode !== '100644' && e.mode !== '100755') refuse(e.path + ' is not a regular file (mode ' + e.mode + ')');
     }
     if (!entries.some((e) => e.path === 'UPSTREAM.lock')) refuse('it does not update UPSTREAM.lock');
-    if (!entries.some((e) => e.path === reportPath)) refuse('it has no report at ' + reportPath);
+    if (!entries.some((e) => e.path === r.reportPath)) refuse('it has no report at ' + r.reportPath);
 
-    const newLockText = git('show', commit + ':UPSTREAM.lock');
-    let newLock;
-    try { newLock = parseLock(newLockText); } catch (e) { refuse(e.message); }
-    if (newLock.baseline !== meta.new) refuse('UPSTREAM.lock: baseline is not ' + short(meta.new));
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newLock.baseline_date ?? '') || !/^(PR #\d+|commit [0-9a-f]{8})$/.test(newLock.baseline_note ?? ''))
-      refuse('UPSTREAM.lock: baseline_date or baseline_note is not what tools/sync writes');
-    const rest = (t) => t.replace(/\r\n/g, '\n').split('\n').filter((l) => !/^(baseline|baseline_date|baseline_note)=/.test(l)).join('\n').trim();
-    if (rest(newLockText) !== rest(lockText)) refuse('UPSTREAM.lock: lines other than baseline, baseline_date and baseline_note changed');
+    // The lock must be exactly what tools/sync writes (lib/lock.mjs updateLock): only the three baseline lines change.
+    const newLockText = git('show', commit + ':UPSTREAM.lock') + '\n';
+    const date = /^baseline_date=(\d{4}-\d{2}-\d{2})$/m.exec(newLockText)?.[1];
+    const note = /^baseline_note=(PR #\d+|commit [0-9a-f]{8})$/m.exec(newLockText)?.[1];
+    if (!date || !note) refuse('UPSTREAM.lock: baseline_date or baseline_note is not what tools/sync writes');
+    if (newLockText !== updateLock(lockText, { baseline: meta.new, baseline_date: date, baseline_note: note }))
+      refuse('UPSTREAM.lock is not the old lock with baseline ' + short(meta.new) + ' (and its date and note) as tools/sync writes it');
 
-    const report = git('show', commit + ':' + reportPath) + '\n';
-    return { branch, old: meta.old, new: meta.new, commit, base: head, reportPath, report };
+    const report = git('show', commit + ':' + r.reportPath) + '\n';
+    const hits = scanText(report);
+    if (hits.length) refuse('the report has personal data: ' + hits.map((h) => 'line ' + h.line + ' (' + h.kind + ')').join(', '));
+    return { branch, old: meta.old, new: meta.new, commit, base: head, reportPath: r.reportPath, report };
   } catch (e) {
     tryRun(() => git('update-ref', '-d', QUARANTINE));
     throw e;
@@ -324,78 +407,73 @@ export function verifyBundle({ repo, dir }) {
 }
 
 /**
- * The write phase. opts: { repo, bundle, dryRun, repoSlug, serverUrl, runUrl }. deps: { api (null: no GitHub access),
- * log }. Checks the bundle (verifyBundle), then pushes its commit, dispatches CI and opens the issue, unless the range
- * is done already. Runs no upstream code. Resolves { status: 'exists' | 'dry-run' | 'opened', ... }.
+ * The write phase; runs no upstream code. opts: { repo, target, bundle (none: the branch is pushed), dryRun, repoSlug,
+ * serverUrl, runUrl }. deps: { api (null: no GitHub access), log }. Checks the bundle (verifyBundle), then pushes its
+ * commit, dispatches CI and opens the issue, unless the range is done already. Resolves { status: 'exists' | 'dry-run'
+ * | 'opened', ... }.
  */
 export async function publish(opts, { api = null, log = console.log } = {}) {
   const repo = path.resolve(opts.repo);
   const git = gitIn(repo);
   if (!opts.dryRun && !api) throw new Fail('a real run needs GITHUB_TOKEN and GITHUB_REPOSITORY (or pass --dry-run)');
-  const c = verifyBundle({ repo, dir: path.resolve(opts.bundle) });
+  if (!SHA.test(opts.target ?? '')) throw new Fail('--target must be a 40-character commit sha');
+  const lock = readLockText(git('show', 'HEAD:UPSTREAM.lock'));
+  if (opts.target === lock.baseline) throw new Fail('nothing to publish: UPSTREAM.lock is at ' + short(opts.target));
+  const r = rangeOf(lock.baseline, opts.target, JSON.parse(git('show', 'HEAD:tools/sync/sync.json')));
+  const c = opts.bundle ? verifyBundle({ repo, dir: path.resolve(opts.bundle), target: opts.target }) : null;
   try {
-    const { branch, commit } = c;
-    log('the sync bundle is valid: ' + branch + ' at ' + short(commit) + ', one commit on ' + short(c.base));
-    const title = 'Upstream sync ' + short(c.old) + ' → ' + short(c.new);
-    const onRemote = git('ls-remote', '--heads', 'origin', 'refs/heads/' + branch) !== '';
-    let issues = null;
-    if (api) {
-      const page = await api('GET', '/repos/' + opts.repoSlug + '/issues?state=all&per_page=100');
-      issues = page.filter((i) => !i.pull_request && typeof i.title === 'string');
-    } else log('GitHub not checked (no GITHUB_TOKEN): an existing issue for this range would not be seen');
-    const existing = issues?.find((i) => i.title === title);
-    // An issue for the range, open or closed, means it was handled: a closed one whose branch is gone was turned down,
-    // and is not opened again. A branch with no issue is a run that failed after its push: open the issue now.
-    const plan = existing
-      ? 'do nothing: issue #' + existing.number + ' (' + existing.state + ') is for this range' + (onRemote ? ', and ' + branch + ' is pushed' : '')
-      : (onRemote ? 'open the issue only (' + branch + ' is already pushed)' : 'push ' + branch) + ', dispatch ' + CI_WORKFLOW + ' on it and open the issue "' + title + '"';
-    if (existing && !opts.dryRun) {
-      log('already done: ' + plan.replace(/^do nothing: /, '') + '; nothing to do');
-      return { status: 'exists', branch, issue: existing.number, issueState: existing.state, pushed: onRemote, old: c.old, new: c.new };
+    if (c) log('the sync bundle is valid: ' + r.branch + ' at ' + short(c.commit) + ', one commit on ' + short(c.base));
+    const s = await rangeState({ git, api, repoSlug: opts.repoSlug, r, log });
+    if (s.existing && !opts.dryRun) {
+      log('already done: ' + s.plan.replace(/^do nothing: /, '') + '; nothing to do');
+      return existsResult(r, s);
     }
+    if (!s.onRemote && !c) throw new Fail('nothing to push: ' + r.branch + ' is not pushed, and no bundle was given');
     // A pushed branch is what the issue describes, so its report is read from there; a dry run shows this sync's.
-    let report = c.report;
-    if (onRemote && !opts.dryRun) {
-      log('branch ' + branch + ' is already pushed; reading its report');
-      git('fetch', '--quiet', 'origin', 'refs/heads/' + branch);
-      report = git('show', 'FETCH_HEAD:' + c.reportPath) + '\n';
+    let report = c?.report;
+    if (s.onRemote && (!opts.dryRun || !c)) {
+      log('branch ' + r.branch + ' is already pushed; reading its report');
+      git('fetch', '--quiet', 'origin', 'refs/heads/' + r.branch);
+      report = git('show', 'FETCH_HEAD:' + r.reportPath) + '\n';
     }
     // The compare link's base: the branch this checkout is on, or its commit.
-    const start = tryRun(() => git('symbolic-ref', '--quiet', '--short', 'HEAD')) || c.base;
-    const superseded = (issues ?? []).filter((i) => i.state === 'open' && i.title !== title && i.title.startsWith('Upstream sync '));
-    const bodyFor = (ci) => issueBody({ report, branch, base: start, reportPath: c.reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
+    const start = tryRun(() => git('symbolic-ref', '--quiet', '--short', 'HEAD')) || git('rev-parse', 'HEAD');
+    const bodyFor = (ci) => issueBody({ report, branch: r.branch, base: start, reportPath: r.reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded: s.superseded });
     if (opts.dryRun) {
-      log('dry run: a real run would ' + plan + (superseded.length && !existing ? ' (superseding #' + superseded.map((i) => i.number).join(', #') + ')' : ''));
-      return { status: 'dry-run', branch, title, plan, body: bodyFor({ ok: true }), old: c.old, new: c.new };
+      log('dry run: a real run would ' + s.plan + (s.superseded.length && !s.existing ? ' (superseding #' + s.superseded.map((i) => i.number).join(', #') + ')' : ''));
+      return { status: 'dry-run', branch: r.branch, title: r.title, plan: s.plan, body: bodyFor({ ok: true }), old: r.old, new: r.new };
     }
 
-    if (!onRemote) {
+    if (!s.onRemote) {
       // The checked commit itself, not a ref name.
-      git('push', '--quiet', 'origin', commit + ':refs/heads/' + branch);
-      log('pushed ' + branch);
+      git('push', '--quiet', 'origin', c.commit + ':refs/heads/' + r.branch);
+      log('pushed ' + r.branch);
     }
     let ci = { ok: true };
-    try { await api('POST', '/repos/' + opts.repoSlug + '/actions/workflows/' + CI_WORKFLOW + '/dispatches', { ref: branch }); }
+    try { await api('POST', '/repos/' + opts.repoSlug + '/actions/workflows/' + CI_WORKFLOW + '/dispatches', { ref: r.branch }); }
     catch (e) { ci = { ok: false, error: e.message.split('\n')[0] }; log('warning: could not dispatch ' + CI_WORKFLOW + ': ' + ci.error); }
-    const issue = await api('POST', '/repos/' + opts.repoSlug + '/issues', { title, body: bodyFor(ci) });
-    log('opened issue #' + issue.number + ': ' + title);
-    return { status: 'opened', branch, issue: issue.number, ci: ci.ok, old: c.old, new: c.new };
+    const issue = await api('POST', '/repos/' + opts.repoSlug + '/issues', { title: r.title, body: bodyFor(ci) });
+    log('opened issue #' + issue.number + ': ' + r.title);
+    return { status: 'opened', branch: r.branch, issue: issue.number, ci: ci.ok, old: r.old, new: r.new };
   } finally {
     tryRun(() => git('update-ref', '-d', QUARANTINE));
   }
 }
 
 /**
- * Both phases in one process (a local run, and most tests): prepare into a temporary folder, then publish from it.
- * opts: { repo, upstream, dryRun, fetch, syncScript, repoSlug, serverUrl, runUrl }. deps: { api, log }.
+ * All three phases in one process (a local run, and most tests): plan; prepare into a temporary folder when there is
+ * something to build; then publish. opts: { repo, upstream, dryRun, fetch, syncScript, repoSlug, serverUrl, runUrl }.
+ * deps: { api, log }.
  */
 export async function runJob(opts, { api = null, log = console.log } = {}) {
-  if (!opts.dryRun && !api) throw new Fail('a real run needs GITHUB_TOKEN and GITHUB_REPOSITORY (or pass --dry-run)');
+  const upstream = path.resolve(opts.upstream ?? path.join(opts.repo, 'upstream'));
+  const p = await plan({ repo: opts.repo, upstream, fetch: opts.fetch, dryRun: opts.dryRun, repoSlug: opts.repoSlug }, { api, log });
+  if (p.status === 'up-to-date' || p.status === 'exists') return p;
   const out = mkdtempSync(path.join(os.tmpdir(), 'isotope-sync-bundle-'));
   try {
-    const p = await prepare({ repo: opts.repo, upstream: opts.upstream, fetch: opts.fetch, syncScript: opts.syncScript, out }, { log });
-    if (p.status === 'up-to-date') return p;
-    return await publish({ repo: opts.repo, bundle: out, dryRun: opts.dryRun, repoSlug: opts.repoSlug, serverUrl: opts.serverUrl, runUrl: opts.runUrl }, { api, log });
+    if (p.status === 'build') await prepare({ repo: opts.repo, upstream, fetch: false, syncScript: opts.syncScript, target: p.new, out }, { log });
+    return await publish({ repo: opts.repo, target: p.new, bundle: p.status === 'build' ? out : null, dryRun: opts.dryRun,
+      repoSlug: opts.repoSlug, serverUrl: opts.serverUrl, runUrl: opts.runUrl }, { api, log });
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
@@ -404,7 +482,9 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
 export function summarise(r) {
   const head = {
     'up-to-date': 'Upstream main is the commit in UPSTREAM.lock (' + short(r.new) + '): nothing to do.',
-    built: 'Upstream moved ' + short(r.old) + ' → ' + short(r.new) + ': the sync commit for \x60' + r.branch + '\x60 is built and handed to the publish job, which checks it.',
+    build: 'Upstream moved ' + short(r.old) + ' → ' + short(r.new) + ': the prepare job syncs \x60' + r.branch + '\x60.',
+    publish: 'Upstream moved ' + short(r.old) + ' → ' + short(r.new) + ': \x60' + r.branch + '\x60 is pushed but has no issue, so the publish job opens it.',
+    built: 'Synced ' + short(r.old) + ' → ' + short(r.new) + ': the commit for \x60' + r.branch + '\x60 is built and handed to the publish job, which checks it.',
     exists: 'Already done: #' + r.issue + ' (' + r.issueState + ') is for this range' + (r.pushed ? ', and \x60' + r.branch + '\x60 is pushed' : ', and its branch is gone') + '.',
     'dry-run': 'Dry run: upstream moved ' + short(r.old) + ' → ' + short(r.new) + '. Nothing was pushed or opened.',
     opened: 'Upstream moved ' + short(r.old) + ' → ' + short(r.new) + ': pushed \x60' + r.branch + '\x60 and opened #' + r.issue + '.' +
@@ -425,13 +505,14 @@ async function main(argv, env) {
   const api = env.GITHUB_TOKEN && repoSlug ? githubApi({ token: env.GITHUB_TOKEN, apiUrl: env.GITHUB_API_URL }) : null;
   const where = { repoSlug, serverUrl, runUrl: repoSlug && env.GITHUB_RUN_ID ? serverUrl + '/' + repoSlug + '/actions/runs/' + env.GITHUB_RUN_ID : null };
   try {
-    const r = o.command === 'prepare'
-      ? await prepare({ repo, upstream: o.upstream, syncScript, fetch: o.fetch, out: o.out })
-      : o.command === 'publish'
-        ? await publish({ repo, bundle: o.bundle, dryRun: o.dryRun, ...where }, { api })
-        : await runJob({ repo, upstream: o.upstream, syncScript, dryRun: o.dryRun, fetch: o.fetch, ...where }, { api });
+    const r = await {
+      plan: () => plan({ repo, upstream: o.upstream, fetch: o.fetch, dryRun: o.dryRun, repoSlug }, { api }),
+      prepare: () => prepare({ repo, upstream: o.upstream, syncScript, fetch: o.fetch, target: o.target, out: o.out }),
+      publish: () => publish({ repo, target: o.target, bundle: o.bundle, dryRun: o.dryRun, ...where }, { api }),
+      all: () => runJob({ repo, upstream: o.upstream, syncScript, dryRun: o.dryRun, fetch: o.fetch, ...where }, { api }),
+    }[o.command]();
     if (r.body) console.log('issue "' + r.title + '":\n' + r.body);
-    if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, 'status=' + r.status + '\nbranch=' + (r.branch ?? '') + '\nissue=' + (r.issue ?? '') + '\n');
+    if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, 'status=' + r.status + '\nbranch=' + (r.branch ?? '') + '\nissue=' + (r.issue ?? '') + '\nnew=' + (r.new ?? '') + '\n');
     if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, summarise(r));
     return 0;
   } catch (e) {
