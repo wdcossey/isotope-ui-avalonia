@@ -63,7 +63,7 @@ public class NumberBoxTests
     public void NumberBox_writes_its_bounds_step_and_value_and_NaN_is_an_empty_box()
     {
         double value = 150;
-        var host = new TestHost(() => NumberBox(value) with { Minimum = 100, Maximum = 200, SmallChange = 5 });
+        var host = new TestHost(() => NumberBox(value) with { Minimum = 100, Maximum = 200, Increment = 5 });
         var box = host.All<NumericUpDown>()[0];
         Assert.Equal((100m, 200m, 150m, 5m), (box.Minimum, box.Maximum, box.Value, box.Increment));
 

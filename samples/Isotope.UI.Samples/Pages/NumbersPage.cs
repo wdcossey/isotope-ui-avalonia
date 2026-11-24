@@ -23,7 +23,7 @@ public static class NumbersPage
         return VStack(12,
             TextBlock("Type a number (then Tab or Enter), use the spinner or the arrow keys, or drag the slider:"),
             TextBlock("both show one whole number from 0 to 100, and the spinner and arrow keys step by 5."),
-            (NumberBox(value, Set) with { Minimum = 0, Maximum = 100, SmallChange = 5, FormatString = "F0" })
+            (NumberBox(value, Set) with { Minimum = 0, Maximum = 100, Increment = 5, FormatString = "F0" })
                 .Width(160).HAlign(HorizontalAlignment.Left)
                 .Tip(tips, "Up and down change it by 5"),
             Slider(value, 0, 100, Set).Width(300).HAlign(HorizontalAlignment.Left),

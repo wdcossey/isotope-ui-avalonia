@@ -25,7 +25,7 @@ internal static class SuggestAndCommandExamples
         var matches = query.Length == 0 ? [] : fruit.Where(f => f.StartsWith(query, StringComparison.OrdinalIgnoreCase)).ToArray();
         return VStack(
             AutoSuggestBox(onTextChanged: setQuery, onQuerySubmitted: setChosen).SuggestionChosen(setChosen)
-                with { Suggestions = matches },
+                with { ItemsSource = matches },
             TextBlock($"Chosen: {chosen}"));
     }
     #endregion

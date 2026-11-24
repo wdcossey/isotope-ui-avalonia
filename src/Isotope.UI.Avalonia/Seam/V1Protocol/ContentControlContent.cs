@@ -27,13 +27,26 @@ internal static class ContentControlContent
     private static ContentState? GetOwnedContent(ContentControl control) => control.GetValue(OwnedContentProperty);
 
     /// <summary>
+    /// The control's content, as Avalonia's <c>Content</c> (#31): an element is mounted and reconciled as a child, and any
+    /// other value (a string) is written as it is. A record using it marks its content member <c>[WrapManual]</c>.
+    /// </summary>
+    internal static ControlDescriptor<TElement, TControl> WithContent<TElement, TControl>(
+        this ControlDescriptor<TElement, TControl> descriptor,
+        Func<TElement, object?> getContent)
+        where TElement : Element
+        where TControl : ContentControl, new()
+        => descriptor.WithContent(
+            e => getContent(e) as Element,
+            e => getContent(e) is Element ? null : getContent(e));
+
+    /// <summary>
     /// The control's content: <paramref name="getChild"/>'s element when there is one, mounted and reconciled as a child,
-    /// else <paramref name="getText"/>'s string. A record using it marks its text member <c>[WrapManual]</c>.
+    /// else <paramref name="getText"/>'s value (a string). A record using it marks its content members <c>[WrapManual]</c>.
     /// </summary>
     internal static ControlDescriptor<TElement, TControl> WithContent<TElement, TControl>(
         this ControlDescriptor<TElement, TControl> descriptor,
         Func<TElement, Element?> getChild,
-        Func<TElement, string?> getText)
+        Func<TElement, object?> getText)
         where TElement : Element
         where TControl : ContentControl, new()
     {
@@ -81,7 +94,7 @@ internal static class ContentControlContent
                     UnmountOwnedContent(ctx.Reconciler, control);
                     control.Content = getText(newElement);
                 }
-                else if (!string.Equals(getText(oldElement), getText(newElement), StringComparison.Ordinal))
+                else if (!Equals(getText(oldElement), getText(newElement)))
                 {
                     control.Content = getText(newElement);
                 }

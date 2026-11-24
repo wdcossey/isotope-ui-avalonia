@@ -10,7 +10,7 @@ namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
 /// The TextBox and Slider elements, whose descriptors upstream's wrappers generator generates for Avalonia (#12): the
-/// controlled value, echo suppression, and Slider's Min and Max written by the record's Customize.
+/// controlled value, echo suppression, and Slider's Minimum and Maximum written by the record's Customize.
 /// </summary>
 public class ControlTests
 {
@@ -293,10 +293,10 @@ public class ControlTests
     {
         var reported = new List<double>();
         var min = 10.0;
-        var host = new TestHost(() => new SliderElement(5, Min: min, Max: 20, OnValueChanged: v => reported.Add(v)));
+        var host = new TestHost(() => new SliderElement(5, Minimum: min, Maximum: 20, OnValueChanged: v => reported.Add(v)));
         var slider = host.All<Slider>()[0];
 
-        // Min and Max land before Value, so the value is clamped to the range it was given with.
+        // Minimum and Maximum land before Value, so the value is clamped to the range it was given with.
         Assert.Equal(10, slider.Minimum);
         Assert.Equal(20, slider.Maximum);
         Assert.Equal(10, slider.Value);

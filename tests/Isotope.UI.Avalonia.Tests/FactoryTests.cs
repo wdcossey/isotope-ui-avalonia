@@ -25,14 +25,14 @@ public class FactoryTests
 
     [Fact]
     public void TextBlock_builds_a_text_block()
-        => Assert.Equal("hi", TextBlock("hi").Content);
+        => Assert.Equal("hi", TextBlock("hi").Text);
 
     [Fact]
     public void Button_builds_a_button_with_its_label_and_click()
     {
         Action click = () => { };
         var b = Button("Go", click);
-        Assert.Equal("Go", b.Label);
+        Assert.Equal("Go", b.Content);
         Assert.Same(click, b.OnClick);
         Assert.Null(Button("Go").OnClick);
     }
@@ -42,10 +42,10 @@ public class FactoryTests
     {
         Action<string> changed = _ => { };
         var t = TextBox("x", changed, placeholderText: "type");
-        Assert.Equal(Optional<string>.Of("x"), t.Value);
-        Assert.Same(changed, t.OnChanged);
+        Assert.Equal(Optional<string>.Of("x"), t.Text);
+        Assert.Same(changed, t.OnTextChanged);
         Assert.Equal("type", t.PlaceholderText);
-        Assert.False(TextBox().Value.HasValue);
+        Assert.False(TextBox().Text.HasValue);
     }
 
     [Fact]
@@ -54,10 +54,10 @@ public class FactoryTests
         Action<double> changed = _ => { };
         var s = Slider(5, 1, 10, changed);
         Assert.Equal(Optional<double>.Of(5), s.Value);
-        Assert.Equal((1.0, 10.0), (s.Min, s.Max));
+        Assert.Equal((1.0, 10.0), (s.Minimum, s.Maximum));
         Assert.Same(changed, s.OnValueChanged);
         var d = Slider();
-        Assert.Equal((false, 0.0, 100.0), (d.Value.HasValue, d.Min, d.Max));
+        Assert.Equal((false, 0.0, 100.0), (d.Value.HasValue, d.Minimum, d.Maximum));
     }
 
     [Fact]

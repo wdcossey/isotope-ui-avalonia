@@ -723,8 +723,8 @@
     },
     {
       "path": "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",
-      "tier": 1,
-      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; reads TextBlockElement's text under Avalonia's name, Text (#31, test-textblock-text)"
     },
     {
       "path": "tests/Reactor.Tests/ContextCaptureUnitTests.cs",
@@ -738,8 +738,8 @@
     },
     {
       "path": "tests/Reactor.Tests/ContextSystemUnitTests.cs",
-      "tier": 1,
-      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; reads TextBlockElement's text under Avalonia's name, Text (#31, test-textblock-text)"
     },
     {
       "path": "tests/Reactor.Tests/Core/FocusRevalidationTests.cs",
@@ -823,8 +823,8 @@
     },
     {
       "path": "tests/Reactor.Tests/MemoizationPropagationTests.cs",
-      "tier": 1,
-      "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
+      "tier": 2,
+      "note": "#2: upstream's engine test, run on Avalonia by the library tests; reads TextBlockElement's text under Avalonia's name, Text (#31, test-textblock-text)"
     },
     {
       "path": "tests/Reactor.Tests/NavigationLifecycleTests.cs",

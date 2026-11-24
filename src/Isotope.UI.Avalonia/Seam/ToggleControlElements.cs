@@ -6,8 +6,8 @@ using Isotope.UI.Wrappers;
 namespace Isotope.UI.Core;
 
 // The toggle controls (#19): CheckBox, ToggleSwitch and RadioButton, which Avalonia derives from ToggleButton. Records
-// mirror upstream's (Reactor's member names, Avalonia's value types); descriptors are generated, with the controlled
-// IsChecked written in Customize because the record's value type differs from the control's (bool? on Avalonia).
+// mirror upstream's, with Avalonia's member names (#31) and value types; descriptors are generated, with the controlled
+// IsChecked written in Customize because the record's value type can differ from the control's (bool? on Avalonia).
 // Avalonia raises IsCheckedChanged synchronously inside the write. The controlled entries are upstream's Controlled
 // entry, which arms the value it writes and drops the change event that reads that value back, so a write the engine
 // makes doesn't echo and a user's click reaches the callback. The
@@ -19,81 +19,66 @@ namespace Isotope.UI.Core;
 /// <see cref="Optional{T}.Unset"/>, so the control owns its checked state until one is given.
 /// </summary>
 [GenerateReactorDescriptor(typeof(CheckBox), ClearValueOnUnset = true, Exclude = new[] { "IsCheckedChanged" })]
-[WrapAlias("Label", "Content")]
 [WrapManual("IsChecked")]
-[WrapManual("CheckedState")]
+[WrapManual("Content")]
 public partial record CheckBoxElement(
     Optional<bool?> IsChecked = default,
-    Action<bool>? OnIsCheckedChanged = null,
-    string? Label = null) : Element
+    Action<bool?>? OnIsCheckedChanged = null,
+    string? Content = null) : Element
 {
-    /// <summary>Whether a click cycles through the indeterminate state (null) too.</summary>
+    /// <summary>Whether a click cycles through the indeterminate state (a null <see cref="IsChecked"/>) too.</summary>
     public bool IsThreeState { get; init; }
-
-    /// <summary>
-    /// The three-state value (null: indeterminate), as upstream's. As upstream's, it isn't written: <see cref="IsChecked"/>
-    /// is the value, and <see cref="Factories.ThreeStateCheckBox"/> sets both.
-    /// </summary>
-    public bool? CheckedState { get; init; }
-
-    /// <summary>The three-state change callback: receives null for indeterminate. Takes precedence over <see cref="OnIsCheckedChanged"/>.</summary>
-    public Action<bool?>? OnCheckedStateChanged { get; init; }
 
     internal Action<CheckBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsCheckedChanged is not null || OnCheckedStateChanged is not null;
+    internal override bool HasCallbacks => OnIsCheckedChanged is not null;
 
-    // As upstream's: IsChecked is the controlled value, and one callback is chosen: the three-state one when set, else
-    // the two-state one, called only for a checked or unchecked value. IsThreeState is generated and written after
-    // this entry, which Avalonia allows (it doesn't coerce IsChecked by IsThreeState).
+    // As upstream's: IsChecked is the controlled value, and the callback receives the control's value (null:
+    // indeterminate; Factories.CheckBox's two-state callback is called only for a checked or unchecked value).
+    // IsThreeState is generated and written after this entry, which Avalonia allows (it doesn't coerce IsChecked by
+    // IsThreeState).
     private static partial ControlDescriptor<CheckBoxElement, CheckBox> Customize(ControlDescriptor<CheckBoxElement, CheckBox> d)
-        => d.Controlled<bool?, RoutedEventArgs>(
+        => d.WithContent(static e => e.Content)
+            .Controlled<bool?, RoutedEventArgs>(
             get:         static e => e.IsChecked,
             set:         static (c, v) => c.IsChecked = v,
             subscribe:   static (fe, h) => ((CheckBox)fe).IsCheckedChanged += h,
             unsubscribe: static (fe, h) => { /* the trampoline lives as long as the control, as upstream's */ },
-            callback:    static e => CheckedCallback(e),
+            callback:    static e => e.OnIsCheckedChanged,
             readBack:    static c => c.IsChecked);
-
-    private static Action<bool?>? CheckedCallback(CheckBoxElement element)
-    {
-        if (element.OnCheckedStateChanged is not null) return element.OnCheckedStateChanged;
-        if (element.OnIsCheckedChanged is null) return null;
-        return value =>
-        {
-            if (value.HasValue) element.OnIsCheckedChanged(value.Value);
-        };
-    }
 }
 
 /// <summary>
 /// An on/off switch, as an Avalonia <see cref="Avalonia.Controls.ToggleSwitch"/> (a ToggleButton on Avalonia: Reactor's
-/// <c>IsOn</c> is its <c>IsChecked</c>, and its <c>Header</c> is the switch's <c>Content</c>). <see cref="IsOn"/> defaults
-/// to <see cref="Optional{T}.Unset"/>, so the control owns its state until one is given.
+/// <c>IsOn</c> is its <see cref="IsChecked"/>, and Reactor's <c>Header</c> its <see cref="Content"/>).
+/// <see cref="IsChecked"/> defaults to <see cref="Optional{T}.Unset"/>, so the control owns its state until one is given.
 /// </summary>
-[GenerateReactorDescriptor(typeof(ToggleSwitch), ClearValueOnUnset = true)]
-[WrapAlias("Header", "Content")]
-[WrapManual("IsOn")]
+[GenerateReactorDescriptor(typeof(ToggleSwitch), ClearValueOnUnset = true, Exclude = new[] { "IsCheckedChanged" })]
+[WrapManual("IsChecked")]
+[WrapManual("Content")]
 public partial record ToggleSwitchElement(
-    Optional<bool> IsOn = default,
-    Action<bool>? OnIsOnChanged = null,
+    Optional<bool> IsChecked = default,
+    Action<bool>? OnIsCheckedChanged = null,
     string? OnContent = null,
     string? OffContent = null) : Element
 {
-    public string? Header { get; init; }
+    /// <summary>The text beside the switch (Reactor's <c>Header</c>).</summary>
+    public string? Content { get; init; }
 
     internal Action<ToggleSwitch>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsOnChanged is not null;
+    internal override bool HasCallbacks => OnIsCheckedChanged is not null;
 
-    // The record's value is a bool, the control's a bool? (null never arises: the switch isn't three-state).
+    // The record's value is a bool, the control's a bool? (null never arises: the switch isn't three-state). The
+    // content is a value, not a child slot, as Reactor's Header was (WithContent writes a string as it is).
     private static partial ControlDescriptor<ToggleSwitchElement, ToggleSwitch> Customize(ControlDescriptor<ToggleSwitchElement, ToggleSwitch> d)
-        => d.Controlled<bool, RoutedEventArgs>(
-            get:         static e => e.IsOn,
+        => d.WithContent(static e => e.Content)
+            .Controlled<bool, RoutedEventArgs>(
+            get:         static e => e.IsChecked,
             set:         static (c, v) => c.IsChecked = v,
             subscribe:   static (fe, h) => ((ToggleSwitch)fe).IsCheckedChanged += h,
             unsubscribe: static (fe, h) => { },
-            callback:    static e => e.OnIsOnChanged,
+            callback:    static e => e.OnIsCheckedChanged,
             readBack:    static c => c.IsChecked ?? false);
 }
 
@@ -103,10 +88,10 @@ public partial record ToggleSwitchElement(
 /// <see cref="OnIsCheckedChanged"/> as a change. <see cref="IsChecked"/> defaults to <see cref="Optional{T}.Unset"/>.
 /// </summary>
 [GenerateReactorDescriptor(typeof(RadioButton), ClearValueOnUnset = true, Exclude = new[] { "IsCheckedChanged" })]
-[WrapAlias("Label", "Content")]
 [WrapManual("IsChecked")]
+[WrapManual("Content")]
 public partial record RadioButtonElement(
-    string Label,
+    string Content,
     Optional<bool> IsChecked = default,
     Action<bool>? OnIsCheckedChanged = null,
     string? GroupName = null) : Element
@@ -119,7 +104,8 @@ public partial record RadioButtonElement(
     // of a button doesn't echo to it; the uncheck it causes in another button of the group reaches that button's
     // callback, as on WinUI, so state kept per button follows the group.
     private static partial ControlDescriptor<RadioButtonElement, RadioButton> Customize(ControlDescriptor<RadioButtonElement, RadioButton> d)
-        => d.Controlled<bool, RoutedEventArgs>(
+        => d.WithContent(static e => e.Content)
+            .Controlled<bool, RoutedEventArgs>(
             get:         static e => e.IsChecked,
             set:         static (c, v) => c.IsChecked = v,
             subscribe:   static (fe, h) => ((RadioButton)fe).IsCheckedChanged += h,

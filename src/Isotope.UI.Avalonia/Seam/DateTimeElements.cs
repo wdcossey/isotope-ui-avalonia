@@ -4,22 +4,22 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// The date and time pickers (#19). Records mirror upstream's (Reactor's member names, Avalonia's value types): Reactor's
-// Date and Time are Avalonia's SelectedDate and SelectedTime, which are nullable on Avalonia. Avalonia raises their
+// The date and time pickers (#19). Records mirror upstream's, with Avalonia's member names (#31) and value types:
+// Reactor's Date and Time are Avalonia's SelectedDate and SelectedTime, which are nullable on Avalonia. Avalonia raises their
 // change events synchronously inside the write; upstream's Controlled entry arms each value it writes and drops the
 // event that reads it back, so the engine's own writes don't echo.
 
 /// <summary>
-/// A date picker, as an Avalonia <see cref="Avalonia.Controls.DatePicker"/>. <see cref="Date"/> defaults to
+/// A date picker, as an Avalonia <see cref="Avalonia.Controls.DatePicker"/>. <see cref="SelectedDate"/> defaults to
 /// <see cref="Optional{T}.Unset"/>, so the control owns its date until one is given.
 /// </summary>
-[GenerateReactorDescriptor(typeof(DatePicker), ClearValueOnUnset = true)]
-[WrapManual("Date")]
+[GenerateReactorDescriptor(typeof(DatePicker), ClearValueOnUnset = true, Exclude = new[] { "SelectedDateChanged" })]
+[WrapManual("SelectedDate")]
 [WrapManual("MinYear")]
 [WrapManual("MaxYear")]
 public partial record DatePickerElement(
-    Optional<DateTimeOffset> Date = default,
-    Action<DateTimeOffset>? OnDateChanged = null) : Element
+    Optional<DateTimeOffset> SelectedDate = default,
+    Action<DateTimeOffset>? OnSelectedDateChanged = null) : Element
 {
     /// <summary>The earliest year offered; null keeps Avalonia's (a hundred years back).</summary>
     public DateTimeOffset? MinYear { get; init; }
@@ -41,7 +41,7 @@ public partial record DatePickerElement(
 
     internal Action<DatePicker>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnDateChanged is not null;
+    internal override bool HasCallbacks => OnSelectedDateChanged is not null;
 
     // The year bounds are written before the date, so a first date lands in its range, and together, in the order that
     // keeps MinYear at or before MaxYear (Avalonia throws otherwise). The control's value is nullable and the record's
@@ -57,11 +57,11 @@ public partial record DatePickerElement(
                     if (o.MinYear != n.MinYear || o.MaxYear != n.MaxYear) WriteYears(c, n.MinYear, n.MaxYear, fresh: false);
                 })
             .Controlled<DateTimeOffset?, DatePickerSelectedValueChangedEventArgs>(
-            get:         static e => e.Date.HasValue ? e.Date.Value : Optional<DateTimeOffset?>.Unset,
+            get:         static e => e.SelectedDate.HasValue ? e.SelectedDate.Value : Optional<DateTimeOffset?>.Unset,
             set:         static (c, v) => c.SelectedDate = v,
             subscribe:   static (fe, h) => ((DatePicker)fe).SelectedDateChanged += h,
             unsubscribe: static (fe, h) => { },
-            callback:    static e => e.OnDateChanged is { } cb ? v => { if (v.HasValue) cb(v.Value); } : null,
+            callback:    static e => e.OnSelectedDateChanged is { } cb ? v => { if (v.HasValue) cb(v.Value); } : null,
             readBack:    static c => c.SelectedDate);
 
     private static void WriteYears(DatePicker c, DateTimeOffset? min, DateTimeOffset? max, bool fresh)
@@ -89,15 +89,15 @@ public partial record DatePickerElement(
 }
 
 /// <summary>
-/// A time picker, as an Avalonia <see cref="Avalonia.Controls.TimePicker"/>. <see cref="Time"/> defaults to
+/// A time picker, as an Avalonia <see cref="Avalonia.Controls.TimePicker"/>. <see cref="SelectedTime"/> defaults to
 /// <see cref="Optional{T}.Unset"/>, so the control owns its time until one is given.
 /// </summary>
-[GenerateReactorDescriptor(typeof(TimePicker), ClearValueOnUnset = true)]
-[WrapManual("Time")]
+[GenerateReactorDescriptor(typeof(TimePicker), ClearValueOnUnset = true, Exclude = new[] { "SelectedTimeChanged" })]
+[WrapManual("SelectedTime")]
 [WrapManual("ClockIdentifier")]
 public partial record TimePickerElement(
-    Optional<TimeSpan> Time = default,
-    Action<TimeSpan>? OnTimeChanged = null) : Element
+    Optional<TimeSpan> SelectedTime = default,
+    Action<TimeSpan>? OnSelectedTimeChanged = null) : Element
 {
     public int MinuteIncrement { get; init; } = 1;
 
@@ -111,7 +111,7 @@ public partial record TimePickerElement(
 
     internal Action<TimePicker>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnTimeChanged is not null;
+    internal override bool HasCallbacks => OnSelectedTimeChanged is not null;
 
     // ClockIdentifier is an int on the record and a string on Avalonia's control (upstream leaves it unmapped, because
     // WinUI's is a string too; here it is converted rather than dropped). The time is nullable on the control.
@@ -120,10 +120,10 @@ public partial record TimePickerElement(
                 get: static e => e.ClockIdentifier == 24 ? "24HourClock" : "12HourClock",
                 set: static (c, v) => c.ClockIdentifier = v)
             .Controlled<TimeSpan?, TimePickerSelectedValueChangedEventArgs>(
-                get:         static e => e.Time.HasValue ? e.Time.Value : Optional<TimeSpan?>.Unset,
+                get:         static e => e.SelectedTime.HasValue ? e.SelectedTime.Value : Optional<TimeSpan?>.Unset,
                 set:         static (c, v) => c.SelectedTime = v,
                 subscribe:   static (fe, h) => ((TimePicker)fe).SelectedTimeChanged += h,
                 unsubscribe: static (fe, h) => { },
-                callback:    static e => e.OnTimeChanged is { } cb ? v => { if (v.HasValue) cb(v.Value); } : null,
+                callback:    static e => e.OnSelectedTimeChanged is { } cb ? v => { if (v.HasValue) cb(v.Value); } : null,
                 readBack:    static c => c.SelectedTime);
 }

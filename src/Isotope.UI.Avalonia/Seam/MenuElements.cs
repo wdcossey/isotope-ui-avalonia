@@ -9,8 +9,8 @@ namespace Isotope.UI.Core;
 
 // Menus (#26): upstream's menu data records (MenuFlyoutItemBase and its kinds), a menu bar as an Avalonia Menu, and a
 // context menu as an Avalonia MenuFlyout on a control's ContextFlyout (the WithContextFlyout modifier). The records
-// mirror upstream's (Reactor's member names); members with no Avalonia counterpart yet (icons, access keys) aren't on
-// them. A menu item's keyboard accelerators and description came with #29. Menu items hold no elements, so they are Avalonia MenuItems built from
+// mirror upstream's, with Avalonia's member names (#31: an item's text is its Header); members with no Avalonia
+// counterpart yet (icons, access keys) aren't on them, and KeyboardAccelerators and Description keep Reactor's names. A menu item's keyboard accelerators and description came with #29. Menu items hold no elements, so they are Avalonia MenuItems built from
 // the data and updated in place by position (MenuItemsSync); a click reads the item's current data, so it calls the
 // current render's callback.
 
@@ -18,7 +18,7 @@ namespace Isotope.UI.Core;
 public abstract record MenuFlyoutItemBase;
 
 /// <summary>A menu item that runs <see cref="OnClick"/> when chosen.</summary>
-public record MenuFlyoutItemData(string Text, Action? OnClick = null) : MenuFlyoutItemBase
+public record MenuFlyoutItemData(string Header, Action? OnClick = null) : MenuFlyoutItemBase
 {
     public bool IsEnabled { get; init; } = true;
 
@@ -36,23 +36,23 @@ public record MenuFlyoutItemData(string Text, Action? OnClick = null) : MenuFlyo
 /// <summary>A line between menu items.</summary>
 public record MenuFlyoutSeparatorData() : MenuFlyoutItemBase;
 
-/// <summary>A submenu: <see cref="Text"/>, opening <see cref="Items"/>.</summary>
-public record MenuFlyoutSubItemData(string Text, MenuFlyoutItemBase[] Items) : MenuFlyoutItemBase;
+/// <summary>A submenu: <see cref="Header"/>, opening <see cref="Items"/>.</summary>
+public record MenuFlyoutSubItemData(string Header, MenuFlyoutItemBase[] Items) : MenuFlyoutItemBase;
 
 /// <summary>
 /// A menu item with a check mark. <see cref="IsChecked"/> is written when it changes; choosing the item toggles it and
 /// calls <see cref="OnIsCheckedChanged"/> with the new value.
 /// </summary>
-public record ToggleMenuFlyoutItemData(string Text, bool IsChecked = false, Action<bool>? OnIsCheckedChanged = null) : MenuFlyoutItemBase;
+public record ToggleMenuFlyoutItemData(string Header, bool IsChecked = false, Action<bool>? OnIsCheckedChanged = null) : MenuFlyoutItemBase;
 
 /// <summary>
 /// A menu item that is one of a group (<see cref="GroupName"/>): choosing it checks it and unchecks the others, and
 /// calls <see cref="OnClick"/>.
 /// </summary>
-public record RadioMenuFlyoutItemData(string Text, string GroupName, bool IsChecked = false, Action? OnClick = null) : MenuFlyoutItemBase;
+public record RadioMenuFlyoutItemData(string Header, string GroupName, bool IsChecked = false, Action? OnClick = null) : MenuFlyoutItemBase;
 
-/// <summary>A top-level menu of a <see cref="MenuBarElement"/>: its title and its items.</summary>
-public record MenuBarItemData(string Title, MenuFlyoutItemBase[] Items);
+/// <summary>A top-level menu of a <see cref="MenuBarElement"/>: its header and its items.</summary>
+public record MenuBarItemData(string Header, MenuFlyoutItemBase[] Items);
 
 /// <summary>
 /// The menu a <c>.WithContextFlyout(...)</c> modifier opens, as an Avalonia <see cref="Avalonia.Controls.MenuFlyout"/>.
@@ -92,7 +92,7 @@ internal static class MenuItemsSync
     internal static MenuFlyoutItemBase[] TopLevel(MenuBarItemData[] items)
     {
         var result = new MenuFlyoutItemBase[items.Length];
-        for (int i = 0; i < items.Length; i++) result[i] = new MenuFlyoutSubItemData(items[i].Title, items[i].Items);
+        for (int i = 0; i < items.Length; i++) result[i] = new MenuFlyoutSubItemData(items[i].Header, items[i].Items);
         return result;
     }
 
@@ -141,25 +141,25 @@ internal static class MenuItemsSync
         switch (data)
         {
             case MenuFlyoutItemData d:
-                SetHeader(item, d.Text);
+                SetHeader(item, d.Header);
                 if (item.IsEnabled != d.IsEnabled) item.IsEnabled = d.IsEnabled;
                 WriteShortcutAndDescription(item, old as MenuFlyoutItemData, d);
                 break;
             case ToggleMenuFlyoutItemData t:
-                SetHeader(item, t.Text);
+                SetHeader(item, t.Header);
                 item.ToggleType = MenuItemToggleType.CheckBox;
                 // As upstream's: written when the declared value changes, so the control keeps a toggle until then. Items
-                // are paired by position, so an item whose text changed is another item: its value is written.
-                if (old is not ToggleMenuFlyoutItemData ot || ot.IsChecked != t.IsChecked || ot.Text != t.Text) item.IsChecked = t.IsChecked;
+                // are paired by position, so an item whose header changed is another item: its value is written.
+                if (old is not ToggleMenuFlyoutItemData ot || ot.IsChecked != t.IsChecked || ot.Header != t.Header) item.IsChecked = t.IsChecked;
                 break;
             case RadioMenuFlyoutItemData r:
-                SetHeader(item, r.Text);
+                SetHeader(item, r.Header);
                 item.ToggleType = MenuItemToggleType.Radio;
                 if (item.GroupName != r.GroupName) item.GroupName = r.GroupName;
-                if (old is not RadioMenuFlyoutItemData or_ || or_.IsChecked != r.IsChecked || or_.Text != r.Text) item.IsChecked = r.IsChecked;
+                if (old is not RadioMenuFlyoutItemData or_ || or_.IsChecked != r.IsChecked || or_.Header != r.Header) item.IsChecked = r.IsChecked;
                 break;
             case MenuFlyoutSubItemData s:
-                SetHeader(item, s.Text);
+                SetHeader(item, s.Header);
                 Sync(ItemsList.Of(item.Items), s.Items);
                 break;
         }

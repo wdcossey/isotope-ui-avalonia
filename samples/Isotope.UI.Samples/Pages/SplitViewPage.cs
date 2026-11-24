@@ -9,7 +9,7 @@ namespace Isotope.UI.Samples;
 
 /// <summary>
 /// SplitView (#26): the pane opens and closes from a toggle button, and the control's own changes (a light dismiss in
-/// the overlay modes) come back through OnPaneOpenChanged, so the button follows. The pane's buttons pick the content.
+/// the overlay modes) come back through OnIsPaneOpenChanged, so the button follows. The pane's buttons pick the content.
 /// </summary>
 public static class SplitViewPage
 {
@@ -43,7 +43,7 @@ public static class SplitViewPage
             (SplitView(pane, content) with
             {
                 IsPaneOpen = open,
-                OnPaneOpenChanged = setOpen,
+                OnIsPaneOpenChanged = setOpen,
                 DisplayMode = Modes[mode],
                 OpenPaneLength = 160,
                 CompactPaneLength = 48,

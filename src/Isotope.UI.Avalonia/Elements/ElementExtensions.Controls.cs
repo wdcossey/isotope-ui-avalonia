@@ -27,7 +27,7 @@ public static partial class ElementExtensions
     public static T WithContextFlyout<T>(this T el, MenuFlyoutContentElement contextFlyout) where T : Element =>
         el.WithModifiers(m => m with { ContextFlyout = contextFlyout });
 
-    /// <summary>An element as the expander's header, in place of its string header (upstream's modifier).</summary>
-    public static ExpanderElement HeaderContent(this ExpanderElement el, Element header) =>
-        el with { HeaderContent = header };
+    /// <summary>An element as the expander's header, in place of its string header (Reactor's <c>HeaderContent</c>).</summary>
+    public static ExpanderElement Header(this ExpanderElement el, Element header) =>
+        el with { Header = header };
 }

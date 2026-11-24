@@ -22,7 +22,7 @@ public static partial class ElementExtensions
     public static RepeatButtonElement Command(this RepeatButtonElement el, Core.Command command) =>
         el with { Command = command, OnClick = null };
 
-    /// <summary>Binds a command to a toggle button: each toggle runs it. Clears the checked-changed callbacks.</summary>
+    /// <summary>Binds a command to a toggle button: each toggle runs it. Clears <see cref="ToggleButtonElement.OnIsCheckedChanged"/>.</summary>
     public static ToggleButtonElement Command(this ToggleButtonElement el, Core.Command command) =>
-        el with { Command = command, OnIsCheckedChanged = null, OnCheckedStateChanged = null };
+        el with { Command = command, OnIsCheckedChanged = null };
 }

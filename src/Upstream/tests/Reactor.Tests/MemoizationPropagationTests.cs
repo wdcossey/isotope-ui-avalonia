@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/MemoizationPropagationTests.cs, last changed upstream in 96ccfc4b057c; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/MemoizationPropagationTests.cs, last changed upstream in 96ccfc4b057c; transforms: test-textblock-text, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 using Xunit;
 
@@ -336,7 +336,7 @@ public class MemoizationPropagationTests
 
         // Re-render child and verify state took effect
         var el = MountComponent(child, scope, childComponentRerender) as TextBlockElement;
-        Assert.Equal("Count: 42", el?.Content);
+        Assert.Equal("Count: 42", el?.Text);
     }
 
     [Fact]
@@ -568,7 +568,7 @@ public class MemoizationPropagationTests
         var el = MountComponent(panel, scope, panelRerender) as TextBlockElement;
         Assert.Equal(2, panel.RenderCount);
         Assert.Equal("created", panel.LastContent);
-        Assert.Equal("created", el?.Content);
+        Assert.Equal("created", el?.Text);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -820,7 +820,7 @@ public class MemoizationPropagationTests
 
         // Verify state
         var el = MountComponent(child, scope, childRerender) as TextBlockElement;
-        Assert.Equal("Count: 100", el?.Content);
+        Assert.Equal("Count: 100", el?.Text);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -890,6 +890,6 @@ public class MemoizationPropagationTests
         Assert.True(rootCalled);
 
         var el = MountComponent(child, scope, childRerender) as TextBlockElement;
-        Assert.Equal("Count: 1", el?.Content);
+        Assert.Equal("Count: 1", el?.Text);
     }
 }

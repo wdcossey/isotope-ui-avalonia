@@ -54,6 +54,31 @@ public sealed class ButtonFamilyTests : IDisposable
     };
 
     [AvaloniaFact]
+    public void Content_is_Avalonia_s_object_a_value_is_written_as_it_is_and_an_element_is_mounted()
+    {
+        // #31: one Content, as Avalonia's ContentControl.Content: a string or other value is written as it is, an element
+        // is mounted as a child, and the button moves between them in place.
+        object? content = 42;
+        var host = new TestHost(() => new ButtonElement(content));
+        var button = host.All<Button>()[0];
+        Assert.Equal(42, button.Content);
+
+        content = 43;
+        host.Render();
+        Assert.Same(button, host.All<Button>()[0]);
+        Assert.Equal(43, button.Content);
+
+        content = TextBlock("child");
+        host.Render();
+        Assert.Equal("child", Assert.IsType<TextBlock>(button.Content).Text);
+
+        content = "text";
+        host.Render();
+        Assert.Equal("text", button.Content);
+        Assert.Empty(host.All<TextBlock>());
+    }
+
+    [AvaloniaFact]
     public void Button_with_element_content_mounts_it_and_a_child_component_keeps_its_state()
     {
         var log = new List<string>();
@@ -126,7 +151,7 @@ public sealed class ButtonFamilyTests : IDisposable
         var host = new TestHost(() =>
         {
             var e = Expander("Plain", TextBlock(body));
-            return custom ? e.HeaderContent(Component(counter)) : e;
+            return custom ? e.Header(Component(counter)) : e;
         });
         var expander = host.All<Expander>()[0];
         var header = Assert.IsAssignableFrom<Control>(expander.Header);
@@ -150,7 +175,7 @@ public sealed class ButtonFamilyTests : IDisposable
     {
         var log = new List<string>();
         var counter = Counter(log);
-        var host = new TestHost(() => Expander("Plain", TextBlock("body")).HeaderContent(Component(counter)));
+        var host = new TestHost(() => Expander("Plain", TextBlock("body")).Header(Component(counter)));
 
         host.Unmount();
         Assert.Equal(["cleanup"], log);

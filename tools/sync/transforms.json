@@ -255,6 +255,27 @@
       ]
     },
     {
+      "id": "gen-manual-content-slot",
+      "find": "(\\r?\\n)(            if \\(contentProp is not null\\)\\r?\\n            \\{\\r?\\n                if \\(authorDeclared\\.Contains\\(contentProp\\)\\))",
+      "replace": "$1            if (contentProp is not null && manual.Contains(contentProp)) contentProp = null; // Isotope: [WrapManual] content$1$2",
+      "why": "Our rule (#31): in descriptor-only mode a record member named after the control's content property that is [WrapManual] is the author's, so no content slot is generated for it. Avalonia's ContentControl.Content is an object, and the button family's records declare it as one (a string or an element), written by their Customize (WithContent).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "test-textblock-text",
+      "find": "(\\btext|\\bel\\?|\\(\\(TextBlockElement\\)fallbackResult\\))\\.Content\\b",
+      "replace": "$1.Text",
+      "why": "Our TextBlockElement has Avalonia's member name, Text, where upstream's has Content (#31; tools/naming/renames.json).",
+      "files": [
+        "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",
+        "tests/Reactor.Tests/ContextSystemUnitTests.cs",
+        "tests/Reactor.Tests/ErrorBoundaryTests.cs",
+        "tests/Reactor.Tests/MemoizationPropagationTests.cs"
+      ]
+    },
+    {
       "id": "winui-usings",
       "find": "^using (?:WinUI = )?Microsoft\\.UI\\.(?:Xaml|Composition)(?:\\.[A-Za-z]+)*;\\r?$",
       "flags": "m",

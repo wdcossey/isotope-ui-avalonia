@@ -3,8 +3,8 @@ using Isotope.UI.Core;
 namespace Isotope.UI;
 
 // The factories for the controls of #19, as part of our own version (tier 3) of upstream's src/Reactor/Elements/Dsl.cs:
-// upstream's names, parameter names and order, returning the same records, with Avalonia's value types. WrapPanel is
-// Avalonia-only, so it has Avalonia's name.
+// upstream's names and parameter order, returning the same records, with Avalonia's member names as parameter names
+// (#31) and Avalonia's value types. WrapPanel is Avalonia-only, so it has Avalonia's name.
 
 public static partial class Factories
 {
@@ -12,38 +12,42 @@ public static partial class Factories
 
     /// <summary>
     /// A check box, as an Avalonia <see cref="Avalonia.Controls.CheckBox"/>. <paramref name="isChecked"/> defaults to
-    /// <see cref="Optional{T}.Unset"/>: omit it to let the control own its checked state.
+    /// <see cref="Optional{T}.Unset"/>: omit it to let the control own its checked state. <paramref name="onIsCheckedChanged"/>
+    /// is called with each checked or unchecked value the user gives it.
     /// </summary>
-    public static CheckBoxElement CheckBox(Optional<bool?> isChecked = default, Action<bool>? onIsCheckedChanged = null, string? label = null)
-        => new(isChecked, onIsCheckedChanged, label);
+    public static CheckBoxElement CheckBox(Optional<bool?> isChecked = default, Action<bool>? onIsCheckedChanged = null, string? content = null)
+        => new(isChecked, TwoState(onIsCheckedChanged), content);
 
     /// <summary>
     /// A three-state check box: a click cycles checked, unchecked and indeterminate (null).
-    /// <paramref name="checkedState"/> defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own its state.
+    /// <paramref name="isChecked"/> defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own its state.
     /// </summary>
-    public static CheckBoxElement ThreeStateCheckBox(Optional<bool?> checkedState = default, Action<bool?>? onCheckedStateChanged = null, string? label = null)
-        => new(checkedState, Label: label)
+    public static CheckBoxElement ThreeStateCheckBox(Optional<bool?> isChecked = default, Action<bool?>? onIsCheckedChanged = null, string? content = null)
+        => new(isChecked, onIsCheckedChanged, content) { IsThreeState = true };
+
+    // A two-state callback on a record's three-state one: called only for a checked or unchecked value.
+    private static Action<bool?>? TwoState(Action<bool>? callback) =>
+        callback is null ? null : value =>
         {
-            IsThreeState = true,
-            CheckedState = checkedState.HasValue ? checkedState.Value : null,
-            OnCheckedStateChanged = onCheckedStateChanged,
+            if (value.HasValue) callback(value.Value);
         };
 
     /// <summary>
-    /// An on/off switch, as an Avalonia <see cref="Avalonia.Controls.ToggleSwitch"/>. <paramref name="isOn"/> defaults to
-    /// <see cref="Optional{T}.Unset"/>: omit it to let the control own its state.
+    /// An on/off switch, as an Avalonia <see cref="Avalonia.Controls.ToggleSwitch"/>. <paramref name="isChecked"/>
+    /// defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own its state. <paramref name="content"/>
+    /// is the text beside it (Reactor's <c>header</c>).
     /// </summary>
-    public static ToggleSwitchElement ToggleSwitch(Optional<bool> isOn = default, Action<bool>? onIsOnChanged = null,
-        string? onContent = null, string? offContent = null, string? header = null)
-        => new(isOn, onIsOnChanged, onContent, offContent) { Header = header };
+    public static ToggleSwitchElement ToggleSwitch(Optional<bool> isChecked = default, Action<bool>? onIsCheckedChanged = null,
+        string? onContent = null, string? offContent = null, string? content = null)
+        => new(isChecked, onIsCheckedChanged, onContent, offContent) { Content = content };
 
     /// <summary>
     /// A radio button, as an Avalonia <see cref="Avalonia.Controls.RadioButton"/>. <paramref name="isChecked"/> defaults
     /// to <see cref="Optional{T}.Unset"/>: omit it to let the control own its checked state.
     /// </summary>
-    public static RadioButtonElement RadioButton(string label, Optional<bool> isChecked = default, Action<bool>? onIsCheckedChanged = null,
+    public static RadioButtonElement RadioButton(string content, Optional<bool> isChecked = default, Action<bool>? onIsCheckedChanged = null,
         string? groupName = null)
-        => new(label, isChecked, onIsCheckedChanged, groupName);
+        => new(content, isChecked, onIsCheckedChanged, groupName);
 
     // ── Selection ───────────────────────────────────────────────────
 
@@ -70,18 +74,18 @@ public static partial class Factories
     }
 
     /// <summary>
-    /// A date picker, as an Avalonia <see cref="Avalonia.Controls.DatePicker"/>. <paramref name="date"/> defaults to
-    /// <see cref="Optional{T}.Unset"/>: omit it to let the control own its date.
+    /// A date picker, as an Avalonia <see cref="Avalonia.Controls.DatePicker"/>. <paramref name="selectedDate"/> defaults
+    /// to <see cref="Optional{T}.Unset"/>: omit it to let the control own its date.
     /// </summary>
-    public static DatePickerElement DatePicker(Optional<DateTimeOffset> date = default, Action<DateTimeOffset>? onDateChanged = null)
-        => new(date, onDateChanged);
+    public static DatePickerElement DatePicker(Optional<DateTimeOffset> selectedDate = default, Action<DateTimeOffset>? onSelectedDateChanged = null)
+        => new(selectedDate, onSelectedDateChanged);
 
     /// <summary>
-    /// A time picker, as an Avalonia <see cref="Avalonia.Controls.TimePicker"/>. <paramref name="time"/> defaults to
-    /// <see cref="Optional{T}.Unset"/>: omit it to let the control own its time.
+    /// A time picker, as an Avalonia <see cref="Avalonia.Controls.TimePicker"/>. <paramref name="selectedTime"/> defaults
+    /// to <see cref="Optional{T}.Unset"/>: omit it to let the control own its time.
     /// </summary>
-    public static TimePickerElement TimePicker(Optional<TimeSpan> time = default, Action<TimeSpan>? onTimeChanged = null)
-        => new(time, onTimeChanged);
+    public static TimePickerElement TimePicker(Optional<TimeSpan> selectedTime = default, Action<TimeSpan>? onSelectedTimeChanged = null)
+        => new(selectedTime, onSelectedTimeChanged);
 
     // ── Progress and media ──────────────────────────────────────────
 
@@ -102,8 +106,8 @@ public static partial class Factories
     /// <summary>A single child with a background, border and corners, as an Avalonia <see cref="Avalonia.Controls.Border"/>.</summary>
     public static BorderElement Border(Element? child) => new(child);
 
-    /// <summary>A scrollable view of <paramref name="child"/>, as an Avalonia <see cref="Avalonia.Controls.ScrollViewer"/>.</summary>
-    public static ScrollViewerElement ScrollViewer(Element child) => new(child);
+    /// <summary>A scrollable view of <paramref name="content"/>, as an Avalonia <see cref="Avalonia.Controls.ScrollViewer"/>.</summary>
+    public static ScrollViewerElement ScrollViewer(Element content) => new(content);
 
     /// <summary>
     /// A header that shows or hides <paramref name="content"/>, as an Avalonia <see cref="Avalonia.Controls.Expander"/>.
@@ -114,14 +118,15 @@ public static partial class Factories
 
     /// <summary>
     /// Children in rows and columns, as an Avalonia <see cref="Avalonia.Controls.Grid"/>; place each with
-    /// <c>.Grid(row, column)</c>.
+    /// <c>.Grid(row, column)</c>. Build tracks with <see cref="GridSize"/> (<c>GridSize.Star()</c>, <c>GridSize.Auto</c>,
+    /// <c>GridSize.Px(120)</c>) or <see cref="GridSize.Parse"/>.
     /// </summary>
-    /// <exception cref="ArgumentNullException"><paramref name="columns"/> or <paramref name="rows"/> is null.</exception>
-    public static GridElement Grid(GridSize[] columns, GridSize[] rows, params Element?[] children)
+    /// <exception cref="ArgumentNullException"><paramref name="columnDefinitions"/> or <paramref name="rowDefinitions"/> is null.</exception>
+    public static GridElement Grid(GridSize[] columnDefinitions, GridSize[] rowDefinitions, params Element?[] children)
     {
-        ArgumentNullException.ThrowIfNull(columns);
-        ArgumentNullException.ThrowIfNull(rows);
-        return new(new GridDefinition(columns, rows), FilterChildren(children));
+        ArgumentNullException.ThrowIfNull(columnDefinitions);
+        ArgumentNullException.ThrowIfNull(rowDefinitions);
+        return new(columnDefinitions, rowDefinitions, FilterChildren(children));
     }
 
     /// <summary>Children wrapped onto new lines, as an Avalonia <see cref="Avalonia.Controls.WrapPanel"/> (Avalonia's name).</summary>
