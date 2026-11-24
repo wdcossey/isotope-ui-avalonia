@@ -39,16 +39,17 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   through deterministic transforms, so their semantics and fixes track upstream.
 - **Platform hooks**, with Reactor's names, written for Avalonia: theme and colour scheme, high contrast, windows,
   displays and DPI ([guide](docs/guide/platform-hooks.md)), and Reactor's theme tokens (`Theme.*`, [guide](docs/guide/theme-tokens.md)).
-- **30 controls:** text and image; button, toggle, repeat and hyperlink buttons; check box, radio button, toggle
+- **32 controls:** text and image; button, toggle, repeat and hyperlink buttons; check box, radio button, toggle
   switch; text box, number box, auto-suggest box, combo box, list box, slider, progress; date and time pickers; tabs,
-  menus, context menus and tooltips; split view, expander, border, scroll viewer, separator; and stack, grid, wrap and
-  flexbox layouts (`FlexPanel`, over Reactor's port of Yoga).
+  menus, context menus and tooltips; split view, expander, border, scroll viewer, separator, tree view, viewbox; and
+  stack, grid, wrap and flexbox layouts (`FlexPanel`, over Reactor's port of Yoga).
+- **Function and class components**, keyed lists (reorders move controls instead of rebuilding them), and **error
   boundaries** ([guide](docs/guide/error-boundaries.md)).
 - **A one-line app startup**, `ReactorApp.Run<TRoot>(title, width, height)`, and a sample app
   ([`samples/Isotope.UI.Samples`](samples/Isotope.UI.Samples)).
 - **A Reactor → Isotope migration tool:** a Roslyn analyzer with code fixes, run with `dotnet format analyzers`
   ([guide](docs/guide/migrating-from-reactor.md)).
-- **Tests:** 1,106 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,122 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
 Not there yet: Reactor's named text styles, layout modifiers and more controls (tracked from what the migration tool
 finds missing in upstream's samples, #35), animation, and packages.
@@ -93,47 +94,31 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the library, upstream's engine tests, and every C# block in the docs |
 | `tests/Isotope.UI.Migration.Tests/` | Tests of the migration's rules, compiled against the library |
 | `docs/guide/` | Writing components, platform hooks, error boundaries, migrating from Reactor: all from tested code |
-| `docs/spikes/` | Spike reports: A (engine compile), B (upstream churn), C (Uno and upstream), D (FlexPanel), E (wrappers generator), F (descriptor runtime), G (the vertical slice), H (naming and migration), I (pooling and keyed moves) |
+| `FINDINGS.md`, `docs/spikes/`, `spikes/` | Research notes and the spikes behind the design |
 | `docs/sync/` | Sync reports (what changed upstream, and the tier 3 PRs to port) |
-| `FINDINGS.md` | The research results, the sync recommendation and the decisions taken |
-| `docs/PROCESS.md`, `docs/LESSONS.md`, `docs/agent-brief.md` | How work runs; traps already hit; the brief for parallel agents |
-| `spikes/` | The spikes' code: A (engine compile), D (FlexPanel with upstream's Yoga tests), F (descriptors), G (slice timings), I (pooling) |
 | `tools/sync/` | Vendor and regenerate (`node tools/sync/sync.mjs --help`), and the weekly sync job's glue |
 | `tools/migration/` | Measures the migration on upstream's samples, and lists what is left in a project |
-| `tools/` (other) | Build-error grouping and Spike A's import rewrite |
 | `UPSTREAM.lock` | The upstream commit everything is built and compared against |
-| `upstream/` | Git-ignored cache of the upstream repo, needed only for `tools/sync` and the spikes (see below) |
+| `upstream/` | Git-ignored cache of the upstream repo, needed only for `tools/sync` (see below) |
 
 ## Developing
 
-Besides the .NET SDK and git: Node.js 20 or later for `tools/`, and Python 3 only for the Spike B scripts.
+Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 
 ```sh
-# Upstream cache, full history (Spike B needs it), checked out at the pinned commit:
+# Upstream cache (for tools/sync), full history, checked out at the pinned commit:
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1106 tests; needs no upstream/)
-dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (40 tests)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1122 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (43 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
 dotnet test tools/sync/verify/Upstream.Yoga.Tests        # upstream's Yoga tests on the vendored code
-dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests    # 794 tests: upstream's Yoga tests + FlexPanel
-node spikes/A-engine/run-spike.mjs 3                     # Spike A: groups the engine's compile errors
-node --test tools/rewrite-upstream.test.mjs              # Spike A's build-time rewrite tool
 ```
 
 Run `dotnet` from the repo root, not from inside `upstream/`: upstream's own `global.json` selects a different test
 runner.
-
-## Working on it
-
-- **Tasks** are [GitHub Issues](../../issues), with labels for priority, type and `self-drive`/`hands-on`/`blocked`.
-- **Changes** reach `main` through pull requests that pass CI (Ubuntu and Windows). Workflow runs on pull requests
-  from forks wait for the maintainer's approval.
-- **Process:** [docs/PROCESS.md](docs/PROCESS.md). Agents (Claude Code) also read [CLAUDE.md](CLAUDE.md).
-- **No personal data in the repo:** no names, emails, usernames, local paths or upstream contributors' names in files,
-  outputs, screenshots or issues.
 
 ## Licence
 
