@@ -124,6 +124,26 @@ A menu item's `KeyboardAccelerators` and `Description` are its shortcut and tool
 > (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet. A click on a
 > suggestion doesn't submit the query.
 
+Text is styled with upstream's modifiers, which take Avalonia's value types: `.FontSize(20)`, `.Bold()`,
+`.SemiBold()`, `.FontWeight(FontWeight.Light)`, `.FontStyle(FontStyle.Italic)`, `.FontFamily("Consolas")`,
+`.TextWrapping()`, `.TextAlignment(...)`, `.TextTrimming(TextTrimming.CharacterEllipsis)`, `.LineHeight(...)` and
+`.MaxLines(...)` on a text block, and `.Foreground("Red")` (or any `IBrush`), `.FontSize`, `.FontWeight` and `.FontFamily`
+on a text block or any templated control (a button, a text box, …). As Reactor's, these do nothing on a panel or a
+border.
+
+<!-- snippet: text-styling -->
+```csharp
+public static Element Notice(string title, string body, bool urgent, Action dismiss) =>
+    VStack(
+        TextBlock(title).FontSize(20).SemiBold(),
+        TextBlock(body).TextWrapping().MaxLines(3).TextTrimming(TextTrimming.CharacterEllipsis),
+        Button("Dismiss", dismiss).Foreground(urgent ? "Red" : "Gray"));
+```
+
+> **Coming from Reactor?** `TextBlockElement.Weight` is `FontWeight`, and its `HorizontalAlignment` member is the
+> `.HAlign(...)` modifier. A text block has no `IsTextSelectionEnabled` (Avalonia's `SelectableTextBlock` is another
+> control), and no `CharacterSpacing` or `TextDecorations` yet.
+
 More factories arrive with their controls. An app host that opens a window on a component is #16; the tests mount
 components with a test host.
 

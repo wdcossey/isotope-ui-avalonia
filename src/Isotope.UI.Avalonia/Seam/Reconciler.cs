@@ -637,6 +637,8 @@ public sealed partial class Reconciler
         // element's first, so neither overwrites the other (upstream folds them in Border's descriptor).
         if (BackgroundProperty(control) is { } background)
             SetRef(control, background, BackgroundOf(oldEl, oldM), BackgroundOf(newEl, newM));
+        // #42: the text modifiers, and on a text block its font members, which apply without modifiers too.
+        ApplyTextModifiers(control, oldEl, oldM, newEl, newM);
         // The text tooltip has two sources too, the modifier and a button's command description (#29): written as one
         // value, the modifier's first. An element tooltip owns the tip while either side has one (ApplyRichToolTip).
         if (oldM?.RichToolTip is null && newM?.RichToolTip is null)
