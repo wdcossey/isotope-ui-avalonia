@@ -148,6 +148,11 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   lines" took the next bullet with it, and the README lost a line on `main` unnoticed. Diff the result before committing.
   (2026-11-24)
 
+- **A skip count can come from a child:** an equal child under an updated parent is skipped too, so a test that a parent
+  is skipped watches the parent's handler (a setter that counts), not `DebugElementsSkipped`. (2026-11-24)
+- **`git checkout -- <file>` writes CRLF on Windows,** so an LF-anchored scripted edit made after restoring a break no
+  longer matches: normalise line endings in the replace. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **The harness can block an agent's write to `FINDINGS.md`:** have agents return the section in their reply. (2026-11-24)
