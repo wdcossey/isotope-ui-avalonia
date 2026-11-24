@@ -244,10 +244,14 @@ types when the name is overloaded). Then it regenerates the vendored tree.
   - `tools/sync/lib/roslyn.mjs` builds it on demand (an incremental `dotnet build`) and runs it once per sync.
 - **Rules** have the form `{"id", "roslyn": {"op", ...}, "files"}`, in `tools/sync/transforms.json` (described in
   `tools/sync/lib/transforms.mjs`) or in a Spike A rules file.
-  - **`drop-member`** takes `member`, `type` and optional `parameters`. It must match exactly once. It blanks the lines
-    like a text drop, from the doc comment to the end of the body.
+  - **`drop-member`** takes `member`, `type` and optional `parameters` (the types with their modifiers, such as
+    `(ref int)`). It must match exactly once. It blanks the lines like a text drop, from the doc comment to the end of
+    the body.
   - **`retarget-type`** takes `from` and `to`. It rewrites dotted names, `global::`, generic names and member-access
     chains in code, and must match at least once.
+    - `from` must be qualified (`A.B`). Without a compilation, a bare name can't be told from a local or property of
+      the same name.
+    - Like a find rule, it fails the sync when a C# file it doesn't list uses the type in code.
   - **`drop-attribute`** takes `attribute`. It removes the attribute, or its whole list, and must match at least once.
   - A rule that fails stops the sync, and nothing is written. A file a rule changes must still parse.
   - **`#if`:** files are parsed with a `net10.0` Debug build's symbols, so code under `#if DEBUG` is transformed.
@@ -255,5 +259,3 @@ types when the name is overloaded). Then it regenerates the vendored tree.
       code.
     - The syntax check also parses files that have an `#if` without `DEBUG`.
     - Upstream's `src/Reactor` has 7 `#if` lines, in 6 files.
-- **Not done:** the "matches a file it does not list" guard that find rules have. A `retarget-type` doesn't yet fail
-  when new upstream code in an unlisted file uses the type.

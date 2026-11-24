@@ -11,18 +11,19 @@
 //   "roslyn" ({"op", ...}): a syntax-aware transform run by tools/sync/roslyn (lib/roslyn.mjs). Only with "files", and
 //          before every other rule, so it reads upstream's own text. Ops:
 //            {"op": "drop-member", "member", "type"?, "parameters"?}  drops the one member named member in the type
-//              (dotted, innermost last; omitted for a top-level type), "parameters" ("(T1, T2)", the types as written)
-//              picking an overload; blanked like "drop".
-//            {"op": "retarget-type", "from", "to"}  rewrites every reference to the type name from (dotted, as
-//              written, with or without global::) in code to the text to; comments and strings are left alone.
+//              (dotted, innermost last; omitted for a top-level type), "parameters" ("(T1, ref T2)", the types as
+//              written, with their modifiers) picking an overload; blanked like "drop".
+//            {"op": "retarget-type", "from", "to"}  rewrites every reference to the type name from (qualified, A.B,
+//              with or without global::) in code to the text to; comments and strings are left alone. Like a find
+//              rule, it fails on a C# file it doesn't list whose code uses the type.
 //            {"op": "drop-attribute", "attribute"}  removes every attribute of that name (with or without the
 //              Attribute suffix; dotted to match only that qualified form).
 //          Each must match in every listed file, and a drop-member exactly once; the files it changes must still
-//          parse with no new syntax error.
+//          parse with no new syntax error; a target that also appears in code an #if leaves out fails the rule.
 // Fix a rule that stops matching, never the vendored file.
 // rules: {"rules": [{"id", "find"+"replace" | "drop" | "roslyn", "flags"?, "why", "files" | "glob"}]}
 import { globToRegExp } from './glob.mjs';
-import { dropMember } from './csharp.mjs';
+import { codeMask, dropMember } from './csharp.mjs';
 import { OPS, runRoslyn } from './roslyn.mjs';
 
 export function loadTransforms(json) {
@@ -79,7 +80,8 @@ function loadRoslynRule(r, where) {
     throw new Error(where + ': needs exactly one of "find" or "drop" (or "roslyn")');
   if (r.glob !== undefined || !Array.isArray(r.files) || !r.files.length) throw new Error(where + ': a "roslyn" rule lists the files it changes');
   checkRoslynOp(r.roslyn, where);
-  return { id: r.id, kind: 'roslyn', roslyn: { ...r.roslyn }, why: r.why ?? '', files: r.files, glob: null, globRe: null };
+  return { id: r.id, kind: 'roslyn', roslyn: { ...r.roslyn }, why: r.why ?? '', files: r.files, glob: null, globRe: null,
+    guard: r.roslyn.op === 'retarget-type' ? dotted(r.roslyn.from) : null };
 }
 
 /** Throws unless o is a known Roslyn op with the fields it takes (shared with tools/rewrite-upstream.mjs). */
@@ -93,7 +95,14 @@ export function checkRoslynOp(o, where) {
     if (o[k] === undefined && spec.optional.includes(k)) continue;
     if (typeof o[k] !== 'string' || (!o[k].trim() && k !== 'to')) throw new Error(where + ': ' + o.op + ' needs "' + k + '" (a non-empty string)');
   }
+  // Without a compilation, a bare name can't be told from a local, a property or a method of the same name.
+  if (o.op === 'retarget-type' && !o.from.replace(/^\s*global\s*::/, '').includes('.'))
+    throw new Error(where + ': retarget-type needs a qualified "from" (A.B), not ' + JSON.stringify(o.from));
 }
+
+// The regex for a retarget's "from" as code writes it (optional global::, any spacing around the dots), for the guard.
+const dotted = (from) => new RegExp('(?<![\\w.@])(?:global\\s*::\\s*)?' +
+  from.replace(/^\s*global\s*::\s*/, '').split('.').map((s) => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*\\.\\s*') + '(?!\\w)', 'g');
 
 /**
  * Runs the Roslyn rules on the files they list, in one batch: items [{p, tier, text}] (each file's text as read from
@@ -177,7 +186,16 @@ export function transformFile(rules, p, tier, text) {
   const applied = [];
   const mine = new Set(rulesFor(rules, p, tier));
   for (const r of rules) {
-    if (r.kind === 'roslyn') continue; // applied before, in one batch for every file (applyRoslyn)
+    if (r.kind === 'roslyn') {
+      // Applied before, in one batch (applyRoslyn). A retarget that doesn't list this C# file but finds its type in
+      // the file's code is an error, as for a find rule: new upstream code it would have converted.
+      if (r.guard && !r.files.includes(p) && p.endsWith('.cs')) {
+        const code = codeMask(text);
+        if ([...text.matchAll(r.guard)].some((m) => code[m.index]))
+          errors.push('transform ' + r.id + ' (roslyn retarget-type) matches ' + p + ', which it does not list: add the file to its "files" (tier 2), or classify the file again');
+      }
+      continue;
+    }
     if (mine.has(r)) {
       const x = applyTransforms([r], p, text);
       if (x.text !== text) applied.push(r); // a match whose replacement equals it changes nothing

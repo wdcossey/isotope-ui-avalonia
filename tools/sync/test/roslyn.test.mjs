@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { runRoslyn } from '../lib/roslyn.mjs';
 import { loadTransforms, applyRoslyn } from '../lib/transforms.mjs';
 import { makeFixture, SAMPLE } from './fixture.mjs';
+import { generate } from '../lib/vendor.mjs';
+import { loadTierMap } from '../lib/tiers.mjs';
 
 const one = (text, ...ops) => runRoslyn([{ path: 'f.cs', text, ops: ops.map((o, i) => ({ id: 'r' + i, ...o })) }])[0];
 
@@ -195,4 +197,54 @@ test('the syntax check compares error codes, so an upstream error that moves a l
   const original = 'class C { void M() { } }\n}\n';
   const r = runRoslyn([{ path: 'f.cs', text: '\n\n' + original, original, ops: [] }])[0];
   assert.deepEqual(r.errors, []);
+});
+
+test('a retarget fails the sync when a file it does not list uses its type in code', () => {
+  const f = makeFixture(ROSLYN);
+  try {
+    assert.equal(f.sync(f.base).code, 0);
+    const next = f.commit({ 'src/Lib/Core/Plain.cs': '// Microsoft.UI.Xaml.UIElement in a comment is fine\nclass Plain { Microsoft . UI.Xaml.UIElement e; }\n' }, 'Use UIElement (#11)');
+    const r = f.sync(next);
+    assert.equal(r.code, 1);
+    assert.match(r.err, /transform retarget-element \(roslyn retarget-type\) matches src\/Lib\/Core\/Plain\.cs, which it does not list/);
+    const ok = f.commit({ 'src/Lib/Core/Plain.cs': '// Microsoft.UI.Xaml.UIElement in a comment is fine\nclass Plain { string s = "Microsoft.UI.Xaml.UIElement"; }\n' }, 'Only mention it (#12)');
+    assert.equal(f.sync(ok).code, 0);
+  } finally { f.cleanup(); }
+});
+
+test('the #if guard looks for the target as code would write it, not for any word', () => {
+  const text = 'class C {\n    public int this[int i] => i;\n    void M() {}\n#if NEVER\n    void N() { this.M(); var Control = 1; }\n#endif\n}\n';
+  const r = one(text, { op: 'drop-member', type: 'C', member: 'this' });
+  assert.equal(r.results[0].error, null);
+  const used = one(text, { op: 'drop-member', type: 'C', member: 'M' });
+  assert.match(used.results[0].error, /M also appears in code an #if leaves out \(line 5\)/);
+  const t2 = 'class C {\n    A.Control c;\n#if NEVER\n    Control d;\n#endif\n}\n';
+  assert.equal(one(t2, { op: 'retarget-type', from: 'A.Control', to: 'B' }).results[0].error, null);
+});
+
+test('drop-member tells overloads apart by parameter modifiers', () => {
+  const text = 'class C {\n    void M(int x) {}\n    void M(ref int x) {}\n}\n';
+  const r = one(text, { op: 'drop-member', type: 'C', member: 'M', parameters: '(ref int)' });
+  assert.equal(r.results[0].error, null);
+  assert.equal(r.text, 'class C {\n    void M(int x) {}\n\n}\n');
+});
+
+test('drop-attribute leaves an empty line where the attribute stood alone', () => {
+  const r = one('class C {\n    [Foo]\r\n    void M() {}\n}\n', { op: 'drop-attribute', attribute: 'Foo' });
+  assert.equal(r.text, 'class C {\n\r\n    void M() {}\n}\n');
+});
+
+test('retarget-type takes only a qualified "from"', () => {
+  assert.throws(() => loadTransforms({ rules: [{ id: 'r', roslyn: { op: 'retarget-type', from: 'global::Color', to: 'X' }, files: ['a.cs'] }] }),
+    /retarget-type needs a qualified "from" \(A\.B\)/);
+  assert.match(one('class C { Color c; }', { op: 'retarget-type', from: 'Color', to: 'X' }).results[0].error, /must be a qualified name/);
+});
+
+test('a Roslyn tool that cannot run is one more error in the report, not a crash', () => {
+  const f = makeFixture(ROSLYN);
+  try {
+    const g = generate({ upstreamDir: f.up, commit: f.base, tierMap: loadTierMap(ROSLYN.tiers), transforms: loadTransforms(ROSLYN.transforms),
+      repoName: 'x/y', repoUrl: 'https://example.invalid/x/y', roslyn: () => { throw new Error('no dotnet here'); } });
+    assert.ok(g.errors.includes('the Roslyn rules could not run: no dotnet here'), g.errors.join('\n'));
+  } finally { f.cleanup(); }
 });

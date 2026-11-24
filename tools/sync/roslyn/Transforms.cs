@@ -13,8 +13,9 @@ public sealed record FileRequest(string Path, string Text, List<Op>? Ops, string
 /// <summary>
 /// One transform. drop-member: Member (a name; "this" for an indexer), Type (the dotted names of the types that
 /// contain it, innermost last, matched as a suffix; omitted for a type declared in a namespace), Parameters (optional,
-/// "(T1, T2)": the parameter types as written, to pick one overload). retarget-type: From (a type name as written in
-/// code, dotted, with or without global::), To (the text that replaces it). drop-attribute: Attribute (its name, with or
+/// "(T1, ref T2)": the parameter types as written, with their modifiers, to pick one overload). retarget-type: From (a
+/// qualified type name as written in code, A.B, with or without global::; a bare name can't be told from a value of the
+/// same name without a compilation), To (the text that replaces it). drop-attribute: Attribute (its name, with or
 /// without the Attribute suffix; dotted to match only that qualified form).
 /// </summary>
 public sealed class Op
@@ -108,16 +109,20 @@ public static class Transforms
             .Select(d => (d.Id, "line " + (d.Location.GetLineSpan().StartLinePosition.Line + 1) + ": " + d.Id + " " + d.GetMessage()))
             .ToList();
 
-    // Fails when the name appears in code an #if leaves out (with a Debug build's symbols): the op can't see it there,
-    // so it would leave it untransformed while reporting success.
-    static void Inactive(SyntaxNode root, string name, Op op)
+    // Fails when the target appears in code an #if leaves out (with a Debug build's symbols): the op can't see it
+    // there, so it would leave it untransformed while reporting success. shape: the target as it would be written there.
+    static void Inactive(SyntaxNode root, string what, string shape, Op op)
     {
-        var word = new Regex(@"(?<![\w@])" + Regex.Escape(name) + @"(?!\w)");
+        var re = new Regex(shape);
         foreach (var t in root.DescendantTrivia(descendIntoTrivia: true))
-            if (t.IsKind(SyntaxKind.DisabledTextTrivia) && word.IsMatch(t.ToString()))
-                throw new OpException(name + " also appears in code an #if leaves out (line " + (t.GetLocation().GetLineSpan().StartLinePosition.Line + 1) +
+            if (t.IsKind(SyntaxKind.DisabledTextTrivia) && re.IsMatch(t.ToString()))
+                throw new OpException(what + " also appears in code an #if leaves out (line " + (t.GetLocation().GetLineSpan().StartLinePosition.Line + 1) +
                     "), which " + op.Kind + " can't see: use a text rule there");
     }
+
+    // A dotted name as written in code: optional global::, any spacing around the dots.
+    static string DottedShape(string dotted) =>
+        @"(?<![\w.@])(?:global\s*::\s*)?" + string.Join(@"\s*\.\s*", dotted.Split('.').Select(Regex.Escape)) + @"(?!\w)";
 
     static string Need(string? value, string field, Op op) =>
         string.IsNullOrWhiteSpace(value) ? throw new OpException(op.Kind + " needs \"" + field + "\"") : value;
@@ -154,7 +159,8 @@ public static class Transforms
             .OfType<MemberDeclarationSyntax>()
             .Where(m => Declares(m, member) && InType(m, path) && (wanted is null || ParameterList(m) == wanted))
             .ToList();
-        Inactive(root, member, op);
+        // A declaration of the member, or a use of it (which would break once it's dropped).
+        Inactive(root, member, member == "this" ? @"(?<![\w@.])this\s*\[" : @"(?<![\w@])" + Regex.Escape(member) + @"\s*(?:<[^<>;{}]*>\s*)?[({;=]", op);
         if (found.Count != 1)
             throw new OpException("matched " + found.Count + " members, expected 1 (" + Describe(op) + ")");
         var m = found[0];
@@ -203,7 +209,8 @@ public static class Transforms
             IndexerDeclarationSyntax i => i.ParameterList.Parameters,
             _ => (SeparatedSyntaxList<ParameterSyntax>?)null,
         };
-        return list is null ? null : "(" + string.Join(",", list.Value.Select(p => Squash(p.Type?.ToString() ?? ""))) + ")";
+        // Modifiers count (ref, out, in, params, this, scoped), so M(int) and M(ref int) are told apart.
+        return list is null ? null : "(" + string.Join(",", list.Value.Select(p => Squash(string.Concat(p.Modifiers.Select(m => m.Text + " ")) + (p.Type?.ToString() ?? "")))) + ")";
     }
 
     // The member's lines: from its first doc-comment line (a run of /// lines right above it; a blank line or another
@@ -249,6 +256,7 @@ public static class Transforms
     static (string, int) RetargetType(string text, Op op)
     {
         var from = Unglobal(Squash(Need(op.From, "from", op)));
+        if (!from.Contains('.')) throw new OpException("\"from\" must be a qualified name (A.B), not " + op.From);
         var to = op.To ?? throw new OpException("retarget-type needs \"to\"");
         if (to.Contains('\n')) throw new OpException("\"to\" must be one line");
         var root = Parse(text).GetRoot();
@@ -270,7 +278,7 @@ public static class Transforms
             edits.Add((n.SpanStart, p.Value.End));
         }
         if (edits.Count == 0) throw new OpException("no longer matches: no reference to " + op.From + " in code");
-        Inactive(root, from.Split('.')[^1], op);
+        Inactive(root, op.From!, DottedShape(from), op);
         // A longer match contains no shorter one (from is one name), so the spans don't overlap.
         var sb = new StringBuilder(text);
         foreach (var (s, e) in edits.OrderByDescending(x => x.Start)) sb.Remove(s, e - s).Insert(s, to);
@@ -319,10 +327,13 @@ public static class Transforms
             hits += match.Count;
             if (match.Count == list.Attributes.Count)
             {
-                // The whole [...] goes, with the spaces after it on its line; a line left empty keeps its line ending.
+                // The whole [...] goes, with the spaces after it on its line. When it was alone on its line, the line is
+                // left empty (its indentation too), keeping its line ending.
                 var end = list.Span.End;
                 while (end < text.Length && text[end] is ' ' or '\t') end++;
-                edits.Add((list.SpanStart, end));
+                var lineStart = list.SpanStart == 0 ? 0 : text.LastIndexOf('\n', list.SpanStart - 1) + 1;
+                var alone = text[lineStart..list.SpanStart].Trim().Length == 0 && (end == text.Length || text[end] is '\r' or '\n');
+                edits.Add((alone ? lineStart : list.SpanStart, end));
                 continue;
             }
             // Each run of matched attributes goes with the separators that join it to the list: up to the kept attribute
@@ -341,7 +352,8 @@ public static class Transforms
         }
         if (hits == 0) throw new OpException("no longer matches: no attribute " + op.Attribute + " in code");
         var bare = wanted.Split('.')[^1];
-        Inactive(root, bare.EndsWith("Attribute", StringComparison.Ordinal) ? bare[..^9] : bare, op);
+        bare = bare.EndsWith("Attribute", StringComparison.Ordinal) ? bare[..^9] : bare;
+        Inactive(root, op.Attribute!, @"\[[^\]\r\n]*(?<![\w@])" + Regex.Escape(bare) + @"(?:Attribute)?(?!\w)", op);
         var sb = new StringBuilder(text);
         foreach (var (s, e) in edits.OrderByDescending(x => x.Start)) sb.Remove(s, e - s);
         return (sb.ToString(), hits);

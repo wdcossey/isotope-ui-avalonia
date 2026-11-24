@@ -17,6 +17,7 @@ export const USAGE = [
   'Usage: node tools/sync/sync.mjs [<upstream commit>] [options]',
   '  <upstream commit>  commit or ref in the upstream cache (default: <remote>/main, the remote whose URL is in UPSTREAM.lock)',
   '  --check            regenerate from the commit in UPSTREAM.lock and fail if src/Upstream differs (for CI)',
+  '                     (the sync and --check need dotnet when sync.json has syntaxCheck or a rule is a "roslyn" rule)',
   '  --dry-run          do everything except writing to the repo; print the report',
   '  --no-fetch         do not fetch the upstream cache',
   '  --skip-verify      do not build and run the upstream tests for the vendored paths',

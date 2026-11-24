@@ -53,6 +53,7 @@ export function loadRules(rulesFile) {
   return JSON.parse(readFileSync(rulesFile, 'utf8')).map((r) => {
     if (r.roslyn === undefined) return { ...r, hits: 0, re: new RegExp(r.drop ?? r.find, 'g' + (r.flags ?? '')) };
     if (!Array.isArray(r.files) || !r.files.length) throw new Error('a "roslyn" rule lists its files: ' + JSON.stringify(r.roslyn));
+    if (['find', 'drop', 'replace', 'flags'].some((k) => r[k] !== undefined)) throw new Error('a "roslyn" rule takes no find, drop, replace or flags: ' + JSON.stringify(r.roslyn));
     checkRoslynOp(r.roslyn, rulesFile + ': rule ' + JSON.stringify(r.roslyn));
     return { ...r, hits: 0 };
   });
@@ -142,7 +143,7 @@ function main() {
   }
   const unmatched = rules.filter((r) => r.hits === 0 || (r.drop !== undefined && r.files && r.hits !== r.files.length));
   if (unmatched.length)
-    fail(unmatched.map((r) => 'rewrite-upstream: rule did not match: ' + (r.drop ?? r.find)).join('\n'));
+    fail(unmatched.map((r) => 'rewrite-upstream: rule did not match: ' + (r.drop ?? r.find ?? JSON.stringify(r.roslyn))).join('\n'));
   for (const stale of listFiles(outDir)) if (!written.has(stale) && stale !== manifestFile) rmSync(stale);
   writeIfChanged(manifestFile, manifest.join('\n') + (manifest.length ? '\n' : ''));
   console.log('rewrote ' + manifest.length + ' files');
