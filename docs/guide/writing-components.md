@@ -17,9 +17,13 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | Factory | Element | Avalonia control |
 |---|---|---|
 | `TextBlock(content)` | `TextBlockElement` | `TextBlock` |
-| `Button(label, onClick)` | `ButtonElement` | `Button` |
+| `Button(label, onClick)`, `Button(content, onClick)` | `ButtonElement` | `Button` (`content` is any element) |
+| `ToggleButton(label, isChecked, onIsCheckedChanged)`, `ThreeStateToggleButton(label, checkedState, onCheckedStateChanged)` | `ToggleButtonElement` | `ToggleButton` |
+| `RepeatButton(label, onClick)` | `RepeatButtonElement` | `RepeatButton` |
+| `HyperlinkButton(content, navigateUri, onClick)` | `HyperlinkButtonElement` | `HyperlinkButton` |
 | `TextBox(value, onChanged, placeholderText)` | `TextBoxElement` | `TextBox` |
 | `Slider(value, min, max, onValueChanged)` | `SliderElement` | `Slider` |
+| `NumberBox(value, onValueChanged)` | `NumberBoxElement` | `NumericUpDown` (Reactor's `double` values; `NaN` is an empty box) |
 | `CheckBox(isChecked, onIsCheckedChanged, label)`, `ThreeStateCheckBox(checkedState, onCheckedStateChanged, label)` | `CheckBoxElement` | `CheckBox` |
 | `ToggleSwitch(isOn, onIsOnChanged, onContent, offContent, header)` | `ToggleSwitchElement` | `ToggleSwitch` (`IsOn` is its `IsChecked`, `header` its `Content`) |
 | `RadioButton(label, isChecked, onIsCheckedChanged, groupName)` | `RadioButtonElement` | `RadioButton` |
@@ -31,7 +35,11 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
 | `Border(child)` | `BorderElement` | `Border` |
 | `ScrollViewer(child)` | `ScrollViewerElement` | `ScrollViewer` |
-| `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` |
+| `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.HeaderContent(element)` for an element header) |
+| `TabView(selectedIndex, onSelectedIndexChanged, Tab(header, content), ...)`, `TabView(Tab(...), ...)` | `TabViewElement` | `TabControl` (a `TabItem` per tab) |
+| `SplitView(pane, content)` | `SplitViewElement` | `SplitView` (open by default, as Reactor's) |
+| `MenuBar(Menu(title, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(text, onClick)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
+| `Separator()` | `SeparatorElement` | `Separator` (Avalonia-only, so Avalonia's name) |
 | `Grid(columns, rows, ...)` | `GridElement` | `Grid` (tracks are `GridSize.Auto`, `GridSize.Star(weight)`, `GridSize.Px(size)`) |
 | `WrapPanel(...)` | `WrapPanelElement` | `WrapPanel` (Avalonia-only, so Avalonia's name) |
 | `VStack(...)`, `HStack(...)`, `VStack(spacing, ...)`, `HStack(spacing, ...)` | `StackElement` | `StackPanel` |
@@ -43,21 +51,29 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 
 > **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
 > same element upstream's `RenderEachTime(render)` builds. Both exist here, and `RenderEachTime` works as it does in
-> Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia.
+> Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia, and so do `TabView` and `NumberBox`,
+> which are Avalonia's `TabControl` and `NumericUpDown`.
 
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
-keep their controls when it does. An input control (`TextBox`, `Slider`, `CheckBox`, `ToggleSwitch`, `RadioButton`,
-`ComboBox`, `ListBox`, `Expander`, `DatePicker`, `TimePicker`) given no value owns its own; given the state's value
+keep their controls when it does. An input control (`TextBox`, `Slider`, `NumberBox`, `CheckBox`, `ToggleSwitch`,
+`RadioButton`, `ComboBox`, `ListBox`, `TabView`, `Expander`, `DatePicker`, `TimePicker`) given no value owns its own; given the state's value
 and a change callback, it is controlled by it: what the user changes reaches the callback, and what the state writes
-doesn't come back through it.
+doesn't come back through it. `ToggleButton`'s `isChecked`, a toggle menu item's and `SplitView`'s `IsPaneOpen` are
+written when they change, as in Reactor: a click toggles the control, and it keeps that state until the value changes.
+
+A button (`Button`, `ToggleButton`, `RepeatButton`, `HyperlinkButton`) takes a string or any element as its content:
+`Button(HStack(Image("save.png"), TextBlock("Save")), onSave)`. An element content, a tab's content and a split view's
+pane and content are reconciled in place, so a component inside keeps its state.
 
 Inside a `Grid`, `.Grid(row: 1, column: 0, columnSpan: 2)` sets a child's cell. With the factories imported, a bare
 `Grid`, `Border` or `ScrollViewer` names the factory, so Avalonia's attached-property calls need the type in full
-(`Avalonia.Controls.Grid.GetRow(...)`) or an alias.
+(`Avalonia.Controls.Grid.GetRow(...)`) or an alias. The same goes for `Menu`, `MenuItem`, `SplitView` and `Separator`.
 
 Modifiers and keys chain onto any element: `.Margin(...)` (uniform, horizontal and vertical, per side or a
 `Thickness`), `.Width(...)`, `.Height(...)`, `.Size(...)`, `.HAlign(...)`, `.VAlign(...)`, `.Opacity(...)`,
-`.IsEnabled(...)`, `.Background(...)` (a brush or a colour string), `.AutomationName(...)` and `.WithKey(...)`. Inside
+`.IsEnabled(...)`, `.Background(...)` (a brush or a colour string), `.AutomationName(...)`, `.ToolTip(text)` (or
+`.ToolTip(text, placement)`), `.WithContextFlyout(MenuItems(...))` (a context menu, as an Avalonia `MenuFlyout`) and
+`.WithKey(...)`. Inside
 a `Flex` container, `.Flex(grow: 1, ...)` sets a child's flex data. Container settings that have no factory parameter
 are set with `with`: `FlexRow(...) with { ColumnGap = 8 }`.
 
