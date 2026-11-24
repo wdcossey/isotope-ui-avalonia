@@ -53,13 +53,16 @@ public partial record TabViewElement(TabViewItemData[] Tabs) : Element
     {
         d.Children = new TabItemsHost<TabViewElement, TabControl, TabViewItemData>(
             GetItems:        static e => e.Tabs,
-            GetCollection:   static c => ItemsList.Of(c.Items),
+            GetCollection:   static c => new EchoScopedItems(c, ItemsList.Of(c.Items)),
             GetContent:      static item => item.Content,
             CreateContainer: static (item, mounted) => new TabItem { Header = item.Header, Content = mounted },
             UpdateContainer: static (oldItem, newItem, container) =>
             {
                 if (container is TabItem tab && !Equals(tab.Header, newItem.Header)) tab.Header = newItem.Header;
             });
+        // Avalonia's TabControl always keeps a tab selected: adding the first tab, or removing the selected one, moves the
+        // selection and raises SelectionChanged in the middle of the engine's update. That change is the engine's, not
+        // the user's, so it is dropped (the controlled index, written next, corrects the selection when it differs).
         return d.HandCodedControlled<TabViewEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
             get:         static e => e.SelectedIndex,
             set:         static (c, v) => c.SelectedIndex = v,
@@ -70,6 +73,40 @@ public partial record TabViewElement(TabViewItemData[] Tabs) : Element
             slotIsNull:  static p => p.SelectionChangedTrampoline is null,
             setSlot:     static (p, h) => p.SelectionChangedTrampoline = h);
     }
+}
+
+/// <summary>
+/// The tab collection, with each change made in an echo-suppression scope on the TabControl, so the selection Avalonia
+/// moves in answer to it isn't reported as the user's.
+/// </summary>
+internal sealed class EchoScopedItems(Control owner, IList<object> inner) : IList<object>
+{
+    private void Scoped(Action change)
+    {
+        var state = Reconciler.GetOrCreateReactorState(owner);
+        state.EchoSuppressScopeDepth++;
+        try { change(); }
+        finally { state.EchoSuppressScopeDepth--; }
+    }
+
+    public object this[int index] { get => inner[index]; set => Scoped(() => inner[index] = value); }
+    public int Count => inner.Count;
+    public bool IsReadOnly => inner.IsReadOnly;
+    public void Add(object item) => Scoped(() => inner.Add(item));
+    public void Clear() => Scoped(inner.Clear);
+    public bool Contains(object item) => inner.Contains(item);
+    public void CopyTo(object[] array, int arrayIndex) => inner.CopyTo(array, arrayIndex);
+    public IEnumerator<object> GetEnumerator() => inner.GetEnumerator();
+    public int IndexOf(object item) => inner.IndexOf(item);
+    public void Insert(int index, object item) => Scoped(() => inner.Insert(index, item));
+    public bool Remove(object item)
+    {
+        var removed = false;
+        Scoped(() => removed = inner.Remove(item));
+        return removed;
+    }
+    public void RemoveAt(int index) => Scoped(() => inner.RemoveAt(index));
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
 /// <summary>

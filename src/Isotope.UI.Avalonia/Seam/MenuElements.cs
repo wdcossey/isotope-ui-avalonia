@@ -31,7 +31,7 @@ public record MenuFlyoutSubItemData(string Text, MenuFlyoutItemBase[] Items) : M
 
 /// <summary>
 /// A menu item with a check mark. <see cref="IsChecked"/> is written when it changes; choosing the item toggles it and
-/// calls <see cref="OnIsCheckedChanged"/> with the new value, as WinUI's does (Avalonia's MenuItem doesn't toggle itself).
+/// calls <see cref="OnIsCheckedChanged"/> with the new value.
 /// </summary>
 public record ToggleMenuFlyoutItemData(string Text, bool IsChecked = false, Action<bool>? OnIsCheckedChanged = null) : MenuFlyoutItemBase;
 
@@ -174,13 +174,12 @@ internal static class MenuItemsSync
                 d.OnClick?.Invoke();
                 break;
             case ToggleMenuFlyoutItemData t:
-                // Unlike WinUI's ToggleMenuFlyoutItem, Avalonia's MenuItem doesn't toggle itself on a click.
-                item.IsChecked = !item.IsChecked;
+                // Avalonia's menu interaction handler toggles a check-box item before it raises Click, as WinUI's does.
                 t.OnIsCheckedChanged?.Invoke(item.IsChecked);
                 break;
             case RadioMenuFlyoutItemData r:
-                // Nor does it check a radio item, or uncheck the others of its group outside a window: as WinUI's,
-                // choosing one checks it and unchecks the others of its group among its siblings.
+                // Its handler checks a radio item too; as WinUI's, the others of its group among its siblings are
+                // unchecked here, which doesn't depend on the item being in a window's group scope.
                 item.IsChecked = true;
                 if (item.GetValue(SiblingsProperty) is { } siblings)
                     foreach (var other in siblings)
@@ -200,6 +199,10 @@ internal static class MenuItemsSync
     private static readonly AttachedProperty<bool> OwnedFlyoutProperty =
         AvaloniaProperty.RegisterAttached<FlyoutOwner, MenuFlyout, bool>("IsotopeOwnedFlyout");
 
+    // The flyout this modifier created for a control, reused when a setter has put another one in its place.
+    private static readonly AttachedProperty<MenuFlyout?> ControlFlyoutProperty =
+        AvaloniaProperty.RegisterAttached<FlyoutOwner, Control, MenuFlyout?>("IsotopeContextFlyout");
+
     /// <summary>
     /// Writes the <c>.WithContextFlyout(...)</c> modifier: a MenuFlyout created once and updated in place, removed when
     /// the modifier goes.
@@ -208,18 +211,22 @@ internal static class MenuItemsSync
     {
         if (newMenu is null)
         {
-            if (oldMenu is not null && control.ContextFlyout is MenuFlyout gone && gone.GetValue(OwnedFlyoutProperty))
+            if (oldMenu is null) return;
+            if (control.ContextFlyout is MenuFlyout gone && gone.GetValue(OwnedFlyoutProperty))
                 control.ClearValue(Control.ContextFlyoutProperty);
+            control.ClearValue(ControlFlyoutProperty);
             return;
         }
         if (ReferenceEquals(oldMenu, newMenu) && control.ContextFlyout is MenuFlyout same && same.GetValue(OwnedFlyoutProperty))
             return;
-        if (control.ContextFlyout is not MenuFlyout flyout || !flyout.GetValue(OwnedFlyoutProperty))
+        if (control.GetValue(ControlFlyoutProperty) is not { } flyout)
         {
             flyout = new MenuFlyout();
             flyout.SetValue(OwnedFlyoutProperty, true);
-            control.ContextFlyout = flyout;
+            control.SetValue(ControlFlyoutProperty, flyout);
         }
+        // As the other modifiers, it is written after the setters, so it wins over a flyout a setter assigned.
+        if (!ReferenceEquals(control.ContextFlyout, flyout)) control.ContextFlyout = flyout;
         if (newMenu.Placement is { } placement) flyout.Placement = placement;
         else flyout.ClearValue(Avalonia.Controls.Primitives.PopupFlyoutBase.PlacementProperty);
         Sync(ItemsList.Of(flyout.Items), newMenu.Items);

@@ -51,7 +51,9 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
     };
 
     // As upstream's: Minimum and Maximum are written before Value (Customize's entries come first), so a new value lands
-    // in the new range, and a bound that coerces the value drops the change event the coercion raises; Value is
+    // in the new range, and a bound that coerces the value drops the change event the coercion raises. Avalonia's
+    // control coerces only with ClipValueToMinMax (off by default; a Setters action can turn it on), so only then does
+    // a bound expect that event: a token for an event that never comes would swallow the next user change. Value is
     // controlled on the counter channel (Avalonia raises ValueChanged inside the write). Values compare as the decimals
     // the control holds, so a double that doesn't round-trip through decimal isn't taken for drift (a write that
     // changes nothing raises no event, and its suppression token would swallow the next user change).
@@ -59,11 +61,11 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
         => d.CoercingOneWay(
                 get:               static e => e.Minimum,
                 set:               static (c, v) => c.Minimum = Clamp(v),
-                coercesController: static (c, newMin) => c.Value < Clamp(newMin))
+                coercesController: static (c, newMin) => c.ClipValueToMinMax && c.Value < Clamp(newMin))
             .CoercingOneWay(
                 get:               static e => e.Maximum,
                 set:               static (c, v) => c.Maximum = Clamp(v),
-                coercesController: static (c, newMax) => c.Value > Clamp(newMax))
+                coercesController: static (c, newMax) => c.ClipValueToMinMax && c.Value > Clamp(newMax))
             .OneWay(
                 get: static e => e.SmallChange,
                 set: static (c, v) => c.Increment = Clamp(v))

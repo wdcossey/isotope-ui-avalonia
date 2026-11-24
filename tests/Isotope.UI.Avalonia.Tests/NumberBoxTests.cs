@@ -73,6 +73,23 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
+    public void NumberBox_bound_moved_past_the_value_leaves_no_token_behind()
+    {
+        // Avalonia's NumericUpDown doesn't clip its value to a new bound (ClipValueToMinMax is off by default), so the
+        // bound's write raises no change event and must not expect one.
+        var reported = new List<double>();
+        double min = 0;
+        var host = new TestHost(() => NumberBox(5, v => reported.Add(v)) with { Minimum = min });
+        var box = host.All<NumericUpDown>()[0];
+
+        min = 10;
+        host.Render();
+        Assert.Equal(10m, box.Minimum);
+        box.Value = 12; // the user's next change
+        Assert.Equal([12.0], reported);
+    }
+
+    [AvaloniaFact]
     public void NumberBox_default_bounds_are_decimal_range()
     {
         var host = new TestHost(() => NumberBox(1));

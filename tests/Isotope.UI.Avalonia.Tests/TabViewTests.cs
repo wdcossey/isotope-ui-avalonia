@@ -125,6 +125,46 @@ public class TabViewTests
     }
 
     [AvaloniaFact]
+    public void TabView_removing_the_selected_tab_lands_on_the_declared_index_without_a_report()
+    {
+        // Avalonia keeps a tab selected, so removing the selected one moves the selection inside the engine's update:
+        // that move isn't the user's, and the index the app declares wins.
+        var reported = new List<int>();
+        Action? close = null;
+        var host = new TestHost(() => Component(ctx =>
+        {
+            var (state, setState) = ctx.UseState((Count: 3, Index: 2));
+            close = () => setState((2, 0)); // closes the last tab and selects the first
+            var tabs = Enumerable.Range(0, state.Count).Select(i => Tab("T" + i, TextBlock("t" + i))).ToArray();
+            return TabView(state.Index, i => { reported.Add(i); setState(state with { Index = i }); }, tabs);
+        }));
+        var tabControl = host.All<TabControl>()[0];
+        Assert.Equal(2, tabControl.SelectedIndex);
+
+        close!();
+        host.Flush();
+        Assert.Equal(0, tabControl.SelectedIndex);
+        Assert.Empty(reported);
+    }
+
+    [AvaloniaFact]
+    public void TabView_first_tab_added_is_not_reported_as_a_user_selection()
+    {
+        var reported = new List<int>();
+        var tabs = Array.Empty<TabViewItemData>();
+        var host = new TestHost(() => TabView(Optional<int>.Unset, i => reported.Add(i), tabs));
+        var tabControl = host.All<TabControl>()[0];
+
+        tabs = [Tab("A", TextBlock("a")), Tab("B", TextBlock("b"))];
+        host.Render();
+        Assert.Equal(0, tabControl.SelectedIndex);
+        Assert.Empty(reported);
+
+        tabControl.SelectedIndex = 1; // the user's own changes still arrive
+        Assert.Equal([1], reported);
+    }
+
+    [AvaloniaFact]
     public void TabView_tab_contents_are_torn_down_with_the_tabs()
     {
         var log = new List<string>();
