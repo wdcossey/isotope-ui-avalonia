@@ -121,13 +121,14 @@ public sealed class PlatformHooksTests : IDisposable
     {
         public PlatformColorValues Values = new() { ThemeVariant = PlatformThemeVariant.Light };
         public int Handlers;
+        public int Adds;
         private EventHandler<PlatformColorValues>? _changed;
 
         public PlatformColorValues GetColorValues() => Values;
 
         public event EventHandler<PlatformColorValues>? ColorValuesChanged
         {
-            add { _changed += value; Handlers++; }
+            add { _changed += value; Handlers++; Adds++; }
             remove { _changed -= value; Handlers--; }
         }
 
@@ -156,6 +157,8 @@ public sealed class PlatformHooksTests : IDisposable
         fake.Set(ColorContrastPreference.NoPreference);
         Pump();
         Assert.Equal(renders, m.Renders);
+        // Re-renders keep the one subscription made at mount.
+        Assert.Equal(1, fake.Adds);
 
         m.Host.Dispose();
         Assert.Equal(0, fake.Handlers);
@@ -194,6 +197,37 @@ public sealed class PlatformHooksTests : IDisposable
         other.Height = 175;
         Pump();
         Assert.Equal("250x175", m.Text);
+    }
+
+    [AvaloniaFact]
+    public void UseWindowSize_follows_a_new_top_level_when_the_argument_changes()
+    {
+        var a = NewWindow(250, 150);
+        var b = NewWindow(260, 160);
+        a.Show();
+        b.Show();
+        Action<bool>? useB = null;
+        var m = Mount(ctx =>
+        {
+            var (which, set) = ctx.UseState(false);
+            useB = set;
+            var (w, h) = ctx.UseWindowSize(which ? b : a);
+            return $"{w}x{h}";
+        });
+        Assert.Equal("250x150", m.Text);
+
+        useB!(true);
+        Pump();
+        Assert.Equal("260x160", m.Text);
+        b.Width = 300;
+        Pump();
+        Assert.Equal("300x160", m.Text);
+
+        // The old one no longer drives it.
+        var renders = m.Renders;
+        a.Width = 400;
+        Pump();
+        Assert.Equal(renders, m.Renders);
     }
 
     [AvaloniaFact]
