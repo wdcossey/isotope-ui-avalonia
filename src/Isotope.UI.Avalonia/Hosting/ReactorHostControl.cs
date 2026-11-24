@@ -20,8 +20,8 @@ namespace Isotope.UI.Hosting;
 /// during a pass (by the render or an effect) queues one more pass, at <see cref="DispatcherPriority.Background"/> so
 /// input, layout and rendering run first; so does any request after a pass slower than one frame (16 ms).</para>
 /// <para><b>Errors.</b> An exception from the root's render (<see cref="RenderErrorSource.RootRender"/>), the reconcile
-/// after it (<see cref="RenderErrorSource.Reconcile"/>, which includes child components' renders until error boundaries
-/// arrive) or the root's effects, flushed once the tree is committed (<see cref="RenderErrorSource.Effects"/>), goes to
+/// after it (<see cref="RenderErrorSource.Reconcile"/>, which includes the renders of child components outside every
+/// error boundary: an <see cref="ErrorBoundaryElement"/> shows its own fallback for what its subtree throws) or the root's effects, flushed once the tree is committed (<see cref="RenderErrorSource.Effects"/>), goes to
 /// <see cref="EffectiveRenderErrorHandler"/>. With no handler, or one that returns <c>null</c>, a built-in panel shows
 /// the exception text. After a root render or effects failure the tree is kept, so the next good pass reconciles against
 /// it and child state survives; after a reconcile failure the half-updated tree is released (its cleanups run). An element the handler returns replaces

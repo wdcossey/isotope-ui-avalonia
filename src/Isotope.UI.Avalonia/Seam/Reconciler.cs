@@ -349,11 +349,14 @@ public sealed partial class Reconciler
     {
         element = Unwrap(element, out var modifiers);
         int pushed = PushContext(element);
+        // While an error boundary records completed mounts (#25): where this mount's completed roots start.
+        int boundaryRootsStart = BoundaryRootsMark;
         try
         {
             UIElement? control = element switch
             {
                 EmptyElement => null,
+                ErrorBoundaryElement boundary => MountErrorBoundary(boundary, requestRerender),
                 FuncElement func => MountFunc(func, requestRerender),
                 MemoElement memo => MountMemo(memo, requestRerender),
                 ComponentElement comp => MountComponent(comp, requestRerender),
@@ -366,10 +369,21 @@ public sealed partial class Reconciler
             };
             if (control is not null)
             {
-                ApplyModifiers(control, null, null, element, modifiers);
-                ApplyEnabled(control, element, modifiers);
+                try
+                {
+                    ApplyModifiers(control, null, null, element, modifiers);
+                    ApplyEnabled(control, element, modifiers);
+                }
+                catch
+                {
+                    // The subtree mounted (a wrapper registered its node) but this mount fails: inside an error boundary,
+                    // it is a completed subtree for the boundary to unmount.
+                    NoteMountCompleted(boundaryRootsStart, control);
+                    throw;
+                }
                 GetOrCreateReactorState(control).Element = element;
             }
+            NoteMountCompleted(boundaryRootsStart, control);
             return control;
         }
         finally
@@ -419,6 +433,9 @@ public sealed partial class Reconciler
                     break;
                 case ComponentElement comp:
                     ReconcileComponent(comp, (Border)control, requestRerender);
+                    break;
+                case ErrorBoundaryElement boundary:
+                    UpdateErrorBoundary(boundary, (Border)control, requestRerender);
                     break;
                 default:
                     // Controls: the registered handler updates the control in place. It returns another control only
@@ -731,13 +748,21 @@ public sealed partial class Reconciler
             wrapper.Child = Mount(child, componentRerender);
             node.RenderedElement = child;
         }
+        catch
+        {
+            // Its render (and effects) ran, but no node is registered: inside an error boundary, the boundary runs its
+            // cleanups when it discards the failed child (#25).
+            NoteAbandonedNode(node);
+            throw;
+        }
         finally
         {
             _renderStack.RemoveAt(_renderStack.Count - 1);
         }
-        // Registered once the subtree mounted: a render that throws leaves no node behind. (A descendant that
-        // throws still leaves the nodes of siblings mounted before it; recovering from render errors is the
-        // error boundaries' job, tier 3.)
+        // Registered once the subtree mounted: a render that throws leaves no node behind. Inside an error boundary,
+        // the boundary discards what a failed subtree left (the nodes of siblings mounted before it, its own
+        // cleanups). Outside one, nothing reaches this node's cleanups, nor the completed subtrees under it: the host
+        // releases only the tree it had.
         _componentNodes[wrapper] = node;
         return wrapper;
     }
@@ -883,6 +908,7 @@ public sealed partial class Reconciler
     {
         CountPerfChanges();
         _exitingControls?.Remove(control);
+        _errorBoundaryNodes.Remove(control);
         if (_componentNodes.Remove(control, out var node))
         {
             if (_unmountCleanupFailures is { } onFailure)

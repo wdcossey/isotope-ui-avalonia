@@ -877,6 +877,11 @@
       "note": "#2: upstream's engine test, compiles and passes unchanged on Avalonia (library tests)"
     },
     {
+      "path": "tests/Reactor.Tests/ErrorBoundaryTests.cs",
+      "tier": 2,
+      "note": "#25: upstream's error-boundary tests, run on Avalonia by the library tests; drops the RegisterType test (per-host RegisterType is not on Avalonia) and the WinUI using"
+    },
+    {
       "glob": "src/Reactor/Core/Element*.cs",
       "tier": 3,
       "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"

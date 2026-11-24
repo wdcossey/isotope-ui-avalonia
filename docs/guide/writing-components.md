@@ -40,6 +40,7 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | `Component<T>()`, `Component<T, TProps>(props)` | `ComponentElement` | a `Component` class |
 | `Memo(render, dependencies...)` | `MemoElement` | a function component that re-renders only when a dependency changes |
 | `Group(...)`, `Empty()` | `GroupElement`, `EmptyElement` | none (a fragment; nothing) |
+| `ErrorBoundary(child, fallback)` | `ErrorBoundaryElement` | a `Border` holding the child, or the fallback when the child throws ([Error boundaries](error-boundaries.md)) |
 
 > **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
 > same element upstream's `RenderEachTime(render)` builds. Both exist here, and `RenderEachTime` works as it does in
@@ -296,7 +297,7 @@ The window's content is a `ReactorHostControl` (`using Isotope.UI.Hosting;`), wh
 anywhere in an existing Avalonia layout. It renders on Avalonia's dispatcher: however many state changes arrive before
 a pass runs, the root renders once. When a render throws, the host shows the exception (or what the
 `RenderErrorHandler` returns, or `ReactorApp.DefaultRenderErrorHandler` for every host), and the next state change
-renders again. Leaving the visual tree doesn't unmount it; `Dispose` does.
+renders again. An [error boundary](error-boundaries.md) keeps a failing part from replacing the whole content. Leaving the visual tree doesn't unmount it; `Dispose` does.
 
 <!-- snippet: host-control -->
 ```csharp

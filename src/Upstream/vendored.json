@@ -1815,6 +1815,17 @@
       "sha256": "cfdeaa18b5ae2688cbb30ad56d1d12c70606adbc8da7a66b7e9276122d2e96f5"
     },
     {
+      "path": "tests/Reactor.Tests/ErrorBoundaryTests.cs",
+      "tier": 2,
+      "lastChanged": "58c2f12a13d4ec18d6eb4d2f1efb98f2c73db92b",
+      "transforms": [
+        "drop-test-ErrorBoundary-RegisterType",
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "b38a8a434d5b9e4fd7f25bf14a57aa3c7934a97dfab429233a683c6a4279aaa8"
+    },
+    {
       "path": "tests/Reactor.Tests/HookArityOverloadTests.cs",
       "tier": 1,
       "lastChanged": "e0394e0cc3392be9fcab7bdcd068c2e69fad2efd",
