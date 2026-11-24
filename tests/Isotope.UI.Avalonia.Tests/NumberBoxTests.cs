@@ -50,11 +50,11 @@ public class NumberBoxTests
         // (whose token would swallow the next user change, since writing the same decimal raises no event).
         var reported = new List<double>();
         var tick = 0;
-        var host = new TestHost(() => VStack(TextBlock("t" + tick), NumberBox(0.1 + 0.2, v => reported.Add(v))));
+        var host = new TestHost(() => NumberBox(0.1 + 0.2, v => reported.Add(v)) with { PlaceholderText = "t" + tick });
         var box = host.All<NumericUpDown>()[0];
 
         tick = 1;
-        host.Render(); // updates the box with the same value
+        host.Render(); // updates the box (its placeholder changes) with the same value
         box.Value = 5;
         Assert.Equal([5.0], reported);
     }

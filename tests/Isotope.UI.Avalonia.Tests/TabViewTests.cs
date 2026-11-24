@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Isotope.UI.Core;
 using Xunit;
 using static Isotope.UI.Factories;
@@ -202,10 +203,23 @@ public class TabViewTests
         var host = new TestHost(() => TabView(0, i => reported.Add(i), Tab("A", ComboBox(["x", "y"], 0)), Tab("B", TextBlock("b"))));
         var tabs = host.All<TabControl>()[0];
         var combo = Assert.IsType<ComboBox>(Items(tabs)[0].Content);
+        // In a window, so the TabControl's template hosts the selected tab's content and the event has a route to it.
+        var window = new Window { Width = 400, Height = 300, Content = host.Root };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            Assert.Contains(tabs, combo.GetVisualAncestors());
 
-        combo.SelectedIndex = 1;
-        Assert.Empty(reported);
-        Assert.Equal(0, tabs.SelectedIndex);
+            combo.SelectedIndex = 1;
+            Assert.Empty(reported);
+            Assert.Equal(0, tabs.SelectedIndex);
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
     }
 
     [AvaloniaFact]

@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Isotope.UI.Core;
 using Xunit;
 using static Isotope.UI.Factories;
@@ -117,10 +119,25 @@ public class SplitViewTests
         var host = new TestHost(() => SplitView(
             SplitView(TextBlock("inner pane"), TextBlock("inner content")),
             TextBlock("content")) with { OnPaneOpenChanged = v => reported.Add(v) });
-        var inner = Assert.IsType<AvSplitView>(host.All<AvSplitView>()[0].Pane);
+        var outer = host.All<AvSplitView>()[0];
+        var inner = Assert.IsType<AvSplitView>(outer.Pane);
+        // In a window, so the outer template hosts the pane and the inner events have a route to the outer view.
+        var window = new Window { Width = 400, Height = 300, Content = host.Root };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            Assert.Contains(outer, inner.GetVisualAncestors());
 
-        inner.IsPaneOpen = false;
-        Assert.Empty(reported);
+            inner.IsPaneOpen = false;
+            inner.IsPaneOpen = true;
+            Assert.Empty(reported);
+        }
+        finally
+        {
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+        }
     }
 
     [AvaloniaFact]

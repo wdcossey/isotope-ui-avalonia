@@ -79,10 +79,6 @@ internal static class MenuItemsSync
     private static readonly AttachedProperty<MenuFlyoutItemBase?> DataProperty =
         AvaloniaProperty.RegisterAttached<DataOwner, MenuItem, MenuFlyoutItemBase?>("IsotopeMenuData");
 
-    // The items a MenuItem is one of, so a radio item can uncheck the others of its group.
-    private static readonly AttachedProperty<IList<object>?> SiblingsProperty =
-        AvaloniaProperty.RegisterAttached<DataOwner, MenuItem, IList<object>?>("IsotopeMenuSiblings");
-
     internal static MenuFlyoutItemBase[] TopLevel(MenuBarItemData[] items)
     {
         var result = new MenuFlyoutItemBase[items.Length];
@@ -106,7 +102,6 @@ internal static class MenuItemsSync
                     items.Insert(i, created);
                 }
             }
-            if (items[i] is MenuItem item) item.SetValue(SiblingsProperty, items);
         }
         for (int i = items.Count - 1; i >= data.Length; i--) items.RemoveAt(i);
     }
@@ -179,14 +174,7 @@ internal static class MenuItemsSync
                 t.OnIsCheckedChanged?.Invoke(item.IsChecked);
                 break;
             case RadioMenuFlyoutItemData r:
-                // Its handler checks a radio item too; as WinUI's, the others of its group among its siblings are
-                // unchecked here, which doesn't depend on the item being in a window's group scope.
-                item.IsChecked = true;
-                if (item.GetValue(SiblingsProperty) is { } siblings)
-                    foreach (var other in siblings)
-                        if (other is MenuItem o && !ReferenceEquals(o, item) && o.GetValue(DataProperty) is RadioMenuFlyoutItemData od
-                            && od.GroupName == r.GroupName)
-                            o.IsChecked = false;
+                // Its handler checks a radio item too, and Avalonia unchecks the others of its group, as WinUI does.
                 r.OnClick?.Invoke();
                 break;
         }
