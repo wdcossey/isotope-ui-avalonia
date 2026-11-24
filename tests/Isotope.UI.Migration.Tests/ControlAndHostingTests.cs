@@ -23,14 +23,14 @@ public class ControlAndHostingTests
                 [
                     TitleBar("Todos"),
                     ProgressRing(),
-                    ScrollView(TextBlock("x")),
+                    RelativePanel(TextBlock("x")),
                 ];
             }
             """;
         Assert.Equal([
             "ISOMIG011: 'TitleBar' is a WinUI control with no Isotope counterpart: Avalonia's core has no TitleBar element: the window title comes from ReactorApp.Run's title.",
             "ISOMIG011: 'ProgressRing' is a WinUI control with no Isotope counterpart: Avalonia's core has no ProgressRing: use ProgressIndeterminate() (an indeterminate ProgressBar).",
-            "ISOMIG012: 'ScrollView' has no Isotope factory: Not in Isotope yet: use ScrollViewer(...) (Avalonia ScrollViewer).",
+            "ISOMIG012: 'RelativePanel' has no Isotope factory: Not in Isotope yet (Avalonia: RelativePanel).",
         ], Migrate.Analyze(reactor).Describe());
     }
 

@@ -69,6 +69,7 @@
     {"record": "HyperlinkButtonElement", "reactor": "Content", "avalonia": "Content", "kind": "shape", "note": "Now an object? (it was string): a string or an element."},
     {"record": "HyperlinkButtonElement", "reactor": "ContentElement", "avalonia": "Content", "kind": "shape", "note": "Content and ContentElement are one Content (object?)."},
     {"record": "ScrollViewerElement", "reactor": "Child", "avalonia": "Content", "kind": "rename"},
+    {"record": "ScrollViewerElement", "reactor": "ContentOrientation", "avalonia": ["HorizontalScrollBarVisibility", "VerticalScrollBarVisibility"], "kind": "shape", "note": "Upstream's ScrollView is Avalonia's ScrollViewer here, and its ContentOrientation (WinUI's ScrollingContentOrientation) is the scroll bar visibilities: Vertical, ScrollView's default, is a Disabled horizontal scroll bar; Horizontal a Disabled vertical one; Both leaves both Auto; None disables both."},
     {"record": "ExpanderElement", "reactor": "Header", "avalonia": "Header", "kind": "shape", "note": "Now an object? (it was string): a string or an element."},
     {"record": "ExpanderElement", "reactor": "HeaderContent", "avalonia": "Header", "kind": "shape", "note": "Header and HeaderContent are one Header (object?): a string or an element."},
     {"record": "DatePickerElement", "reactor": "Date", "avalonia": "SelectedDate", "kind": "rename"},
@@ -115,8 +116,7 @@
     {"factory": "DatePicker", "reactor": "onDateChanged", "avalonia": "onSelectedDateChanged"},
     {"factory": "TimePicker", "reactor": "time", "avalonia": "selectedTime"},
     {"factory": "TimePicker", "reactor": "onTimeChanged", "avalonia": "onSelectedTimeChanged"},
-    {"factory": "ScrollViewer", "reactor": "child", "avalonia": "content"},
-    {"factory": "TabView", "reactor": "tabs", "avalonia": "items"},
+    {"factory": "ScrollViewer", "reactor": "child", "avalonia": "content"},    {"factory": "TabView", "reactor": "tabs", "avalonia": "items"},
     {"factory": "Menu", "reactor": "title", "avalonia": "header"},
     {"factory": "MenuItem", "reactor": "text", "avalonia": "header"},
     {"factory": "ToggleMenuItem", "reactor": "text", "avalonia": "header"},
@@ -141,13 +141,13 @@
     {"reactor": "StackElement", "avalonia": "StackPanelElement", "status": "proposed"},
     {"reactor": "MenuBarElement", "avalonia": "MenuElement", "status": "proposed"},
     {"reactor": "MenuBarItemData", "avalonia": "MenuItemData", "status": "proposed"},
-    {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"}
-  ],
+    {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"}  ],
   "factories": [
     {"reactor": "TabView", "avalonia": "TabControl", "status": "proposed"},
     {"reactor": "Tab", "avalonia": "TabItem", "status": "proposed"},
     {"reactor": "NumberBox", "avalonia": "NumericUpDown", "status": "proposed"},
     {"reactor": "AutoSuggestBox", "avalonia": "AutoCompleteBox", "status": "proposed"},
-    {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"}
+    {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"},
+    {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation); ScrollViewer's horizontal scroll bar is Auto, so add with { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } for the same layout (#43)."}
   ]
 }

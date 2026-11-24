@@ -97,7 +97,6 @@
     {"factory": "RelativePanel", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: RelativePanel)."},
     {"factory": "RichTextBlock", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: SelectableTextBlock)."},
     {"factory": "Run", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Run, inside a TextBlock)."},
-    {"factory": "ScrollView", "status": "not-ported", "alternative": "Not in Isotope yet: use ScrollViewer(...) (Avalonia ScrollViewer)."},
     {"factory": "SplitButton", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: SplitButton)."},
     {"factory": "SymbolIcon", "status": "not-ported", "alternative": "Not in Isotope yet: Avalonia has no symbol font; use a PathIcon."},
     {"factory": "Thick", "status": "not-ported", "alternative": "Not in Isotope yet: use new Thickness(...) (Avalonia)."},
