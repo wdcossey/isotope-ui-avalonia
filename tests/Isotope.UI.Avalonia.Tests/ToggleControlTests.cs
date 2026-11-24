@@ -37,6 +37,15 @@ public class ToggleControlTests
         label = null;
         host.Render();
         Assert.Null(box.Content);
+        Assert.False(box.IsSet(ContentControl.ContentProperty)); // cleared, not a local null over the styles
+    }
+
+    [AvaloniaFact]
+    public void Content_left_unset_is_not_written_so_a_style_can_give_it()
+    {
+        // #31: the toggles' Content is written by WithContent; as on the ClearValue channel, a null isn't a local value.
+        var host = new TestHost(() => VStack(CheckBox(true), RadioButton(null!), ToggleSwitch(true)));
+        Assert.All(host.All<ContentControl>(), c => Assert.False(c.IsSet(ContentControl.ContentProperty), c.GetType().Name));
     }
 
     [AvaloniaFact]

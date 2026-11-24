@@ -879,7 +879,7 @@
     {
       "path": "tests/Reactor.Tests/ErrorBoundaryTests.cs",
       "tier": 2,
-      "note": "#25: upstream's error-boundary tests, run on Avalonia by the library tests; drops the RegisterType test (per-host RegisterType is not on Avalonia) and the WinUI using"
+      "note": "#25: upstream's error-boundary tests, run on Avalonia by the library tests; drops the RegisterType test (per-host RegisterType is not on Avalonia) and the WinUI using; reads TextBlockElement's text under Avalonia's name, Text (#31, test-textblock-text)"
     },
     {
       "glob": "src/Reactor/Core/Element*.cs",

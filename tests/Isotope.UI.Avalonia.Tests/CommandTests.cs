@@ -315,7 +315,6 @@ public sealed class CommandTests : IDisposable
 
         var bound = ToggleButton("Bold", false, v => log.Add("toggled " + v)).Command(cmd);
         Assert.Null(bound.OnIsCheckedChanged);
-        Assert.Null(bound.OnIsCheckedChanged);
     }
 
     [AvaloniaFact]

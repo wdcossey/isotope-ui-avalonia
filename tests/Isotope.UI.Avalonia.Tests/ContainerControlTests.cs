@@ -251,6 +251,12 @@ public class ContainerControlTests
         Assert.ThrowsAny<ArgumentException>(() => host.Render());
         Assert.Equal([new GridLength(100), new GridLength(1, GridUnitType.Star)], grid.ColumnDefinitions.Select(c => c.Width).ToArray());
         Assert.Equal([GridLength.Auto], grid.RowDefinitions.Select(r => r.Height).ToArray());
+
+        // A bad row with new columns: the columns aren't rebuilt either (#31: the two sets are written together).
+        (columns, rows) = ([GridSize.Star(), GridSize.Star(), GridSize.Star()], [new GridSize(double.NaN, GridUnitType.Auto)]);
+        Assert.ThrowsAny<ArgumentException>(() => host.Render());
+        Assert.Equal([new GridLength(100), new GridLength(1, GridUnitType.Star)], grid.ColumnDefinitions.Select(c => c.Width).ToArray());
+        Assert.Equal([GridLength.Auto], grid.RowDefinitions.Select(r => r.Height).ToArray());
     }
 
     [AvaloniaFact]

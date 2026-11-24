@@ -58,38 +58,34 @@ namespace Isotope.UI.Core
         // instance, it compares the tracks, so the arrays a component builds on every render don't rebuild them each
         // time.
         private static partial ControlDescriptor<GridElement, Grid> Customize(ControlDescriptor<GridElement, Grid> d)
-            => d.OneWay(
-                    get: static e => e.ColumnDefinitions,
-                    set: static (c, v) =>
-                    {
-                        // Every track is converted before the grid is touched: upstream's GridSize doesn't check an
-                        // Auto track's value, and Avalonia's GridLength rejects a bad one, so such a render fails with
-                        // the grid's tracks as they were.
-                        var columns = v is null ? [] : Array.ConvertAll(v, ColumnDefinitionOf);
-                        c.ColumnDefinitions.Clear();
-                        foreach (var col in columns) c.ColumnDefinitions.Add(col);
-                    },
-                    comparer: SameTracks.Instance)
-                .OneWay(
-                    get: static e => e.RowDefinitions,
-                    set: static (c, v) =>
-                    {
-                        var rows = v is null ? [] : Array.ConvertAll(v, RowDefinitionOf);
-                        c.RowDefinitions.Clear();
-                        foreach (var row in rows) c.RowDefinitions.Add(row);
-                    },
-                    comparer: SameTracks.Instance);
+            => d.ImperativeBridged(
+                mount: static (ctx, c, e) => WriteTracks(c, e.ColumnDefinitions, e.RowDefinitions, columns: true, rows: true),
+                update: static (ctx, c, o, n) => WriteTracks(c, n.ColumnDefinitions, n.RowDefinitions,
+                    columns: !TracksEqual(o.ColumnDefinitions, n.ColumnDefinitions),
+                    rows: !TracksEqual(o.RowDefinitions, n.RowDefinitions)));
+
+        // Both sets are converted before the grid is touched: upstream's GridSize doesn't check an Auto track's value,
+        // and Avalonia's GridLength rejects a bad one, so such a render fails with all the grid's tracks as they were.
+        private static void WriteTracks(Grid c, GridSize[]? columnSizes, GridSize[]? rowSizes, bool columns, bool rows)
+        {
+            if (!columns && !rows) return;
+            var newColumns = columns ? Array.ConvertAll(columnSizes ?? [], ColumnDefinitionOf) : null;
+            var newRows = rows ? Array.ConvertAll(rowSizes ?? [], RowDefinitionOf) : null;
+            if (newColumns is not null)
+            {
+                c.ColumnDefinitions.Clear();
+                foreach (var col in newColumns) c.ColumnDefinitions.Add(col);
+            }
+            if (newRows is not null)
+            {
+                c.RowDefinitions.Clear();
+                foreach (var row in newRows) c.RowDefinitions.Add(row);
+            }
+        }
 
         /// <summary>Whether two track arrays hold the same tracks (upstream's record compares the instance).</summary>
         internal static bool TracksEqual(GridSize[]? a, GridSize[]? b) =>
             ReferenceEquals(a, b) || (a is not null && b is not null && a.AsSpan().SequenceEqual(b));
-
-        private sealed class SameTracks : IEqualityComparer<GridSize[]>
-        {
-            internal static readonly SameTracks Instance = new();
-            public bool Equals(GridSize[]? a, GridSize[]? b) => TracksEqual(a, b);
-            public int GetHashCode(GridSize[] v) => v.Length;
-        }
 
         private static ColumnDefinition ColumnDefinitionOf(GridSize size)
         {
