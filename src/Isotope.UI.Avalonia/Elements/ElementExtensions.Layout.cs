@@ -87,7 +87,7 @@ public static partial class ElementExtensions
     /// <summary>The border's colour, from a colour string Avalonia parses (<c>"#FF0000"</c>, <c>"Red"</c>).</summary>
     public static T BorderBrush<T>(this T el, string color) where T : Element => el.BorderBrush(Brush.Parse(color));
 
-    /// <summary>The border's brush; <see langword="null"/> leaves the control's own.</summary>
+    /// <summary>The border's brush; a null brush leaves the control's own.</summary>
     public static T BorderBrush<T>(this T el, IBrush? brush) where T : Element =>
         el.WithModifiers(m => m with { BorderBrush = brush });
 

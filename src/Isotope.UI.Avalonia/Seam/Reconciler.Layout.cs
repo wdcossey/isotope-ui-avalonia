@@ -8,13 +8,14 @@ namespace Isotope.UI.Core;
 // Layout modifiers (#49), written where Avalonia has the property, as upstream writes them where WinUI has it.
 public sealed partial class Reconciler
 {
-    // A stack, grid or wrap panel whose modifiers ask for padding, a border or rounded corners is mounted inside a
-    // PanelChrome border. A flex panel isn't, as upstream's FlexPanel ignores them (its padding is FlexPadding).
+    // A stack, grid or wrap panel whose modifiers ask for padding, a border width or rounded corners is mounted inside a
+    // PanelChrome border. A flex panel isn't, as upstream's FlexPanel ignores them (its padding is FlexPadding). A border
+    // brush alone (a brush modifier or token) draws nothing with no width, so it doesn't ask for one: a brush that comes
+    // and goes, as a selection highlight's does, doesn't mount the panel again.
     // Which elements' controls lack the four properties is known from the element type, so the choice can be made from
     // the elements alone (CanUpdate): a change in it mounts the element afresh, as a change of control type does.
     internal static bool NeedsPanelChrome(Element element, ElementModifiers? modifiers) =>
-        element is StackElement or GridElement or WrapPanelElement
-        && (modifiers is { HasPanelChrome: true } || element.ThemeBindings?.ContainsKey("BorderBrush") == true);
+        modifiers is { HasPanelChrome: true } && element is StackElement or GridElement or WrapPanelElement;
 
     // The control a handler mounted for the element in this slot: the panel inside a chrome border, or the control.
     private static UIElement HandlerControl(UIElement control) => control is PanelChrome { Child: { } panel } ? panel : control;
@@ -43,9 +44,11 @@ public sealed partial class Reconciler
         Set(control, Visual.IsVisibleProperty, oldM?.IsVisible, newM?.IsVisible);
         // Content alignment, on the controls that declare it (ContentControl's property, which TextBox, ComboBox,
         // NumericUpDown, … add as owners), as upstream writes it on a WinUI Control.
-        if (AvaloniaPropertyRegistry.Instance.IsRegistered(control, ContentControl.HorizontalContentAlignmentProperty))
+        if ((oldM?.HorizontalContentAlignment ?? newM?.HorizontalContentAlignment) is not null
+            && AvaloniaPropertyRegistry.Instance.IsRegistered(control, ContentControl.HorizontalContentAlignmentProperty))
             Set(control, ContentControl.HorizontalContentAlignmentProperty, oldM?.HorizontalContentAlignment, newM?.HorizontalContentAlignment);
-        if (AvaloniaPropertyRegistry.Instance.IsRegistered(control, ContentControl.VerticalContentAlignmentProperty))
+        if ((oldM?.VerticalContentAlignment ?? newM?.VerticalContentAlignment) is not null
+            && AvaloniaPropertyRegistry.Instance.IsRegistered(control, ContentControl.VerticalContentAlignmentProperty))
             Set(control, ContentControl.VerticalContentAlignmentProperty, oldM?.VerticalContentAlignment, newM?.VerticalContentAlignment);
         switch (control)
         {

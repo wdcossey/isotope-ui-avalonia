@@ -455,21 +455,50 @@ public sealed class LayoutModifierTests
         var withBorder = ChromeOf(host.All<StackPanel>()[1]);
         Assert.Equal(new Thickness(2), withBorder.BorderThickness);
         Assert.Equal(["BorderBrush"], Reconciler.BoundThemeProperties(withBorder));
-        // A token brush alone puts the panel in a border too, as a brush modifier does.
-        Assert.Equal(["BorderBrush"], Reconciler.BoundThemeProperties(ChromeOf(host.All<StackPanel>()[2])));
+        // A token brush alone, with no width, doesn't, as a brush modifier alone doesn't.
+        Assert.Same(host.All<StackPanel>()[0], host.All<StackPanel>()[2].Parent);
     }
 
     [AvaloniaFact]
-    public void Each_of_padding_a_border_brush_a_border_width_and_corners_alone_puts_a_stack_in_a_border()
+    public void A_border_width_after_a_theme_token_border_replaces_its_width()
+    {
+        var border = new TestHost(() => Border(TextBlock("a")).WithBorder(Theme.CardStroke).BorderThickness(0, 0, 0, 1)).All<AvBorder>()[0];
+        Assert.Equal(new Thickness(0, 0, 0, 1), border.BorderThickness);
+    }
+
+    [AvaloniaFact]
+    public void Each_of_padding_a_border_width_and_corners_alone_puts_a_stack_in_a_border_and_a_brush_alone_doesn_t()
     {
         var host = new TestHost(() => VStack(
             VStack(TextBlock("p")).Padding(1),
-            VStack(TextBlock("b")).BorderBrush("Red"),
             VStack(TextBlock("t")).BorderThickness(1),
-            VStack(TextBlock("c")).CornerRadius(1)));
-        var stacks = host.All<StackPanel>().Skip(1).ToList();
-        Assert.Equal(4, stacks.Count);
-        Assert.All(stacks, s => ChromeOf(s));
+            VStack(TextBlock("c")).CornerRadius(1),
+            VStack(TextBlock("b")).BorderBrush("Red")));
+        var stacks = host.All<StackPanel>();
+        Assert.All(stacks.Skip(1).Take(3), s => ChromeOf(s));
+        Assert.Same(stacks[0], stacks[4].Parent); // a brush with no width draws nothing
+    }
+
+    [AvaloniaFact]
+    public void A_border_brush_that_comes_and_goes_keeps_the_panel_and_its_children_s_state()
+    {
+        var selected = false;
+        Action<int>? setCount = null;
+        var counter = Component(ctx =>
+        {
+            var (count, set) = ctx.UseState(0);
+            setCount = set;
+            return TextBlock($"count {count}");
+        });
+        var host = new TestHost(() => VStack(counter).BorderBrush(selected ? Brushes.Blue : null));
+        var panel = host.All<StackPanel>()[0];
+        setCount!(2);
+        host.Flush();
+
+        selected = true;
+        host.Render();
+        Assert.Same(panel, host.All<StackPanel>()[0]);
+        Assert.Equal(["count 2"], host.Texts());
     }
 
     [AvaloniaFact]

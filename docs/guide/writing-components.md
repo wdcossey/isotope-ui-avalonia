@@ -168,8 +168,10 @@ public static Element Card(string title, string body, bool selected) =>
         .MaxWidth(320);
 ```
 
-> **Coming from Reactor?** A panel that gains or loses its padding, border or corners between renders is mounted again,
-> and the state of the components inside it is lost: give it `.Padding(0)` rather than none. The BiDi-aware
+> **Coming from Reactor?** A panel that gains or loses its padding, border width or corner radius between renders is
+> mounted again, and the state of the components inside it is lost: give it `.Padding(0)` rather than none. A border
+> brush alone draws nothing without a width, so it doesn't need the `Border`, and a brush that comes and goes (a
+> selection highlight) keeps the panel. The BiDi-aware
 > `MarginInlineStart` family isn't here.
 
 More factories arrive with their controls. An app host that opens a window on a component is #16; the tests mount

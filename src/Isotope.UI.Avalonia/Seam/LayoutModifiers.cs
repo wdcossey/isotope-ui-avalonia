@@ -17,7 +17,7 @@ public partial record ElementModifiers
     /// </summary>
     public Thickness? Padding { get; init; }
 
-    /// <summary>The border's brush, on a templated control or a border (and a panel, as <see cref="Padding"/>).</summary>
+    /// <summary>The border's brush, on a templated control or a border (and a panel in its border, as <see cref="Padding"/>).</summary>
     public IBrush? BorderBrush { get; init; }
 
     /// <summary>The corners' radii, where <see cref="BorderBrush"/> is written.</summary>
@@ -40,9 +40,10 @@ public partial record ElementModifiers
     /// <summary>
     /// Whether a stack, grid or wrap panel with these modifiers needs a border around it (<see cref="PanelChrome"/>):
     /// WinUI's StackPanel and Grid have <c>Padding</c>, <c>BorderBrush</c>, <c>BorderThickness</c> and
-    /// <c>CornerRadius</c>, and Avalonia's panels have none of them.
+    /// <c>CornerRadius</c>, and Avalonia's panels have none of them. A brush alone doesn't count: with no width it
+    /// draws nothing, and a brush that comes and goes then doesn't mount the panel again.
     /// </summary>
-    internal bool HasPanelChrome => Padding is not null || BorderBrush is not null || BorderThickness is not null || CornerRadius is not null;
+    internal bool HasPanelChrome => Padding is not null || BorderThickness is not null || CornerRadius is not null;
 }
 
 /// <summary>
