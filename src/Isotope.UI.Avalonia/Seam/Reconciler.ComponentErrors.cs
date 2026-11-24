@@ -36,6 +36,17 @@ public sealed partial class Reconciler
     internal bool IsPropagating(Exception ex) => _propagating is not null && ReferenceEquals(_propagating, ex);
 
     /// <summary>
+    /// For the host, once a pass has thrown: whether <paramref name="ex"/> is the propagated exception, which is then
+    /// forgotten (an exception thrown again later is an ordinary error).
+    /// </summary>
+    internal bool ConsumePropagation(Exception ex)
+    {
+        if (!IsPropagating(ex)) return false;
+        _propagating = null;
+        return true;
+    }
+
+    /// <summary>
     /// Renders a component and flushes its effects. Outside every error boundary, an exception from either is shown in
     /// the component's slot: the result is then the fallback for it (see <see cref="BuildInTreeFallback"/>), and the
     /// component stays mounted, so its next render retries it. Inside a boundary, or for a fatal error, it propagates.
@@ -101,7 +112,15 @@ public sealed partial class Reconciler
     /// <c>RenderErrorDispatch.Guard</c>): a fallback that throws degrades without exception details, and the handler isn't
     /// called again for it.
     /// </summary>
-    internal static Element GuardFallback(Element appElement) => new ErrorBoundaryElement(appElement, s_neutralFallback);
+    internal static Element GuardFallback(Element appElement) => new GuardedFallbackElement(appElement, s_neutralFallback);
+
+    /// <summary>Whether <paramref name="tree"/> is an app handler's fallback (<see cref="GuardFallback"/>).</summary>
+    internal static bool IsGuardedFallback(Element? tree) => tree is GuardedFallbackElement;
+
+    // A boundary of its own type, as upstream's FallbackGuardElement, so the host can tell a handler's fallback from the
+    // app's tree.
+    private sealed record GuardedFallbackElement(Element Child, Func<Exception, Element> Fallback)
+        : ErrorBoundaryElement(Child, Fallback);
 
     /// <summary>The text of the built-in placeholder for <paramref name="ex"/> (upstream's wording).</summary>
     internal static string FallbackText(Exception ex) => $"⚠ Render error: {ex.GetType().Name}: {ex.Message}\n\n{ex}";
@@ -129,8 +148,17 @@ public sealed partial class Reconciler
     {
         if (_boundaryMountRoots is not null) return null;
         _propagating = null;
-        return BeginBoundaryMount();
+        // The lists are kept between passes (cleared), so a pass allocates none.
+        _boundaryMountRoots = _rootPassRoots ??= new List<UIElement>();
+        _boundaryAbandonedNodes = _rootPassAbandoned ??= new List<ComponentNode>();
+        return new BoundaryMountRecord(RootsStart: 0, AbandonedStart: 0, OwnsLists: true);
     }
+
+    private List<UIElement>? _rootPassRoots;
+    private List<ComponentNode>? _rootPassAbandoned;
+
+    // A list that grew past this (a pass that mounted many subtrees into existing panels) isn't kept.
+    private const int MaxKeptRootPassCapacity = 256;
 
     // The pass threw: the subtrees it mounted but never attached are unmounted, and the cleanups of components whose
     // mount failed run (each once, every one even when some throw). What is attached under existingControl, the tree
@@ -146,6 +174,10 @@ public sealed partial class Reconciler
         finally
         {
             EndBoundaryMount(r);
+            _rootPassRoots?.Clear();
+            _rootPassAbandoned?.Clear();
+            if (_rootPassRoots?.Capacity > MaxKeptRootPassCapacity) _rootPassRoots = null;
+            if (_rootPassAbandoned?.Capacity > MaxKeptRootPassCapacity) _rootPassAbandoned = null;
         }
     }
 

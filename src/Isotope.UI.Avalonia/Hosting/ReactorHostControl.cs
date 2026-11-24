@@ -23,11 +23,12 @@ namespace Isotope.UI.Hosting;
 /// after it (<see cref="RenderErrorSource.Reconcile"/>: a control's mount or update, a modifier) or the root's effects,
 /// flushed once the tree is committed (<see cref="RenderErrorSource.Effects"/>), goes to
 /// <see cref="EffectiveRenderErrorHandler"/> with <see cref="RenderError.IsHostLevel"/> true, and its outcome replaces
-/// the whole content. With no handler, or one that returns <c>null</c>, a built-in panel shows the exception text. After
-/// a root render or effects failure the tree is kept, so the next good pass reconciles against it and child state
-/// survives; after a reconcile failure the half-updated tree is released (its cleanups run, and so do those of what the
-/// pass mounted but never attached). An element the handler returns replaces the content. A handler that throws, or
-/// whose element fails, gets a neutral "Something went wrong." panel.</para>
+/// the whole content. With no handler, or one that returns <c>null</c>, a built-in panel shows the exception text; after
+/// a root render or effects failure the tree is then kept, so the next good pass reconciles against it and child state
+/// survives. After a reconcile failure the half-updated tree is released (its cleanups run, and so do those of what the
+/// pass mounted but never attached). An element the handler returns replaces the content, and the tree it replaces is
+/// unmounted; it is mounted inside a guard, as upstream's, so a component in it that throws shows the neutral text. A
+/// handler that throws, or whose element fails, gets a neutral "Something went wrong." panel.</para>
 /// <para>A child component whose render or effects throw outside every error boundary is replaced in its own slot, as
 /// upstream's: the handler gets <see cref="RenderErrorSource.ComponentRender"/> or <see cref="RenderErrorSource.Effects"/>
 /// with <see cref="RenderError.IsHostLevel"/> false and the component's name (a class component's), and the rest of the
@@ -207,9 +208,15 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
             if (_disposed)
+            {
                 _logger?.LogError(ex, "Render failed ({Source}) after the host was disposed", phase);
+                // A child component's failure the handler asked to propagate still leaves the dispatcher (#28).
+                if (_reconciler.ConsumePropagation(ex)) ExceptionDispatchInfo.Capture(ex).Throw();
+            }
             else
+            {
                 ShowRenderError(ex, phase);
+            }
         }
         finally
         {
@@ -221,7 +228,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
     // Upstream's host-level fallback (RenderErrorDispatch.BuildHostFallback), for one host.
     private void ShowRenderError(Exception ex, RenderErrorSource source)
     {
-        if (_reconciler.IsPropagating(ex))
+        if (_reconciler.ConsumePropagation(ex))
         {
             // A child component's failure the handler asked to propagate (#28): as for the host's own, nothing is shown,
             // and the handler isn't asked again.
@@ -286,6 +293,9 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
             }
             return;
         }
+        // The built-in panel. A tree the pass kept stays for the next good pass to reconcile against, but a handler's
+        // fallback from an earlier failure is released rather than left mounted out of sight (as upstream's).
+        if (Reconciler.IsGuardedFallback(_currentTree)) ReleaseTree();
         Child = ErrorPanel(ex);
     }
 
@@ -373,7 +383,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
     internal static string ErrorText(Exception ex) => "Render error\n\n" + ex;
 
     /// <summary>The neutral message shown when the error handler itself failed (no exception details).</summary>
-    internal const string SafeText = "Something went wrong.";
+    internal const string SafeText = Reconciler.NeutralFallbackText;
 
     private static Control ErrorPanel(Exception ex) => new Border
     {

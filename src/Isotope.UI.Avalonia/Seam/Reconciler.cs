@@ -364,6 +364,8 @@ public sealed partial class Reconciler
     public UIElement? Mount(Element element, Action requestRerender)
     {
         element = Unwrap(element, out var modifiers);
+        // A mount outside any pass (#28): an exception propagated earlier is an ordinary error again.
+        if (_boundaryMountRoots is null) _propagating = null;
         int pushed = PushContext(element);
         // While an error boundary records completed mounts (#25): where this mount's completed roots start.
         int boundaryRootsStart = BoundaryRootsMark;

@@ -293,6 +293,54 @@ public sealed class ComponentErrorTests : IDisposable
         for (int i = 0; i < 3; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
     }
 
+    [AvaloniaFact]
+    public void Propagate_still_rethrows_when_the_pass_disposed_the_host()
+    {
+        ReactorHostControl? host = null;
+        host = new ReactorHostControl(_ => VStack(
+            Component(c =>
+            {
+                c.UseEffect(() => host!.Dispose(), Array.Empty<object>()); // closes the window during the pass
+                return TextBlock("closes");
+            }),
+            Throws("after the dispose")))
+        {
+            RenderErrorHandler = e => { e.Propagate(); return null; },
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(Pump);
+
+        Assert.Equal("after the dispose", ex.Message);
+        Assert.True(host.IsIdle);
+        for (int i = 0; i < 3; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
+    }
+
+    [AvaloniaFact]
+    public void A_handler_fallback_is_released_when_a_later_failure_shows_the_built_in_panel()
+    {
+        var cleanups = new StrongBox<int>(0);
+        bool returnElement = true;
+        Action<int>? rerender = null;
+        using var host = new ReactorHostControl(ctx =>
+        {
+            var (n, set) = ctx.UseState(0);
+            rerender = set;
+            throw new InvalidOperationException("root " + n);
+        })
+        {
+            RenderErrorHandler = _ => returnElement ? Tracked(cleanups, "app fallback") : null,
+        };
+        Pump();
+        Assert.Equal(["app fallback"], Texts(host));
+
+        returnElement = false;
+        rerender!(1);
+        Pump();
+
+        Assert.Contains("root 1", Assert.Single(Texts(host))); // the built-in panel
+        Assert.Equal(1, cleanups.Value); // the earlier fallback was unmounted, not left running
+    }
+
     // ── A failed mount outside every boundary ────────────────────────────
 
     [AvaloniaFact]
