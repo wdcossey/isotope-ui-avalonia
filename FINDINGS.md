@@ -152,6 +152,24 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## Platform hooks (issue #20, 2026-11-24)
+
+- **12 hooks on Avalonia, with Reactor's names,** in our partial `RenderContext`:
+  - theme: `UseColorScheme`, `UseIsDarkTheme`, `UseHighContrast`;
+  - window: `UseWindow`, `UseWindowSize`, `UseBreakpoint`, `UseWindowState`, `UseIsActive`, `UseWindowPosition`, `UseDpi`,
+    `UseClosingGuard`;
+  - displays: `UseDisplays`.
+- **Behaviour:** each reads its value during the render, re-renders only on a real change, unsubscribes on unmount, and
+  follows a host moved to another window. Guide: `docs/guide/platform-hooks.md`.
+- **Tests:** 52 new, all proven to fail; 811 in all.
+- **Not built:**
+  - `UseReducedMotion` and `UseHighContrastScheme`: Avalonia 12 exposes neither.
+  - `UseIntl`: upstream's `IntlAccessor` isn't vendored.
+  - Aspect ratio, covered, drag-move: no matching Avalonia API.
+  - Tray, pickers and the back button: later.
+- **Differences from upstream:** the theme hooks read the host's own theme (a window's theme counts), and `UseWindow` takes
+  hook slots so it can follow the host.
+
 ## App host (issue #16, 2026-11-23)
 
 - **`ReactorHostControl`** (`Isotope.UI.Hosting`) renders a root component into any Avalonia layout, coalescing re-renders
