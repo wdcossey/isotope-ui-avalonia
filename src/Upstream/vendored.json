@@ -1,7 +1,7 @@
 {
   "generatedBy": "tools/sync",
   "repo": "https://github.com/microsoft/microsoft-ui-reactor",
-  "commit": "1f0784368e39b9b660974060d6d7c653438414ab",
+  "commit": "561c55739d6999094fed83b63dda6e2c94aef8ec",
   "files": [
     {
       "path": "LICENSE",
@@ -22,11 +22,11 @@
     {
       "path": "src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs",
       "tier": 1,
-      "lastChanged": "91540bb61ea6918b411bd738ff6070004594099f",
+      "lastChanged": "0234f14f3f9751b4b6d298134b8e02054f7545a3",
       "transforms": [
         "namespace-isotope"
       ],
-      "sha256": "429863cf2532bd1e9c8ed159cd340ddebae25ad5bdb48a431615c99a756e7241"
+      "sha256": "0ef0cdfaf31ff2fe50890c0842392bf49ab53f8e0b9f9cfeb9a986fa75370571"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/IsExternalInit.cs",
@@ -407,12 +407,12 @@
     {
       "path": "src/Reactor/Core/ChildReconciler.cs",
       "tier": 2,
-      "lastChanged": "244b77b228af15833583cbab13f8f98a74f2a532",
+      "lastChanged": "defbf2a397ea96ca35231fe62fea9b3b5f2898c3",
       "transforms": [
         "winui-usings",
         "namespace-isotope"
       ],
-      "sha256": "e0f7ab3babe1ed2d0fba54a6dfd59d1a866ac6836765870d99d144799b5f91c5"
+      "sha256": "8dfd6f00d0f1e7fa7c54bd0c02ba607ccf8271976cb60e8e056991da2c1ae0ec"
     },
     {
       "path": "src/Reactor/Core/ChildSlots.cs",
@@ -513,13 +513,13 @@
     {
       "path": "src/Reactor/Core/Diagnostics/AppliedModifierMap.cs",
       "tier": 2,
-      "lastChanged": "1dff529a7f116595ed7c88f5029dff62638059ed",
+      "lastChanged": "561c55739d6999094fed83b63dda6e2c94aef8ec",
       "transforms": [
         "winui-usings",
         "winui-alias-panel",
         "namespace-isotope"
       ],
-      "sha256": "f6dafdd64fbfccf60e2e983c57eb9cd1fb805d84e4c2ae43abe025ca89dc0f98"
+      "sha256": "8fc5297b9f408b471c8c79738eeaa069c429fa2ff8ee844e405edb785631cee3"
     },
     {
       "path": "src/Reactor/Core/Diagnostics/ComponentNames.cs",
@@ -1813,6 +1813,17 @@
         "namespace-isotope"
       ],
       "sha256": "cfdeaa18b5ae2688cbb30ad56d1d12c70606adbc8da7a66b7e9276122d2e96f5"
+    },
+    {
+      "path": "tests/Reactor.Tests/ErrorBoundaryTests.cs",
+      "tier": 2,
+      "lastChanged": "58c2f12a13d4ec18d6eb4d2f1efb98f2c73db92b",
+      "transforms": [
+        "drop-test-ErrorBoundary-RegisterType",
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "b38a8a434d5b9e4fd7f25bf14a57aa3c7934a97dfab429233a683c6a4279aaa8"
     },
     {
       "path": "tests/Reactor.Tests/HookArityOverloadTests.cs",

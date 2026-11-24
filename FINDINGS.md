@@ -209,6 +209,36 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Error boundaries (issue #25, 2026-11-24)
+
+- **`ErrorBoundary(child, fallback)`:** when a subtree throws (in a render, an effect, a mount or an update), the boundary
+  shows `fallback(ex)` in its place, and the rest of the tree keeps its controls and state.
+  - The nearest boundary catches, and a fallback that throws goes to the next boundary out.
+  - Errors outside every boundary still reach the host (#16).
+  - Every re-render with a new boundary element retries the child; a new key remounts it.
+- **Differences from upstream** (guide, "What differs from Reactor"):
+  - a retry mounts the child afresh;
+  - a fallback shown again keeps its state;
+  - an unchanged boundary element doesn't retry;
+  - a cleanup that throws while the old child is unmounted is logged;
+  - out-of-memory and stack-overflow exceptions pass through.
+- **Tests:** 28 new, all proven to fail. Upstream's `ErrorBoundaryTests.cs` is vendored and 8 of its 9 tests run.
+- **Cost:** about +7 ms per 1,000 rows on mount, each row in its own boundary.
+- **Guide:** `docs/guide/error-boundaries.md`.
+
+## First automated weekly sync (issue #24, 2026-11-24)
+
+- **The `upstream-sync` job's first real run** (`1f078436` → `561c5573`, 11 upstream commits) worked as designed: it pushed
+  `sync/1f078436-561c5573`, started CI on it and opened #24 with the report.
+- **3 vendored files changed,** no transform rule broke, and Yoga stayed at 780.
+- **9 new upstream paths,** all classified by the tier map.
+- **The compiler caught one break:** upstream's `ChildReconciler` now passes a new `childIndex:` argument to our seam's
+  `Reconciler.UpdateChildTracked` (4 errors). The fix was to mirror the parameter in our seam (unused: it serves staggered
+  animations, which Avalonia doesn't have yet).
+- **Tier 3 PRs** (compositor implicit transitions, transforms on the composition visual, assembly names): none needs porting
+  yet.
+- **Coordinator time:** about 5 minutes from reading the issue to a green branch (session timestamps).
+
 ## Roslyn transforms (issue #4, 2026-11-24)
 
 - **Decision: Roslyn complements the text-based drops; it doesn't replace them.** All 88 text drops convert to Roslyn drops

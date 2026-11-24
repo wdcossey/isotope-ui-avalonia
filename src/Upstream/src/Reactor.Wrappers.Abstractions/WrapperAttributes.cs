@@ -1,9 +1,9 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs, last changed upstream in 91540bb61ea6; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Abstractions/WrapperAttributes.cs, last changed upstream in 0234f14f3f97; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 // Authoring attributes for Reactor.Wrappers.Generator.
 //
 // These were previously emitted into every consuming compilation by the source
-// generator via RegisterPostInitializationOutput. Because Reactor.dll runs the
-// generator too, the (internal) generated copies landed in Reactor.dll and then
+// generator via RegisterPostInitializationOutput. Because Isotope.UI.dll runs the
+// generator too, the (internal) generated copies landed in Isotope.UI.dll and then
 // leaked through InternalsVisibleTo into friend assemblies that ALSO run the
 // generator (e.g. Reactor.AppTests.Host), where the locally generated copy
 // collided with the imported one — CS0436, which fails Release builds under

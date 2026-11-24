@@ -44,6 +44,18 @@
       ]
     },
     {
+      "id": "drop-test-ErrorBoundary-RegisterType",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "ErrorBoundaryTests",
+        "member": "ErrorBoundary_Mount_Catches_RegisterType_Error"
+      },
+      "why": "Mounts through the per-host RegisterType callback table, which our Avalonia reconciler doesn't have (controls mount through registered V1 handlers). ErrorBoundaryTests in the library tests covers what a boundary catches (#25).",
+      "files": [
+        "tests/Reactor.Tests/ErrorBoundaryTests.cs"
+      ]
+    },
+    {
       "id": "drop-winuiex-notice",
       "find": "\\n+-+ WinUIEx -+\\n[\\s\\S]*?\\n-{20,}(?=\\r?\\n|$)",
       "replace": "",
@@ -281,7 +293,8 @@
         "src/Reactor/Hooks/UseElementFocus.cs",
         "src/Reactor/Hooks/UseElementRef.cs",
         "src/Reactor/Hooks/UseFocus.cs",
-        "src/Reactor/Hooks/UseFocusTrap.cs"
+        "src/Reactor/Hooks/UseFocusTrap.cs",
+        "tests/Reactor.Tests/ErrorBoundaryTests.cs"
       ]
     },
     {
