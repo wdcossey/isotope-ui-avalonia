@@ -88,6 +88,12 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **With `using static Isotope.UI.Factories`, `Grid.GetRow(...)` and `Border.BackgroundProperty` name the factory
   (CS0119).** Use an alias or the full name. (2026-11-24)
 
+- **Yoga doesn't call a measure function for a child it sizes Exactly on both axes** (a basis of 0 with stretch), so
+  FlexPanel's own final sweep measures that child, and a fix in the Yoga bridge alone misses it. (2026-11-24)
+- **Two parts of a fix that each correct a bug hide each other from break tests.** A test stayed green with one part
+  removed because the other corrected the layout one pass later. Prove it with both removed, and test what each part
+  alone buys. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would
