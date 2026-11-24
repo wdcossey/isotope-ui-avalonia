@@ -229,6 +229,15 @@ public record ElementModifiers
     public IBrush? Background { get; init; }
     public string? AutomationName { get; init; }
 
+    /// <summary>The text of the control's tooltip (Avalonia's <c>ToolTip.Tip</c>, #26).</summary>
+    public string? ToolTip { get; init; }
+
+    /// <summary>Which side of the control its tooltip opens on (Avalonia's <c>ToolTip.Placement</c>).</summary>
+    public Avalonia.Controls.PlacementMode? ToolTipPlacement { get; init; }
+
+    /// <summary>The menu the control opens on a right-click or the menu key (Avalonia's <c>ContextFlyout</c>, #26).</summary>
+    public MenuFlyoutContentElement? ContextFlyout { get; init; }
+
     /// <summary>These modifiers, with <paramref name="other"/>'s set values taking precedence.</summary>
     public ElementModifiers Merge(ElementModifiers other) => new()
     {
@@ -241,6 +250,9 @@ public record ElementModifiers
         IsEnabled = other.IsEnabled ?? IsEnabled,
         Background = other.Background ?? Background,
         AutomationName = other.AutomationName ?? AutomationName,
+        ToolTip = other.ToolTip ?? ToolTip,
+        ToolTipPlacement = other.ToolTipPlacement ?? ToolTipPlacement,
+        ContextFlyout = other.ContextFlyout ?? ContextFlyout,
     };
 }
 

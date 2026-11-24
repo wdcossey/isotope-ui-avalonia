@@ -588,6 +588,10 @@ public sealed partial class Reconciler
         Set(control, Layoutable.VerticalAlignmentProperty, oldM?.VerticalAlignment, newM?.VerticalAlignment);
         Set(control, Visual.OpacityProperty, oldM?.Opacity, newM?.Opacity);
         SetRef(control, AutomationProperties.NameProperty, oldM?.AutomationName, newM?.AutomationName);
+        // #26: the tooltip and the context menu.
+        SetRef<object?>(control, ToolTip.TipProperty, oldM?.ToolTip, newM?.ToolTip);
+        Set(control, ToolTip.PlacementProperty, oldM?.ToolTipPlacement, newM?.ToolTipPlacement);
+        MenuItemsSync.ApplyContextFlyout(control, oldM?.ContextFlyout, newM?.ContextFlyout);
     }
 
     // IsEnabled has two sources, the element's own (ButtonElement.IsEnabled) and the modifier: either one
