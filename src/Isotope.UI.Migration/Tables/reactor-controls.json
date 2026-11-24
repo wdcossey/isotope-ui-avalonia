@@ -2,7 +2,7 @@
   "$comment": [
     "Reactor factories (upstream's Elements/Dsl.cs and friends) with no Isotope factory, for the migration analyzer (#33).",
     "status: winui-only (no Avalonia counterpart in its core) or not-ported (Avalonia has a counterpart; Isotope has no element for it yet).",
-    "alternative: what to use instead, shown in the diagnostic. MigrationTableTests fails when Isotope gains one of these factories."
+    "alternative: what to use instead, shown in the diagnostic. TableAndFixTests fails when Isotope gains one of these factories."
   ],
   "version": 1,
   "factories": [

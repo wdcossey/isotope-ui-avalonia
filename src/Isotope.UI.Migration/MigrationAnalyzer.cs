@@ -38,6 +38,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             start.RegisterSyntaxNodeAction(session.UsingDirective, SyntaxKind.UsingDirective);
             start.RegisterSyntaxNodeAction(session.IdentifierName, SyntaxKind.IdentifierName);
             start.RegisterSyntaxNodeAction(session.MemberAccess, SyntaxKind.SimpleMemberAccessExpression);
+            start.RegisterSyntaxNodeAction(session.MemberBinding, SyntaxKind.MemberBindingExpression);
+            start.RegisterSyntaxNodeAction(session.ObjectCreation, SyntaxKind.ObjectCreationExpression, SyntaxKind.ImplicitObjectCreationExpression);
             start.RegisterSyntaxNodeAction(session.Initializer, SyntaxKind.WithInitializerExpression, SyntaxKind.ObjectInitializerExpression);
             start.RegisterSyntaxNodeAction(session.Invocation, SyntaxKind.InvocationExpression);
             start.RegisterSyntaxNodeAction(session.ClassDeclaration, SyntaxKind.ClassDeclaration);
@@ -101,6 +103,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         public void IdentifierName(SyntaxNodeAnalysisContext ctx)
         {
             var id = (IdentifierNameSyntax)ctx.Node;
+            if (QualifiedTypeRename(ctx, id)) return;
             if (!IsLeftmost(id)) return;
             var text = id.Identifier.ValueText;
             if (_roots.Contains(text)) Chain(ctx, id);
@@ -166,7 +169,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     Report(ctx, Rules.NoAvaloniaType, top.GetLocation(), args: [full, ""]);
                 return;
             }
-            Report(ctx, Rules.NoAvaloniaType, top.GetLocation(), args: [full, " in the migration's WinUI table"]);
+            Report(ctx, Rules.WinUINotInTable, top.GetLocation(), args: [full]);
         }
 
         void ReactorChain(SyntaxNodeAnalysisContext ctx, List<SyntaxNode> nodes, List<string> segs)
@@ -182,6 +185,19 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 if (current is ITypeSymbol) break;
             }
             var found = current is ITypeSymbol || consumed == segs.Count;
+            // The namespace resolves and the next name is a type Isotope renamed or removed (renames.json).
+            if (!found && current is INamespaceSymbol && _t.Renames.Types.FirstOrDefault(e => e.Applied && e.Reactor == segs[consumed]) is { } type)
+            {
+                var name = string.Join(".", segs.Take(consumed + 1));
+                if (type.Avalonia is null)
+                    Report(ctx, Rules.NameRemoved, nodes[consumed].GetLocation(), args: ["Type", name, type.Note ?? ""]);
+                else
+                {
+                    var isotope = "Isotope.UI" + string.Concat(segs.Skip(3).Take(consumed - 3).Select(s => "." + s)) + "." + type.Avalonia;
+                    Report(ctx, Rules.NameRenamed, nodes[consumed].GetLocation(), replace: Prefix(nodes) + isotope, args: ["Type", name, isotope]);
+                }
+                return;
+            }
             // The message names the namespace or type: up to what resolved, or up to the segment that didn't.
             var shown = found ? consumed : Math.Min(consumed + 1, segs.Count);
             var reactorName = string.Join(".", segs.Take(shown));
@@ -200,8 +216,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             if (IsInvoked(id) || InUsing(id) || !Unbound(ctx.SemanticModel, id)) return;
             if (renamed is not null)
             {
-                if (renamed.Avalonia is null) Report(ctx, Rules.NameRemoved, id.GetLocation(), args: ["Type", text, renamed.Note ?? ""]);
-                else Report(ctx, Rules.NameRenamed, id.GetLocation(), replace: renamed.Avalonia, args: ["Type", text, renamed.Avalonia]);
+                ReportTypeRename(ctx, id, renamed);
                 return;
             }
             var type = Pick(winui!, id);
@@ -235,6 +250,31 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 Report(ctx, Rules.WinUIType, id.GetLocation(), replace: type.AvaloniaName, usings: usings, args: [type.FullName, type.Avalonia]);
         }
 
+        /// <summary>The last name of `Isotope.UI.Core.GridDefinition`: a type the table renamed or removed, after an Isotope namespace.</summary>
+        bool QualifiedTypeRename(SyntaxNodeAnalysisContext ctx, IdentifierNameSyntax id)
+        {
+            ExpressionSyntax? left = id.Parent switch
+            {
+                QualifiedNameSyntax q when q.Right == id => q.Left,
+                MemberAccessExpressionSyntax m when m.Name == id => m.Expression,
+                _ => null,
+            };
+            if (left is null || ctx.SemanticModel.GetSymbolInfo(left, ctx.CancellationToken).Symbol is not INamespaceSymbol ns) return false;
+            var nsName = ns.ToDisplayString();
+            if (nsName != "Isotope.UI" && !nsName.StartsWith("Isotope.UI.", StringComparison.Ordinal)) return false;
+            var renamed = _t.Renames.Types.FirstOrDefault(e => e.Applied && e.Reactor == id.Identifier.ValueText);
+            if (renamed is null || !Unbound(ctx.SemanticModel, id)) return false;
+            ReportTypeRename(ctx, id, renamed);
+            return true;
+        }
+
+        static void ReportTypeRename(SyntaxNodeAnalysisContext ctx, IdentifierNameSyntax id, NameEntry renamed)
+        {
+            var text = id.Identifier.ValueText;
+            if (renamed.Avalonia is null) Report(ctx, Rules.NameRemoved, id.GetLocation(), args: ["Type", text, renamed.Note ?? ""]);
+            else Report(ctx, Rules.NameRenamed, id.GetLocation(), replace: renamed.Avalonia, args: ["Type", text, renamed.Avalonia]);
+        }
+
         // ── element members: with and object initializers, member access ────────────────────────────────
 
         public void Initializer(SyntaxNodeAnalysisContext ctx)
@@ -247,9 +287,45 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 _ => null,
             };
             if (type is null or IErrorTypeSymbol) return;
+            var assigned = init.Expressions.OfType<AssignmentExpressionSyntax>().Select(a => a.Left).OfType<IdentifierNameSyntax>()
+                .Select(l => l.Identifier.ValueText).ToList();
             foreach (var expr in init.Expressions)
                 if (expr is AssignmentExpressionSyntax { Left: IdentifierNameSyntax left } assignment)
-                    MemberUse(ctx, type, left, assignment.Right);
+                    MemberUse(ctx, type, left, assignment.Right, assigned);
+        }
+
+        public void MemberBinding(SyntaxNodeAnalysisContext ctx)
+        {
+            // `box?.Value`: the receiver is the conditional access's expression.
+            var binding = (MemberBindingExpressionSyntax)ctx.Node;
+            if (binding.Name is not IdentifierNameSyntax name || binding.Parent is InvocationExpressionSyntax) return;
+            if (binding.FirstAncestorOrSelf<ConditionalAccessExpressionSyntax>() is not { } access || access.WhenNotNull.SpanStart != binding.SpanStart) return;
+            var receiver = Constraint(ctx.SemanticModel.GetTypeInfo(access.Expression, ctx.CancellationToken).Type);
+            if (receiver is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable) receiver = nullable.TypeArguments[0];
+            if (receiver is null or IErrorTypeSymbol) return;
+            MemberUse(ctx, receiver, name, null);
+        }
+
+        public void ObjectCreation(SyntaxNodeAnalysisContext ctx)
+        {
+            // `new TextBoxElement(Value: "x")`: a record's positional parameters have its members' names.
+            var creation = (BaseObjectCreationExpressionSyntax)ctx.Node;
+            if (creation.ArgumentList is not { } list) return;
+            var model = ctx.SemanticModel;
+            if (model.GetTypeInfo(creation, ctx.CancellationToken).Type is not { } type || type is IErrorTypeSymbol || !IsIsotope(type)) return;
+            var info = model.GetSymbolInfo(creation, ctx.CancellationToken);
+            if (info.Symbol is not null) return;
+            var ctors = info.CandidateSymbols.OfType<IMethodSymbol>().ToList();
+            var named = list.Arguments.Where(a => a.NameColon is not null).Select(a => a.NameColon!.Name.Identifier.ValueText).ToList();
+            foreach (var arg in list.Arguments)
+            {
+                if (arg.NameColon is null) continue;
+                var parameter = arg.NameColon.Name.Identifier.ValueText;
+                if (ctors.Any(c => c.Parameters.Any(p => p.Name == parameter))) continue;
+                var entry = FindMember(type, parameter, out var record);
+                if (entry is not { Kind: "rename" } || entry.SingleAvalonia is not { } target || named.Contains(target)) continue;
+                Report(ctx, Rules.MemberRenamed, arg.NameColon.Name.GetLocation(), replace: target, args: [record, parameter, target]);
+            }
         }
 
         public void MemberAccess(SyntaxNodeAnalysisContext ctx)
@@ -268,7 +344,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 if (info.Symbol is not null || !info.CandidateSymbols.IsEmpty) return;
                 if (receiverSymbol is not INamedTypeSymbol)
                 {
-                    var modifier = _t.Renames.Modifiers.FirstOrDefault(m => m.Applied && m.Reactor == text && (m.Target is null || IsOrDerivesFrom(receiver, m.Target)));
+                    var modifier = _t.Renames.Modifiers.FirstOrDefault(m => m.Applied && m.Reactor == text && (m.Target is null || IsOrDerivesFrom(receiver, m.Target, _recordAliases)));
                     if (modifier is not null)
                     {
                         if (modifier.Avalonia is null) Report(ctx, Rules.NameRemoved, name.GetLocation(), args: ["Modifier", text, modifier.Note ?? ""]);
@@ -276,7 +352,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                         return;
                     }
                 }
-                if (receiver.Name == "ReactorApp" && text is "Run" or "OpenWindow") return; // Invocation's
+                if (receiver.Name is "ReactorApp" && text is "Run" or "OpenWindow") return; // Invocation's
+                if (receiver.Name is "Factories" && IsFactoryEntry(text)) return; // Invocation's
                 if (IsIsotope(receiver)) Report(ctx, Rules.NoIsotopeMember, name.GetLocation(), args: [receiver.Name, text]);
                 return;
             }
@@ -284,7 +361,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             MemberUse(ctx, receiver, name, value);
         }
 
-        void MemberUse(SyntaxNodeAnalysisContext ctx, ITypeSymbol type, IdentifierNameSyntax name, ExpressionSyntax? value)
+        void MemberUse(SyntaxNodeAnalysisContext ctx, ITypeSymbol type, IdentifierNameSyntax name, ExpressionSyntax? value,
+            List<string>? siblings = null)
         {
             var model = ctx.SemanticModel;
             var member = name.Identifier.ValueText;
@@ -302,7 +380,14 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     return;
                 }
                 if (info.Symbol is not null) return;
-                if (entry.Kind == "rename")
+                // Two members of one initializer becoming one (Label and ContentElement are Content): merge them by hand.
+                if (siblings is not null && target is not null && siblings.Any(s => s != member &&
+                        (s == target || (FindMember(type, s, out _) is { } other && other.SingleAvalonia == target))))
+                {
+                    Report(ctx, Rules.MemberShape, name.GetLocation(), args: [record, member, "it and another member here are both " + target + " in Isotope: keep one."]);
+                    return;
+                }
+                if (entry.Kind == "rename" && target is not null)
                 {
                     Report(ctx, Rules.MemberRenamed, name.GetLocation(), replace: target, args: [record, member, target]);
                     return;
@@ -335,14 +420,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     var location = simple.Identifier.GetLocation();
                     if (info.Symbol is null && info.CandidateSymbols.IsEmpty && Unbound(model, simple))
                     {
-                        var factory = _t.Renames.Factories.FirstOrDefault(f => f.Applied && f.Reactor == name);
-                        if (factory is not null)
-                        {
-                            if (factory.Avalonia is null) Report(ctx, Rules.NameRemoved, location, args: ["Factory", name, factory.Note ?? ""]);
-                            else Report(ctx, Rules.NameRenamed, location, replace: factory.Avalonia, args: ["Factory", name, factory.Avalonia]);
-                        }
-                        else if (_t.Controls.Factories.TryGetValue(name, out var control))
-                            Report(ctx, control.WinUIOnly ? Rules.WinUIOnlyControl : Rules.ControlNotPorted, location, args: [name, control.Alternative ?? ""]);
+                        FactoryCall(ctx, name, location);
                         return;
                     }
                     if (info.Symbol is null) NamedArguments(ctx, inv, name, info.CandidateSymbols);
@@ -353,7 +431,10 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     var name = ma.Name.Identifier.ValueText;
                     var receiver = ReceiverName(ma.Expression);
                     var info = model.GetSymbolInfo(inv, ctx.CancellationToken);
-                    if (receiver == "Factories" && info.Symbol is null) NamedArguments(ctx, inv, name, info.CandidateSymbols);
+                    if (receiver == "Factories" && info.Symbol is null && info.CandidateSymbols.IsEmpty
+                        && model.GetSymbolInfo(ma.Expression, ctx.CancellationToken).Symbol is INamedTypeSymbol factories && IsIsotope(factories))
+                        FactoryCall(ctx, name, ma.Name.Identifier.GetLocation());
+                    else if (receiver == "Factories" && info.Symbol is null) NamedArguments(ctx, inv, name, info.CandidateSymbols);
                     else if (receiver == "ReactorApp") Hosting(ctx, inv, name, info);
                     else if (receiver == "Application" && name == "Start" && info.Symbol is null)
                         Report(ctx, Rules.Startup, inv.GetLocation(), args: ["Application.Start (WinUI startup)", ""]);
@@ -362,18 +443,36 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             }
         }
 
+        /// <summary>An unbound factory call: a factory the table renamed or removed, or a control Isotope lacks.</summary>
+        void FactoryCall(SyntaxNodeAnalysisContext ctx, string name, Location location)
+        {
+            var factory = _t.Renames.Factories.FirstOrDefault(f => f.Applied && f.Reactor == name);
+            if (factory is not null)
+            {
+                if (factory.Avalonia is null) Report(ctx, Rules.NameRemoved, location, args: ["Factory", name, factory.Note ?? ""]);
+                else Report(ctx, Rules.NameRenamed, location, replace: factory.Avalonia, args: ["Factory", name, factory.Avalonia]);
+            }
+            else if (_t.Controls.Factories.TryGetValue(name, out var control))
+                Report(ctx, control.WinUIOnly ? Rules.WinUIOnlyControl : Rules.ControlNotPorted, location, args: [name, control.Alternative ?? ""]);
+        }
+
+        bool IsFactoryEntry(string name) =>
+            _t.Controls.Factories.ContainsKey(name) || _t.Renames.Factories.Any(f => f.Applied && f.Reactor == name);
+
         void NamedArguments(SyntaxNodeAnalysisContext ctx, InvocationExpressionSyntax inv, string factory, ImmutableArray<ISymbol> candidates)
         {
             var methods = candidates.OfType<IMethodSymbol>().ToList();
             if (methods.Count == 0 || !methods.Any(m => m.ContainingType?.Name == "Factories" && IsIsotope(m.ContainingType))) return;
             var reactorFactory = _t.Renames.Factories.FirstOrDefault(f => f.Applied && f.Avalonia == factory)?.Reactor;
+            var named = inv.ArgumentList.Arguments.Where(a => a.NameColon is not null).Select(a => a.NameColon!.Name.Identifier.ValueText).ToList();
             foreach (var arg in inv.ArgumentList.Arguments)
             {
                 if (arg.NameColon is null) continue;
                 var parameter = arg.NameColon.Name.Identifier.ValueText;
                 if (methods.Any(m => m.Parameters.Any(p => p.Name == parameter))) continue;
                 var entry = _t.Renames.Parameters.FirstOrDefault(p => (p.Factory == factory || p.Factory == reactorFactory) && p.Reactor == parameter);
-                if (entry is not null)
+                // A target already named here would be named twice: leave it to the compiler's error.
+                if (entry is not null && !named.Contains(entry.Avalonia))
                     Report(ctx, Rules.ParameterRenamed, arg.NameColon.Name.GetLocation(), replace: entry.Avalonia, args: [factory, parameter, entry.Avalonia]);
             }
         }
@@ -390,7 +489,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             if (info.Symbol is null && args.Count > 0)
             {
                 var first = args[0].Expression;
-                if (first is SimpleLambdaExpressionSyntax || first is ParenthesizedLambdaExpressionSyntax { ParameterList.Parameters.Count: 1 } && args.Count == 1)
+                if ((first is SimpleLambdaExpressionSyntax || first is ParenthesizedLambdaExpressionSyntax { ParameterList.Parameters.Count: 1 }) && args.Count == 1)
                 {
                     Report(ctx, Rules.Startup, inv.GetLocation(), args: ["ReactorApp.Run(startup) (several windows)", "; Isotope has one window per app for now"]);
                     return;
@@ -406,7 +505,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 if (arg.Expression is not InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax fromPath } call) continue;
                 if (fromPath.Name.Identifier.ValueText != "FromPath" || ReceiverName(fromPath.Expression) != "WindowIcon" || call.ArgumentList.Arguments.Count != 1) continue;
                 if (arg.NameColon is not null && arg.NameColon.Name.Identifier.ValueText != "icon") continue;
-                var replacement = "() => new Avalonia.Controls.WindowIcon(" + call.ArgumentList.Arguments[0].ToString() + ")";
+                var replacement = "() => new Avalonia.Controls.WindowIcon(" + call.ArgumentList.Arguments[0].Expression.ToString() + ")";
                 Report(ctx, Rules.WindowIcon, call.GetLocation(), replace: replacement, args: [call.ToString(), replacement]);
             }
         }
@@ -479,10 +578,10 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             return null;
         }
 
-        static bool IsOrDerivesFrom(ITypeSymbol type, string name)
+        static bool IsOrDerivesFrom(ITypeSymbol type, string name, Dictionary<string, string> aliases)
         {
             for (ITypeSymbol? t = type; t is not null; t = t.BaseType)
-                if (t.Name == name) return true;
+                if (t.Name == name || (aliases.TryGetValue(t.Name, out var reactor) && reactor == name)) return true;
             return false;
         }
 

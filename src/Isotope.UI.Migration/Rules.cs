@@ -74,9 +74,14 @@ internal static class Rules
         "{0}: an Isotope app starts with ReactorApp.Run<TRoot>(title, width, height) (Isotope.UI.Avalonia.Desktop){1}",
         "WinUI application startup, or a Reactor startup Isotope doesn't have (WindowSpec, several windows). No fix.");
 
+    public static readonly DiagnosticDescriptor WinUINotInTable = Rule("ISOMIG016", "WinUI name not in the table",
+        "'{0}' is a WinUI name the migration's table doesn't list: find its Avalonia counterpart by hand",
+        "A WinUI name the WinUI table (src/Isotope.UI.Migration/Tables/winui-types.json) doesn't list. Avalonia may still have it. No fix.");
+
     public static readonly ImmutableArray<DiagnosticDescriptor> All = ImmutableArray.Create(
         ReactorNamespace, NoIsotopeNamespace, WinUIUsing, WinUIType, NoAvaloniaType, MemberRenamed, MemberShape,
-        ParameterRenamed, NameRenamed, NameRemoved, WinUIOnlyControl, ControlNotPorted, NoIsotopeMember, WindowIcon, Startup);
+        ParameterRenamed, NameRenamed, NameRemoved, WinUIOnlyControl, ControlNotPorted, NoIsotopeMember, WindowIcon, Startup,
+        WinUINotInTable);
 
     /// <summary>The IDs whose diagnostics carry an edit.</summary>
     public static readonly ImmutableArray<string> Fixable = ImmutableArray.Create(

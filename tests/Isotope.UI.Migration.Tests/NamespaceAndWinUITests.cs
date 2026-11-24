@@ -168,7 +168,7 @@ public class NamespaceAndWinUITests
             "ISOMIG005: 'Microsoft.UI.Xaml.Controls.ContentDialogButton' has no Avalonia counterpart: Avalonia's core has no ContentDialog: use a Window shown as a dialog, or an overlay.",
             "ISOMIG005: 'VirtualKey.GamepadA' has no Avalonia counterpart",
             "ISOMIG005: 'Windows.System.VirtualKey.NoSuchKey' has no Avalonia counterpart ('NoSuchKey' isn't a member of Avalonia.Input.Key)",
-            "ISOMIG005: 'Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error' has no Avalonia counterpart in the migration's WinUI table",
+            "ISOMIG016: 'Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error' is a WinUI name the migration's table doesn't list: find its Avalonia counterpart by hand",
         ], Migrate.Analyze(reactor).Describe());
     }
 

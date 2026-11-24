@@ -4,7 +4,7 @@
     "roots: the first segments of WinUI/WinRT namespaces; excluded: namespaces under a root that aren't WinUI.",
     "namespaces: a WinUI namespace and the Avalonia namespace holding most of its counterparts (used for namespace aliases).",
     "types[]: winui (full name), avalonia (full name, or null with a note saying what to use instead), members (WinUI member -> Avalonia member, or null for none; unlisted members keep their name).",
-    "MigrationTableTests checks that every Avalonia type and member named here exists."
+    "TableAndFixTests checks that every Avalonia type and member named here exists."
   ],
   "version": 1,
   "roots": ["Microsoft.UI", "Microsoft.Windows", "Microsoft.Graphics", "Windows", "WinRT"],

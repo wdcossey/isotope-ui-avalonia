@@ -35,6 +35,20 @@ public class ControlAndHostingTests
     }
 
     [Fact]
+    public void A_control_called_through_Factories_is_reported_as_a_control()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element Render() => Factories.ProgressRing();
+            }
+            """;
+        Assert.Equal([
+            "ISOMIG011: 'ProgressRing' is a WinUI control with no Isotope counterpart: Avalonia's core has no ProgressRing: use ProgressIndeterminate() (an indeterminate ProgressBar).",
+        ], Migrate.Analyze(reactor).Describe());
+    }
+
+    [Fact]
     public void A_user_method_named_like_a_control_is_left_alone()
     {
         const string code = Usings + """
@@ -97,6 +111,10 @@ public class ControlAndHostingTests
         var fixedText = Migrate.Fix(reactor);
         Assert.Contains("icon: () => new Avalonia.Controls.WindowIcon(\"Assets/chat.ico\"))", fixedText);
         Assert.Empty(Migrate.Errors(fixedText));
+
+        // A named argument to FromPath: Avalonia's constructor names it otherwise.
+        var named = Migrate.Fix(reactor.Replace("FromPath(\"Assets", "FromPath(path: \"Assets"));
+        Assert.Contains("icon: () => new Avalonia.Controls.WindowIcon(\"Assets/chat.ico\"))", named);
     }
 
     [Fact]
@@ -119,6 +137,9 @@ public class ControlAndHostingTests
             }
             """;
         var startup = Migrate.Analyze(reactor).Where(d => d.Id == "ISOMIG015").Describe();
+        // A parenthesized lambda with one parameter is the same startup, and a lambda with more arguments isn't one.
+        Assert.Contains(Migrate.Analyze(Usings + "ReactorApp.Run((app) => { });"), d => d.Id == "ISOMIG015");
+        Assert.DoesNotContain(Migrate.Analyze(Usings + "ReactorApp.Run(app => { }, 1);"), d => d.Id == "ISOMIG015");
         Assert.Equal([
             "ISOMIG015: ReactorApp.Run(startup) (several windows): an Isotope app starts with ReactorApp.Run<TRoot>(title, width, height) (Isotope.UI.Avalonia.Desktop); Isotope has one window per app for now",
             "ISOMIG015: ReactorApp.OpenWindow (another window): an Isotope app starts with ReactorApp.Run<TRoot>(title, width, height) (Isotope.UI.Avalonia.Desktop); Isotope has one window per app for now",

@@ -70,6 +70,100 @@ public class RenameTests
     }
 
     [Fact]
+    public void Two_members_that_become_one_are_reported_rather_than_renamed_twice()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element Render() => Button("Go") with { Label = "Save", ContentElement = TextBlock("Save") };
+            }
+            """;
+        Assert.Equal([
+            "ISOMIG007: 'ButtonElement.Label' changed shape in Isotope: it and another member here are both Content in Isotope: keep one.",
+            "ISOMIG007: 'ButtonElement.ContentElement' changed shape in Isotope: it and another member here are both Content in Isotope: keep one.",
+        ], Migrate.Analyze(reactor).Describe());
+        Assert.Equal(reactor, Migrate.Fix(reactor));
+    }
+
+    [Fact]
+    public void Record_constructor_arguments_and_null_conditional_reads_are_renamed()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element Render(TextBoxElement? box) =>
+                    new TextBoxElement(Value: "typed", OnChanged: _ => { }) { PlaceholderText = box?.Value.ToString() };
+            }
+            """;
+        Assert.Equal([
+            "ISOMIG006: 'TextBoxElement.Value' is 'Text' in Isotope",
+            "ISOMIG006: 'TextBoxElement.OnChanged' is 'OnTextChanged' in Isotope",
+            "ISOMIG006: 'TextBoxElement.Value' is 'Text' in Isotope",
+        ], Migrate.Analyze(reactor).Describe());
+        var fixedText = Migrate.Fix(reactor);
+        Assert.Contains("new TextBoxElement(Text: \"typed\", OnTextChanged: _ => { }) { PlaceholderText = box?.Text.ToString() }", fixedText);
+        Assert.Empty(Migrate.Errors(fixedText));
+    }
+
+    [Fact]
+    public void A_qualified_type_the_table_renamed_or_removed_is_renamed_or_reported()
+    {
+        var tables = Migrate.WithRenames(t =>
+            t.Types.Add(new NameEntry { Reactor = "ScrollViewElement", Avalonia = "ScrollViewerElement", Status = "applied" }));
+        const string reactor = """
+            static class C
+            {
+                public static Microsoft.UI.Reactor.ScrollViewElement? A;
+                public static Isotope.UI.ScrollViewElement? B;
+                public static Microsoft.UI.Reactor.GridDefinition? D;
+            }
+            """;
+        Assert.Equal([
+            "ISOMIG009: Type 'Microsoft.UI.Reactor.ScrollViewElement' is 'Isotope.UI.ScrollViewerElement' in Isotope",
+            "ISOMIG009: Type 'ScrollViewElement' is 'ScrollViewerElement' in Isotope",
+            "ISOMIG010: Type 'Microsoft.UI.Reactor.GridDefinition' is gone in Isotope: Removed with GridElement.Definition: pass the GridSize[] columns and rows to GridElement or Grid(...); strings become tracks through GridSize.Parse (Array.ConvertAll(columns, GridSize.Parse)).",
+        ], Migrate.Analyze(reactor, tables).Describe());
+        var fixedText = Migrate.Fix(reactor, tables);
+        Assert.Contains("public static Isotope.UI.ScrollViewerElement? A;", fixedText);
+        Assert.Contains("public static Isotope.UI.ScrollViewerElement? B;", fixedText);
+    }
+
+    [Fact]
+    public void A_modifier_entry_follows_its_record_when_the_table_renames_the_record()
+    {
+        // ToolTip's target record (Reactor's name) renamed in the table to Isotope's TextBlockElement.
+        var tables = Migrate.WithRenames(t =>
+        {
+            t.Types.Add(new NameEntry { Reactor = "LabelElement", Avalonia = "TextBlockElement", Status = "applied" });
+            t.Modifiers.Add(new NameEntry { Reactor = "Hint", Avalonia = "ToolTip", Target = "LabelElement", Status = "applied" });
+        });
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element Render() => TextBlock("x").Hint("y");
+            }
+            """;
+        Assert.Equal(["ISOMIG009: Modifier 'Hint' is 'ToolTip' in Isotope"], Migrate.Analyze(reactor, tables).Describe());
+        Assert.Empty(Migrate.Errors(Migrate.Fix(reactor, tables)));
+    }
+
+    [Fact]
+    public void A_parameter_whose_new_name_is_already_given_is_left_to_the_compiler()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element[] Render() =>
+                [
+                    TextBox(value: "x", text: "y"),
+                    new TextBoxElement(Value: "x", Text: "y"),
+                ];
+            }
+            """;
+        Assert.Empty(Migrate.Analyze(reactor));
+    }
+
+    [Fact]
     public void Kept_members_are_not_reported()
     {
         const string code = Usings + """
