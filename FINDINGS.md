@@ -210,6 +210,36 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Text styling (issue #42, 2026-11-24)
+
+- **Upstream's text members and modifiers, with Avalonia's names and types** (#31):
+  - TextBlockElement has `FontSize`, `FontWeight` (upstream's `Weight`, renamed in `renames.json`), `FontStyle`,
+    `FontFamily`, `TextWrapping`, `TextAlignment`, `TextTrimming`, `LineHeight` and `MaxLines`. Upstream's modifiers
+    set them (`.Bold()`, `.SemiBold()`, `.FontSize(20)`, `.TextWrapping()`…).
+  - Element-wide modifiers: `Foreground` (a colour string or an `IBrush`), `FontSize`, `FontWeight` and `FontFamily`,
+    written on a TextBlock or a TemplatedControl; they do nothing on a panel, as upstream's.
+- **Unlike upstream's:**
+  - On a text block, a member and the modifier of the same name are written as one value, member first.
+  - The element-wide font modifiers set the member when the element is a text block, so the last call wins.
+  - `MaxLines` is `int?`, so a text block that doesn't set it leaves a style's value alone.
+- **Not done:** `IsTextSelectionEnabled` (Avalonia's TextBlock has no selection; `SelectableTextBlock` is another
+  control), `CharacterSpacing` and `TextDecorations` (shape changes; unused in the samples), `Foreground(ThemeRef)` (#41).
+- **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`: 36 projects, 358 files, upstream 561c5573;
+  before is main at 00692f0, after is this branch; both after the migration's fixes):
+
+  | | Before | After |
+  |---|---|---|
+  | Compile errors | 5,544 | 4,988 |
+  | Migration diagnostics | 2,948 | 2,227 |
+  | ISOMIG013 (members and modifiers Isotope lacks) | 1,466 | 745 |
+  | Files that build | 62 | 62 |
+  | Projects that build | 2 | 2 |
+
+  - Every text diagnostic is gone except `IsTextSelectionEnabled` (3 → 6: more code is now analysed).
+  - The ISOMIG013 group next by count is layout: `Padding` (144 across Stack, TextBlock and Flex), `WithBorder` (82),
+    `Center` (50).
+- **Tests:** 24 new, each proven to fail.
+
 ## Upstream sync hardening (issue #36, 2026-11-24)
 
 - **Upstream's code runs only in a read-only job.** `upstream-sync.yml` has four jobs:

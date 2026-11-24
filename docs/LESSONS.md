@@ -140,6 +140,8 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 
 ## Git, GitHub and merging
 
+- **The harness can block an agent's write to `FINDINGS.md`:** have agents return the section in their reply. (2026-11-24)
+
 - **`git commit-tree` with the same tree, parent, message and identity in the same second gives the same commit:** a
   crafted "other" commit was the genuine one on a fast runner. Change a file or the date. (2026-11-24)
 - **`actions/checkout` stores a token header for github.com in the checkout's git config:** run `git ls-remote` of
