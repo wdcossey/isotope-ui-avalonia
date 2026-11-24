@@ -140,6 +140,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 
 ## Git, GitHub and merging
 
+- **`git commit-tree` with the same tree, parent, message and identity in the same second gives the same commit:** a
+  crafted "other" commit was the genuine one on a fast runner. Change a file or the date. (2026-11-24)
+- **`actions/checkout` stores a token header for github.com in the checkout's git config:** run `git ls-remote` of
+  another repo from outside the checkout. (2026-11-24)
+- **A first push of a new branch that changes no filtered path doesn't start a `paths:`-filtered workflow:** dispatch it
+  instead. (2026-11-24)
+
 - **A merge made on GitHub (its button or `gh pr merge`) takes the author from the GitHub profile,** not from git config:
   the profile's name (the login if none is set) and the primary email unless email privacy is on. One leaked a full name
   and email into `main` and had to be rebuilt. Keep the profile name empty and email privacy on. (2026-11-24)
