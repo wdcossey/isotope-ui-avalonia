@@ -47,6 +47,7 @@ public sealed class CommandTests : IDisposable
         var top = TopLevel.GetTopLevel(control) ?? throw new InvalidOperationException("the control isn't shown");
         var centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
             ?? throw new InvalidOperationException("the control isn't shown");
+        TestHost.HoldOffRepeat(control);
         top.MouseDown(centre, MouseButton.Left);
         top.MouseUp(centre, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();

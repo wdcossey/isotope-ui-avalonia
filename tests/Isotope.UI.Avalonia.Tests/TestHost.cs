@@ -81,6 +81,17 @@ internal sealed class TestHost
     public List<string?> Texts() => All<TextBlock>().Select(t => t.Text).ToList();
 
     public static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+    /// <summary>
+    /// Call before a headless press and release. A RepeatButton repeats once it is held past its Delay, and a headless
+    /// MouseUp runs the due dispatcher timers first, so on a slow runner a click fired twice (#55). A click in a test
+    /// isn't a hold: this moves the first repeat a minute out, on the control (a style can't: the element sets Delay
+    /// itself). TestApp does the same for tooltips.
+    /// </summary>
+    public static void HoldOffRepeat(Control control)
+    {
+        if (control is RepeatButton repeat) repeat.Delay = 60_000;
+    }
 }
 
 /// <summary>Collects log entries.</summary>

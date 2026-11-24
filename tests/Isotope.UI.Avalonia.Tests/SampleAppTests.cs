@@ -49,6 +49,7 @@ public sealed class SampleAppTests : IDisposable
         var top = TopLevel.GetTopLevel(control) ?? throw new InvalidOperationException("not shown");
         var centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
             ?? throw new InvalidOperationException("not shown");
+        TestHost.HoldOffRepeat(control);
         top.MouseDown(centre, button);
         top.MouseUp(centre, button);
         Dispatcher.UIThread.RunJobs(); // the posted root pass and the layout that follows it
