@@ -158,11 +158,14 @@ public sealed partial class Reconciler
         return Mount(newChild, requestRerender);
     }
 
-    /// <summary>Keyed reconcile of a panel strategy's children through upstream's ChildReconciler.</summary>
+    /// <summary>
+    /// Keyed reconcile of a panel strategy's children through upstream's ChildReconciler. Moves go through
+    /// <see cref="MovingPanelChildCollection"/>, so a moved control stays in the visual and logical trees (#23).
+    /// </summary>
     internal void ReconcilePanelChildrenInto(Element[] oldChildren, Element[] newChildren, UIElementCollection collection,
         Action requestRerender, UIElement? parentControl = null)
-        => ChildReconciler.Reconcile(Flatten(oldChildren), Flatten(newChildren), new PanelChildCollection(collection), this,
-            requestRerender, parentControl);
+        => ChildReconciler.Reconcile(Flatten(oldChildren), Flatten(newChildren), new MovingPanelChildCollection(collection),
+            this, requestRerender, parentControl);
 
     // ════════════════════════════════════════════════════════════════════
     //  Scopes
