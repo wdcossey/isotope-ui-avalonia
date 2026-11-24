@@ -8,6 +8,7 @@
 // file. --json: per source file under the project (relative path), its compile errors and migration diagnostics by
 // ID, and the commonest messages (tools/migration/measure-samples.mjs reads it).
 using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Isotope.UI.Migration;
@@ -31,7 +32,7 @@ var msbuild = new ProcessStartInfo("dotnet")
     RedirectStandardError = true,
 };
 foreach (var a in new[] { "msbuild", project, "-nologo", "-v:q", "-restore", "-t:Build", "-p:BuildProjectReferences=false",
-             "-getItem:Compile", "-getItem:ReferencePathWithRefAssemblies", "-getProperty:LangVersion", "-getProperty:Nullable",
+             "-getItem:Compile", "-getItem:ReferencePathWithRefAssemblies", "-getItem:Analyzer", "-getProperty:LangVersion", "-getProperty:Nullable",
              "-getProperty:OutputType", "-getProperty:DefineConstants", "-getProperty:AllowUnsafeBlocks", "-getProperty:AssemblyName" })
     msbuild.ArgumentList.Add(a);
 using var process = Process.Start(msbuild)!;
@@ -57,11 +58,22 @@ var options = new CSharpCompilationOptions(
     Prop("OutputType") is "Exe" or "WinExe" ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary,
     nullableContextOptions: Prop("Nullable") == "enable" ? NullableContextOptions.Enable : NullableContextOptions.Disable,
     allowUnsafe: Prop("AllowUnsafeBlocks") == "true");
-var compilation = CSharpCompilation.Create(Prop("AssemblyName"), trees, references, options);
+Compilation compilation = CSharpCompilation.Create(Prop("AssemblyName"), trees, references, options);
+// The project's source generators (System.Text.Json's, LibraryImport…), as a build runs them; not the migration analyzer.
+var loader = new Loader();
+var generators = new List<ISourceGenerator>();
+foreach (var path in Paths("Analyzer").Where(File.Exists).Where(p => !Path.GetFileName(p).StartsWith("Isotope.UI.Migration", StringComparison.Ordinal)))
+{
+    try { generators.AddRange(new AnalyzerFileReference(path, loader).GetGenerators(LanguageNames.CSharp)); }
+    catch (Exception e) { Console.Error.WriteLine($"generator not loaded: {Path.GetFileName(path)}: {e.GetType().Name}"); }
+}
+CSharpGeneratorDriver.Create(generators, parseOptions: parse).RunGeneratorsAndUpdateCompilation(compilation, out compilation, out _);
+var sourceTrees = new HashSet<SyntaxTree>(trees);
 var errors = compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 var migration = await compilation.WithAnalyzers([new MigrationAnalyzer()]).GetAnalyzerDiagnosticsAsync();
 
-string? Relative(Diagnostic d) => d.Location.SourceTree?.FilePath is { } p ? Relative2(p) : null;
+// Only the project's own files count: not obj/, not generated code, not other projects.
+string? Relative(Diagnostic d) => d.Location.SourceTree is { } t && sourceTrees.Contains(t) ? Relative2(t.FilePath) : null;
 string? Relative2(string path)
 {
     var rel = Path.GetRelativePath(projectDir, path).Replace('\\', '/');
@@ -117,3 +129,10 @@ foreach (var (rel, n) in underProject.GroupBy(d => Relative(d)!).OrderBy(g => g.
     Console.WriteLine($"{rel}: {n} compile error(s)");
 Console.WriteLine($"{migration.Count(d => Relative(d) is not null)} migration diagnostic(s), {underProject.Count} compile error(s) in {trees.Count(t => Relative2(t.FilePath) is not null)} file(s)");
 return 0;
+
+/// <summary>Loads generator assemblies into this process (Roslyn's own are already loaded).</summary>
+sealed class Loader : IAnalyzerAssemblyLoader
+{
+    public void AddDependencyLocation(string fullPath) { }
+    public Assembly LoadFromPath(string fullPath) => Assembly.LoadFrom(fullPath);
+}

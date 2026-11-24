@@ -51,22 +51,33 @@ run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Avalonia.Desktop'), '
 run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Migration'), '-nologo', '-v:q'], repo, true);
 const reporter = path.join(repo, 'tools', 'migration', 'MigrationReport', 'bin', 'Release', 'net10.0', 'MigrationReport.dll');
 
+// Every project's "before" first, so a sample that uses another is measured against the other's unmigrated code.
+const befores = new Map();
+for (const p of converted) {
+  process.stderr.write(`before: ${rel(p.file)}\n`);
+  befores.set(p.file, report(p.file));
+}
 const results = [];
 for (const p of converted) {
   const dir = path.dirname(p.file);
   const name = rel(p.file);
-  process.stderr.write(`${name}\n`);
-  const before = report(p.file);
+  process.stderr.write(`migrate: ${name}\n`);
   let formatRuns = 0;
+  let formatFailures = 0;
   for (let i = 0; i < passes; i++) {
     const hash = hashTree(dir);
     // dotnet format skips referenced projects, so only this project's files change.
-    run('dotnet', ['format', 'analyzers', p.file, '--no-restore', '--severity', 'warn', '--diagnostics', ...fixable], dir, false);
+    const f = run('dotnet', ['format', 'analyzers', p.file, '--no-restore', '--severity', 'warn', '--diagnostics', ...fixable], dir, false);
     formatRuns++;
+    if (f.status !== 0) {
+      formatFailures++;
+      process.stderr.write(`  dotnet format exited ${f.status}\n`);
+    }
     if (hashTree(dir) === hash) break;
   }
+  const before = befores.get(p.file);
   const after = report(p.file);
-  results.push({ project: name, dropped: p.dropped, formatRuns, projectBuildsBefore: before.builds, projectBuilds: after.builds, before, after });
+  results.push({ project: name, dropped: p.dropped, formatRuns, formatFailures, projectBuildsBefore: before.builds, projectBuilds: after.builds, before, after });
 }
 
 const summary = summarise(results);
@@ -101,7 +112,7 @@ function convert(file) {
     `    <ImplicitUsings>${prop('ImplicitUsings') ?? 'disable'}</ImplicitUsings>`,
     `    <Nullable>${prop('Nullable') ?? 'disable'}</Nullable>`,
     `    <LangVersion>${lang}</LangVersion>`,
-    ...['RootNamespace', 'AssemblyName', 'AllowUnsafeBlocks'].filter(n => prop(n)).map(n => `    <${n}>${prop(n)}</${n}>`),
+    ...['RootNamespace', 'AssemblyName', 'AllowUnsafeBlocks', 'DefineConstants'].filter(n => prop(n)).map(n => `    <${n}>${prop(n)}</${n}>`),
     '  </PropertyGroup>',
     '  <ItemGroup>',
     `    <ProjectReference Include="${path.join(src, 'Isotope.UI.Avalonia', 'Isotope.UI.Avalonia.csproj')}" />`,
@@ -148,6 +159,7 @@ function summarise(results) {
   for (const r of results) {
     if (r.projectBuilds) total.projectsBuild++;
     if (r.projectBuildsBefore) total.projectsBuildBefore++;
+    total.formatFailures = (total.formatFailures ?? 0) + r.formatFailures;
     add(total.migrationMessagesLeft, r.after.migrationMessages);
     add(total.errorsLeft, r.after.errorMessages);
     for (const [file, f] of Object.entries(r.after.files)) {
@@ -178,6 +190,7 @@ function print(results, s) {
   console.log(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
   console.log(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
   console.log(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
+  console.log(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
   console.log(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
   console.log('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
   console.log('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));
