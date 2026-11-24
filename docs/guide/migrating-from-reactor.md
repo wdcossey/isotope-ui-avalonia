@@ -80,6 +80,7 @@ The analyzer binds to Isotope's types, so it runs in the project *after* its ref
 | ISOMIG013 | no | A member or modifier Isotope doesn't have |
 | ISOMIG014 | yes | `icon: WindowIcon.FromPath(path)` is `icon: () => new Avalonia.Controls.WindowIcon(path)` |
 | ISOMIG015 | no | WinUI startup, or a Reactor startup Isotope doesn't have (several windows, `WindowSpec`) |
+| ISOMIG016 | no | A WinUI name the migration's table doesn't list: Avalonia may still have it |
 
 ## On upstream's samples
 
@@ -87,7 +88,8 @@ The analyzer binds to Isotope's types, so it runs in the project *after* its ref
 projects (358 C# files), at the commit in `UPSTREAM.lock`.
 
 - It copies each sample out of the upstream cache and writes an Isotope project file.
-- It runs the fixes until nothing changes, then compiles each project.
+- It compiles every project first, with the project's source generators, as a build does.
+- It runs the fixes until nothing changes, then compiles each project again.
 - A file counts as building when the compiler reports no error in it.
 - It also prints the commonest diagnostics and errors left.
 
@@ -95,19 +97,21 @@ Measured on 2026-11-24:
 
 | | Before the fixes | After |
 |---|---|---|
-| Files that build | 46 of 358 | 56 of 358 |
-| Compile errors | 13,741 | 5,587 |
+| Files that build | 51 of 358 | 62 of 358 |
+| Compile errors | 13,699 | 5,544 |
 | Projects that build | 1 of 36 | 2 of 36 |
 
-- No file that built before the fixes fails after them.
-- The 46 files that built before use no Reactor or WinUI names, such as the chat sample's model.
+- No file that built before the fixes fails after them, and no `dotnet format` run failed.
+- The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
+- The two projects that build after are the hello-world app and the chat sample's model.
 - Diagnostics left: 2,947.
   - 1,466 ISOMIG013: members and modifiers Isotope lacks. The commonest are `Foreground` (375), `FontSize` (157) and
     `SemiBold` (144) on `TextBlockElement`.
   - 877 ISOMIG012: controls not ported yet. The commonest are `Caption` (221), `SubHeading` (149) and
     `ScrollView` (139).
   - 249 ISOMIG002: Charting (159), `Theme` (50) and Advanced (11).
-  - 171 ISOMIG005 and 171 ISOMIG011: WinUI-only types and controls.
+  - 171 ISOMIG011 and 112 ISOMIG005: WinUI-only controls and types.
+  - 59 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.
 - Most compile errors left are names Isotope doesn't have yet. The largest group is 830 uses of Reactor's `Theme`
   tokens.
