@@ -583,9 +583,10 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
     writeFileSync(path.join(out, META), JSON.stringify({ base: p.base, branch: p.branch, commit: tag, new: p.new, old: p.old, reportPath: p.reportPath }));
     refused(out, /its head is not [0-9a-f]{8}/);
   });
-  test('bundle: an object git\'s fsck refuses (a ".git" folder in the vendored tree)', () => {
+  /** The genuine commit's tree with a ".git" folder in src/Upstream (one file, the given content), made with mktree. */
+  const dotgitTree = (content) => {
     const run = (args, input) => execFileSync('git', [...G, ...args], { cwd: prep, encoding: 'utf8', input }).trim();
-    const blob = run(['hash-object', '-w', '--stdin'], '[core]\n');
+    const blob = run(['hash-object', '-w', '--stdin'], content);
     const dotgit = run(['mktree'], '100644 blob ' + blob + '\tconfig\n');
     const withEntry = (tree, dirs) => {
       const lines = run(['ls-tree', tree]).split('\n');
@@ -594,7 +595,21 @@ describe('the publish phase refuses a bundle that breaks a rule', () => {
       lines[i] = '040000 tree ' + withEntry(lines[i].split(/\s/)[2], dirs.slice(1)) + '\t' + dirs[0];
       return run(['mktree'], lines.join('\n') + '\n');
     };
-    refused(variant({ commit: craft({ tree: withEntry(p.commit + '^{tree}', ['src', 'Upstream']) }) }), /git fetch \(with fsck\): .*hasDotgit/);
+    return withEntry(p.commit + '^{tree}', ['src', 'Upstream']);
+  };
+  test('bundle: an object git\'s fsck refuses (a ".git" folder in the vendored tree)', () => {
+    refused(variant({ commit: craft({ tree: dotgitTree('[core]\n') }) }), /git fetch \(with fsck\): .*hasDotgit/);
+  });
+  test('paths: a ".git" folder is refused even where git\'s fetch lets it through', () => {
+    // fetch.fsck.hasDotgit=ignore stands in for a git that doesn't fsck what it fetches from a bundle.
+    const keys = { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'fetch.fsck.hasDotgit', GIT_CONFIG_VALUE_0: 'ignore' };
+    const saved = Object.fromEntries(Object.keys(keys).map((k) => [k, process.env[k]]));
+    Object.assign(process.env, keys);
+    try {
+      refused(variant({ commit: craft({ tree: dotgitTree('[core]\n\tbare = true\n') }) }), /it changes "src\/Upstream\/\.git\/config", a path no commit may hold/);
+    } finally {
+      for (const [k, v] of Object.entries(saved)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
   });
   test('commit: two commits on HEAD', () => {
     refused(variant({ commit: craft({ parents: [craft()] }) }), /must have one parent, this checkout's HEAD [0-9a-f]{8}; it has [0-9a-f]{8}$/);
