@@ -8,15 +8,55 @@ using static Isotope.UI.Factories;
 namespace Isotope.UI.Samples;
 
 /// <summary>
-/// The sample's components: the counter and the todo app of the guide ("Writing components"), side by side under one
-/// root. UI as a function of state: each is a C# function of its hooks' state.
+/// The sample app: one tab per area (#30), so a real-window run can check what headless tests can't (menus opened with
+/// the mouse, hover tooltips, right-click menus, the look of tabs and the split view). UI as a function of state: each
+/// page is a C# function of its hooks' state, and the root holds the selected page and the tooltip switch.
 /// </summary>
 public static class SampleApp
 {
-    /// <summary>The accent behind the todo title, provided by the root.</summary>
+    /// <summary>The accent behind the todo title, provided by the Basics page.</summary>
     public static readonly Context<IBrush?> Accent = new(null);
 
-    public static Element Root(RenderContext ctx) =>
+    /// <summary>Whether the pages put tooltips on their controls (the View menu's "Show tooltips").</summary>
+    public static readonly Context<bool> ShowTips = new(true);
+
+    /// <summary>The window's size, as Program opens it.</summary>
+    public const double WindowWidth = 640, WindowHeight = 680;
+
+    /// <summary>The pages, in tab order: each tab and each item of the Go menu comes from this list.</summary>
+    public static readonly (string Name, Func<RenderContext, Element> Render)[] Pages =
+    [
+        ("Basics", Basics),
+        ("Buttons", ButtonsPage.Render),
+        ("Menus", MenusPage.Render),
+        ("Numbers", NumbersPage.Render),
+        ("Split view", SplitViewPage.Render),
+        ("Errors", ErrorsPage.Render),
+    ];
+
+    public static Element Root(RenderContext ctx)
+    {
+        var (page, setPage) = ctx.UseState(0);
+        var (tips, setTips) = ctx.UseState(true);
+        return FlexColumn(
+            // The Go menu and the tabs show one state: choosing either moves both.
+            MenuBar(
+                Menu("Go", Pages.Select((p, i) => (MenuFlyoutItemBase)RadioMenuItem(p.Name, "page", i == page, () => setPage(i))).ToArray()),
+                Menu("View", ToggleMenuItem("Show tooltips", tips, setTips))),
+            TabView(page, setPage, Pages.Select(p => Tab(p.Name, Component(p.Render))).ToArray())
+                .Provide(ShowTips, tips)
+                .Flex(grow: 1));
+    }
+
+    /// <summary>A row of controls, eight apart and centred on one line.</summary>
+    public static FlexElement Row(params Element?[] children) =>
+        FlexRow(children) with { ColumnGap = 8, AlignItems = FlexAlign.Center };
+
+    /// <summary>Puts a tooltip on <paramref name="el"/> when <paramref name="on"/> (read from <see cref="ShowTips"/>).</summary>
+    public static T Tip<T>(this T el, bool on, string tip) where T : Element => on ? el.ToolTip(tip) : el;
+
+    /// <summary>The counter and the todo app of the guide ("Writing components"), one above the other.</summary>
+    public static Element Basics(RenderContext ctx) =>
         FlexColumn(
             TextBlock("Counter"),
             Component(Counter),
