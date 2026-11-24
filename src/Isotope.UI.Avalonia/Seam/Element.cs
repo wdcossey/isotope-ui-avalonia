@@ -98,6 +98,29 @@ public abstract record Element
             (SliderElement x, SliderElement y) => x.Value.Equals(y.Value) && x.Min == y.Min && x.Max == y.Max
                 && x.Orientation == y.Orientation && x.TickFrequency == y.TickFrequency && x.TickPlacement == y.TickPlacement
                 && ReferenceEquals(x.Setters, y.Setters),
+            // #19: the records upstream has arms for, over their members here. ListBox, Expander, the pickers and the
+            // WrapPanel have none upstream either: they always update.
+            (CheckBoxElement x, CheckBoxElement y) => x.IsChecked.Equals(y.IsChecked) && x.Label == y.Label
+                && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState && ReferenceEquals(x.Setters, y.Setters),
+            (ToggleSwitchElement x, ToggleSwitchElement y) => x.IsOn.Equals(y.IsOn) && x.OnContent == y.OnContent
+                && x.OffContent == y.OffContent && x.Header == y.Header && ReferenceEquals(x.Setters, y.Setters),
+            (RadioButtonElement x, RadioButtonElement y) => x.Label == y.Label && x.IsChecked.Equals(y.IsChecked)
+                && x.GroupName == y.GroupName && ReferenceEquals(x.Setters, y.Setters),
+            (ComboBoxElement x, ComboBoxElement y) => ReferenceEquals(x.Items, y.Items) && x.SelectedIndex.Equals(y.SelectedIndex)
+                && x.PlaceholderText == y.PlaceholderText && x.IsEditable == y.IsEditable
+                && x.MaxDropDownHeight.Equals(y.MaxDropDownHeight) && ReferenceEquals(x.Setters, y.Setters),
+            (ProgressElement x, ProgressElement y) => x.Value == y.Value && x.Minimum == y.Minimum && x.Maximum == y.Maximum
+                && ReferenceEquals(x.Setters, y.Setters),
+            (ImageElement x, ImageElement y) => x.Source == y.Source && x.Stretch == y.Stretch && ReferenceEquals(x.Setters, y.Setters),
+            (BorderElement x, BorderElement y) => Equals(x.Background, y.Background) && Equals(x.BorderBrush, y.BorderBrush)
+                && x.CornerRadius == y.CornerRadius && x.BorderThickness == y.BorderThickness && x.Padding == y.Padding
+                && ReferenceEquals(x.Child, y.Child) && ReferenceEquals(x.Setters, y.Setters),
+            (GridElement x, GridElement y) => x.RowSpacing == y.RowSpacing && x.ColumnSpacing == y.ColumnSpacing
+                && ReferenceEquals(x.Definition, y.Definition) && ReferenceEquals(x.Children, y.Children)
+                && ReferenceEquals(x.Setters, y.Setters),
+            (ScrollViewerElement x, ScrollViewerElement y) => x.HorizontalScrollBarVisibility == y.HorizontalScrollBarVisibility
+                && x.VerticalScrollBarVisibility == y.VerticalScrollBarVisibility && ReferenceEquals(x.Child, y.Child)
+                && ReferenceEquals(x.Setters, y.Setters),
             _ => false,
         };
     }

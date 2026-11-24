@@ -366,7 +366,7 @@ public sealed partial class Reconciler
             };
             if (control is not null)
             {
-                ApplyModifiers(control, null, modifiers);
+                ApplyModifiers(control, null, null, element, modifiers);
                 ApplyEnabled(control, element, modifiers);
                 GetOrCreateReactorState(control).Element = element;
             }
@@ -427,14 +427,14 @@ public sealed partial class Reconciler
                         if (!ReferenceEquals(updated, control))
                         {
                             // The adapter mounted the unwrapped element: give the new control the wrapper's modifiers too.
-                            ApplyModifiers(updated, null, newModifiers);
+                            ApplyModifiers(updated, null, null, newInner, newModifiers);
                             ApplyEnabled(updated, newInner, newModifiers);
                             return updated;
                         }
                     }
                     break;
             }
-            ApplyModifiers(control, oldModifiers, newModifiers);
+            ApplyModifiers(control, oldInner, oldModifiers, newInner, newModifiers);
             ApplyEnabled(control, newInner, newModifiers);
             GetOrCreateReactorState(control).Element = newInner;
             return null;
@@ -574,8 +574,12 @@ public sealed partial class Reconciler
     //  Modifiers
     // ════════════════════════════════════════════════════════════════════
 
-    private static void ApplyModifiers(UIElement control, ElementModifiers? oldM, ElementModifiers? newM)
+    private static void ApplyModifiers(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
     {
+        // Background has two sources on a Border element, its own and the modifier: written as one value, the
+        // element's first, so neither overwrites the other (upstream folds them in Border's descriptor).
+        if (BackgroundProperty(control) is { } background)
+            SetRef(control, background, BackgroundOf(oldEl, oldM), BackgroundOf(newEl, newM));
         if (oldM is null && newM is null) return;
         Set(control, Layoutable.MarginProperty, oldM?.Margin, newM?.Margin);
         Set(control, Layoutable.WidthProperty, oldM?.Width, newM?.Width);
@@ -583,8 +587,6 @@ public sealed partial class Reconciler
         Set(control, Layoutable.HorizontalAlignmentProperty, oldM?.HorizontalAlignment, newM?.HorizontalAlignment);
         Set(control, Layoutable.VerticalAlignmentProperty, oldM?.VerticalAlignment, newM?.VerticalAlignment);
         Set(control, Visual.OpacityProperty, oldM?.Opacity, newM?.Opacity);
-        if (BackgroundProperty(control) is { } background)
-            SetRef(control, background, oldM?.Background, newM?.Background);
         SetRef(control, AutomationProperties.NameProperty, oldM?.AutomationName, newM?.AutomationName);
     }
 
@@ -601,6 +603,9 @@ public sealed partial class Reconciler
         else if (control.IsSet(InputElement.IsEnabledProperty))
             control.ClearValue(InputElement.IsEnabledProperty);
     }
+
+    private static Avalonia.Media.IBrush? BackgroundOf(Element? element, ElementModifiers? modifiers)
+        => (element as BorderElement)?.Background ?? modifiers?.Background;
 
     private static AvaloniaProperty<Avalonia.Media.IBrush?>? BackgroundProperty(UIElement control) => control switch
     {
