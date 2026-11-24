@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.Logging;
 using Isotope.UI.Core;
 
@@ -81,6 +82,20 @@ internal sealed class TestHost
     public List<string?> Texts() => All<TextBlock>().Select(t => t.Text).ToList();
 
     public static void Click(Button button) => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+    /// <summary>
+    /// Call before a headless press and release. A RepeatButton repeats once it is held past its Delay, and a headless
+    /// MouseUp runs the due dispatcher timers first, so on a slow runner a click fired twice (#55). A click in a test
+    /// isn't a hold: this moves the first repeat a minute out on every RepeatButton the press can reach: the control, one
+    /// around it (a click on its text) and those inside it (a Slider's track, a NumericUpDown's spinner). A style can't:
+    /// the element sets Delay itself. Those controls keep that Delay until a render sets a different one. TestApp does the
+    /// same for tooltips.
+    /// </summary>
+    public static void HoldOffRepeat(Control control)
+    {
+        foreach (var repeat in control.GetSelfAndVisualAncestors().Concat(control.GetVisualDescendants()).OfType<RepeatButton>())
+            repeat.Delay = 60_000;
+    }
 }
 
 /// <summary>Collects log entries.</summary>

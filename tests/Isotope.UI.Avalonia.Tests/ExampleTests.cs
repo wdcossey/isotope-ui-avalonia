@@ -41,6 +41,7 @@ public sealed class ExampleTests : IDisposable
     {
         var centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
             ?? throw new InvalidOperationException("not in the window");
+        TestHost.HoldOffRepeat(control);
         window.MouseDown(centre, MouseButton.Left);
         window.MouseUp(centre, MouseButton.Left);
         Dispatcher.UIThread.RunJobs(); // the posted root pass and the layout that follows it

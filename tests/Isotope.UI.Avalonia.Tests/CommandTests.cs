@@ -41,13 +41,16 @@ public sealed class CommandTests : IDisposable
     }
 
     // A real headless click at the control's centre, then the root passes the state changes asked for.
-    private void Click(TestHost host, Control control)
+    // holdMs: a pause between press and release, as a slow runner makes (#55).
+    private void Click(TestHost host, Control control, int holdMs = 0)
     {
         Show(host);
         var top = TopLevel.GetTopLevel(control) ?? throw new InvalidOperationException("the control isn't shown");
         var centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
             ?? throw new InvalidOperationException("the control isn't shown");
+        TestHost.HoldOffRepeat(control);
         top.MouseDown(centre, MouseButton.Left);
+        if (holdMs > 0) Thread.Sleep(holdMs);
         top.MouseUp(centre, MouseButton.Left);
         Dispatcher.UIThread.RunJobs();
         host.Flush();
@@ -178,7 +181,7 @@ public sealed class CommandTests : IDisposable
         host.Render();
         Click(host, host.All<Button>()[0]);
         Click(host, host.All<ToggleButton>()[0]);
-        Click(host, host.All<RepeatButton>()[0]);
+        Click(host, host.All<RepeatButton>()[0], holdMs: 500); // past the repeat Delay, as a slow runner made it (#55)
         Click(host, host.All<HyperlinkButton>()[0]);
         Assert.Equal(["click", "toggled True", "more", "help"], log);
     }
