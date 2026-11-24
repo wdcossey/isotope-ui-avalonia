@@ -267,13 +267,14 @@ export function verifyBundle({ repo, dir }) {
 
   const file = path.join(dir, BUNDLE);
   if (!existsSync(file)) refuse('no ' + BUNDLE);
-  try { git('bundle', 'verify', '--quiet', file); } catch (e) { refuse('git bundle verify: ' + String(e.stderr ?? e.message).trim().split('\n').join(' ')); }
+  const why = (e) => String(e.stderr || e.message).trim().split('\n').join(' ');
+  try { git('bundle', 'verify', file); } catch (e) { refuse('git bundle verify: ' + why(e)); }
   const heads = git('bundle', 'list-heads', file).split('\n').filter(Boolean);
   if (heads.length !== 1 || heads[0] !== meta.commit + ' refs/heads/' + branch)
     refuse('it must hold one head, refs/heads/' + branch + ' at ' + short(meta.commit) + '; it holds ' + (heads.join(', ') || 'none'));
   // fsck refuses what git itself should never hold (a ".git" or ".." path, a malformed object).
   try { git('-c', 'fetch.fsckObjects=true', 'fetch', '--quiet', '--no-tags', '--no-write-fetch-head', file, '+refs/heads/' + branch + ':' + QUARANTINE); }
-  catch (e) { refuse('git fetch (with fsck): ' + String(e.stderr ?? e.message).trim().split('\n').join(' ')); }
+  catch (e) { refuse('git fetch (with fsck): ' + why(e)); }
   try {
     const commit = git('rev-parse', '--verify', '--quiet', QUARANTINE + '^{commit}');
     if (commit !== meta.commit) refuse('its head is not ' + short(meta.commit));
