@@ -116,7 +116,8 @@
     {"factory": "DatePicker", "reactor": "onDateChanged", "avalonia": "onSelectedDateChanged"},
     {"factory": "TimePicker", "reactor": "time", "avalonia": "selectedTime"},
     {"factory": "TimePicker", "reactor": "onTimeChanged", "avalonia": "onSelectedTimeChanged"},
-    {"factory": "ScrollViewer", "reactor": "child", "avalonia": "content"},    {"factory": "TabView", "reactor": "tabs", "avalonia": "items"},
+    {"factory": "ScrollViewer", "reactor": "child", "avalonia": "content"},
+    {"factory": "TabView", "reactor": "tabs", "avalonia": "items"},
     {"factory": "Menu", "reactor": "title", "avalonia": "header"},
     {"factory": "MenuItem", "reactor": "text", "avalonia": "header"},
     {"factory": "ToggleMenuItem", "reactor": "text", "avalonia": "header"},
@@ -141,7 +142,8 @@
     {"reactor": "StackElement", "avalonia": "StackPanelElement", "status": "proposed"},
     {"reactor": "MenuBarElement", "avalonia": "MenuElement", "status": "proposed"},
     {"reactor": "MenuBarItemData", "avalonia": "MenuItemData", "status": "proposed"},
-    {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"}  ],
+    {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"}
+  ],
   "factories": [
     {"reactor": "TabView", "avalonia": "TabControl", "status": "proposed"},
     {"reactor": "Tab", "avalonia": "TabItem", "status": "proposed"},
