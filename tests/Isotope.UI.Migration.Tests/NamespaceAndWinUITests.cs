@@ -93,7 +93,7 @@ public class NamespaceAndWinUITests
         const string page = """
             static class Page
             {
-                public static Element Render() => TextBlock("x").HAlign(HorizontalAlignment.Right);
+                public static Element Render() => TextBlock("x").HorizontalAlignment(HorizontalAlignment.Right);
             }
             """;
         var fixedTexts = Migrate.Fix([usings, page]);

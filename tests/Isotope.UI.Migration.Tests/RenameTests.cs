@@ -204,7 +204,7 @@ public class RenameTests
         const string code = Usings + """
             static class C
             {
-                public static Element Render() => AutoSuggestBox("") with { OnQuerySubmitted = _ => { } };
+                public static Element Render() => AutoCompleteBox("") with { OnQuerySubmitted = _ => { } };
             }
             """;
         Assert.Empty(Migrate.Errors(code));
@@ -244,22 +244,68 @@ public class RenameTests
     }
 
     [Fact]
-    public void Proposed_type_factory_and_modifier_renames_are_not_applied()
+    public void Reactor_type_factory_and_modifier_names_take_the_Avalonia_names_of_the_table()
     {
-        // The table proposes TabView -> TabControl, NumberBox -> NumericUpDown and HAlign -> HorizontalAlignment;
-        // Isotope's code still has Reactor's names, so Reactor code using them compiles and is left alone.
-        const string code = Usings + """
+        // The table's applied renames (#46): Reactor's names become Avalonia's, and the kept ones (VStack, MenuBar, Menu)
+        // are left alone. With `using System;`, Reactor's Progress(0.5) names System.Progress<T> in an Isotope project.
+        const string reactor = Usings + """
             static class C
             {
-                public static Element[] Render(NumberBoxElement number) =>
+                public static Element[] Render(NumberBoxElement number, StackElement stack) =>
                 [
-                    NumberBox(1).HAlign(Avalonia.Layout.HorizontalAlignment.Left),
-                    number,
+                    TabView(0, null, Tab("A", NumberBox(1)), Tab("B", AutoSuggestBox("x"))),
+                    Progress(0.5),
+                    VStack(number, stack),
+                    MenuBar(Menu("File", MenuItem("Open"))),
+                ];
+                public static TabViewElement? Tabs;
+            }
+            """;
+        Assert.Equal([
+            "ISOMIG009: Type 'NumberBoxElement' is 'NumericUpDownElement' in Isotope",
+            "ISOMIG009: Type 'StackElement' is 'StackPanelElement' in Isotope",
+            "ISOMIG009: Factory 'TabView' is 'TabControl' in Isotope",
+            "ISOMIG009: Factory 'Tab' is 'TabItem' in Isotope",
+            "ISOMIG009: Factory 'NumberBox' is 'NumericUpDown' in Isotope",
+            "ISOMIG009: Factory 'Tab' is 'TabItem' in Isotope",
+            "ISOMIG009: Factory 'AutoSuggestBox' is 'AutoCompleteBox' in Isotope",
+            "ISOMIG009: Factory 'Progress' is 'ProgressBar' in Isotope",
+            "ISOMIG009: Type 'TabViewElement' is 'TabControlElement' in Isotope",
+        ], Migrate.Analyze(reactor).Describe());
+        var fixedText = Migrate.Fix(reactor);
+        Assert.Contains("Render(NumericUpDownElement number, StackPanelElement stack)", fixedText);
+        Assert.Contains("TabControl(0, null, TabItem(\"A\", NumericUpDown(1)), TabItem(\"B\", AutoCompleteBox(\"x\")))", fixedText);
+        Assert.Contains("ProgressBar(0.5)", fixedText);
+        Assert.Contains("VStack(number, stack)", fixedText);
+        Assert.Contains("MenuBar(Menu(\"File\", MenuItem(\"Open\")))", fixedText);
+        Assert.Contains("public static TabControlElement? Tabs;", fixedText);
+        Assert.Empty(Migrate.Errors(fixedText));
+    }
+
+    [Fact]
+    public void Reactor_modifier_names_take_the_Avalonia_names_of_the_table()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element[] Render() =>
+                [
+                    TextBlock("a").HAlign(Avalonia.Layout.HorizontalAlignment.Left),
+                    TextBlock("b").VAlign(Avalonia.Layout.VerticalAlignment.Top),
+                    TextBlock("c").WithContextFlyout(MenuItems(MenuItem("Copy"))),
                 ];
             }
             """;
-        Assert.Empty(Migrate.Errors(code));
-        Assert.Empty(Migrate.Analyze(code));
+        Assert.Equal([
+            "ISOMIG009: Modifier 'HAlign' is 'HorizontalAlignment' in Isotope",
+            "ISOMIG009: Modifier 'VAlign' is 'VerticalAlignment' in Isotope",
+            "ISOMIG009: Modifier 'WithContextFlyout' is 'ContextFlyout' in Isotope",
+        ], Migrate.Analyze(reactor).Describe());
+        var fixedText = Migrate.Fix(reactor);
+        Assert.Contains(".HorizontalAlignment(Avalonia.Layout.HorizontalAlignment.Left)", fixedText);
+        Assert.Contains(".VerticalAlignment(Avalonia.Layout.VerticalAlignment.Top)", fixedText);
+        Assert.Contains(".ContextFlyout(MenuItems(MenuItem(\"Copy\")))", fixedText);
+        Assert.Empty(Migrate.Errors(fixedText));
     }
 
     [Fact]
@@ -303,11 +349,11 @@ public class RenameTests
     [Fact]
     public void A_record_renamed_by_the_table_keeps_its_member_entries()
     {
-        // With StackElement -> StackPanelElement applied, a member entry recorded under Reactor's record name still
-        // applies to the renamed record: here Isotope's StackElement stands in for the renamed type.
+        // A member entry recorded under Reactor's record name still applies to the renamed record: here a made-up
+        // Reactor record stands for Isotope's StackPanelElement.
         var tables = Migrate.WithRenames(t =>
         {
-            t.Types.Add(new NameEntry { Reactor = "PanelOfStack", Avalonia = "StackElement", Status = "applied" });
+            t.Types.Add(new NameEntry { Reactor = "PanelOfStack", Avalonia = "StackPanelElement", Status = "applied" });
             t.Members.Add(new MemberEntry { Record = "PanelOfStack", Reactor = "Gap", Avalonia = ["Spacing"], Kind = "rename" });
         });
         const string reactor = Usings + """
