@@ -105,6 +105,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **Replacing our type with upstream's can move a check from construction to render.** A setter that clears and then
   converts leaves the control half-built when the conversion throws. Convert first, then clear. (2026-11-24)
 
+- **A keyed-move test must check that each key keeps its own control:** a wrong Move index left the texts in order,
+  because the reconcile updated the swapped rows in place with each other's elements. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would
