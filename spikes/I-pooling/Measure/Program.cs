@@ -66,7 +66,7 @@ sealed class Bench(int n, int runs, bool quiet)
 
     public int Run()
     {
-        Out($"rows={n} runs={runs}; medians: change ms | change + layout ms | KB allocated | gen0 GCs; then notes");
+        Out($"rows={n} runs={runs}; medians: change ms | change + layout + posted jobs ms | KB allocated | gen0 GCs; then notes");
         EngineSection();
         PoolSection();
         MoveSection();
@@ -80,7 +80,8 @@ sealed class Bench(int n, int runs, bool quiet)
     //  Measuring
     // ════════════════════════════════════════════════════════════════════
 
-    private Stats Sample<T>(Func<T> setup, Action<T> change, Action<T> layout, Action<T> teardown)
+    // teardown gets whether the run was the warm-up, so tallies of kept, detached and focused rows count timed runs only.
+    private Stats Sample<T>(Func<T> setup, Action<T> change, Action<T> layout, Action<T, bool> teardown)
     {
         var changeMs = new List<double>();
         var totalMs = new List<double>();
@@ -99,10 +100,12 @@ sealed class Bench(int n, int runs, bool quiet)
             change(state);
             double t1 = sw.Elapsed.TotalMilliseconds;
             layout(state);
+            // What the change posted to the dispatcher (Avalonia raises Loaded and Unloaded through it) is part of its cost.
+            Dispatcher.UIThread.RunJobs();
             double t2 = sw.Elapsed.TotalMilliseconds;
             long after = GC.GetAllocatedBytesForCurrentThread();
             int gcAfter = GC.CollectionCount(0);
-            teardown(state);
+            teardown(state, run < 0);
             Settle();
             if (run < 0) continue; // warm-up
             changeMs.Add(t1);
@@ -169,7 +172,7 @@ sealed class Bench(int n, int runs, bool quiet)
 
     private readonly Dictionary<string, string[]> _finalOrder = new();
     private readonly Dictionary<string, List<MoveOp>> _engineMoves = new();
-    private readonly Dictionary<string, Stats> _engineWindow = new();
+    private bool _engineMovesAreMoves; // the engine moved with Controls.Move (move-collection.patch applied)
 
     // Records the edits the engine makes for each reorder (detached), for the focus checks and section 3.
     private void RecordMoves()
@@ -197,7 +200,10 @@ sealed class Bench(int n, int runs, bool quiet)
                     i++;
                 }
                 else if (events[i] is { Action: NotifyCollectionChangedAction.Move } moved)
+                {
                     moves.Add(new MoveOp(moved.OldStartingIndex, moved.NewStartingIndex)); // the Controls.Move variant (move-collection.patch)
+                    _engineMovesAreMoves = true;
+                }
                 else movesOnly = false;
             }
             Check(movesOnly, $"engine {name}: every collection edit is a move (a remove + insert of the same row, or a Move)");
@@ -227,6 +233,7 @@ sealed class Bench(int n, int runs, bool quiet)
             foreach (var where in Where)
             {
                 bool inWindow = where == "window";
+                bool isMount = name is "mount" or "mount again after unmount all";
                 int keptMin = int.MaxValue, detachedMax = 0, focusKept = 0, focusRuns = 0;
                 var stats = Sample(
                     setup: () =>
@@ -258,23 +265,36 @@ sealed class Bench(int n, int runs, bool quiet)
                     },
                     change: h => h.Render(),
                     layout: h => h.Layout(),
-                    teardown: h =>
+                    teardown: (h, warmup) =>
                     {
                         Check(h.RowKeys().SequenceEqual(h.Keys), $"engine {name} {where}: rows in key order");
-                        keptMin = Math.Min(keptMin, h.Kept());
-                        detachedMax = Math.Max(detachedMax, h.Detached);
-                        if (h.FocusedButton is { } b && _engineMoves.ContainsKey(name) && h.RowKeys().Contains(h.FocusedKey))
+                        if (!isMount)
                         {
-                            focusRuns++;
-                            if (b.IsFocused) focusKept++;
+                            int kept = h.Kept();
+                            Check(kept == h.Keys.Count(k => k.StartsWith('k')), $"engine {name} {where}: every surviving key kept its row control (kept {kept})");
+                            if (inWindow)
+                            {
+                                // Each move detaches its row with RemoveAt + Insert and none with Controls.Move; a removal detaches its row.
+                                int expected = _engineMoves.TryGetValue(name, out var mv) ? (_engineMovesAreMoves ? 0 : mv.Count) : n - kept;
+                                Check(h.Detached == expected, $"engine {name} {where}: rows detached {h.Detached}, expected {expected}");
+                            }
+                        }
+                        if (!warmup)
+                        {
+                            if (!isMount) keptMin = Math.Min(keptMin, h.Kept());
+                            detachedMax = Math.Max(detachedMax, h.Detached);
+                            if (h.FocusedButton is { } b && _engineMoves.ContainsKey(name) && h.RowKeys().Contains(h.FocusedKey))
+                            {
+                                focusRuns++;
+                                if (b.IsFocused) focusKept++;
+                            }
                         }
                         h.Close();
                     });
-                string note = name is "mount" or "mount again after unmount all" ? "" : $"kept {keptMin}";
-                if (inWindow && name != "mount" && name != "mount again after unmount all") note += $", rows detached from the visual tree {detachedMax}";
+                string note = isMount ? "" : $"kept {keptMin}";
+                if (inWindow && !isMount) note += $", rows detached from the visual tree {detachedMax}";
                 if (focusRuns > 0) note += $", focused Button of a moved row still focused in {focusKept} of {focusRuns} runs";
                 Print(name, where, stats, note);
-                if (inWindow) _engineWindow[name] = stats;
             }
         }
 
@@ -354,7 +374,7 @@ sealed class Bench(int n, int runs, bool quiet)
             setup: () => new List<Border>(n),
             change: list => { for (int i = 0; i < n; i++) list.Add(RowControls.Create("k" + i, null)); },
             layout: _ => { },
-            teardown: _ => { }));
+            teardown: (_, _) => { }));
 
         foreach (var where in Where)
         {
@@ -364,7 +384,7 @@ sealed class Bench(int n, int runs, bool quiet)
                 setup: () => new PanelHost(inWindow, 0, n),
                 change: h => h.AddRows("k", null),
                 layout: h => h.Layout(),
-                teardown: h => h.Close()));
+                teardown: (h, _) => h.Close()));
             Print("mount: rent from a full pool", where, Sample(
                 setup: () =>
                 {
@@ -377,7 +397,7 @@ sealed class Bench(int n, int runs, bool quiet)
                 },
                 change: h => h.AddRows("k", h.Pool),
                 layout: h => h.Layout(),
-                teardown: h =>
+                teardown: (h, _) =>
                 {
                     Check(h.Pool!.Rented == 4 * n && h.Pool.Created == 0, $"pool mount {where}: every control rented");
                     h.Close();
@@ -398,18 +418,22 @@ sealed class Bench(int n, int runs, bool quiet)
                         h.AddRows("r", h.Pool);
                     },
                     layout: h => h.Layout(),
-                    teardown: h => h.Close()), cap is 32 ? "(upstream's ElementPool keeps at most 32 per type)" : "");
+                    teardown: (h, _) =>
+                    {
+                        if (cap is { } c) Check(h.Pool!.Rented == 4 * Math.Min(c, n), $"pool re-key {where} cap {c}: rented {h.Pool.Rented}");
+                        h.Close();
+                    }), cap is 32 ? "(upstream's ElementPool keeps at most 32 per type)" : "");
             }
             Print("unmount all: drop", where, Sample(
                 setup: () => new PanelHost(inWindow, n, n),
                 change: h => h.RemoveRows(null),
                 layout: h => h.Layout(),
-                teardown: h => h.Close()));
+                teardown: (h, _) => h.Close()));
             Print("unmount all: reset and pool", where, Sample(
-                setup: () => new PanelHost(inWindow, n, n),
-                change: h => h.RemoveRows(new Pool(int.MaxValue)),
+                setup: () => new PanelHost(inWindow, n, n) { Pool = new Pool(int.MaxValue) }, // a long-lived pool, made once
+                change: h => h.RemoveRows(h.Pool),
                 layout: h => h.Layout(),
-                teardown: h => h.Close()));
+                teardown: (h, _) => h.Close()));
         }
     }
 
@@ -566,6 +590,7 @@ sealed class Bench(int n, int runs, bool quiet)
         {
             var moves = _engineMoves[name];
             var expected = _finalOrder[name];
+            if (moves.Count == 0) continue; // RecordMoves has reported it as a failed check
             foreach (var where in Where)
             {
                 bool inWindow = where == "window";
@@ -597,16 +622,20 @@ sealed class Bench(int n, int runs, bool quiet)
                             }
                         },
                         layout: h => h.Layout(),
-                        teardown: h =>
+                        teardown: (h, warmup) =>
                         {
                             Check(h.Keys().SequenceEqual(expected), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: final order is the engine's");
                             Check(h.TreesInOrder(), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: visual and logical children in the new order");
                             if (inWindow) Check(h.ArrangedInOrder(), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: rows arranged top to bottom in the new order");
-                            detachedMax = Math.Max(detachedMax, h.Detached);
-                            if (focused is not null)
+                            if (inWindow) Check(h.Detached == (useMove ? 0 : moves.Count), $"replay {name} {where} {(useMove ? "Move" : "RemoveAt+Insert")}: rows detached {h.Detached}");
+                            if (!warmup)
                             {
-                                focusRuns++;
-                                if (focused.IsFocused) focusKept++;
+                                detachedMax = Math.Max(detachedMax, h.Detached);
+                                if (focused is not null)
+                                {
+                                    focusRuns++;
+                                    if (focused.IsFocused) focusKept++;
+                                }
                             }
                             h.Close();
                         });

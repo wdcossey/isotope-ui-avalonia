@@ -1,9 +1,10 @@
 diff --git a/src/Isotope.UI.Avalonia/Seam/MovingPanelChildCollection.cs b/src/Isotope.UI.Avalonia/Seam/MovingPanelChildCollection.cs
 new file mode 100644
-index 0000000..a86f8d1
+index 0000000..efc11c2
 --- /dev/null
 +++ b/src/Isotope.UI.Avalonia/Seam/MovingPanelChildCollection.cs
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,50 @@
++using System.Diagnostics;
 +using Avalonia.Controls;
 +
 +namespace Isotope.UI.Core;
@@ -16,13 +17,33 @@ index 0000000..a86f8d1
 +    public int Count => children.Count;
 +    public UIElement Get(int index) => children[index];
 +    public int IndexOf(UIElement element) => children.IndexOf(element);
-+    public void Insert(int index, UIElement element) => children.Insert(index, element);
-+    public void RemoveAt(int index) => children.RemoveAt(index);
++
++    // Upstream's edit counts for the perf ChildReconcile span, kept for parity.
++    internal uint InsertCount { get; private set; }
++    internal uint RemoveCount { get; private set; }
++    internal uint MoveCount { get; private set; }
++    internal uint ReplaceCount { get; private set; }
++
++    public void Insert(int index, UIElement element)
++    {
++        children.Insert(index, element);
++        InsertCount++;
++    }
++
++    public void RemoveAt(int index)
++    {
++        children.RemoveAt(index);
++        RemoveCount++;
++    }
 +
 +    // Same contract as upstream's: newIndex is the final position (AvaloniaList.Move removes, then inserts there).
 +    public void Move(int oldIndex, int newIndex)
 +    {
-+        if (oldIndex != newIndex) children.Move(oldIndex, newIndex);
++        if (oldIndex == newIndex) return;
++        Debug.Assert(oldIndex >= 0 && oldIndex < children.Count, $"oldIndex {oldIndex} out of range [0, {children.Count})");
++        Debug.Assert(newIndex >= 0 && newIndex < children.Count, $"newIndex {newIndex} out of range [0, {children.Count})");
++        children.Move(oldIndex, newIndex);
++        MoveCount++;
 +    }
 +
 +    // As upstream: RemoveAt + Insert, so the old control leaves the trees.
@@ -30,6 +51,7 @@ index 0000000..a86f8d1
 +    {
 +        children.RemoveAt(index);
 +        children.Insert(index, element);
++        ReplaceCount++;
 +    }
 +}
 diff --git a/src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs b/src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs
