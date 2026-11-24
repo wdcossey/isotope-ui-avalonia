@@ -29,12 +29,18 @@ public static partial class ElementExtensions
     /// <see cref="BorderElement.BorderThickness"/>; on a templated control, the modifier's. Avalonia's panels have no border.
     /// </summary>
     public static T WithBorder<T>(this T el, ThemeRef theme, double thickness = 1) where T : Element
+        => ModifyTheme((T)WithBorderWidth(el, thickness), "BorderBrush", theme);
+
+    // A border element's own width, also one a ModifiedElement wraps (whose control is the border's); else the modifier.
+    private static Element WithBorderWidth(Element el, double thickness) => el switch
     {
-        Element withWidth = el is BorderElement border
-            ? border with { BorderThickness = thickness }
-            : el.WithModifiers(m => m with { BorderThickness = new Thickness(thickness) });
-        return ModifyTheme((T)withWidth, "BorderBrush", theme);
-    }
+        BorderElement border => border with { BorderThickness = thickness },
+        ModifiedElement { Inner: var inner } wrapper when Innermost(inner) is BorderElement =>
+            wrapper with { Inner = WithBorderWidth(inner, thickness) },
+        _ => el.WithModifiers(m => m with { BorderThickness = new Thickness(thickness) }),
+    };
+
+    private static Element Innermost(Element el) => el is ModifiedElement m ? Innermost(m.Inner) : el;
 
     /// <summary>The brush behind a split view's pane, from a theme token; the element's own pane brush wins.</summary>
     public static SplitViewElement PaneBackground(this SplitViewElement el, ThemeRef theme) => ModifyTheme(el, "PaneBackground", theme);

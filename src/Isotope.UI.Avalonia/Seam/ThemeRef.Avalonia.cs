@@ -70,13 +70,19 @@ public readonly partial record struct ThemeRef
     internal static IColorValuesSource? ColorValuesSource(Visual element)
     {
         if (element.FindAncestorOfType<ReactorHostControl>(includeSelf: true)?.ColorValuesOverride is { } fake) return fake;
-        return Application.Current is { } app && app.CheckAccess() && app.PlatformSettings is { } settings
-            ? new PlatformColorValuesSource(settings)
-            : null;
+        if (Application.Current is not { } app || !app.CheckAccess() || app.PlatformSettings is not { } settings) return null;
+        var cached = s_platformSource;
+        if (cached is null || !ReferenceEquals(cached.Settings, settings)) s_platformSource = cached = new PlatformColorValuesSource(settings);
+        return cached;
     }
+
+    // One wrapper for the application's settings, not one per resolve.
+    private static PlatformColorValuesSource? s_platformSource;
 
     private sealed class PlatformColorValuesSource(IPlatformSettings settings) : IColorValuesSource
     {
+        public IPlatformSettings Settings => settings;
+
         public PlatformColorValues GetColorValues() => settings.GetColorValues();
 
         public event EventHandler<PlatformColorValues>? ColorValuesChanged

@@ -58,6 +58,10 @@ public sealed partial class Reconciler
     {
         private readonly Dictionary<string, ThemeSlot> _slots = new(StringComparer.Ordinal);
         private IReadOnlyDictionary<string, ThemeRef>? _bindings;
+        // The resolution generation the slots were last resolved under: Theme.NotifyResourcesChanged() (and any other
+        // invalidation of ThemeRef's cache) moves it, so the next apply, which a resource-refresh pass reaches for every
+        // element, resolves the tokens again even when they are unchanged.
+        private int _generation = ThemeRef.ResolutionGenerationForTest;
         private bool _hooked;
         private IColorValuesSource? _colorValues;
 
@@ -65,7 +69,11 @@ public sealed partial class Reconciler
 
         public void Apply(IReadOnlyDictionary<string, ThemeRef>? bindings)
         {
-            if (Same(_bindings, bindings)) return;
+            if (Same(_bindings, bindings))
+            {
+                if (_generation != ThemeRef.ResolutionGenerationForTest) Refresh();
+                return;
+            }
             _bindings = bindings is null ? null : new Dictionary<string, ThemeRef>(bindings);
             foreach (var name in _slots.Keys.ToArray())
             {
@@ -97,6 +105,7 @@ public sealed partial class Reconciler
 
         private void Refresh()
         {
+            _generation = ThemeRef.ResolutionGenerationForTest;
             foreach (var slot in _slots.Values) slot.Push(Resolve(slot.Ref));
         }
 
@@ -193,11 +202,20 @@ public sealed partial class Reconciler
         // No brush: no value at this priority, so the control's own (its theme's) shows.
         private object? Boxed => (object?)_value ?? AvaloniaProperty.UnsetValue;
 
+        // The binding's subscription: undoing it detaches that observer only; the slot's own Dispose ends the binding.
         public IDisposable Subscribe(IObserver<object?> observer)
         {
             _observer = observer;
             observer.OnNext(Boxed);
-            return this;
+            return new Detach(this, observer);
+        }
+
+        private sealed class Detach(ThemeSlot slot, IObserver<object?> observer) : IDisposable
+        {
+            public void Dispose()
+            {
+                if (ReferenceEquals(slot._observer, observer)) slot._observer = null;
+            }
         }
 
         public void Dispose()

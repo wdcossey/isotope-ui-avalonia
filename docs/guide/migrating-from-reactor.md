@@ -109,7 +109,8 @@ Measured on 2026-11-24:
     `TextBlockElement`, and `Padding` (88) on `StackElement`.
   - 877 ISOMIG012: controls not ported yet. The commonest are `Caption` (221), `SubHeading` (149) and
     `ScrollView` (139).
-  - 199 ISOMIG002: Charting (159) and Advanced (11).
+  - 199 ISOMIG002: Charting (159), Advanced (11), Docking (8), Controls.Validation (8), Animation (7), and 6 in
+    Markdown, Diagnostics, Interop and Devtools.
   - 171 ISOMIG011 and 113 ISOMIG005: WinUI-only controls and types.
   - 59 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.

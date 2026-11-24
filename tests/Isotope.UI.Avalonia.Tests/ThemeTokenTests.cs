@@ -353,6 +353,42 @@ public sealed class ThemeTokenTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void NotifyResourcesChanged_resolves_bound_tokens_again_with_no_event_from_the_platform()
+    {
+        var fake = new FakeColorValues();
+        var m = Mount(_ => VStack(Memo(_ => TextBlock("a").Foreground(Theme.SecondaryText), 1)), ThemeVariant.Dark,
+            h => h.ColorValuesOverride = fake);
+        var text = m.First<TextBlock>();
+        Assert.Equal(Hex(0xC5FFFFFF), ColorOf(text.Foreground));
+
+        // The preference changes with no event: only the refresh sees it.
+        fake.Values = fake.Values with { ContrastPreference = ColorContrastPreference.High };
+        Pump();
+        Assert.Equal(Hex(0xC5FFFFFF), ColorOf(text.Foreground));
+        Theme.NotifyResourcesChanged();
+        Pump();
+        Assert.Same(text, m.First<TextBlock>());
+        Assert.Equal(Colors.White, ColorOf(text.Foreground));
+
+        // Back to no preference, in light (the theme switch raises its own event).
+        fake.Values = fake.Values with { ContrastPreference = ColorContrastPreference.NoPreference };
+        m.Window.RequestedThemeVariant = ThemeVariant.Light;
+        Pump();
+        Assert.Equal(Hex(0x9E000000), ColorOf(text.Foreground));
+    }
+
+    [AvaloniaFact]
+    public void WithBorder_on_a_wrapped_border_element_gives_the_border_its_width()
+    {
+        var wrapped = new ModifiedElement(Border(TextBlock("in")), new ElementModifiers { Margin = new Thickness(2) })
+            .WithBorder(Theme.CardStroke, thickness: 3);
+        var m = Mount(_ => wrapped, ThemeVariant.Light);
+        var border = m.First<Border>();
+        Assert.Equal(new Thickness(3), border.BorderThickness);
+        Assert.Equal(Hex(0x0F000000), ColorOf(border.BorderBrush));
+    }
+
+    [AvaloniaFact]
     public void A_memo_skips_an_ordinary_root_pass_but_not_a_resource_refresh()
     {
         int memoRenders = 0;
