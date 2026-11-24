@@ -34,7 +34,7 @@ namespace Isotope.UI.Hosting;
 /// a pass. A cleanup that throws is reported to the handler as
 /// <see cref="RenderErrorSource.Cleanup"/>; with no handler, the first is rethrown once the teardown is done.</para>
 /// </remarks>
-public sealed class ReactorHostControl : Decorator, IDisposable
+public sealed partial class ReactorHostControl : Decorator, IDisposable
 {
     /// <summary>A pass slower than this (one frame at 60 Hz) demotes the next one, as upstream's render priority policy.</summary>
     internal const double FrameBudgetMs = 16.0;
@@ -63,7 +63,8 @@ public sealed class ReactorHostControl : Decorator, IDisposable
     {
         Dispatcher.UIThread.VerifyAccess();
         _logger = logger;
-        _reconciler = new Reconciler(logger);
+        // The owner of the content: the platform hooks find this host (and its window) through it.
+        _reconciler = new Reconciler(logger) { Owner = this };
         _queue = DispatcherQueue.ForUIThread;
         _requestRender = RequestRender;
         _renderLoop = RenderLoop;

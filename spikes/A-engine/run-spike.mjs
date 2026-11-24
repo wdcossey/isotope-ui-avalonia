@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Re-runs Spike A's build at a step and prints the grouped errors.
-// Usage (from anywhere): node spikes/A-engine/run-spike.mjs [step]   step = 1, 2 or 3 (default 3)
+// Usage (from anywhere): node spikes/A-engine/run-spike.mjs [step]   step = 1, 2, 3 or 4 (default 3)
+// Step 4 adds the Roslyn rules in roslyn-rules.json (issue #4); its total is in expected-total-step4.txt.
 // Every step uses the final file list in EngineFiles.props; see docs/spikes/A-engine-compile.md.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';

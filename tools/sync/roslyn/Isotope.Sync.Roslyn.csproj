@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- tools/sync's syntax-aware transforms (issue #4): drop a member by name, retarget a type reference, drop an
+       attribute. Syntax only (no compilation, no references). tools/sync builds it on demand and runs it once per
+       sync: a JSON request on stdin, a JSON response on stdout (see Program.cs). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The Roslyn the pinned SDK (global.json, 11.0.100) ships, so C# 15 (closed hierarchies) parses. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+  </ItemGroup>
+</Project>
