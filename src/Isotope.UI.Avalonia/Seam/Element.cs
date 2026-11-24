@@ -85,7 +85,7 @@ public abstract record Element
             (EmptyElement, EmptyElement) => true,
             (TextBlockElement x, TextBlockElement y) => x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
             (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled
-                && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
             (FlexElement x, FlexElement y) => x.Direction == y.Direction && x.JustifyContent == y.JustifyContent
@@ -126,6 +126,15 @@ public abstract record Element
             (ScrollViewerElement x, ScrollViewerElement y) => x.HorizontalScrollBarVisibility == y.HorizontalScrollBarVisibility
                 && x.VerticalScrollBarVisibility == y.VerticalScrollBarVisibility && ReferenceEquals(x.Child, y.Child)
                 && ReferenceEquals(x.Setters, y.Setters),
+            // #26: as upstream's arms, a declared element content always updates (its child is reconciled). Unlike
+            // upstream's, ToggleButton's compares the three-state members too, so a changed CheckedState is written.
+            (ToggleButtonElement x, ToggleButtonElement y) => x.Label == y.Label && x.IsChecked == y.IsChecked
+                && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+            (RepeatButtonElement x, RepeatButtonElement y) => x.Label == y.Label && x.Delay == y.Delay && x.Interval == y.Interval
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+            (HyperlinkButtonElement x, HyperlinkButtonElement y) => x.Content == y.Content && x.NavigateUri == y.NavigateUri
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
             _ => false,
         };
     }

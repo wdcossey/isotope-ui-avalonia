@@ -21,21 +21,29 @@ public partial record TextBlockElement(string Content) : Element
     internal Action<TextBlock>[] Setters { get; init; } = [];
 }
 
-/// <summary>A push button, as an Avalonia <see cref="Avalonia.Controls.Button"/>.</summary>
+/// <summary>
+/// A push button, as an Avalonia <see cref="Avalonia.Controls.Button"/>: a text <see cref="Label"/>, or any element as
+/// its content (<see cref="ContentElement"/>, #26).
+/// </summary>
 [GenerateReactorDescriptor(typeof(Button))]
-[WrapAlias("Label", "Content")]
+[WrapManual("Label")]
 [WrapManual("IsEnabled")]
 public partial record ButtonElement(string Label, Action? OnClick = null) : Element
 {
     public bool IsEnabled { get; init; } = true;
+
+    /// <summary>Declarative content, taking precedence over <see cref="Label"/> (upstream's member).</summary>
+    public Element? ContentElement { get; init; }
 
     internal Action<Button>[] Setters { get; init; } = [];
 
     internal override bool HasCallbacks => OnClick is not null;
 
     // IsEnabled has a second source, the IsEnabled modifier: the reconciler writes the two as one value
-    // (Reconciler.ApplyEnabled), so neither overwrites the other, and the descriptor leaves it alone.
-    private static partial ControlDescriptor<ButtonElement, Button> Customize(ControlDescriptor<ButtonElement, Button> d) => d;
+    // (Reconciler.ApplyEnabled), so neither overwrites the other, and the descriptor leaves it alone. As upstream's,
+    // the content is a child subtree when ContentElement is set, else the label (WithContent, #26).
+    private static partial ControlDescriptor<ButtonElement, Button> Customize(ControlDescriptor<ButtonElement, Button> d)
+        => d.WithContent(static e => e.ContentElement, static e => e.Label);
 }
 
 /// <summary>Children stacked in one direction, as an Avalonia <see cref="Avalonia.Controls.StackPanel"/>.</summary>

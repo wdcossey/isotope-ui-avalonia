@@ -76,6 +76,7 @@ public partial record ScrollViewerElement(Element Child) : Element
 [GenerateReactorDescriptor(typeof(Expander))]
 [WrapManual("Content")]
 [WrapManual("Header")]
+[WrapManual("HeaderContent")]
 [WrapManual("IsExpanded")]
 public partial record ExpanderElement(
     string Header,
@@ -84,6 +85,12 @@ public partial record ExpanderElement(
     Action<bool>? OnIsExpandedChanged = null) : Element
 {
     public ExpandDirection ExpandDirection { get; init; } = ExpandDirection.Down;
+
+    /// <summary>
+    /// An element as the header, taking precedence over the string <see cref="Header"/> (upstream's member, #26): a
+    /// mounted child, reconciled in place across renders.
+    /// </summary>
+    public Element? HeaderContent { get; init; }
 
     internal Action<Expander>[] Setters { get; init; } = [];
 
@@ -102,10 +109,32 @@ public partial record ExpanderElement(
         {
             GetCurrentChild = static c => c.Content as Control,
         };
+        // HeaderContent, as upstream's: a secondary element slot on the imperative bridge (the control's one children
+        // strategy is the content), and the string header is written only without it.
         return d
-            .OneWay(
-                get: static e => e.Header,
-                set: static (c, v) => c.Header = v)
+            .ImperativeBridged(
+                mount: static (ctx, c, e) =>
+                {
+                    if (e.HeaderContent is null) return;
+                    if (ctx.MountChild(e.HeaderContent) is { } mounted) c.Header = mounted;
+                },
+                update: static (ctx, c, oldEl, newEl) =>
+                {
+                    if (oldEl.HeaderContent is null && newEl.HeaderContent is null) return;
+                    var existing = c.Header as Control;
+                    var next = ctx.Reconciler.ReconcileV1Child(oldEl.HeaderContent, newEl.HeaderContent, existing, ctx.RequestRerender);
+                    if (!ReferenceEquals(existing, next)) c.Header = next;
+                },
+                unmount: static (ctx, c) =>
+                {
+                    if (Reconciler.GetElementTag(c) is not ExpanderElement { HeaderContent: not null }) return;
+                    if (c.Header is Control child) ctx.Reconciler.UnmountChild(child);
+                    c.Header = null;
+                })
+            .OneWayConditional(
+                get:         static e => e.Header,
+                set:         static (c, v) => c.Header = v,
+                shouldWrite: static e => e.HeaderContent is null)
             .Controlled<bool, AvaloniaPropertyChangedEventArgs>(
                 get:         static e => e.IsExpanded,
                 set:         static (c, v) => c.IsExpanded = v,

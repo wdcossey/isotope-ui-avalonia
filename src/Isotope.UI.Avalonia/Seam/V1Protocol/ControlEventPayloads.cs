@@ -29,3 +29,9 @@ internal sealed class ComboBoxEventPayload
     public EventHandler? DropDownOpenedTrampoline;
     public EventHandler? DropDownClosedTrampoline;
 }
+
+/// <summary>The per-control event payload of a <see cref="Avalonia.Controls.Primitives.ToggleButton"/> (#26): its click.</summary>
+internal sealed class ToggleButtonEventPayload
+{
+    public EventHandler<Avalonia.Interactivity.RoutedEventArgs>? ClickTrampoline;
+}
