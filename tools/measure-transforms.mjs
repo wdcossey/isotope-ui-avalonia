@@ -29,6 +29,8 @@ if (manifest.commit !== baseline) throw new Error('src/Upstream was generated at
 const byPath = new Map(manifest.files.map((f) => [f.path, f]));
 const rules = new Map(loadTransforms(JSON.parse(readFileSync(path.join(repo, 'tools', 'sync', 'transforms.json'), 'utf8'))).map((r) => [r.id, r]));
 const lines = (s) => s.replace(/^\u{FEFF}/u, '').split(/\r?\n/);
+// A member drop is a text "drop" or a Roslyn drop-member (tools/sync/lib/transforms.mjs).
+const isDrop = (r) => r.kind === 'drop' || (r.kind === 'roslyn' && r.roslyn.op === 'drop-member');
 
 const totals = { files: 0, lines: 0, touchedFiles: 0, rewritten: 0, blanked: 0 };
 const used = new Set();
@@ -56,7 +58,7 @@ for (const rel of rels) {
   totals.rewritten += rewritten;
   totals.blanked += blanked;
   if (only.length && !only.includes(rel)) continue;
-  const drops = entry.transforms.filter((id) => rules.get(id).kind === 'drop').length;
+  const drops = entry.transforms.filter((id) => isDrop(rules.get(id))).length;
   console.log(rel + ': ' + lineCount + ' lines; tier ' + entry.tier + '; ' + entry.transforms.length + ' rules hit (' + drops + ' member drops); ' +
     rewritten + ' lines rewritten, ' + blanked + ' lines blanked');
 }
@@ -64,4 +66,5 @@ const kinds = [...used].map((id) => rules.get(id));
 const count = (f) => kinds.filter(f).length;
 console.log('all ' + totals.files + ' files: ' + totals.lines + ' lines; ' + totals.touchedFiles + ' files transformed; ' + totals.rewritten +
   ' lines rewritten, ' + totals.blanked + ' lines blanked; ' + used.size + ' rules hit them (' + count((r) => r.kind === 'find' && r.files) +
-  ' find/replace, ' + count((r) => r.kind === 'drop') + ' member drops, ' + count((r) => r.glob) + ' repo-wide) of ' + rules.size + ' in tools/sync/transforms.json');
+  ' find/replace, ' + count(isDrop) + ' member drops, ' + count((r) => r.glob) + ' repo-wide' +
+  (count((r) => r.kind === 'roslyn') ? ', ' + count((r) => r.kind === 'roslyn') + ' of them Roslyn' : '') + ') of ' + rules.size + ' in tools/sync/transforms.json');
