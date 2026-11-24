@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -29,7 +30,8 @@ public sealed class Op
     public string? Attribute { get; init; }
     public int? At { get; init; }
 }
-public sealed record OpResult(string Id, int Hits, string? Error, string? Info = null);
+/// <summary>Hits: matches found. Changed: whether the op changed the text. Info: locate-member's answer.</summary>
+public sealed record OpResult(string Id, int Hits, string? Error, string? Info = null, bool Changed = false);
 public sealed record FileResponse(string Path, string Text, List<OpResult> Results, List<string> Errors);
 public sealed record Response(List<FileResponse> Files);
 
@@ -37,9 +39,13 @@ sealed class OpException(string message) : Exception(message);
 
 public static class Transforms
 {
-    // Preview, so whatever the pinned SDK's compiler accepts parses. No preprocessor symbols: code under an #if is
-    // inactive, so it is neither matched nor changed.
-    static readonly CSharpParseOptions Options = new(LanguageVersion.Preview, DocumentationMode.Parse);
+    // Preview, so whatever the pinned SDK's compiler accepts parses. The symbols are a net10.0 Debug build's, so code
+    // under #if DEBUG is seen; code an #if leaves out is not, so an op whose target appears there fails (Inactive), and
+    // the syntax check also parses without DEBUG.
+    static readonly string[] Net10 = ["TRACE", "NET", "NETCOREAPP", "NET10_0",
+        "NETCOREAPP3_0_OR_GREATER", "NETCOREAPP3_1_OR_GREATER", .. Enumerable.Range(5, 6).Select(v => "NET" + v + "_0_OR_GREATER")];
+    static readonly CSharpParseOptions Options = new(LanguageVersion.Preview, DocumentationMode.Parse, preprocessorSymbols: ["DEBUG", .. Net10]);
+    static readonly CSharpParseOptions ReleaseOptions = new(LanguageVersion.Preview, DocumentationMode.Parse, preprocessorSymbols: Net10);
 
     public static FileResponse Apply(FileRequest file)
     {
@@ -62,40 +68,62 @@ public static class Transforms
                     "drop-attribute" => DropAttribute(text, op),
                     _ => throw new OpException("unknown op " + op.Kind),
                 };
+                results.Add(new OpResult(op.Id, hits, null, null, next != text));
                 text = next;
-                results.Add(new OpResult(op.Id, hits, null));
             }
             catch (OpException e)
             {
                 results.Add(new OpResult(op.Id, 0, e.Message));
             }
+            catch (Exception e)
+            {
+                // A bug in an op must name the op and file, not take the whole batch down.
+                results.Add(new OpResult(op.Id, 0, "failed inside the tool: " + e.GetType().Name + ": " + e.Message));
+            }
         }
         // A transform must never leave broken syntax behind: compare the syntax errors before and after.
         var baseline = file.Original ?? file.Text;
         if (text != baseline)
-        {
-            var before = SyntaxErrors(baseline);
-            var added = SyntaxErrors(text).Where(d => !before.Remove(d)).ToList();
-            if (added.Count > 0)
-                errors.Add("the transforms leave " + added.Count + " new syntax error(s), the first: " + added[0]);
-        }
+            foreach (var options in new[] { Options, ReleaseOptions })
+            {
+                // Compared by error code, not line: text rules may move lines, and an error upstream has stays allowed.
+                var before = SyntaxErrors(baseline, options).GroupBy(d => d.Code).ToDictionary(g => g.Key, g => g.Count());
+                var added = SyntaxErrors(text, options).GroupBy(d => d.Code)
+                    .Where(g => g.Count() > before.GetValueOrDefault(g.Key)).SelectMany(g => g.Skip(before.GetValueOrDefault(g.Key))).ToList();
+                if (added.Count == 0) continue;
+                errors.Add("the transforms leave " + added.Count + " new syntax error(s)" + (options == ReleaseOptions ? " (without DEBUG)" : "") +
+                    ", the first: " + added[0].Text);
+                break;
+            }
         return new FileResponse(file.Path, text, results, errors);
     }
 
     static SyntaxTree Parse(string text) => CSharpSyntaxTree.ParseText(text, Options);
 
-    // Syntax errors as "line N: CSxxxx message" (line numbers are kept by every op, so they compare across ops).
-    static List<string> SyntaxErrors(string text) => Parse(text).GetDiagnostics()
-        .Where(d => d.Severity == DiagnosticSeverity.Error)
-        .Select(d => "line " + (d.Location.GetLineSpan().StartLinePosition.Line + 1) + ": " + d.Id + " " + d.GetMessage())
-        .ToList();
+    // Syntax errors: the code, and "line N: CSxxxx message" for the report.
+    static List<(string Code, string Text)> SyntaxErrors(string text, CSharpParseOptions options) =>
+        CSharpSyntaxTree.ParseText(text, options).GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Select(d => (d.Id, "line " + (d.Location.GetLineSpan().StartLinePosition.Line + 1) + ": " + d.Id + " " + d.GetMessage()))
+            .ToList();
+
+    // Fails when the name appears in code an #if leaves out (with a Debug build's symbols): the op can't see it there,
+    // so it would leave it untransformed while reporting success.
+    static void Inactive(SyntaxNode root, string name, Op op)
+    {
+        var word = new Regex(@"(?<![\w@])" + Regex.Escape(name) + @"(?!\w)");
+        foreach (var t in root.DescendantTrivia(descendIntoTrivia: true))
+            if (t.IsKind(SyntaxKind.DisabledTextTrivia) && word.IsMatch(t.ToString()))
+                throw new OpException(name + " also appears in code an #if leaves out (line " + (t.GetLocation().GetLineSpan().StartLinePosition.Line + 1) +
+                    "), which " + op.Kind + " can't see: use a text rule there");
+    }
 
     static string Need(string? value, string field, Op op) =>
         string.IsNullOrWhiteSpace(value) ? throw new OpException(op.Kind + " needs \"" + field + "\"") : value;
 
     static string Squash(string s) => new(s.Where(c => !char.IsWhiteSpace(c)).ToArray());
 
-    // ---- locate-member (a measurement aid: tools/measure-roslyn-drops.mjs) ----
+    // ---- locate-member (a measurement aid: tools/measure-roslyn.mjs) ----
 
     // The member declared at offset At, as "member|type|parameters|overloads": what a drop-member op needs to name it,
     // and how many members of the same type share its name.
@@ -109,7 +137,7 @@ public static class Transforms
         var name = MemberName(m) ?? throw new OpException("the member at " + at + " has no name this tool can drop by");
         var chain = m.Ancestors().OfType<BaseTypeDeclarationSyntax>().Select(t => t.Identifier.Text).Reverse().ToArray();
         var overloads = root.DescendantNodes(n => n is not BlockSyntax and not ArrowExpressionClauseSyntax)
-            .OfType<MemberDeclarationSyntax>().Count(x => MemberName(x) == name && InType(x, chain));
+            .OfType<MemberDeclarationSyntax>().Count(x => Declares(x, name) && InType(x, chain));
         return name + "|" + string.Join(".", chain) + "|" + (ParameterList(m) ?? "") + "|" + overloads;
     }
 
@@ -123,8 +151,9 @@ public static class Transforms
         var wanted = op.Parameters is null ? null : Squash(op.Parameters);
         var found = root.DescendantNodes(n => n is not BlockSyntax and not ArrowExpressionClauseSyntax)
             .OfType<MemberDeclarationSyntax>()
-            .Where(m => MemberName(m) == member && InType(m, path) && (wanted is null || ParameterList(m) == wanted))
+            .Where(m => Declares(m, member) && InType(m, path) && (wanted is null || ParameterList(m) == wanted))
             .ToList();
+        Inactive(root, member, op);
         if (found.Count != 1)
             throw new OpException("matched " + found.Count + " members, expected 1 (" + Describe(op) + ")");
         var m = found[0];
@@ -133,6 +162,10 @@ public static class Transforms
         var (start, end) = LinesOf(text, m);
         return (Blank(text, start, end), 1);
     }
+
+    // Whether m declares the name (any of a field declaration's variables).
+    static bool Declares(MemberDeclarationSyntax m, string name) =>
+        m is BaseFieldDeclarationSyntax f ? f.Declaration.Variables.Any(v => v.Identifier.Text == name) : MemberName(m) == name;
 
     static string Describe(Op op) => (op.Type is null ? "" : op.Type + ".") + op.Member + (op.Parameters ?? "");
 
@@ -229,11 +262,14 @@ public static class Transforms
             if (n.Parent is AliasQualifiedNameSyntax aq && aq.Name == n) continue;
             if (n.Parent is MemberBindingExpressionSyntax) continue;
             if (n is IdentifierNameSyntax && n.Parent is NameColonSyntax or NameEqualsSyntax) continue;
+            // A namespace's own name is not a reference to a type.
+            if (n.Parent is BaseNamespaceDeclarationSyntax ns && ns.Name == n) continue;
             var p = PathOf(n);
             if (p is null || Unglobal(p.Value.Text) != from) continue;
             edits.Add((n.SpanStart, p.Value.End));
         }
         if (edits.Count == 0) throw new OpException("no longer matches: no reference to " + op.From + " in code");
+        Inactive(root, from.Split('.')[^1], op);
         // A longer match contains no shorter one (from is one name), so the spans don't overlap.
         var sb = new StringBuilder(text);
         foreach (var (s, e) in edits.OrderByDescending(x => x.Start)) sb.Remove(s, e - s).Insert(s, to);
@@ -288,17 +324,23 @@ public static class Transforms
                 edits.Add((list.SpanStart, end));
                 continue;
             }
+            // Each run of matched attributes goes with the separators that join it to the list: up to the kept attribute
+            // after it, or, for a run that ends the list, from the separator after the kept attribute before it.
             var attrs = list.Attributes;
             for (var i = 0; i < attrs.Count; i++)
             {
                 if (!match.Contains(attrs[i])) continue;
-                // An attribute and the separator after it (or before it, for the last one).
-                edits.Add(i < attrs.Count - 1
-                    ? (attrs[i].SpanStart, attrs[i + 1].SpanStart)
-                    : (attrs.GetSeparator(i - 1).SpanStart, attrs[i].Span.End));
+                var j = i;
+                while (j + 1 < attrs.Count && match.Contains(attrs[j + 1])) j++;
+                edits.Add(j < attrs.Count - 1
+                    ? (attrs[i].SpanStart, attrs[j + 1].SpanStart)
+                    : (attrs.GetSeparator(i - 1).SpanStart, attrs[j].Span.End));
+                i = j;
             }
         }
         if (hits == 0) throw new OpException("no longer matches: no attribute " + op.Attribute + " in code");
+        var bare = wanted.Split('.')[^1];
+        Inactive(root, bare.EndsWith("Attribute", StringComparison.Ordinal) ? bare[..^9] : bare, op);
         var sb = new StringBuilder(text);
         foreach (var (s, e) in edits.OrderByDescending(x => x.Start)) sb.Remove(s, e - s);
         return (sb.ToString(), hits);

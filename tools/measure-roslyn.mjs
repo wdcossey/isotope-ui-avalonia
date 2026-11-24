@@ -33,6 +33,9 @@ if (!sha) throw new Error('the commit in UPSTREAM.lock is not in the upstream ca
 const raw = json(path.join(here, 'transforms.json'));
 const rules = loadTransforms(raw);
 const drops = rules.filter((r) => r.kind === 'drop');
+// Conversions are keyed by rule, so each drop must name one file (every drop does: a member lives in one file).
+const multi = drops.filter((r) => r.files.length !== 1);
+if (multi.length) throw new Error('drops that list several files can\'t be measured: ' + multi.map((r) => r.id).join(', '));
 const files = [...new Set(drops.flatMap((r) => r.files))];
 const blobs = readBlobs(upstreamDir, sha, files);
 

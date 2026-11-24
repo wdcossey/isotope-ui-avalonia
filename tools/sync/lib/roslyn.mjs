@@ -2,6 +2,7 @@
 // The tool is built on demand (an incremental dotnet build, once per process) and run once per batch of files: a JSON
 // request on stdin, a JSON response on stdout. Only syntax is used, never a compilation, so it needs no references.
 import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,8 +19,17 @@ let built = false;
 // dotnet runs from the tool's folder, so it takes this repo's global.json (never upstream's).
 const dotnet = (args, input) => spawnSync('dotnet', args, { cwd: TOOL_DIR, input, encoding: 'utf8', maxBuffer: 1 << 28 });
 
+// The tool's sources: its project and C# files (not bin/ or obj/).
+const sources = () => readdirSync(TOOL_DIR).filter((f) => /\.(cs|csproj)$/.test(f)).map((f) => path.join(TOOL_DIR, f));
+
 function build() {
   if (built) return;
+  // Built already and newer than every source: no dotnet build, which saves its start-up and keeps two processes (two
+  // test files run by node --test) from building into the same bin/ at once.
+  if (existsSync(DLL)) {
+    const dll = statSync(DLL).mtimeMs;
+    if (sources().every((f) => statSync(f).mtimeMs < dll)) { built = true; return; }
+  }
   const r = dotnet(['build', PROJECT, '-c', 'Release', '-nologo', '-v:q', '-clp:ErrorsOnly']);
   if (r.error) throw new Error('the Roslyn transform tool needs the .NET SDK (dotnet): ' + r.error.message);
   if (r.status !== 0) throw new Error('the Roslyn transform tool (tools/sync/roslyn) did not build:\n' + (r.stdout + r.stderr).trim());

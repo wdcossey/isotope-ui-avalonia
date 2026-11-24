@@ -20,6 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dropMember } from './sync/lib/csharp.mjs';
 import { runRoslyn } from './sync/lib/roslyn.mjs';
+import { checkRoslynOp } from './sync/lib/transforms.mjs';
 
 // The C# lexer lives in tools/sync/lib/csharp.mjs (one implementation, shared with tools/sync's drop rules).
 export { codeMask } from './sync/lib/csharp.mjs';
@@ -52,6 +53,7 @@ export function loadRules(rulesFile) {
   return JSON.parse(readFileSync(rulesFile, 'utf8')).map((r) => {
     if (r.roslyn === undefined) return { ...r, hits: 0, re: new RegExp(r.drop ?? r.find, 'g' + (r.flags ?? '')) };
     if (!Array.isArray(r.files) || !r.files.length) throw new Error('a "roslyn" rule lists its files: ' + JSON.stringify(r.roslyn));
+    checkRoslynOp(r.roslyn, rulesFile + ': rule ' + JSON.stringify(r.roslyn));
     return { ...r, hits: 0 };
   });
 }

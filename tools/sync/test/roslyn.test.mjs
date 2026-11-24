@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runRoslyn } from '../lib/roslyn.mjs';
-import { loadTransforms } from '../lib/transforms.mjs';
+import { loadTransforms, applyRoslyn } from '../lib/transforms.mjs';
 import { makeFixture, SAMPLE } from './fixture.mjs';
 
 const one = (text, ...ops) => runRoslyn([{ path: 'f.cs', text, ops: ops.map((o, i) => ({ id: 'r' + i, ...o })) }])[0];
@@ -28,7 +28,7 @@ const CLASS = [
 
 test('drop-member blanks one member, its doc comment and attributes, keeping every line', () => {
   const r = one(CLASS, { op: 'drop-member', type: 'Host', member: 'Hook', parameters: '(Microsoft.UI.Xaml.Window)' });
-  assert.deepEqual(r.results, [{ id: 'r0', hits: 1, error: null, info: null }]);
+  assert.deepEqual(r.results, [{ id: 'r0', hits: 1, error: null, info: null, changed: true }]);
   assert.deepEqual(r.errors, []);
   const lines = r.text.split('\r\n');
   assert.equal(lines.length, CLASS.split('\r\n').length);
@@ -156,4 +156,43 @@ test('with syntaxCheck, a text rule that breaks a C# file fails the sync', () =>
     assert.equal(r.code, 1);
     assert.match(r.err, /src\/Lib\/Core\/Engine\.cs: the transforms leave 1 new syntax error\(s\), the first: line 1: CS1513/);
   } finally { f.cleanup(); }
+});
+
+test('drop-attribute removes adjacent matches in one list with their separators', () => {
+  const r = one('class C {\n    [Obsolete, Foo, Bar.Foo] void M() {}\n    [Foo, Foo, Obsolete, FooAttribute] void N() {}\n    [Obsolete, Foo, Serializable] void P() {}\n}\n',
+    { op: 'drop-attribute', attribute: 'Foo' });
+  assert.equal(r.results[0].error, null);
+  assert.equal(r.results[0].hits, 6);
+  assert.equal(r.text, 'class C {\n    [Obsolete] void M() {}\n    [Obsolete] void N() {}\n    [Obsolete, Serializable] void P() {}\n}\n');
+});
+
+test('code under #if DEBUG is transformed; a target in code an #if leaves out fails the op', () => {
+  const text = 'class C {\n#if DEBUG\n    WinUI.Border a;\n#else\n    WinUI.Border b;\n#endif\n    WinUI.Border c;\n}\n';
+  const r = one(text, { op: 'retarget-type', from: 'WinUI.Border', to: 'Border' });
+  assert.match(r.results[0].error, /Border also appears in code an #if leaves out \(line 5\), which retarget-type can't see: use a text rule/);
+  const ok = one(text.replace('    WinUI.Border b;\n', '    int b;\n'), { op: 'retarget-type', from: 'WinUI.Border', to: 'Border' });
+  assert.equal(ok.results[0].hits, 2);
+  assert.equal(ok.text, 'class C {\n#if DEBUG\n    Border a;\n#else\n    int b;\n#endif\n    Border c;\n}\n');
+});
+
+test('drop-member names a field declared with others, rather than reporting it missing', () => {
+  const r = one('class Host {\n    int a, b;\n}\n', { op: 'drop-member', type: 'Host', member: 'b' });
+  assert.match(r.results[0].error, /b is declared with other fields in one declaration/);
+});
+
+test('a Roslyn rule that changes nothing is not named as applied', () => {
+  const rules = loadTransforms({ rules: [
+    { id: 'same', roslyn: { op: 'retarget-type', from: 'A.B', to: 'A.B' }, files: ['f.cs'] },
+    { id: 'real', roslyn: { op: 'retarget-type', from: 'A.B', to: 'C' }, files: ['f.cs'] },
+  ] });
+  const out = applyRoslyn(rules, [{ p: 'f.cs', tier: 2, text: 'class X { A.B y; }' }]).get('f.cs');
+  assert.deepEqual(out.errors, []);
+  assert.deepEqual(out.applied.map((r) => r.id), ['real']);
+  assert.equal(out.text, 'class X { C y; }');
+});
+
+test('the syntax check compares error codes, so an upstream error that moves a line is not new', () => {
+  const original = 'class C { void M() { } }\n}\n';
+  const r = runRoslyn([{ path: 'f.cs', text: '\n\n' + original, original, ops: [] }])[0];
+  assert.deepEqual(r.errors, []);
 });

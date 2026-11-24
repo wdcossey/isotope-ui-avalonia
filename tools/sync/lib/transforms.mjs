@@ -78,7 +78,12 @@ function loadRoslynRule(r, where) {
   if (r.find !== undefined || r.drop !== undefined || r.replace !== undefined || r.flags !== undefined)
     throw new Error(where + ': needs exactly one of "find" or "drop" (or "roslyn")');
   if (r.glob !== undefined || !Array.isArray(r.files) || !r.files.length) throw new Error(where + ': a "roslyn" rule lists the files it changes');
-  const o = r.roslyn;
+  checkRoslynOp(r.roslyn, where);
+  return { id: r.id, kind: 'roslyn', roslyn: { ...r.roslyn }, why: r.why ?? '', files: r.files, glob: null, globRe: null };
+}
+
+/** Throws unless o is a known Roslyn op with the fields it takes (shared with tools/rewrite-upstream.mjs). */
+export function checkRoslynOp(o, where) {
   if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error(where + ': "roslyn" must be an object {"op", ...}');
   const spec = OPS[o.op];
   if (!spec) throw new Error(where + ': "roslyn" op must be one of ' + Object.keys(OPS).join(', ') + ', not ' + JSON.stringify(o.op));
@@ -88,7 +93,6 @@ function loadRoslynRule(r, where) {
     if (o[k] === undefined && spec.optional.includes(k)) continue;
     if (typeof o[k] !== 'string' || (!o[k].trim() && k !== 'to')) throw new Error(where + ': ' + o.op + ' needs "' + k + '" (a non-empty string)');
   }
-  return { id: r.id, kind: 'roslyn', roslyn: { ...o }, why: r.why ?? '', files: r.files, glob: null, globRe: null };
 }
 
 /**
@@ -116,8 +120,8 @@ export function applyRoslyn(rules, items, run = runRoslyn) {
       else if (x.error) errors.push('transform ' + r.id + ' (roslyn ' + r.roslyn.op + ') ' + x.error + ' in ' + it.p + ': fix the rule in tools/sync/transforms.json, never the vendored file');
     }
     for (const e of f.errors) errors.push(it.p + ': ' + e);
-    // Every op that ran without an error changed the text (a drop blanks lines, a retarget or attribute drop rewrites).
-    const applied = mine.filter((r) => hits[r.id] > 0);
+    // As for text rules, a rule is named in the header only when it changed the text (a retarget to the same name doesn't).
+    const applied = mine.filter((r) => f.results.find((y) => y.id === r.id)?.changed);
     out.set(it.p, { text: f.text, hits, applied, errors });
   });
   return out;
