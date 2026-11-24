@@ -198,8 +198,8 @@ public sealed partial class Reconciler
         public void Dispose() { }
     }
 
-    /// <summary>True during a theme-resource refresh pass. Theme resources are tier 3: never.</summary>
-    internal bool ResourceRefreshActive => false;
+    /// <summary>True during a theme-resource refresh pass (Theme.NotifyResourcesChanged, #41; Reconciler.Theme.cs).</summary>
+    internal bool ResourceRefreshActive => _resourceRefreshActive;
 
     // Unmount isolation (IsolatesUnmountCleanupFailures and the members the handler adapter calls) is in
     // Reconciler.ComponentErrors.cs (#28).

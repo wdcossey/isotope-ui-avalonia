@@ -27,6 +27,9 @@
     <Compile Include="$(UpstreamSrc)Core\HookOrderException.cs" Link="Upstream\Core\HookOrderException.cs" />
     <!-- RenderError, RenderErrorSource, RenderErrorHandler: what the host (#16) hands a render-error handler. -->
     <Compile Include="$(UpstreamSrc)Core\RenderError.cs" Link="Upstream\Core\RenderError.cs" />
+    <!-- Theme tokens (#41): ThemeRef (its Avalonia part in Seam/ThemeRef.Avalonia.cs), Theme, and the hosts that Theme.NotifyResourcesChanged() re-renders. -->
+    <Compile Include="$(UpstreamSrc)Core\Theme.cs" Link="Upstream\Core\Theme.cs" />
+    <Compile Include="$(UpstreamSrc)Core\ThemeResourceListeners.cs" Link="Upstream\Core\ThemeResourceListeners.cs" />
     <Compile Include="$(UpstreamSrc)Core\UIThreadMarshal.cs" Link="Upstream\Core\UIThreadMarshal.cs" />
     <Compile Include="$(UpstreamSrc)Core\WindowPersistedScope.cs" Link="Upstream\Core\WindowPersistedScope.cs" />
     <Compile Include="$(UpstreamSrc)Hosting\WindowKey.cs" Link="Upstream\Hosting\WindowKey.cs" />
