@@ -108,6 +108,16 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A keyed-move test must check that each key keeps its own control:** a wrong Move index left the texts in order,
   because the reconcile updated the swapped rows in place with each other's elements. (2026-11-24)
 
+- **Avalonia's `SelectionChanged` and `PaneOpening`/`PaneClosing` bubble,** so a nested control's event reaches the
+  outer control's handler: check `Source`. A test of this outside a window proves nothing, since untemplated content has
+  no route to its host. (2026-11-24)
+- **Avalonia's menu handler toggles a MenuItem before raising `Click`;** raising `ClickEvent` directly skips that. Click
+  menus through a headless window. (2026-11-24)
+- **A controlled value converted between types** (a double record, a decimal control) must be compared in the control's
+  type, or a write that changes nothing leaves an echo token that swallows the next user change. (2026-11-24)
+- **TabControl always keeps a tab selected,** so adding or removing tabs moves the selection inside the engine's update.
+  (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

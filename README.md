@@ -97,7 +97,7 @@ git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.l
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (569 at `1f078436`; 567 at `28a87225`)
 node spikes/A-engine/run-spike.mjs 4                        # Spike A step 4: + Roslyn rules (502 at `1f078436`)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (917 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (966 tests; needs no upstream/)
 node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
 node tools/sync/test/all.mjs                                # the sync harness's own tests (needs dotnet: the Roslyn step)
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms
