@@ -173,10 +173,12 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Upstream's 32-per-type pool saves nothing. Only an unbounded pool helps (about 17% on a re-key, 50% on a mount,
     from reused templates).
   - #14 is closed without a port.
-- **Keyed moves should use `Controls.Move`.**
-  - Upstream's RemoveAt + Insert detaches every moved row: a reverse takes 193 to 212 ms in a window, and focus is lost.
-  - With `Controls.Move` it takes 7.3 to 10.7 ms, nothing is detached, and focus is kept.
-  - It needs no transform rule, only a tier 3 `IChildCollection` in the seam (#23).
+- **Keyed moves use `Controls.Move`** (#23, `Seam/MovingPanelChildCollection.cs`).
+  - Upstream's RemoveAt + Insert detached every moved row and lost focus: a reverse of 1,000 rows took 136 to 137 ms in
+    a headless window (measured before #23).
+  - With `Controls.Move` it takes 6.7 to 7.1 ms, nothing is detached, and focus is kept (3 invocations of
+    `spikes/I-pooling/Measure`).
+  - A guard test fails when a sync changes upstream's `PanelChildCollection`, since our copy is invisible to `tools/sync`.
   - Report: `docs/spikes/I-pooling-and-moves.md`.
 
 ## More controls (issue #19, 2026-11-24)
