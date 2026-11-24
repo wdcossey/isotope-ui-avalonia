@@ -18,6 +18,7 @@
     "HyperlinkButtonElement": "Avalonia.Controls.HyperlinkButton",
     "BorderElement": "Avalonia.Controls.Border",
     "ScrollViewerElement": "Avalonia.Controls.ScrollViewer",
+    "ScrollViewElement": "Avalonia.Controls.ScrollViewer",
     "ExpanderElement": "Avalonia.Controls.Expander",
     "WrapPanelElement": "Avalonia.Controls.WrapPanel",
     "ViewboxElement": "Avalonia.Controls.Viewbox",
@@ -72,7 +73,7 @@
     {"record": "HyperlinkButtonElement", "reactor": "Content", "avalonia": "Content", "kind": "shape", "note": "Now an object? (it was string): a string or an element."},
     {"record": "HyperlinkButtonElement", "reactor": "ContentElement", "avalonia": "Content", "kind": "shape", "note": "Content and ContentElement are one Content (object?)."},
     {"record": "ScrollViewerElement", "reactor": "Child", "avalonia": "Content", "kind": "rename"},
-    {"record": "ScrollViewerElement", "reactor": "ContentOrientation", "avalonia": ["HorizontalScrollBarVisibility", "VerticalScrollBarVisibility"], "kind": "shape", "note": "Upstream's ScrollView is Avalonia's ScrollViewer here, and its ContentOrientation (WinUI's ScrollingContentOrientation) is the scroll bar visibilities: Vertical, ScrollView's default, is a Disabled horizontal scroll bar; Horizontal a Disabled vertical one; Both leaves both Auto; None disables both."},
+    {"record": "ScrollViewElement", "reactor": "ContentOrientation", "avalonia": ["HorizontalScrollBarVisibility", "VerticalScrollBarVisibility"], "kind": "shape", "note": "Upstream's ScrollView is Avalonia's ScrollViewer here, and its ContentOrientation (WinUI's ScrollingContentOrientation) is the scroll bar visibilities: Vertical, ScrollView's default, is a Disabled horizontal scroll bar; Horizontal a Disabled vertical one; Both leaves both Auto; None disables both."},
     {"record": "ExpanderElement", "reactor": "Header", "avalonia": "Header", "kind": "shape", "note": "Now an object? (it was string): a string or an element."},
     {"record": "ExpanderElement", "reactor": "HeaderContent", "avalonia": "Header", "kind": "shape", "note": "Header and HeaderContent are one Header (object?): a string or an element."},
     {"record": "DatePickerElement", "reactor": "Date", "avalonia": "SelectedDate", "kind": "rename"},
@@ -154,6 +155,7 @@
     {"reactor": "MenuBarElement", "avalonia": "MenuElement", "status": "proposed"},
     {"reactor": "MenuBarItemData", "avalonia": "MenuItemData", "status": "proposed"},
     {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"},
+    {"reactor": "ScrollViewElement", "avalonia": "ScrollViewerElement", "status": "applied", "note": "Upstream's ScrollView is Avalonia's ScrollViewer (#43)."},
     {"reactor": "TreeViewNodeData", "avalonia": "TreeViewItemData", "status": "applied", "note": "A node is Avalonia's TreeViewItem (#43): Header and Items for Content and Children."}
   ],
   "factories": [
@@ -162,7 +164,7 @@
     {"reactor": "NumberBox", "avalonia": "NumericUpDown", "status": "proposed"},
     {"reactor": "AutoSuggestBox", "avalonia": "AutoCompleteBox", "status": "proposed"},
     {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"},
-    {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation); ScrollViewer's horizontal scroll bar is Auto, so add with { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled } for the same layout (#43)."},
+    {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "with": "HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled", "using": "Avalonia.Controls.Primitives", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation): a ScrollViewer with its horizontal scroll bar disabled, which the migration writes (#43)."},
     {"reactor": "TreeNode", "avalonia": "TreeViewItem", "status": "applied", "note": "Avalonia's name for a tree view node (#43)."}
   ]
 }

@@ -13,25 +13,49 @@ public class NextControlsMigrationTests
 
         """;
 
+    // What ScrollView becomes: a ScrollViewer whose content is as wide as the view, as WinUI ScrollView's.
+    const string Disabled = " with { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled })";
+
     [Fact]
-    public void ScrollView_becomes_ScrollViewer_and_its_content_orientation_is_reported()
+    public void ScrollView_becomes_a_ScrollViewer_with_its_layout_and_its_type_is_renamed()
     {
         const string reactor = Usings + """
             static class C
             {
                 public static Element Render() => ScrollView(child: TextBlock("x"));
-                public static Element Sideways() => ScrollView(TextBlock("y")) with { ContentOrientation = default };
+                public static Element Nested() => ScrollView(ScrollView(TextBlock("z"))).Margin(4);
+                public static ScrollViewElement Qualified() => Factories.ScrollView(TextBlock("f"));
             }
             """;
         var before = Migrate.Analyze(reactor).Describe();
         Assert.Contains("ISOMIG009: Factory 'ScrollView' is 'ScrollViewer' in Isotope", before);
+        Assert.Contains("ISOMIG009: Type 'ScrollViewElement' is 'ScrollViewerElement' in Isotope", before);
 
         var fixedText = Migrate.Fix(reactor);
-        Assert.Contains("ScrollViewer(content: TextBlock(\"x\"))", fixedText);
-        Assert.Contains("public static Element Sideways() => ScrollViewer(TextBlock(\"y\")) with { ContentOrientation = default };", fixedText);
-        // Left for a hand fix, with the table's note: the orientation is the scroll bar visibilities.
+        Assert.Contains("using Avalonia.Controls.Primitives;", fixedText);
+        Assert.Contains("Render() => (ScrollViewer(content: TextBlock(\"x\"))" + Disabled + ";", fixedText);
+        Assert.Contains("Nested() => (ScrollViewer((ScrollViewer(TextBlock(\"z\"))" + Disabled + ")" + Disabled + ".Margin(4);", fixedText);
+        Assert.Contains("ScrollViewerElement Qualified() => (Factories.ScrollViewer(TextBlock(\"f\"))" + Disabled + ";", fixedText);
+        Assert.Empty(Migrate.Errors(fixedText));
+        Assert.Empty(Migrate.Analyze(fixedText));
+    }
+
+    [Fact]
+    public void ScrollView_s_content_orientation_is_left_for_a_hand_fix_with_the_table_s_note()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element Sideways() => ScrollView(TextBlock("y")) with { ContentOrientation = default };
+            }
+            """;
+        var fixedText = Migrate.Fix(reactor);
+        Assert.Contains("Sideways() => (ScrollViewer(TextBlock(\"y\"))" + Disabled + " with { ContentOrientation = default };", fixedText);
+        // ScrollViewerElement's own member entries and those of the record it replaced (ScrollViewElement) both apply.
         Assert.Contains(Migrate.Analyze(fixedText).Describe(), d =>
-            d.StartsWith("ISOMIG007: 'ScrollViewerElement.ContentOrientation'", StringComparison.Ordinal) && d.Contains("Disabled horizontal scroll bar", StringComparison.Ordinal));
+            d.StartsWith("ISOMIG007: 'ScrollViewElement.ContentOrientation'", StringComparison.Ordinal) && d.Contains("Disabled horizontal scroll bar", StringComparison.Ordinal));
+        Assert.Contains("ISOMIG006: 'ScrollViewerElement.Child' is 'Content' in Isotope",
+            Migrate.Analyze(Usings + "static class D { static object? C(ScrollViewerElement s) => s.Child; }").Describe());
     }
 
     [Fact]

@@ -55,11 +55,17 @@ public static partial class Factories
         return new GroupElement(buffer.ToArray());
     }
 
-    // As upstream's: an element the render already keyed keeps its key; a null element passes through to the
-    // container's filter, which drops it.
+    // As upstream's: only when T itself is IReactorKeyed (a ForEach over object or another base type keys nothing, so
+    // its rows stay matched by position); an element the render already keyed keeps its key; a null element passes
+    // through to the container's filter, which drops it.
     private static Element AutoKey<T>(Element element, T item)
     {
-        if (element is null || element.Key is not null) return element!;
+        if (!SelfKeyingItem<T>.Supported || element is null || element.Key is not null) return element!;
         return item is IReactorKeyed keyed ? element with { Key = keyed.Key } : element;
+    }
+
+    private static class SelfKeyingItem<T>
+    {
+        internal static readonly bool Supported = typeof(IReactorKeyed).IsAssignableFrom(typeof(T));
     }
 }

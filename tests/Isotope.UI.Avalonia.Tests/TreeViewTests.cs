@@ -95,7 +95,9 @@ public sealed class TreeViewTests : IDisposable
         Assert.False(root.IsExpanded);
 
         root.IsExpanded = true; // the user expands it
-        label = "Root"; // a render that changes nothing about it keeps the user's expansion
+        host.Render(); // a render that changes nothing about it keeps the user's expansion
+        Assert.True(root.IsExpanded);
+        label = "Root (4)"; // and so does a new header on the same node (a live count)
         host.Render();
         Assert.True(root.IsExpanded);
 
@@ -105,6 +107,25 @@ public sealed class TreeViewTests : IDisposable
         expanded = false; // a declared change is written
         host.Render();
         Assert.False(root.IsExpanded);
+    }
+
+    [AvaloniaFact]
+    public void A_node_whose_header_changes_as_its_level_gains_a_node_is_another_node_and_gets_its_declared_expansion()
+    {
+        var archived = false;
+        var host = new TestHost(() =>
+        {
+            TreeViewItemData docs = TreeViewItem("Documents", TreeViewItem("Report.docx"));
+            return TreeView(archived ? [TreeViewItem("Archive", TreeViewItem("Old")), docs] : [docs]);
+        });
+        var first = Item(Tree(host), 0);
+        first.IsExpanded = true; // the user expands Documents
+
+        archived = true; // Archive is inserted before it: the item at 0 now shows Archive, which isn't expanded
+        host.Render();
+        Assert.Same(first, Item(Tree(host), 0));
+        Assert.Equal("Archive", first.Header);
+        Assert.False(first.IsExpanded);
     }
 
     [AvaloniaFact]
@@ -151,6 +172,25 @@ public sealed class TreeViewTests : IDisposable
         window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(["1B", "2B"], invoked);
+    }
+
+    [AvaloniaFact]
+    public void Enter_on_a_parent_node_invokes_it_and_Avalonia_expands_it_which_OnExpanding_hears()
+    {
+        var invoked = new List<string>();
+        var expanding = new List<string>();
+        var host = new TestHost(() => TreeView(TreeViewItem("Parent", TreeViewItem("Child")))
+            with { OnItemInvoked = node => invoked.Add(node.Header), OnExpanding = node => expanding.Add(node.Header) });
+        var window = Show(host);
+        var parent = Item(Tree(host), 0);
+        parent.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(["Parent"], invoked);
+        // Avalonia's TreeViewItem expands a parent on Enter (measured): a user expansion, so OnExpanding is called too.
+        Assert.True(parent.IsExpanded);
+        Assert.Equal(["Parent"], expanding);
     }
 
     [AvaloniaFact]

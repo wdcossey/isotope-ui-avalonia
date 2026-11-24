@@ -57,6 +57,10 @@ public class ConditionalFactoryTests
         Assert.Equal(["0:x", "1:y"], indexed.Children.Select(c => ((TextBlockElement)c).Text));
         Assert.All(indexed.Children, c => Assert.Null(c.Key));
         Assert.Equal(["a", "b"], ((GroupElement)ForEach(todos, (t, _) => TextBlock(t.Title))).Children.Select(c => c.Key));
+
+        // As upstream's, keying follows the item type ForEach is given: over objects, keyed items stay unkeyed too.
+        IEnumerable<object> mixed = [todos[0], "plain"];
+        Assert.All(((GroupElement)ForEach(mixed, o => TextBlock(o.ToString()!))).Children, c => Assert.Null(c.Key));
     }
 
     [AvaloniaFact]

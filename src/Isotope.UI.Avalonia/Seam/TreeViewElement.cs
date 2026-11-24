@@ -15,8 +15,10 @@ namespace Isotope.UI.Core;
 // Header, Items and IsExpanded (upstream's Content, Children, IsExpanded), and the tree's nodes are its Items. Upstream's
 // ContentElement (an element per node, obsolete upstream) and the drag members have no counterpart here. Nodes hold no
 // elements, so they are TreeViewItems built from the data and updated in place by position (TreeItemsSync), as menu
-// items are; upstream rebuilds the tree when its shape changes. A node's IsExpanded is written when its declared value
-// changes, so what the user expands stays expanded until then, as upstream's. OnItemInvoked and OnExpanding keep
+// items are. A node's IsExpanded is written when its declared value changes, so what the user expands stays expanded
+// across renders, also when its header text changes (a live count); when its level gains or loses nodes, a node whose
+// header changed is another node, and gets its declared value. Upstream rebuilds the whole tree from the data whenever
+// any header, expansion or node count changes, so there the user's expansions last only while nothing changes. OnItemInvoked and OnExpanding keep
 // Reactor's names: Avalonia's TreeView has no such events. An item is invoked by a tap on it (not on its expand
 // chevron) or by Enter or Space on it, as WinUI's ItemInvoked; OnExpanding runs on TreeViewItem's Expanded, which comes
 // after the item expands where WinUI's Expanding comes before, and not for the engine's own writes.
@@ -37,7 +39,10 @@ public record TreeViewItemData(string Header, TreeViewItemData[]? Items = null)
 [WrapManual("OnExpanding")]
 public partial record TreeViewElement(TreeViewItemData[] Items) : Element
 {
-    /// <summary>Called with a node's data when the user taps it, or presses Enter or Space on it.</summary>
+    /// <summary>
+    /// Called with a node's data when the user taps it, or presses Enter or Space on it. Enter on a node with children
+    /// also expands it (Avalonia's TreeViewItem does), which <see cref="OnExpanding"/> hears.
+    /// </summary>
     public Action<TreeViewItemData>? OnItemInvoked { get; init; }
 
     /// <summary>Called with a node's data when the user expands it (after it expands): load its children here.</summary>
@@ -147,11 +152,11 @@ internal static class TreeItemsSync
         for (int i = 0; i < data.Length; i++)
         {
             if (i < items.Count && items[i] is TreeViewItem existing)
-                Write(existing, old is not null && i < old.Length ? old[i] : null, data[i]);
+                Write(existing, old is not null && i < old.Length ? old[i] : null, data[i], sameCount: old?.Length == data.Length);
             else
             {
                 var created = new TreeViewItem();
-                Write(created, null, data[i]);
+                Write(created, null, data[i], sameCount: false);
                 if (i < items.Count) items[i] = created;
                 else items.Add(created);
             }
@@ -159,15 +164,16 @@ internal static class TreeItemsSync
         for (int i = items.Count - 1; i >= data.Length; i--) items.RemoveAt(i);
     }
 
-    private static void Write(TreeViewItem item, TreeViewItemData? old, TreeViewItemData data)
+    private static void Write(TreeViewItem item, TreeViewItemData? old, TreeViewItemData data, bool sameCount)
     {
         // The data an item last showed, for one updated in place by an engine that has no old element (a remount).
         old ??= item.GetValue(DataProperty);
         item.SetValue(DataProperty, data);
         if (!Equals(item.Header, data.Header)) item.Header = data.Header;
         // Written when the declared value changes, so the user's expansions stay until then. Items are paired by
-        // position, so an item whose header changed is another item: its value is written.
-        if (old is null || old.IsExpanded != data.IsExpanded || old.Header != data.Header) item.IsExpanded = data.IsExpanded;
+        // position: when the level's node count changed, an item whose header changed is another node, so its value
+        // is written; with the same count it is the same node renamed.
+        if (old is null || old.IsExpanded != data.IsExpanded || (old.Header != data.Header && !sameCount)) item.IsExpanded = data.IsExpanded;
         SyncLevel(ItemsList.Of(item.Items), old?.Items, data.Items ?? []);
     }
 }

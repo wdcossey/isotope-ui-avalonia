@@ -54,7 +54,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         readonly INamespaceSymbol _isotope;
         readonly HashSet<string> _roots;
         readonly Lazy<HashSet<string>> _globalUsings;
-        // Applied type renames, Isotope name -> Reactor name, so a renamed record still finds its member entries.
+        // Applied type renames, Isotope name -> Reactor name, so a renamed record still finds its member entries. A record
+        // that is also a Reactor name (ScrollViewerElement, which ScrollViewElement became) finds its own entries first.
         readonly Dictionary<string, string> _recordAliases = new(StringComparer.Ordinal);
 
         public Session(MigrationTables tables, Compilation compilation, INamespaceSymbol isotope)
@@ -444,7 +445,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     var location = simple.Identifier.GetLocation();
                     if (info.Symbol is null && info.CandidateSymbols.IsEmpty && Unbound(model, simple))
                     {
-                        FactoryCall(ctx, name, location);
+                        FactoryCall(ctx, name, location, inv);
                         return;
                     }
                     if (info.Symbol is null) NamedArguments(ctx, inv, name, info.CandidateSymbols);
@@ -457,7 +458,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     var info = model.GetSymbolInfo(inv, ctx.CancellationToken);
                     if (receiver == "Factories" && info.Symbol is null && info.CandidateSymbols.IsEmpty
                         && model.GetSymbolInfo(ma.Expression, ctx.CancellationToken).Symbol is INamedTypeSymbol factories && IsIsotope(factories))
-                        FactoryCall(ctx, name, ma.Name.Identifier.GetLocation());
+                        FactoryCall(ctx, name, ma.Name.Identifier.GetLocation(), inv);
                     else if (receiver == "Factories" && info.Symbol is null) NamedArguments(ctx, inv, name, info.CandidateSymbols);
                     else if (receiver == "ReactorApp") Hosting(ctx, inv, name, info);
                     else if (receiver == "Application" && name == "Start" && info.Symbol is null)
@@ -468,12 +469,22 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         }
 
         /// <summary>An unbound factory call: a factory the table renamed or removed, or a control Isotope lacks.</summary>
-        void FactoryCall(SyntaxNodeAnalysisContext ctx, string name, Location location)
+        void FactoryCall(SyntaxNodeAnalysisContext ctx, string name, Location location, InvocationExpressionSyntax inv)
         {
             var factory = _t.Renames.Factories.FirstOrDefault(f => f.Applied && f.Reactor == name);
             if (factory is not null)
             {
                 if (factory.Avalonia is null) Report(ctx, Rules.NameRemoved, location, args: ["Factory", name, factory.Note ?? ""]);
+                else if (factory.With is { } with)
+                {
+                    // The whole call, renamed and given the initializer, in one edit: an edit inside it waits for the next
+                    // run of the fix, so the parentheses can't be split.
+                    var text = inv.ToString();
+                    var at = location.SourceSpan.Start - inv.SpanStart;
+                    var renamed = text.Substring(0, at) + factory.Avalonia + text.Substring(at + name.Length);
+                    Report(ctx, Rules.NameRenamed, inv.GetLocation(), replace: "(" + renamed + " with { " + with + " })",
+                        usings: factory.Using is { } ns ? [ns] : null, args: ["Factory", name, factory.Avalonia]);
+                }
                 else Report(ctx, Rules.NameRenamed, location, replace: factory.Avalonia, args: ["Factory", name, factory.Avalonia]);
             }
             else if (_t.Controls.Factories.TryGetValue(name, out var control))
@@ -579,12 +590,14 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         {
             for (ITypeSymbol? t = type; t is not null; t = t.BaseType)
             {
-                var name = _recordAliases.TryGetValue(t.Name, out var reactor) ? reactor! : t.Name;
-                var entry = _t.Renames.Members.FirstOrDefault(m => m.Record == name && m.Reactor == member);
-                if (entry is not null)
+                foreach (var name in _recordAliases.TryGetValue(t.Name, out var reactor) ? [t.Name, reactor!] : new[] { t.Name })
                 {
-                    record = name;
-                    return entry;
+                    var entry = _t.Renames.Members.FirstOrDefault(m => m.Record == name && m.Reactor == member);
+                    if (entry is not null)
+                    {
+                        record = name;
+                        return entry;
+                    }
                 }
             }
             record = type.Name;

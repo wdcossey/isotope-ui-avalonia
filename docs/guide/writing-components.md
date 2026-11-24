@@ -37,7 +37,7 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 | `Progress(value)`, `ProgressIndeterminate()` | `ProgressElement` | `ProgressBar` |
 | `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
 | `Border(child)` | `BorderElement` | `Border` |
-| `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` (Reactor's `ScrollView` too: set `HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled` for its layout, content as wide as the view) |
+| `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` (Reactor's `ScrollView` is one with `HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled`, content as wide as the view; the migration writes it) |
 | `Viewbox(child)` | `ViewboxElement` | `Viewbox` |
 | `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.Header(element)` for an element header) |
 | `TabView(selectedIndex, onSelectedIndexChanged, Tab(header, content), ...)`, `TabView(Tab(...), ...)` | `TabViewElement` | `TabControl` (a `TabItem` per tab) |
