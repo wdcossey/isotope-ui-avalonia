@@ -73,7 +73,7 @@ const ALLOWED = {
 export function parseArgs(argv) {
   const o = { command: 'all', dryRun: false, fetch: true, help: false };
   let i = 0;
-  if (argv[0] in ALLOWED && argv[0] !== 'all') o.command = argv[i++];
+  if (Object.hasOwn(ALLOWED, argv[0] ?? '') && argv[0] !== 'all') o.command = argv[i++];
   const allowed = ALLOWED[o.command];
   for (; i < argv.length; i++) {
     const a = argv[i];
@@ -83,7 +83,7 @@ export function parseArgs(argv) {
     if (name === 'dry-run') o.dryRun = true;
     else if (name === 'no-fetch') o.fetch = false;
     else {
-      if (!argv[i + 1]) throw new Fail(a + ' needs a value');
+      if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new Fail(a + ' needs a value');
       o[name] = argv[++i];
     }
   }
@@ -183,8 +183,9 @@ function rangeOf(old, target, cfg) {
 function upstreamMain({ lock, upstream, fetch, log }) {
   if (!upstream) {
     // From outside the checkout, so its git config (a token for this repo's remote) plays no part.
-    const line = tryRun(() => execFileSync('git', ['ls-remote', lock.repo, 'refs/heads/main'], { cwd: os.tmpdir(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
-    const sha = /^([0-9a-f]{40})\trefs\/heads\/main$/.exec(line ?? '')?.[1];
+    const lines = tryRun(() => execFileSync('git', ['ls-remote', '--heads', lock.repo, 'refs/heads/main'], { cwd: os.tmpdir(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+    // The pattern also matches a branch that ends in it (release/refs/heads/main), so take the exact line.
+    const sha = (lines ?? '').split('\n').map((l) => /^([0-9a-f]{40})\trefs\/heads\/main$/.exec(l.trim())?.[1]).find(Boolean);
     if (!sha) throw new Fail('could not read main of ' + lock.repo + ' (git ls-remote)');
     return sha;
   }
@@ -259,7 +260,7 @@ export async function prepare(opts, { log = console.log } = {}) {
   const git = gitIn(repo);
   const syncScript = opts.syncScript ?? path.join(repo, 'tools', 'sync', 'sync.mjs');
   const inside = path.relative(repo, out);
-  if (!inside || (!inside.startsWith('..') && !path.isAbsolute(inside))) throw new Fail('--out must be outside the repo (the checkout is cleaned after the sync)');
+  if (!inside || (inside !== '..' && !inside.startsWith('..' + path.sep) && !path.isAbsolute(inside))) throw new Fail('--out must be outside the repo (the checkout is cleaned after the sync)');
 
   const lock = readLockText(readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8'));
   let target = opts.target;
@@ -277,8 +278,10 @@ export async function prepare(opts, { log = console.log } = {}) {
   const base = git('rev-parse', 'HEAD');
   // The branch to return to, or the commit when HEAD is detached.
   const start = tryRun(() => git('symbolic-ref', '--quiet', '--short', 'HEAD')) || base;
+  let made = false; // the local branch is deleted afterwards only if this run made it
   try {
     git('checkout', '--quiet', '-b', r.branch);
+    made = true;
     const sync = spawnSync(process.execPath, [syncScript, target, '--commit', '--no-fetch', '--no-checkout', '--repo', repo, '--upstream', upstream],
       { encoding: 'utf8', maxBuffer: 1 << 28 });
     if (sync.stdout) log(sync.stdout.trimEnd());
@@ -300,7 +303,7 @@ export async function prepare(opts, { log = console.log } = {}) {
     tryRun(() => git('reset', '--quiet', '--hard'));
     tryRun(() => git('clean', '--quiet', '-fd'));
     tryRun(() => git('checkout', '--quiet', start));
-    tryRun(() => git('branch', '--quiet', '-D', r.branch));
+    if (made) tryRun(() => git('branch', '--quiet', '-D', r.branch));
   }
 }
 

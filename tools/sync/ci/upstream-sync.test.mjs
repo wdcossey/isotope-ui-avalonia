@@ -376,6 +376,17 @@ test('the command runs when it is reached through a linked folder (a junction on
   }
 });
 
+test('a local branch with the sync branch\'s name is refused and kept, never deleted', async () => {
+  const f = fixture();
+  try {
+    const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    f.git('branch', 'sync/' + range(f.base, next));
+    await assert.rejects(f.job({ dryRun: true }), /already exists/);
+    assert.equal(f.git('branch', '--list', 'sync/*').trim(), 'sync/' + range(f.base, next));
+    assert.equal(f.git('rev-parse', '--abbrev-ref', 'HEAD'), 'main');
+  } finally { f.cleanup(); }
+});
+
 test('a dirty working tree is refused before anything is written', async () => {
   const f = fixture();
   try {
@@ -424,6 +435,8 @@ test('arguments: unknown ones, and options of the other phase, are refused', () 
   assert.throws(() => parseArgs(['plan', '--out', 'o']), /unknown argument --out for plan/);
   assert.throws(() => parseArgs(['--push']), /unknown argument --push/);
   assert.throws(() => parseArgs(['--repo']), /needs a value/);
+  assert.throws(() => parseArgs(['publish', '--target', '--dry-run', '--bundle', 'b']), /--target needs a value/);
+  assert.throws(() => parseArgs(['constructor']), /unknown argument constructor/);
   assert.throws(() => parseArgs(['prepare', '--dry-run', '--out', 'o']), /unknown argument --dry-run for prepare/);
   assert.throws(() => parseArgs(['publish', '--upstream', 'u', '--target', 't']), /unknown argument --upstream for publish/);
   assert.throws(() => parseArgs(['--out', 'o']), /unknown argument --out/);
@@ -698,6 +711,7 @@ test('prepare refuses an --out folder inside the repo, which its clean-up would 
   try {
     f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
     await assert.rejects(prepare({ repo: f.repo, upstream: f.up, fetch: false, out: path.join(f.repo, 'out') }, { log: () => {} }), /--out must be outside the repo/);
+    await assert.rejects(prepare({ repo: f.repo, upstream: f.up, fetch: false, out: path.join(f.repo, '..out') }, { log: () => {} }), /--out must be outside the repo/);
   } finally { f.cleanup(); }
 });
 
@@ -756,6 +770,7 @@ test('plan with no upstream cache asks the lock\'s repo for its main (git ls-rem
     const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
     const lock = readFileSync(path.join(f.repo, 'UPSTREAM.lock'), 'utf8').replace(/^repo=.*$/m, 'repo=' + f.up);
     writeFileSync(path.join(f.repo, 'UPSTREAM.lock'), lock);
+    f.gitAt(f.up, 'branch', 'release/refs/heads/main', f.base); // ls-remote's pattern matches it too
     const r = await plan({ repo: f.repo, dryRun: true }, { log: () => {} });
     assert.equal(r.new, next);
     assert.equal(r.status, 'build');
