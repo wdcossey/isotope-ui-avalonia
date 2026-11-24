@@ -53,21 +53,32 @@ function gitIn(dir) {
 }
 const tryRun = (f) => { try { return f(); } catch { return null; } };
 
-/** The GitHub REST API: api(method, path, body) resolves the parsed JSON (null for an empty reply). */
-export function githubApi({ token, apiUrl = 'https://api.github.com' }) {
+/** The GitHub REST API: api(method, path, body) resolves the parsed JSON (null for an empty reply). A GET that returns a
+ * list follows its "Link: rel=next" pages and resolves them all, so a search of the issues sees every one. */
+export function githubApi({ token, apiUrl = 'https://api.github.com', fetchImpl = fetch }) {
+  const base = apiUrl.replace(/\/+$/, '');
   return async (method, p, body) => {
-    const res = await fetch(apiUrl.replace(/\/+$/, '') + p, {
-      method,
-      headers: {
-        Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'isotope-upstream-sync',
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Fail(method + ' ' + p + ' failed: HTTP ' + res.status + ' ' + text.slice(0, 300));
-    return text ? JSON.parse(text) : null;
+    let url = base + p;
+    let all = null;
+    for (;;) {
+      const res = await fetchImpl(url, {
+        method,
+        headers: {
+          Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'isotope-upstream-sync',
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Fail(method + ' ' + p + ' failed: HTTP ' + res.status + ' ' + text.slice(0, 300));
+      const data = text ? JSON.parse(text) : null;
+      if (method !== 'GET' || !Array.isArray(data)) return data;
+      all = (all ?? []).concat(data);
+      const next = /<([^>]+)>;\s*rel="next"/.exec(res.headers.get('link') ?? '')?.[1];
+      if (!next) return all;
+      url = next;
+    }
   };
 }
 
@@ -78,11 +89,15 @@ export function neutralise(markdown, ownUrl) {
   const own = ownUrl ? ownUrl.replace(/\/+$/, '') + '/' : null;
   const isOwn = (url) => own !== null && (url + '/').startsWith(own);
   const wrap = (s) => (s.includes('\x60') ? '\x60\x60 ' + s + ' \x60\x60' : '\x60' + s + '\x60');
-  const plain = (text) => text
-    .replace(/\[([^\]\n]*)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, url) => (isOwn(url) ? m : wrap(label || url)))
-    .replace(/(?<![\w\x60]|\]\()https?:\/\/[^\s<>()\x60|]*[^\s<>()\x60|.,;:!?'"]/g, (url) => (isOwn(url) ? url : wrap(url)))
-    .replace(/(?<![\w\x60/])(?:[\w.-]+\/[\w.-]+)?[#@][A-Za-z0-9][\w.-]*/g, (m) => wrap(m));
-  // Split on code spans (a run of backticks up to the same run), and on links to this repo, which stay as they are.
+  // One pass, so nothing a replacement wrapped is matched again: a markdown link, a URL, or a reference/mention.
+  const plain = (text) => text.replace(
+    /\[([^\]\n]*)\]\((https?:\/\/[^)\s]+)\)|(?<![\w\x60])(https?:\/\/[^\s<>()\x60|]*[^\s<>()\x60|.,;:!?'"])|(?<![\w\x60/])((?:[\w.-]+\/[\w.-]+)?[#@][A-Za-z0-9][\w.-]*)/g,
+    (m, label, linkUrl, url, ref) => {
+      if (linkUrl !== undefined) return isOwn(linkUrl) ? m : wrap(label || linkUrl);
+      if (url !== undefined) return isOwn(url) ? url : wrap(url);
+      return wrap(ref);
+    });
+  // Split on code spans (a run of backticks up to the same run), which stay as they are.
   return markdown.split(/(\x60+)([^]*?)(\1)/).reduce((acc, part, i, parts) => {
     const k = i % 4;
     if (k === 0) return acc + plain(part);
@@ -91,12 +106,12 @@ export function neutralise(markdown, ownUrl) {
   }, '');
 }
 
-export function issueBody({ report, branch, reportPath, serverUrl, repoSlug, runUrl, ci, superseded = [] }) {
+export function issueBody({ report, branch, base = 'main', reportPath, serverUrl, repoSlug, runUrl, ci, superseded = [] }) {
   const ownUrl = serverUrl + '/' + repoSlug;
   const L = [];
   L.push('Opened by the \x60upstream-sync\x60 workflow' + (runUrl ? ' ([run](' + runUrl + '))' : '') + '.', '');
   L.push('- **Branch:** [\x60' + branch + '\x60](' + ownUrl + '/tree/' + branch + '): one commit with the regenerated files, ' +
-    '\x60UPSTREAM.lock\x60 and the report ([compare](' + ownUrl + '/compare/main...' + branch + ')).');
+    '\x60UPSTREAM.lock\x60 and the report ([compare](' + ownUrl + '/compare/' + base + '...' + branch + ')).');
   L.push('- **CI:** ' + (ci.ok ? 'dispatched on the branch ([runs](' + ownUrl + '/actions/workflows/' + CI_WORKFLOW + '?query=branch%3A' +
     encodeURIComponent(branch) + ')).' : 'not dispatched (' + ci.error + '): run \x60ci\x60 on the branch by hand.'));
   L.push('- **Report:** [\x60' + reportPath + '\x60](' + ownUrl + '/blob/' + branch + '/' + reportPath + '). Its upstream links work ' +
@@ -105,7 +120,8 @@ export function issueBody({ report, branch, reportPath, serverUrl, repoSlug, run
     ': close it once this one is merged.');
   L.push('', 'To finish: port what applies from the tier 3 PRs, check the new paths\' tiers, build and test the branch, then merge it.', '', '---', '');
   let body = neutralise(report, ownUrl);
-  if (body.length > ISSUE_LIMIT) body = body.slice(0, ISSUE_LIMIT) + '\n\n… (cut: the whole report is the file on the branch)\n';
+  // Cut at a line end, so no code span is left open (the report's spans never cross a line).
+  if (body.length > ISSUE_LIMIT) body = body.slice(0, body.lastIndexOf('\n', ISSUE_LIMIT) + 1) + '\n… (cut: the whole report is the file on the branch)\n';
   return L.join('\n') + '\n' + body;
 }
 
@@ -155,7 +171,7 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
   // and is not opened again. A branch with no issue is a run that failed after its push: open the issue now.
   if (existing) {
     log('already done: issue #' + existing.number + ' (' + existing.state + ') is for this range' + (onRemote ? ', and ' + branch + ' is pushed' : '') + '; nothing to do');
-    return { status: 'exists', branch, issue: existing.number, old: baseline, new: target };
+    return { status: 'exists', branch, issue: existing.number, issueState: existing.state, pushed: onRemote, old: baseline, new: target };
   }
 
   let report;
@@ -172,6 +188,9 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
       { encoding: 'utf8', maxBuffer: 1 << 28 });
     if (sync.stdout) log(sync.stdout.trimEnd());
     if (sync.status !== 0) {
+      // The tree was clean, so whatever the sync wrote before it failed goes (ignored files such as upstream/ stay).
+      tryRun(() => git('reset', '--quiet', '--hard'));
+      tryRun(() => git('clean', '--quiet', '-fd'));
       tryRun(() => git('checkout', '--quiet', start));
       tryRun(() => git('branch', '--quiet', '-D', branch));
       throw new Fail('tools/sync failed (exit ' + sync.status + '); nothing was pushed or opened:\n' + (sync.stderr || sync.error?.message || '').trimEnd());
@@ -180,7 +199,7 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
   }
 
   const superseded = (issues ?? []).filter((i) => i.state === 'open' && i.title !== title && i.title.startsWith('Upstream sync '));
-  const bodyFor = (ci) => issueBody({ report, branch, reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
+  const bodyFor = (ci) => issueBody({ report, branch, base: start, reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
   if (opts.dryRun) {
     log('dry run: would ' + (onRemote ? '' : 'push ' + branch + ', ') + 'dispatch ' + CI_WORKFLOW + ' on it and open the issue "' + title + '"' +
       (superseded.length ? ' (superseding #' + superseded.map((i) => i.number).join(', #') + ')' : ''));
@@ -203,10 +222,10 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
   return { status: 'opened', branch, issue: issue.number, ci: ci.ok, old: baseline, new: target };
 }
 
-function summarise(r) {
+export function summarise(r) {
   const head = {
     'up-to-date': 'Upstream main is the commit in UPSTREAM.lock (' + short(r.new) + '): nothing to do.',
-    exists: 'Already done: \x60' + r.branch + '\x60 is pushed and #' + r.issue + ' is open for it.',
+    exists: 'Already done: #' + r.issue + ' (' + r.issueState + ') is for this range' + (r.pushed ? ', and \x60' + r.branch + '\x60 is pushed' : ', and its branch is gone') + '.',
     'dry-run': 'Dry run: upstream moved ' + short(r.old) + ' → ' + short(r.new) + '. Nothing was pushed or opened.',
     opened: 'Upstream moved ' + short(r.old) + ' → ' + short(r.new) + ': pushed \x60' + r.branch + '\x60 and opened #' + r.issue + '.' +
       (r.ci ? '' : ' CI could not be dispatched on it.'),

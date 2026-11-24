@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runJob, neutralise, issueBody, parseArgs, Fail } from './upstream-sync.mjs';
+import { runJob, neutralise, issueBody, parseArgs, githubApi, summarise, Fail } from './upstream-sync.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(here, 'upstream-sync.mjs');
@@ -269,6 +269,55 @@ test('an older open sync issue is named as superseded', async () => {
   } finally { f.cleanup(); }
 });
 
+test('a sync that fails after writing leaves the checkout clean', async () => {
+  const f = fixture();
+  try {
+    f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    // tools/sync writes the files, then its commit is refused.
+    writeFileSync(path.join(f.repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    await assert.rejects(f.job({ dryRun: true }), /tools\/sync failed/);
+    assert.equal(f.git('status', '--porcelain'), '');
+    assert.equal(f.git('rev-parse', '--abbrev-ref', 'HEAD'), 'main');
+    assert.equal(f.git('branch', '--list', 'sync/*'), '');
+  } finally { f.cleanup(); }
+});
+
+test('the issue compares the sync branch with the branch it was made from', async () => {
+  const f = fixture();
+  try {
+    f.git('checkout', '-q', '-b', 'trunk');
+    const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    const r = await f.job({ dryRun: true });
+    assert.ok(r.body.includes('/compare/trunk...sync/' + range(f.base, next) + ')'), r.body);
+  } finally { f.cleanup(); }
+});
+
+test('the step summary says what an existing range\'s issue and branch are', () => {
+  const r = { status: 'exists', branch: 'sync/a-b', issue: 7, old: 'a'.repeat(40), new: 'b'.repeat(40) };
+  assert.match(summarise({ ...r, issueState: 'closed', pushed: false }), /#7 \(closed\) is for this range, and its branch is gone\./);
+  assert.match(summarise({ ...r, issueState: 'open', pushed: true }), /#7 \(open\) is for this range, and \x60sync\/a-b\x60 is pushed\./);
+});
+
+test('a GET of a list follows the Link pages; other replies are returned as they are', async () => {
+  const pages = {
+    'https://api.invalid/repos/o/r/issues?per_page=2': { body: [{ n: 1 }, { n: 2 }], link: '<https://api.invalid/repos/o/r/issues?per_page=2&page=2>; rel="next", <https://api.invalid/x>; rel="last"' },
+    'https://api.invalid/repos/o/r/issues?per_page=2&page=2': { body: [{ n: 3 }], link: '<https://api.invalid/repos/o/r/issues?per_page=2>; rel="first"' },
+    'https://api.invalid/repos/o/r/issues': { body: { number: 9 }, link: '<https://api.invalid/never>; rel="next"' },
+  };
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push(init.method + ' ' + url);
+    assert.equal(init.headers.Authorization, 'Bearer t');
+    const p = pages[url];
+    return { ok: !!p, status: p ? 200 : 404, text: async () => JSON.stringify(p?.body ?? {}), headers: { get: (h) => (h === 'link' ? p?.link ?? null : null) } };
+  };
+  const api = githubApi({ token: 't', apiUrl: 'https://api.invalid/', fetchImpl });
+  assert.deepEqual(await api('GET', '/repos/o/r/issues?per_page=2'), [{ n: 1 }, { n: 2 }, { n: 3 }]);
+  assert.deepEqual(await api('POST', '/repos/o/r/issues', { title: 't' }), { number: 9 });
+  assert.equal(seen.length, 3);
+  await assert.rejects(api('GET', '/missing'), /GET \/missing failed: HTTP 404/);
+});
+
 test('a dirty working tree is refused before anything is written', async () => {
   const f = fixture();
   try {
@@ -289,15 +338,20 @@ test('neutralise puts references, mentions and outside links in code, and leaves
     ['[report](https://github.com/owner/repo/blob/x/r.md) and ' + own + '/issues', '[report](https://github.com/owner/repo/blob/x/r.md) and ' + own + '/issues'],
     ['## Heading, C# and issue#5', '## Heading, C# and issue#5'],
     ['(see https://github.com/up/stream/pull/2) <https://h.invalid/x>', '(see \x60https://github.com/up/stream/pull/2\x60) <\x60https://h.invalid/x\x60>'],
+    // Nothing a replacement wrapped is wrapped again (which would split the span and leave the match live).
+    ['[see up/stream#12](https://x.invalid) and https://h.invalid/?q=up/stream#5', '\x60see up/stream#12\x60 and \x60https://h.invalid/?q=up/stream#5\x60'],
+    // A link whose label is a code span still loses its upstream URL.
+    ['[\x60Foo\x60](https://github.com/up/stream/pull/1650)', '[\x60Foo\x60](\x60https://github.com/up/stream/pull/1650\x60)'],
   ];
   for (const [input, want] of cases) assert.equal(neutralise(input, own), want, input);
 });
 
-test('a very long report is cut in the issue body, which points at the file', () => {
-  const report = '# Upstream sync\n' + '| row |\n'.repeat(20000);
+test('a very long report is cut in the issue body at a line end, and points at the file', () => {
+  const report = '# Upstream sync\n' + '| #1654 | \x60src/a.cs\x60 |\n'.repeat(5000);
   const body = issueBody({ report, branch: 'sync/a-b', reportPath: 'docs/sync/a-b.md', serverUrl: SERVER, repoSlug: SLUG, runUrl: null, ci: { ok: true } });
   assert.ok(body.length < 65536, String(body.length));
   assert.match(body, /cut: the whole report is the file on the branch/);
+  for (const line of body.split('\n')) assert.equal((line.match(/\x60/g) ?? []).length % 2, 0, 'an open code span: ' + line);
   assert.ok(body.includes(SERVER + '/' + SLUG + '/blob/sync/a-b/docs/sync/a-b.md'));
 });
 
