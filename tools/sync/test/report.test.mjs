@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeSubject, prNumber } from '../lib/report.mjs';
+import { sanitizeSubject, prNumber, renderReport } from '../lib/report.mjs';
 import { parseLock, updateLock } from '../lib/lock.mjs';
 import { makeFixture, SAMPLE } from './fixture.mjs';
 
@@ -86,4 +86,13 @@ test('the tier 3 report links PRs and carries no author names or source branches
     assert.doesNotMatch(report, /\b[A-Z]:[\\/]|Users[\\/]|\/tmp\//i, 'no local paths');
     assert.match(report, /3 first-parent commits/);
   } finally { f.cleanup(); }
+});
+
+test('the tier 3 section points a port at the rename table (#31)', () => {
+  const report = renderReport({
+    repoUrl: 'https://example.invalid/upstream', old: { sha: 'a'.repeat(40), date: '2026-01-01' }, new: { sha: 'b'.repeat(40), date: '2026-01-02' },
+    commits: [], changes: [], unclassified: [], delta: { added: [], removed: [], changed: [] }, manifest: { files: [] }, map: { rules: [] }, verify: null,
+  });
+  const tier3 = report.slice(report.indexOf('## Tier 3'), report.indexOf('## Tier 1 and 2'));
+  assert.match(tier3, /tools\/naming\/renames\.json/);
 });
