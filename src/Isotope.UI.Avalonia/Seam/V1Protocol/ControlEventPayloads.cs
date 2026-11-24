@@ -36,6 +36,13 @@ internal sealed class NumberBoxEventPayload
     public EventHandler<Avalonia.Controls.NumericUpDownValueChangedEventArgs>? ValueChangedTrampoline;
 }
 
+/// <summary>The per-control event payload of a <see cref="Avalonia.Controls.SplitView"/> (#26): its pane opening and closing.</summary>
+internal sealed class SplitViewEventPayload
+{
+    public EventHandler<Avalonia.Interactivity.CancelRoutedEventArgs>? PaneOpeningTrampoline;
+    public EventHandler<Avalonia.Interactivity.CancelRoutedEventArgs>? PaneClosingTrampoline;
+}
+
 /// <summary>The per-control event payload of a <see cref="Avalonia.Controls.TabControl"/> (#26): its selection.</summary>
 internal sealed class TabViewEventPayload
 {

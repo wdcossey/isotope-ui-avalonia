@@ -41,6 +41,14 @@ public static partial class Factories
 
     /// <summary>One tab: its header text and its content.</summary>
     public static TabViewItemData Tab(string header, Element content) => new(header, content);
+
+    // ── Split view ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// A pane beside (or over) the content, as an Avalonia <see cref="Avalonia.Controls.SplitView"/>. The pane starts
+    /// open, as upstream's; set <c>IsPaneOpen</c> and <c>OnPaneOpenChanged</c> to drive it from state.
+    /// </summary>
+    public static SplitViewElement SplitView(Element? pane = null, Element? content = null) => new(pane, content);
     // ── Menus ───────────────────────────────────────────────────────
 
     /// <summary>A menu bar, as an Avalonia <see cref="Avalonia.Controls.Menu"/>: <c>MenuBar(Menu("File", MenuItem("Open", open)))</c>.</summary>

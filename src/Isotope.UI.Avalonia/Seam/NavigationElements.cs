@@ -1,11 +1,12 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Isotope.UI.Core.V1Protocol;
 using Isotope.UI.Core.V1Protocol.Descriptor;
 using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// Tabs (#26): upstream's TabView, as an Avalonia TabControl. The record mirrors upstream's (Reactor's member names,
+// Tabs and the split view (#26): upstream's TabView, as an Avalonia TabControl, and SplitView. The record mirrors upstream's (Reactor's member names,
 // Avalonia's value types); members with no Avalonia counterpart (add-tab button, close buttons, tab dragging, strip
 // header and footer) aren't on it. The descriptor is generated; the tabs go through upstream's TabItemsHost strategy
 // (vendored), which keeps each TabItem and reconciles its content in place, so a component in a tab keeps its state.
@@ -68,5 +69,111 @@ public partial record TabViewElement(TabViewItemData[] Tabs) : Element
             trampoline:  __SelectionChangedTrampoline,
             slotIsNull:  static p => p.SelectionChangedTrampoline is null,
             setSlot:     static (p, h) => p.SelectionChangedTrampoline = h);
+    }
+}
+
+/// <summary>
+/// A pane beside (or over) the content, as an Avalonia <see cref="Avalonia.Controls.SplitView"/>. The record mirrors
+/// upstream's (Reactor's member names, Avalonia's value types), with Avalonia's <see cref="PanePlacement"/>; upstream's
+/// LightDismissOverlayMode has no Avalonia counterpart.
+/// </summary>
+/// <remarks>
+/// As upstream's, <see cref="IsPaneOpen"/> is edge-triggered: it is written only when the declared value changes, so a
+/// pane the control closed itself (light dismiss) stays closed when the same value renders again. Feed
+/// <see cref="OnPaneOpenChanged"/> into the state that drives it.
+/// </remarks>
+[GenerateReactorDescriptor(typeof(SplitView), ClearValueOnUnset = true, Exclude = new[] { "PaneOpening", "PaneOpened", "PaneClosing", "PaneClosed" })]
+[WrapManual("Pane")]
+[WrapManual("Content")]
+[WrapManual("IsPaneOpen")]
+public partial record SplitViewElement(Element? Pane = null, Element? Content = null) : Element
+{
+    /// <summary>Whether the pane is open (upstream's default: true). Written only when it changes.</summary>
+    public bool IsPaneOpen { get; init; } = true;
+
+    public double OpenPaneLength { get; init; } = 320;
+    public double CompactPaneLength { get; init; } = 48;
+    public SplitViewDisplayMode DisplayMode { get; init; } = SplitViewDisplayMode.Overlay;
+
+    /// <summary>The brush behind the pane; null keeps the theme's.</summary>
+    public Avalonia.Media.IBrush? PaneBackground { get; init; }
+
+    /// <summary>Which side the pane is on; null keeps Avalonia's default (left). Avalonia's member.</summary>
+    public SplitViewPanePlacement? PanePlacement { get; init; }
+
+    /// <summary>Called with true when the pane starts to open and false when it starts to close, for the user's actions only.</summary>
+    public Action<bool>? OnPaneOpenChanged { get; init; }
+
+    internal Action<SplitView>[] Setters { get; init; } = [];
+
+    internal override bool HasCallbacks => OnPaneOpenChanged is not null;
+
+    // PaneOpening and PaneClosing are bubbling routed events on Avalonia: a SplitView in the pane raises them on this one
+    // too, so only this control's own are reported. Avalonia raises them inside an IsPaneOpen write, which the engine
+    // makes in an echo-suppression scope.
+    private static readonly EventHandler<CancelRoutedEventArgs> __PaneOpeningTrampoline = (s, args) => Report((SplitView)s!, args, true);
+
+    private static readonly EventHandler<CancelRoutedEventArgs> __PaneClosingTrampoline = (s, args) => Report((SplitView)s!, args, false);
+
+    private static void Report(SplitView view, CancelRoutedEventArgs args, bool open)
+    {
+        if (!ReferenceEquals(args.Source, view)) return;
+        if (!Reconciler.TryGetReactorState(view, out var state)) return;
+        if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
+        (state.Element as SplitViewElement)?.OnPaneOpenChanged?.Invoke(open);
+    }
+
+    // As upstream's: Pane and Content are named slots, reconciled in place; IsPaneOpen edge-triggered; the two events
+    // share one payload (a control holds one). Unlike upstream's, the engine's own IsPaneOpen write doesn't reach
+    // OnPaneOpenChanged.
+    private static partial ControlDescriptor<SplitViewElement, SplitView> Customize(ControlDescriptor<SplitViewElement, SplitView> d)
+    {
+        d.Children = new NamedSlots<SplitViewElement, SplitView>(new[]
+        {
+            new NamedSlot<SplitViewElement, SplitView>(
+                Name: "Pane",
+                GetChild: static e => e.Pane,
+                SetChild: static (c, ui) => c.Pane = ui)
+            {
+                GetCurrentChild = static c => c.Pane as Control,
+            },
+            new NamedSlot<SplitViewElement, SplitView>(
+                Name: "Content",
+                GetChild: static e => e.Content,
+                SetChild: static (c, ui) => c.Content = ui)
+            {
+                GetCurrentChild = static c => c.Content as Control,
+            },
+        });
+        return d
+            .ImperativeBridged(
+                mount:  static (ctx, c, e) => WriteIsPaneOpen(c, e.IsPaneOpen),
+                update: static (ctx, c, o, n) =>
+                {
+                    if (o.IsPaneOpen != n.IsPaneOpen) WriteIsPaneOpen(c, n.IsPaneOpen);
+                })
+            .HandCodedEvent<V1Protocol.SplitViewEventPayload, EventHandler<CancelRoutedEventArgs>>(
+                subscribe:       static (c, h) => c.PaneOpening += h,
+                callbackPresent: static e => e.OnPaneOpenChanged,
+                trampoline:      __PaneOpeningTrampoline,
+                slotIsNull:      static p => p.PaneOpeningTrampoline is null,
+                setSlot:         static (p, h) => p.PaneOpeningTrampoline = h)
+            .HandCodedEvent<V1Protocol.SplitViewEventPayload, EventHandler<CancelRoutedEventArgs>>(
+                subscribe:       static (c, h) => c.PaneClosing += h,
+                callbackPresent: static e => e.OnPaneOpenChanged,
+                trampoline:      __PaneClosingTrampoline,
+                slotIsNull:      static p => p.PaneClosingTrampoline is null,
+                setSlot:         static (p, h) => p.PaneClosingTrampoline = h);
+    }
+
+    // The events the write raises are echoes: dropped in a scope rather than by a token, so a write the control
+    // doesn't act on leaves nothing behind.
+    private static void WriteIsPaneOpen(SplitView c, bool open)
+    {
+        if (c.IsPaneOpen == open) return;
+        var state = Reconciler.GetOrCreateReactorState(c);
+        state.EchoSuppressScopeDepth++;
+        try { c.IsPaneOpen = open; }
+        finally { state.EchoSuppressScopeDepth--; }
     }
 }
