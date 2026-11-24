@@ -72,17 +72,21 @@ const dllWithEmbeddedPdb = (p = pdb()) => {
 function nuspec(spec, over = {}) {
   const m = { authors: 'The Isotope.UI.Avalonia authors', tags: 'avalonia ui react hooks declarative mvu', projectUrl: URL,
     repository: '<repository type="git" url="' + URL + '.git" commit="' + COMMIT + '" />', version: VERSION, extra: '', ...over };
-  const deps = spec.dependsOn.map((id) => '<dependency id="' + id + '" version="' + (over.depVersion ?? m.version) + '"' + (over.depExclude ? ' exclude="' + over.depExclude + '"' : '') + ' />').join('\n');
+  const deps = [...spec.dependsOn, ...(over.extraDeps ?? [])].map((id) => '<dependency id="' + id + '" version="' + (over.depVersion ?? m.version) + '"' + (over.depExclude ? ' exclude="' + over.depExclude + '"' : '') + ' />').join('\n');
   return '<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">\n  <metadata>\n' +
     '    <id>' + spec.id + '</id>\n    <version>' + m.version + '</version>\n    <authors>' + m.authors + '</authors>\n' +
     (spec.analyzerOnly ? '    <developmentDependency>true</developmentDependency>\n' : '') +
+    (spec.tool && !over.noToolType ? '    <packageTypes>\n      <packageType name="DotnetTool" />\n    </packageTypes>\n' : '') +
     '    <license type="expression">MIT</license>\n    <readme>README.md</readme>\n    <projectUrl>' + m.projectUrl + '</projectUrl>\n' +
     '    <description>A package.</description>\n    <tags>' + m.tags + '</tags>\n    ' + m.repository + '\n' + m.extra +
     (deps ? '    <dependencies>\n      <group targetFramework="net10.0">\n' + deps + '\n      </group>\n    </dependencies>\n' : '') +
     '  </metadata>\n</package>';
 }
 
-// The three packages as they must ship; change(id, entries, spec) edits one before it is zipped.
+const toolSettings = (spec, command = spec.tool.command) => '<?xml version="1.0" encoding="utf-8"?>\n<DotNetCliTool Version="1">\n  <Commands>\n' +
+  '    <Command Name="' + command + '" EntryPoint="' + spec.tool.entryPoint + '" Runner="dotnet" />\n  </Commands>\n</DotNetCliTool>';
+
+// The packages as they must ship; change(id, entries, spec) edits one before it is zipped.
 function fixture({ change = () => {}, readme = '# Package\n\nA package.\n', nuspecOver = {} } = {}) {
   const packages = [], symbols = [];
   for (const spec of PACKAGES) {
@@ -91,7 +95,10 @@ function fixture({ change = () => {}, readme = '# Package\n\nA package.\n', nusp
       ['README.md', readme], ['LICENSE', 'MIT'], ['licenses/microsoft-ui-reactor/LICENSE', 'MIT'],
       ['licenses/microsoft-ui-reactor/ThirdPartyNoticeText.txt', 'Yoga, MIT'],
     ]);
-    for (const f of spec.files) entries.set(f, f.endsWith('.dll') && !spec.symbols ? dllWithEmbeddedPdb() : Buffer.from('MZ binary'));
+    const embedded = spec.symbols ? [] : (spec.embedded ?? spec.files.filter((f) => f.endsWith('.dll')));
+    for (const f of spec.files) entries.set(f, embedded.includes(f) ? dllWithEmbeddedPdb() : Buffer.from('MZ binary'));
+    for (const p of spec.pdbs ?? []) entries.set(p, pdb());
+    if (spec.tool) entries.set(spec.tool.settings, toolSettings(spec));
     const sym = spec.symbols ? new Map([[spec.id + '.nuspec', nuspec(spec)], ...spec.symbols.map((p) => [p, pdb()])]) : null;
     change(spec.id, entries, sym);
     const file = spec.id + '.' + VERSION + '.nupkg';
@@ -206,4 +213,28 @@ test("a PDB's source documents must be under the /_/ root, in the symbols and in
 test('the embedded PDB is found in a DLL', () => {
   assert.ok(embeddedPdb(dllWithEmbeddedPdb()).equals(pdb()));
   assert.equal(embeddedPdb(Buffer.from('MZ MPDB garbage')), null);
+});
+
+const TOOL = PACKAGES.find((s) => s.tool);
+
+test('the tool package is a dotnet tool with its command, the library it reads, and nothing it does not run', () => {
+  const tool = (change) => problems({ change: (id, e) => id === TOOL.id && change(e) });
+  has(problems({ nuspecOver: { [TOOL.id]: { noToolType: true } } }), /Mcp.*must have the DotnetTool package type/);
+  has(tool((e) => e.set(TOOL.tool.settings, toolSettings(TOOL, 'isotope'))), /the tool command must be isotope-mcp, not isotope/);
+  has(tool((e) => e.delete(TOOL.tool.settings)), /missing tools\/net10\.0\/any\/DotnetToolSettings\.xml/);
+  has(tool((e) => e.delete('tools/net10.0/any/Isotope.UI.Avalonia.xml')), /Mcp.*missing tools\/net10\.0\/any\/Isotope\.UI\.Avalonia\.xml/);
+  has(tool((e) => e.set('tools/net10.0/any/runtimes/win-x64/native/libSkiaSharp.dll', 'MZ')), /1 native libraries in the tool, e\.g\. tools\/net10\.0\/any\/runtimes\/win-x64\/native\/libSkiaSharp\.dll/);
+  has(tool((e) => e.set('tools/net10.0/any/runtimes/linux-x64/native/libHarfBuzzSharp.so', 'ELF')), /native libraries in the tool/);
+  has(tool((e) => e.set('lib/net10.0/Isotope.UI.Mcp.dll', 'MZ')), /a tool package must have no lib\/ or ref\//);
+  has(problems({ nuspecOver: { [TOOL.id]: { extraDeps: ['Isotope.UI.Avalonia'] } } }), /a tool package must have no dependencies/);
+  // Only the tool is a tool.
+  has(problems({ nuspecOver: { 'Isotope.UI.Avalonia': { extra: '    <packageTypes><packageType name="DotnetTool" /></packageTypes>\n' } } }), /Isotope\.UI\.Avalonia\.0.*only Isotope\.UI\.Mcp is a dotnet tool/);
+});
+
+test("the tool's PDBs, embedded or next to their DLLs, carry SourceLink at the commit", () => {
+  const tool = (change) => problems({ change: (id, e) => id === TOOL.id && change(e) });
+  has(tool((e) => e.set('tools/net10.0/any/Isotope.UI.Avalonia.pdb', pdb('b'.repeat(40)))), /Mcp.*Isotope\.UI\.Avalonia\.pdb: the SourceLink map does not point at the package commit/);
+  has(tool((e) => e.delete('tools/net10.0/any/Isotope.UI.Avalonia.Desktop.pdb')), /Mcp.*missing tools\/net10\.0\/any\/Isotope\.UI\.Avalonia\.Desktop\.pdb/);
+  has(tool((e) => e.set('tools/net10.0/any/Isotope.UI.Mcp.dll', Buffer.from('MZ no pdb'))), /Isotope\.UI\.Mcp\.dll: no embedded PDB/);
+  has(tool((e) => e.set('tools/net10.0/any/Isotope.UI.Avalonia.pdb', pdb(COMMIT, '/_/', ['/_/src/A.cs', LOCAL + '/obj/G.cs']))), /Mcp.*Isotope\.UI\.Avalonia\.pdb: 1 of 2 source documents are outside/);
 });

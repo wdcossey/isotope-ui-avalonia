@@ -10,10 +10,12 @@ nothing is published except by pushing a `v*` tag, and agents never push tags.
 | `Isotope.UI.Avalonia` | The library | `lib/net10.0` (DLL and XML docs), and the wrappers generator in `analyzers/dotnet/cs`, so a consumer's own `[GenerateReactorDescriptor]` records get descriptors as the library's do |
 | `Isotope.UI.Avalonia.Desktop` | The one-line desktop startup | `lib/net10.0`; depends on the library at the same version, declaring every asset (`include="All"`, the generator included) |
 | `Isotope.UI.Migration` | The Reactor → Isotope migration analyzer and code fixes | `analyzers/dotnet/cs` only; a development dependency with no dependencies |
+| `Isotope.UI.Mcp` | The MCP server for coding agents (#60), a `dotnet tool` with the command `isotope-mcp` | `tools/net10.0/any`: the tool and everything it runs, the library's and desktop startup's DLLs and XML docs (which it reads) and the migration among them; no dependencies, and no native libraries (it never runs Avalonia) |
 
 Each also carries its README (next to its project file), this repository's `LICENSE`, and upstream's licence and
 third-party notices under `licenses/microsoft-ui-reactor/`, since the packages ship upstream's code (Yoga included).
-The library and desktop packages have `.snupkg` symbol packages; the migration analyzer's PDB is embedded in its DLL.
+The library and desktop packages have `.snupkg` symbol packages; the migration analyzer's PDB is embedded in its DLL,
+and the tool's own PDB in its DLL, with the library's and desktop startup's PDBs next to their DLLs in the tool.
 
 Metadata lives in `src/Directory.Build.props` and `src/Directory.Build.targets` (only the projects under `src/`):
 `Authors` is "The Isotope.UI.Avalonia authors", the licence is the `MIT` expression, and the repository URL and
@@ -41,7 +43,8 @@ node --test tools/packaging/test/*.test.mjs   # the checks' own tests (no dotnet
 The script packs with `ContinuousIntegrationBuild`, which maps source paths to `/_/`, so no local path reaches a DLL
 or PDB; a plain `dotnet pack` of a package fails on purpose and says so. Then it checks each package (layout,
 metadata, the Isotope dependencies, SourceLink in every PDB at the package's commit, personal data in the nuspecs and
-READMEs, local paths in every DLL, and every PDB's source documents under the deterministic `/_/` root), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
+READMEs, local paths in every DLL, every PDB's source documents under the deterministic `/_/` root, and the tool package's type,
+command, contents and lack of native libraries), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
 packages alone: a fresh packages folder, and a `nuget.config` that takes `Isotope.UI.*` from the packed folder only (never
 nuget.org's copy of the same version):
 
@@ -49,6 +52,8 @@ nuget.org's copy of the same version):
   only compiles if the bundled generator ran, and the desktop package's default app builder, set up headless. It
   references only the desktop package and builds with the consumer's default C# version and warnings as errors.
 - `Migration`: `dotnet format analyzers` must find `ISOMIG001` and offer its fix, from the analyzer package.
+- The MCP tool: installed from its package into a temporary `--tool-path` (never globally), started over stdio, it must
+  list its six tools, answer `get_api UseState` with the hook's doc comment, and list the guides as resources.
 
 The default output folder is emptied of earlier builds of these packages first. Another `--out` must be empty or
 new, or given `--clean` to delete earlier builds of these packages in it; a folder holding anything else is refused,
@@ -112,6 +117,9 @@ on nuget.org if it must not be used, and release the next one.
 ## Not done yet
 
 - No package icon (nuget.org shows its default).
+- `release.yml` still counts three packages, so a release fails at its count check now that `pack.mjs` packs four
+  (the MCP tool, #60): whether the tool is published with the others is the developer's call, and the workflow changes
+  with it.
 - No GitHub Release is created for a tag; the packages are the release.
 - The first real run of `release.yml` is the first release: the token exchange and the symbol push have only been
   reviewed, not run.
