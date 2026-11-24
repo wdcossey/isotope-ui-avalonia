@@ -5,8 +5,9 @@ using Isotope.UI.Layout;
 namespace Isotope.UI;
 
 // Our own version (tier 3) of upstream's src/Reactor/Elements/Dsl.cs, for the controls the library has today. The
-// factories keep upstream's names, parameter names and order, and return the same records; their value types are
-// Avalonia's. Add a factory here when its control arrives.
+// factories keep upstream's names and parameter order, and return the same records; their parameter names follow the
+// records' Avalonia member names (#31; tools/naming/renames.json maps Reactor's), and their value types are Avalonia's.
+// Add a factory here when its control arrives.
 
 /// <summary>
 /// The element factories: <c>using static Isotope.UI.Factories;</c> lets a component read as a description of its UI.
@@ -22,28 +23,28 @@ public static partial class Factories
     // ── Text ────────────────────────────────────────────────────────
 
     /// <summary>Text, as an Avalonia <see cref="Avalonia.Controls.TextBlock"/>.</summary>
-    public static TextBlockElement TextBlock(string content) => new(content);
+    public static TextBlockElement TextBlock(string text) => new(text);
 
     // ── Buttons ─────────────────────────────────────────────────────
 
-    /// <summary>A push button with a text label, as an Avalonia <see cref="Avalonia.Controls.Button"/>.</summary>
-    public static ButtonElement Button(string label, Action? onClick = null) => new(label, onClick);
+    /// <summary>A push button with a text content, as an Avalonia <see cref="Avalonia.Controls.Button"/>.</summary>
+    public static ButtonElement Button(string content, Action? onClick = null) => new(content, onClick);
 
     // ── Input ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// A text box. <paramref name="value"/> defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own
-    /// its text, or pass the state's value and <paramref name="onChanged"/> to control it.
+    /// A text box. <paramref name="text"/> defaults to <see cref="Optional{T}.Unset"/>: omit it to let the control own
+    /// its text, or pass the state's value and <paramref name="onTextChanged"/> to control it.
     /// </summary>
-    public static TextBoxElement TextBox(Optional<string> value = default, Action<string>? onChanged = null, string? placeholderText = null)
-        => new(value, onChanged, placeholderText);
+    public static TextBoxElement TextBox(Optional<string> text = default, Action<string>? onTextChanged = null, string? placeholderText = null)
+        => new(text, onTextChanged, placeholderText);
 
     /// <summary>
-    /// A slider from <paramref name="min"/> to <paramref name="max"/>. <paramref name="value"/> defaults to
+    /// A slider from <paramref name="minimum"/> to <paramref name="maximum"/>. <paramref name="value"/> defaults to
     /// <see cref="Optional{T}.Unset"/>: omit it to let the control own its value.
     /// </summary>
-    public static SliderElement Slider(Optional<double> value = default, double min = 0, double max = 100, Action<double>? onValueChanged = null)
-        => new(value, min, max, onValueChanged);
+    public static SliderElement Slider(Optional<double> value = default, double minimum = 0, double maximum = 100, Action<double>? onValueChanged = null)
+        => new(value, minimum, maximum, onValueChanged);
 
     // ── Layout ──────────────────────────────────────────────────────
 

@@ -3,7 +3,8 @@ using Isotope.UI.Core;
 namespace Isotope.UI;
 
 // The factories for number entry and the separator (#26), as part of our own version (tier 3) of upstream's
-// src/Reactor/Elements/Dsl.cs: upstream's names and parameter order, with Avalonia's value types. Separator is
+// src/Reactor/Elements/Dsl.cs: upstream's names and parameter order, with Avalonia's member names as parameter names
+// (#31) and Avalonia's value types. Separator is
 // Avalonia-only, so it has Avalonia's name.
 
 public static partial class Factories

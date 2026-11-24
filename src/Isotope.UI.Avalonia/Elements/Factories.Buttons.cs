@@ -3,9 +3,8 @@ using Isotope.UI.Core;
 namespace Isotope.UI;
 
 // The factories for the button family of #26, as part of our own version (tier 3) of upstream's
-// src/Reactor/Elements/Dsl.cs: upstream's names, parameter names and order, returning the same records, with Avalonia's
-// value types. Each button takes a string or any element as its content. Upstream's Command overloads come when
-// Command binding does.
+// src/Reactor/Elements/Dsl.cs: upstream's names and parameter order, returning the same records, with Avalonia's member
+// names as parameter names (#31) and Avalonia's value types. Each button takes a string or any element as its content.
 
 public static partial class Factories
 {
@@ -17,7 +16,7 @@ public static partial class Factories
     public static ButtonElement Button(Element content, Action? onClick = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return new("", onClick) { ContentElement = content };
+        return new(content, onClick);
     }
 
     /// <summary>
@@ -25,46 +24,40 @@ public static partial class Factories
     /// <paramref name="isChecked"/> is written when it changes; a click toggles the button and calls
     /// <paramref name="onIsCheckedChanged"/>.
     /// </summary>
-    public static ToggleButtonElement ToggleButton(string label, bool isChecked = false, Action<bool>? onIsCheckedChanged = null)
-        => new(label, isChecked, onIsCheckedChanged);
+    public static ToggleButtonElement ToggleButton(string content, bool isChecked = false, Action<bool>? onIsCheckedChanged = null)
+        => new(content, isChecked, TwoState(onIsCheckedChanged));
 
     /// <summary>A toggle button with any element as its content.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is null.</exception>
     public static ToggleButtonElement ToggleButton(Element content, bool isChecked = false, Action<bool>? onIsCheckedChanged = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return new("", isChecked, onIsCheckedChanged) { ContentElement = content };
+        return new(content, isChecked, TwoState(onIsCheckedChanged));
     }
 
     /// <summary>A three-state toggle button: a click cycles checked, unchecked and indeterminate (null).</summary>
-    public static ToggleButtonElement ThreeStateToggleButton(string label, bool? checkedState = null, Action<bool?>? onCheckedStateChanged = null)
-        => new(label, checkedState == true) { IsThreeState = true, CheckedState = checkedState, OnCheckedStateChanged = onCheckedStateChanged };
+    public static ToggleButtonElement ThreeStateToggleButton(string content, bool? isChecked = null, Action<bool?>? onIsCheckedChanged = null)
+        => new(content, isChecked, onIsCheckedChanged) { IsThreeState = true };
 
     /// <summary>A three-state toggle button with any element as its content.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is null.</exception>
-    public static ToggleButtonElement ThreeStateToggleButton(Element content, bool? checkedState = null, Action<bool?>? onCheckedStateChanged = null)
+    public static ToggleButtonElement ThreeStateToggleButton(Element content, bool? isChecked = null, Action<bool?>? onIsCheckedChanged = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return new("", checkedState == true)
-        {
-            ContentElement = content,
-            IsThreeState = true,
-            CheckedState = checkedState,
-            OnCheckedStateChanged = onCheckedStateChanged,
-        };
+        return new(content, isChecked, onIsCheckedChanged) { IsThreeState = true };
     }
 
     /// <summary>
     /// A button whose click repeats while it is held, as an Avalonia <see cref="Avalonia.Controls.RepeatButton"/>.
     /// </summary>
-    public static RepeatButtonElement RepeatButton(string label, Action? onClick = null) => new(label, onClick);
+    public static RepeatButtonElement RepeatButton(string content, Action? onClick = null) => new(content, onClick);
 
     /// <summary>A repeat button with any element as its content.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is null.</exception>
     public static RepeatButtonElement RepeatButton(Element content, Action? onClick = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return new("", onClick) { ContentElement = content };
+        return new(content, onClick);
     }
 
     /// <summary>
@@ -79,6 +72,6 @@ public static partial class Factories
     public static HyperlinkButtonElement HyperlinkButton(Element content, Uri? navigateUri = null, Action? onClick = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return new("", navigateUri, onClick) { ContentElement = content };
+        return new(content, navigateUri, onClick);
     }
 }

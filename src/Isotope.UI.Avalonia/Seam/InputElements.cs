@@ -4,8 +4,8 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// Number entry and the separator (#26). NumberBox mirrors upstream's (Reactor's member names) as an Avalonia
-// NumericUpDown; members with no Avalonia counterpart (Header, LargeChange, the spin-button placement, number
+// Number entry and the separator (#26). NumberBox mirrors upstream's, with Avalonia's member names (#31), as an
+// Avalonia NumericUpDown; members with no Avalonia counterpart (Header, LargeChange, the spin-button placement, number
 // formatters, expressions, validation mode, description) aren't on it. Separator is Avalonia-only, so Avalonia's name.
 
 /// <summary>
@@ -22,15 +22,15 @@ namespace Isotope.UI.Core;
 [WrapManual("Value")]
 [WrapManual("Minimum")]
 [WrapManual("Maximum")]
-[WrapManual("SmallChange")]
+[WrapManual("Increment")]
 public partial record NumberBoxElement(Optional<double> Value = default, Action<double>? OnValueChanged = null) : Element
 {
     public double Minimum { get; init; } = double.MinValue;
     public double Maximum { get; init; } = double.MaxValue;
     public string? PlaceholderText { get; init; }
 
-    /// <summary>The step of the spinner and the arrow keys (Avalonia's <c>Increment</c>; upstream's default, 1).</summary>
-    public double SmallChange { get; init; } = 1;
+    /// <summary>The step of the spinner and the arrow keys (Reactor's <c>SmallChange</c>; upstream's default, 1).</summary>
+    public double Increment { get; init; } = 1;
 
     /// <summary>How the value is shown, as a .NET format string (<c>"F2"</c>, <c>"C"</c>); Avalonia's member.</summary>
     public string? FormatString { get; init; }
@@ -68,7 +68,7 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
                 set:               static (c, v) => c.Maximum = Clamp(v),
                 coercesController: static (c, newMax) => c.ClipValueToMinMax && c.Value > Clamp(newMax))
             .OneWay(
-                get: static e => e.SmallChange,
+                get: static e => e.Increment,
                 set: static (c, v) => c.Increment = Clamp(v))
             .HandCodedControlled<V1Protocol.NumberBoxEventPayload, double, EventHandler<NumericUpDownValueChangedEventArgs>>(
                 get:         static e => e.Value,

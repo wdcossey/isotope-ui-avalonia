@@ -8,9 +8,10 @@ using Isotope.UI.Wrappers;
 namespace Isotope.UI.Core;
 
 // The auto-suggest box (#29): upstream's AutoSuggestBoxElement, as an Avalonia AutoCompleteBox. The record mirrors
-// upstream's (Reactor's member names, Avalonia's value types); members with no Avalonia counterpart (Header, QueryIcon)
-// aren't on it. FilterMode is Avalonia's member, and defaults to none: as on WinUI, the app's suggestions are shown as
-// given, so a function of the typed text decides them.
+// upstream's, with Avalonia's member names (#31) and value types; members with no Avalonia counterpart (Header,
+// QueryIcon) aren't on it, and OnQuerySubmitted and OnSuggestionChosen keep Reactor's names (no Avalonia event matches
+// them). FilterMode is Avalonia's member, and defaults to none: as on WinUI, the app's suggestions are shown as given, so
+// a function of the typed text decides them.
 //
 // What the AutoCompleteBox does, measured in a headless window (#29): a Text write raises TextChanged inside the write
 // when the box is templated, and none outside a window; attaching a box with text to a window raises one TextChanged
@@ -31,25 +32,24 @@ namespace Isotope.UI.Core;
 /// </remarks>
 [GenerateReactorDescriptor(typeof(AutoCompleteBox), ClearValueOnUnset = true, Exclude = new[] { "TextChanged", "SelectionChanged" })]
 [WrapManual("Text")]
-[WrapManual("Suggestions")]
+[WrapManual("ItemsSource")]
 [WrapManual("FilterMode")]
-[WrapAlias("IsSuggestionListOpen", "IsDropDownOpen")]
 public partial record AutoSuggestBoxElement(
     Optional<string> Text = default,
     Action<string>? OnTextChanged = null,
     Action<string>? OnQuerySubmitted = null,
     Action<string>? OnSuggestionChosen = null) : Element
 {
-    /// <summary>The suggestions the list shows, in order (upstream's member; Avalonia's <c>ItemsSource</c>).</summary>
-    public string[] Suggestions { get; init; } = [];
+    /// <summary>The suggestions the list shows, in order (Reactor's <c>Suggestions</c>).</summary>
+    public string[] ItemsSource { get; init; } = [];
 
     public string? PlaceholderText { get; init; }
 
-    /// <summary>Opens or closes the suggestion list (Avalonia's <c>IsDropDownOpen</c>). Defaults to false.</summary>
-    public bool IsSuggestionListOpen { get; init; }
+    /// <summary>Opens or closes the suggestion list (Reactor's <c>IsSuggestionListOpen</c>). Defaults to false.</summary>
+    public bool IsDropDownOpen { get; init; }
 
     /// <summary>
-    /// How Avalonia filters <see cref="Suggestions"/> by the typed text (Avalonia's member). Defaults to
+    /// How Avalonia filters <see cref="ItemsSource"/> by the typed text (Avalonia's member). Defaults to
     /// <see cref="AutoCompleteFilterMode.None"/>: every suggestion is shown, as on WinUI.
     /// </summary>
     public AutoCompleteFilterMode FilterMode { get; init; } = AutoCompleteFilterMode.None;
@@ -109,7 +109,7 @@ public partial record AutoSuggestBoxElement(
                 get: static e => e.FilterMode,
                 set: static (c, v) => c.FilterMode = v)
             .OneWay(
-                get: static e => e.Suggestions,
+                get: static e => e.ItemsSource,
                 set: static (c, v) =>
                 {
                     c.ItemsSource = v.Length > 0 ? v : null;

@@ -13,22 +13,35 @@ public class ControlFactoryTests
     public void Toggle_factories_build_their_records()
     {
         Action<bool> changed = _ => { };
-        var cb = CheckBox(true, changed, "Agree");
-        Assert.Equal((Optional<bool?>.Of(true), "Agree", false), (cb.IsChecked, cb.Label, cb.IsThreeState));
-        Assert.Same(changed, cb.OnIsCheckedChanged);
+        var reported = new List<bool>();
+        var cb = CheckBox(true, reported.Add, "Agree");
+        Assert.Equal((Optional<bool?>.Of(true), "Agree", false), (cb.IsChecked, cb.Content, cb.IsThreeState));
+        // The record's callback is three-state (Avalonia's bool? IsChecked); the factory's two-state one hears only
+        // checked and unchecked.
+        cb.OnIsCheckedChanged!(false);
+        cb.OnIsCheckedChanged(null);
+        cb.OnIsCheckedChanged(true);
+        Assert.Equal([false, true], reported);
         Assert.False(CheckBox().IsChecked.HasValue);
+        // ToggleButton's two-state factories adapt their callback the same way.
+        var toggled = new List<bool>();
+        var toggle = ToggleButton("Bold", false, toggled.Add);
+        toggle.OnIsCheckedChanged!(null);
+        toggle.OnIsCheckedChanged(true);
+        Assert.Equal([true], toggled);
+        Assert.Null(CheckBox().OnIsCheckedChanged);
 
         Action<bool?> states = _ => { };
         var three = ThreeStateCheckBox(null, states, "Some");
-        Assert.Equal((true, Optional<bool?>.Of(null), (bool?)null, "Some"), (three.IsThreeState, three.IsChecked, three.CheckedState, three.Label));
-        Assert.Same(states, three.OnCheckedStateChanged);
+        Assert.Equal((true, Optional<bool?>.Of(null), "Some"), (three.IsThreeState, three.IsChecked, three.Content));
+        Assert.Same(states, three.OnIsCheckedChanged);
 
         var sw = ToggleSwitch(true, changed, "On", "Off", "Wi-Fi");
-        Assert.Equal((Optional<bool>.Of(true), "On", "Off", "Wi-Fi"), (sw.IsOn, sw.OnContent, sw.OffContent, sw.Header));
-        Assert.Same(changed, sw.OnIsOnChanged);
+        Assert.Equal((Optional<bool>.Of(true), "On", "Off", "Wi-Fi"), (sw.IsChecked, sw.OnContent, sw.OffContent, sw.Content));
+        Assert.Same(changed, sw.OnIsCheckedChanged);
 
         var rb = RadioButton("A", true, changed, "g");
-        Assert.Equal(("A", Optional<bool>.Of(true), "g"), (rb.Label, rb.IsChecked, rb.GroupName));
+        Assert.Equal(("A", Optional<bool>.Of(true), "g"), (rb.Content, rb.IsChecked, rb.GroupName));
         Assert.Same(changed, rb.OnIsCheckedChanged);
     }
 
@@ -52,11 +65,11 @@ public class ControlFactoryTests
 
         var day = new DateTimeOffset(2026, 1, 2, 0, 0, 0, TimeSpan.Zero);
         Action<DateTimeOffset> dateChanged = _ => { };
-        Assert.Equal(Optional<DateTimeOffset>.Of(day), DatePicker(day, dateChanged).Date);
-        Assert.Same(dateChanged, DatePicker(day, dateChanged).OnDateChanged);
+        Assert.Equal(Optional<DateTimeOffset>.Of(day), DatePicker(day, dateChanged).SelectedDate);
+        Assert.Same(dateChanged, DatePicker(day, dateChanged).OnSelectedDateChanged);
         Action<TimeSpan> timeChanged = _ => { };
-        Assert.Equal(Optional<TimeSpan>.Of(TimeSpan.FromHours(1)), TimePicker(TimeSpan.FromHours(1), timeChanged).Time);
-        Assert.Same(timeChanged, TimePicker(TimeSpan.FromHours(1), timeChanged).OnTimeChanged);
+        Assert.Equal(Optional<TimeSpan>.Of(TimeSpan.FromHours(1)), TimePicker(TimeSpan.FromHours(1), timeChanged).SelectedTime);
+        Assert.Same(timeChanged, TimePicker(TimeSpan.FromHours(1), timeChanged).OnSelectedTimeChanged);
     }
 
     [Fact]
@@ -65,7 +78,7 @@ public class ControlFactoryTests
         Element child = TextBlock("x");
         Assert.Same(child, Border(child).Child);
         Assert.Null(Border(null).Child);
-        Assert.Same(child, ScrollViewer(child).Child);
+        Assert.Same(child, ScrollViewer(child).Content);
         Action<bool> expanded = _ => { };
         var ex = Expander("More", child, true, expanded);
         Assert.Equal(("More", Optional<bool>.Of(true)), (ex.Header, ex.IsExpanded));
@@ -74,8 +87,8 @@ public class ControlFactoryTests
         Assert.Equal([child], WrapPanel(child, null).Children);
 
         var grid = Grid([GridSize.Star()], [GridSize.Auto], child, null);
-        Assert.Equal([GridSize.Star()], grid.Definition.Columns);
-        Assert.Equal([GridSize.Auto], grid.Definition.Rows);
+        Assert.Equal([GridSize.Star()], grid.ColumnDefinitions);
+        Assert.Equal([GridSize.Auto], grid.RowDefinitions);
         Assert.Equal([child], grid.Children);
         Assert.Throws<ArgumentNullException>(() => Grid(null!, []));
         Assert.Throws<ArgumentNullException>(() => Grid([], null!));
@@ -90,7 +103,7 @@ public class ControlFactoryTests
     public void GridSize_parses_and_prints_tracks_and_rejects_bad_ones()
     {
         Assert.Equal([GridSize.Auto, GridSize.Star(), GridSize.Star(2.5), GridSize.Px(120)],
-            new GridDefinition(["auto", "*", "2.5*", " 120 "], []).Columns);
+            Array.ConvertAll(["auto", "*", "2.5*", " 120 "], GridSize.Parse));
         Assert.Equal(["Auto", "*", "2.5*", "120"], new[] { GridSize.Auto, GridSize.Star(), GridSize.Star(2.5), GridSize.Px(120) }.Select(s => s.ToString()));
         Assert.Equal((10.0, 20.0), (GridSize.Star().MinSize(10).MaxSize(20).Min, GridSize.Star().MinSize(10).MaxSize(20).Max));
         Assert.Equal(new GridLength(3, GridUnitType.Star), (GridLength)GridSize.Star(3));
@@ -112,20 +125,20 @@ public class ControlFactoryTests
     {
         // Each record upstream compares in ShallowEquals: re-rendering an equal element skips its update.
         string[] items = ["a"];
-        var definition = new GridDefinition(["*"], ["*"]);
+        GridSize[] star = [GridSize.Star()];
         Element[] none = [];
         Element child = TextBlock("c");
         Func<Element>[] equal =
         [
-            () => CheckBox(true, label: "a"),
-            () => ToggleSwitch(true, header: "h"),
+            () => CheckBox(true, content: "a"),
+            () => ToggleSwitch(true, content: "h"),
             () => RadioButton("a", true, groupName: "g"),
             () => ComboBox(items, 0) with { PlaceholderText = "p" },
             () => Progress(5),
             () => Image("none.png"),
             () => Border(child) with { CornerRadius = 2 },
-            () => new GridElement(definition, none) { RowSpacing = 1 },
-            () => Grid([GridSize.Star()], [GridSize.Auto]), // a new, equal definition each render
+            () => new GridElement(star, star, none) { RowSpacing = 1 },
+            () => Grid([GridSize.Star()], [GridSize.Auto]), // new, equal tracks each render
             () => ScrollViewer(child),
         ];
         foreach (var make in equal)

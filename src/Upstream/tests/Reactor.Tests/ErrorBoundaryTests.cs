@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ErrorBoundaryTests.cs, last changed upstream in 58c2f12a13d4; transforms: drop-test-ErrorBoundary-RegisterType, winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ErrorBoundaryTests.cs, last changed upstream in 58c2f12a13d4; transforms: drop-test-ErrorBoundary-RegisterType, test-textblock-text, winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 
 using static Isotope.UI.Factories;
@@ -52,7 +52,7 @@ public class ErrorBoundaryTests
 
         Assert.IsType<ErrorBoundaryElement>(eb);
         var fallbackResult = eb.Fallback(new Exception("test"));
-        Assert.Equal("fallback", ((TextBlockElement)fallbackResult).Content);
+        Assert.Equal("fallback", ((TextBlockElement)fallbackResult).Text);
     }
 
     [Fact]

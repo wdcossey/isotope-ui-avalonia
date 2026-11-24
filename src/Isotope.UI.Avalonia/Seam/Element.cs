@@ -72,6 +72,9 @@ public abstract record Element
     /// </summary>
     internal static bool ShallowEquals(Element a, Element b)
     {
+        // A content (Avalonia's object Content) that holds an element always updates: its child is reconciled.
+        static bool SameTextContent(object? x, object? y) => x is not Element && y is not Element && Equals(x, y);
+
         if (ReferenceEquals(a, b)) return true;
         if (a.GetType() != b.GetType()) return false;
         if (!string.Equals(a.Key, b.Key, StringComparison.Ordinal)) return false;
@@ -83,11 +86,11 @@ public abstract record Element
         return (a, b) switch
         {
             (EmptyElement, EmptyElement) => true,
-            (TextBlockElement x, TextBlockElement y) => x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
+            (TextBlockElement x, TextBlockElement y) => x.Text == y.Text && ReferenceEquals(x.Setters, y.Setters),
             // #29: with a command, HasCallbacks is true with or without the button's own callback, which is subscribed
             // when it first appears: its coming declines the skip, as ComboBox's callbacks do.
-            (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+            (ButtonElement x, ButtonElement y) => SameTextContent(x.Content, y.Content) && x.IsEnabled == y.IsEnabled
+                && ReferenceEquals(x.Setters, y.Setters)
                 && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
@@ -95,19 +98,19 @@ public abstract record Element
                 && x.AlignItems == y.AlignItems && x.AlignContent == y.AlignContent && x.Wrap == y.Wrap
                 && x.ColumnGap == y.ColumnGap && x.RowGap == y.RowGap && x.FlexPadding == y.FlexPadding
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
-            (TextBoxElement x, TextBoxElement y) => x.Value.Equals(y.Value) && x.PlaceholderText == y.PlaceholderText
+            (TextBoxElement x, TextBoxElement y) => x.Text.Equals(y.Text) && x.PlaceholderText == y.PlaceholderText
                 && x.IsReadOnly == y.IsReadOnly && x.AcceptsReturn == y.AcceptsReturn && x.TextWrapping == y.TextWrapping
                 && x.MaxLength == y.MaxLength && ReferenceEquals(x.Setters, y.Setters),
-            (SliderElement x, SliderElement y) => x.Value.Equals(y.Value) && x.Min == y.Min && x.Max == y.Max
+            (SliderElement x, SliderElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && x.Orientation == y.Orientation && x.TickFrequency == y.TickFrequency && x.TickPlacement == y.TickPlacement
                 && ReferenceEquals(x.Setters, y.Setters),
             // #19: the records upstream has arms for, over their members here. ListBox, Expander, the pickers and the
             // WrapPanel have none upstream either: they always update.
-            (CheckBoxElement x, CheckBoxElement y) => x.IsChecked.Equals(y.IsChecked) && x.Label == y.Label
-                && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState && ReferenceEquals(x.Setters, y.Setters),
-            (ToggleSwitchElement x, ToggleSwitchElement y) => x.IsOn.Equals(y.IsOn) && x.OnContent == y.OnContent
-                && x.OffContent == y.OffContent && x.Header == y.Header && ReferenceEquals(x.Setters, y.Setters),
-            (RadioButtonElement x, RadioButtonElement y) => x.Label == y.Label && x.IsChecked.Equals(y.IsChecked)
+            (CheckBoxElement x, CheckBoxElement y) => x.IsChecked.Equals(y.IsChecked) && x.Content == y.Content
+                && x.IsThreeState == y.IsThreeState && ReferenceEquals(x.Setters, y.Setters),
+            (ToggleSwitchElement x, ToggleSwitchElement y) => x.IsChecked.Equals(y.IsChecked) && x.OnContent == y.OnContent
+                && x.OffContent == y.OffContent && x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
+            (RadioButtonElement x, RadioButtonElement y) => x.Content == y.Content && x.IsChecked.Equals(y.IsChecked)
                 && x.GroupName == y.GroupName && ReferenceEquals(x.Setters, y.Setters),
             // ComboBox's three callbacks are subscribed separately, each when it first appears, so a change in which of
             // them are present declines the skip (HasCallbacks alone only says whether any is).
@@ -124,27 +127,26 @@ public abstract record Element
                 && x.CornerRadius == y.CornerRadius && x.BorderThickness == y.BorderThickness && x.Padding == y.Padding
                 && ReferenceEquals(x.Child, y.Child) && ReferenceEquals(x.Setters, y.Setters),
             (GridElement x, GridElement y) => x.RowSpacing == y.RowSpacing && x.ColumnSpacing == y.ColumnSpacing
-                && Equals(x.Definition, y.Definition) && ReferenceEquals(x.Children, y.Children)
+                && GridElement.TracksEqual(x.ColumnDefinitions, y.ColumnDefinitions)
+                && GridElement.TracksEqual(x.RowDefinitions, y.RowDefinitions) && ReferenceEquals(x.Children, y.Children)
                 && ReferenceEquals(x.Setters, y.Setters),
             (ScrollViewerElement x, ScrollViewerElement y) => x.HorizontalScrollBarVisibility == y.HorizontalScrollBarVisibility
-                && x.VerticalScrollBarVisibility == y.VerticalScrollBarVisibility && ReferenceEquals(x.Child, y.Child)
+                && x.VerticalScrollBarVisibility == y.VerticalScrollBarVisibility && ReferenceEquals(x.Content, y.Content)
                 && ReferenceEquals(x.Setters, y.Setters),
             // #26: as upstream's arms, a declared element content always updates (its child is reconciled). Unlike
-            // upstream's, ToggleButton's compares the three-state members too, so a changed CheckedState is written.
-            (ToggleButtonElement x, ToggleButtonElement y) => x.Label == y.Label && x.IsChecked == y.IsChecked
-                && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+            // upstream's, ToggleButton's compares the three-state members too, so a changed three-state value is written.
+            (ToggleButtonElement x, ToggleButtonElement y) => SameTextContent(x.Content, y.Content) && x.IsChecked == y.IsChecked
+                && x.IsThreeState == y.IsThreeState && ReferenceEquals(x.Setters, y.Setters)
                 && CommandBindings.CommandsEqual(x.Command, y.Command)
-                && (x.OnIsCheckedChanged is null) == (y.OnIsCheckedChanged is null)
-                && (x.OnCheckedStateChanged is null) == (y.OnCheckedStateChanged is null),
-            (RepeatButtonElement x, RepeatButtonElement y) => x.Label == y.Label && x.Delay == y.Delay && x.Interval == y.Interval
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && (x.OnIsCheckedChanged is null) == (y.OnIsCheckedChanged is null),
+            (RepeatButtonElement x, RepeatButtonElement y) => SameTextContent(x.Content, y.Content) && x.Delay == y.Delay && x.Interval == y.Interval
+                && ReferenceEquals(x.Setters, y.Setters)
                 && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
-            (HyperlinkButtonElement x, HyperlinkButtonElement y) => x.Content == y.Content && x.NavigateUri == y.NavigateUri
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+            (HyperlinkButtonElement x, HyperlinkButtonElement y) => SameTextContent(x.Content, y.Content) && x.NavigateUri == y.NavigateUri
+                && ReferenceEquals(x.Setters, y.Setters)
                 && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
             (NumberBoxElement x, NumberBoxElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
-                && x.SmallChange == y.SmallChange && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
+                && x.Increment == y.Increment && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
                 && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
             _ => false,
         };

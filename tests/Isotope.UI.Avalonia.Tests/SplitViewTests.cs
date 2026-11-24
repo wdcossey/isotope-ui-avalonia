@@ -12,7 +12,7 @@ namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
 /// SplitView (#26): pane and content mount in their slots and keep a child component's state; IsPaneOpen is
-/// edge-triggered, as upstream's, and its engine writes don't reach OnPaneOpenChanged while the control's own changes do;
+/// edge-triggered, as upstream's, and its engine writes don't reach OnIsPaneOpenChanged while the control's own changes do;
 /// a nested split view's events don't reach the outer one's callback.
 /// </summary>
 public class SplitViewTests
@@ -77,7 +77,7 @@ public class SplitViewTests
             return VStack(TextBlock("open " + open),
                 SplitView(TextBlock("pane"), TextBlock("content")) with
                 {
-                    IsPaneOpen = open, OnPaneOpenChanged = v => { reported.Add(v); setOpen(v); },
+                    IsPaneOpen = open, OnIsPaneOpenChanged = v => { reported.Add(v); setOpen(v); },
                 });
         }));
         var view = host.All<AvSplitView>()[0];
@@ -118,7 +118,7 @@ public class SplitViewTests
         var reported = new List<bool>();
         var host = new TestHost(() => SplitView(
             SplitView(TextBlock("inner pane"), TextBlock("inner content")),
-            TextBlock("content")) with { OnPaneOpenChanged = v => reported.Add(v) });
+            TextBlock("content")) with { OnIsPaneOpenChanged = v => reported.Add(v) });
         var outer = host.All<AvSplitView>()[0];
         var inner = Assert.IsType<AvSplitView>(outer.Pane);
         // In a window, so the outer template hosts the pane and the inner events have a route to the outer view.

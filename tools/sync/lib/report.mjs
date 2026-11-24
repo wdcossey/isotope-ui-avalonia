@@ -110,6 +110,7 @@ export function renderReport({ repoUrl, old, new: neu, commits, changes, unclass
   }
   L.push('', '## Tier 3: PRs to port by hand', '');
   L.push('These touched rewritten (tier 3) paths. The compiler cannot flag their behaviour changes: read each one and port what applies.', '');
+  L.push('Ported code takes Avalonia\'s member names: map each Reactor name of an element record, factory or modifier through tools/naming/renames.json, and add an entry for a new one (tools/naming/README.md).', '');
   const t3 = commitRows(commits, map, (tier) => tier === 3, repoUrl);
   L.push(...(t3.length ? ['| PR | Date | Subject | Tier 3 paths |', '|---|---|---|---|', ...t3] : ['None.']));
   L.push('', '## Tier 1 and 2: PRs regenerated', '');

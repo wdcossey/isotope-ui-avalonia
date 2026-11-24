@@ -161,9 +161,10 @@
         "gen-missing-counterpart-report",
         "gen-drop-try-register-assembly",
         "gen-reference-clear-channel-of",
+        "gen-manual-content-slot",
         "namespace-isotope"
       ],
-      "sha256": "dbda8e36ea427a36b5c623ef57004de1a2b403277ce04f1155365c23d764cd76"
+      "sha256": "563a185b01d6f74c4284176bb52da7897c8cd3abbb529582ff3afb3e5b736fe8"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",
@@ -1681,12 +1682,13 @@
     },
     {
       "path": "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",
-      "tier": 1,
+      "tier": 2,
       "lastChanged": "4f09a719445ec728d5b80e908b0c3df1498921af",
       "transforms": [
+        "test-textblock-text",
         "namespace-isotope"
       ],
-      "sha256": "246531dd750031798165bc4df27b042309b2d8097d37a0328e746394c8cd1abc"
+      "sha256": "81b0fe8d3d8da3270da188ad25c89bccc23a2ba97061780558d09888c14fc8e3"
     },
     {
       "path": "tests/Reactor.Tests/ContextCaptureUnitTests.cs",
@@ -1708,12 +1710,13 @@
     },
     {
       "path": "tests/Reactor.Tests/ContextSystemUnitTests.cs",
-      "tier": 1,
+      "tier": 2,
       "lastChanged": "bb856424eebcd5715bfc400a46f1b9c407d6033c",
       "transforms": [
+        "test-textblock-text",
         "namespace-isotope"
       ],
-      "sha256": "9d130f5b4d26cc54b82d075f19b4d21e2c3bc8e32739b720aee49068a5fe6185"
+      "sha256": "33efe4d6f77663001be76ec203804b8965f815efe4ffd6a565ca0cb4435fb6ad"
     },
     {
       "path": "tests/Reactor.Tests/Core/FocusRevalidationTests.cs",
@@ -1820,10 +1823,11 @@
       "lastChanged": "58c2f12a13d4ec18d6eb4d2f1efb98f2c73db92b",
       "transforms": [
         "drop-test-ErrorBoundary-RegisterType",
+        "test-textblock-text",
         "winui-usings",
         "namespace-isotope"
       ],
-      "sha256": "b38a8a434d5b9e4fd7f25bf14a57aa3c7934a97dfab429233a683c6a4279aaa8"
+      "sha256": "548622a34cfca68bf128ab0a5336594b426665754983431bada2cb3647324420"
     },
     {
       "path": "tests/Reactor.Tests/HookArityOverloadTests.cs",
@@ -1894,12 +1898,13 @@
     },
     {
       "path": "tests/Reactor.Tests/MemoizationPropagationTests.cs",
-      "tier": 1,
+      "tier": 2,
       "lastChanged": "96ccfc4b057c88ffe677f0d86ab084449d24243e",
       "transforms": [
+        "test-textblock-text",
         "namespace-isotope"
       ],
-      "sha256": "f337f11c2cf2b4f3effc98e6f81ad61c99fb687af2067dbcaf584a1dc5156278"
+      "sha256": "dd88be2d9d8e5cb7c67097ff718ab65800215f032b5e198f7c184e550794829c"
     },
     {
       "path": "tests/Reactor.Tests/NavigationLifecycleTests.cs",

@@ -16,7 +16,7 @@ public class ToggleControlTests
     public void CheckBox_mounts_its_label_and_state_and_updates_them_in_place()
     {
         var label = "Agree";
-        var host = new TestHost(() => CheckBox(true, label: label));
+        var host = new TestHost(() => CheckBox(true, content: label));
         var box = host.All<CheckBox>()[0];
         Assert.Equal((true, "Agree"), (box.IsChecked, box.Content));
         Assert.False(box.IsThreeState);
@@ -31,12 +31,21 @@ public class ToggleControlTests
     public void CheckBox_label_set_back_to_null_clears_the_content()
     {
         string? label = "Agree";
-        var host = new TestHost(() => CheckBox(label: label));
+        var host = new TestHost(() => CheckBox(content: label));
         var box = host.All<CheckBox>()[0];
 
         label = null;
         host.Render();
         Assert.Null(box.Content);
+        Assert.False(box.IsSet(ContentControl.ContentProperty)); // cleared, not a local null over the styles
+    }
+
+    [AvaloniaFact]
+    public void Content_left_unset_is_not_written_so_a_style_can_give_it()
+    {
+        // #31: the toggles' Content is written by WithContent; as on the ClearValue channel, a null isn't a local value.
+        var host = new TestHost(() => VStack(CheckBox(true), RadioButton(null!), ToggleSwitch(true)));
+        Assert.All(host.All<ContentControl>(), c => Assert.False(c.IsSet(ContentControl.ContentProperty), c.GetType().Name));
     }
 
     [AvaloniaFact]
@@ -117,7 +126,7 @@ public class ToggleControlTests
     public void CheckBox_with_no_value_keeps_what_the_user_set_across_renders()
     {
         var label = "a";
-        var host = new TestHost(() => CheckBox(label: label));
+        var host = new TestHost(() => CheckBox(content: label));
         var box = host.All<CheckBox>()[0];
         box.IsChecked = true;
 
@@ -131,7 +140,7 @@ public class ToggleControlTests
     public void ToggleSwitch_mounts_its_contents_and_header_and_updates_them_in_place()
     {
         var header = "Wi-Fi";
-        var host = new TestHost(() => ToggleSwitch(true, onContent: "On", offContent: "Off", header: header));
+        var host = new TestHost(() => ToggleSwitch(true, onContent: "On", offContent: "Off", content: header));
         var sw = host.All<ToggleSwitch>()[0];
         Assert.Equal((true, "On", "Off", "Wi-Fi"), (sw.IsChecked, sw.OnContent, sw.OffContent, sw.Content));
 

@@ -27,13 +27,26 @@ internal static class ContentControlContent
     private static ContentState? GetOwnedContent(ContentControl control) => control.GetValue(OwnedContentProperty);
 
     /// <summary>
+    /// The control's content, as Avalonia's <c>Content</c> (#31): an element is mounted and reconciled as a child, and any
+    /// other value (a string) is written as it is. A record using it marks its content member <c>[WrapManual]</c>.
+    /// </summary>
+    internal static ControlDescriptor<TElement, TControl> WithContent<TElement, TControl>(
+        this ControlDescriptor<TElement, TControl> descriptor,
+        Func<TElement, object?> getContent)
+        where TElement : Element
+        where TControl : ContentControl, new()
+        => descriptor.WithContent(
+            e => getContent(e) as Element,
+            e => getContent(e) is Element ? null : getContent(e));
+
+    /// <summary>
     /// The control's content: <paramref name="getChild"/>'s element when there is one, mounted and reconciled as a child,
-    /// else <paramref name="getText"/>'s string. A record using it marks its text member <c>[WrapManual]</c>.
+    /// else <paramref name="getText"/>'s value (a string). A record using it marks its content members <c>[WrapManual]</c>.
     /// </summary>
     internal static ControlDescriptor<TElement, TControl> WithContent<TElement, TControl>(
         this ControlDescriptor<TElement, TControl> descriptor,
         Func<TElement, Element?> getChild,
-        Func<TElement, string?> getText)
+        Func<TElement, object?> getText)
         where TElement : Element
         where TControl : ContentControl, new()
     {
@@ -61,7 +74,7 @@ internal static class ContentControlContent
             mount: (_, control, element) =>
             {
                 control.ClearValue(OwnedContentProperty);
-                control.Content = getChild(element) is null ? getText(element) : null;
+                if (getChild(element) is null) WriteValue(control, getText(element));
             },
             update: (ctx, control, oldElement, newElement) =>
             {
@@ -72,20 +85,28 @@ internal static class ContentControlContent
                     // A declared child may render no control: clear the old string before the reconcile, keeping an
                     // existing subtree.
                     if (oldChild is null && control.Content is not Control)
-                        control.Content = null;
+                        control.ClearValue(ContentControl.ContentProperty);
                     return;
                 }
                 if (oldChild is not null)
                 {
                     // Tear down a declared child before the text takes its slot and the setters run.
                     UnmountOwnedContent(ctx.Reconciler, control);
-                    control.Content = getText(newElement);
+                    WriteValue(control, getText(newElement));
                 }
-                else if (!string.Equals(getText(oldElement), getText(newElement), StringComparison.Ordinal))
+                else if (!Equals(getText(oldElement), getText(newElement)))
                 {
-                    control.Content = getText(newElement);
+                    WriteValue(control, getText(newElement));
                 }
             });
+    }
+
+    // A null content is cleared rather than written, so a style or theme that gives the control content still can, as
+    // the ClearValue channel does for the other members.
+    private static void WriteValue(ContentControl control, object? value)
+    {
+        if (value is null) control.ClearValue(ContentControl.ContentProperty);
+        else control.Content = value;
     }
 
     private static void UnmountOwnedContent(Reconciler reconciler, ContentControl control)

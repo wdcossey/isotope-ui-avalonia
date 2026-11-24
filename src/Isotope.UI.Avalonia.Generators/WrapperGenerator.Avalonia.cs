@@ -55,7 +55,7 @@ public sealed partial class WrapperGenerator
     private static readonly DiagnosticDescriptor MissingCounterpart = new(
         id: "ISOTOPEGEN001",
         title: "Record member has no control counterpart",
-        messageFormat: "'{0}' declares {1}, but '{2}' has no settable property of that name the generator can map, so the descriptor would not write it. Map it with [WrapAlias], write it in Customize with [WrapManual], or remove it.",
+        messageFormat: "'{0}' declares {1}, but '{2}' has no settable property of that name the generator can map, so the descriptor would not write it. Give it the control's member name (tools/naming/README.md), write it in Customize with [WrapManual], or remove it.",
         category: "Isotope.Wrappers",
         defaultSeverity: DiagnosticSeverity.Error, // decided 2026-11-23: a silent drop is what this catches
         isEnabledByDefault: true);

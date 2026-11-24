@@ -210,6 +210,31 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Avalonia member names (issue #31, 2026-11-24)
+
+- **The public API takes Avalonia's member names** (#27 answer 1; Spike H option A). A record member is Avalonia-named
+  when it is a property or event of its control, `On{Event}` (`OnClick`) or `On{Property}Changed`
+  (`OnSelectedIndexChanged`). These are the names the generator already maps, so no `[WrapAlias]` is left.
+- **The rename table is data:** `tools/naming/renames.json`, in the format given in `tools/naming/README.md`.
+  - 36 records with their controls, and 47 member entries: 25 renames, 18 shape changes and 4 kept.
+  - 32 factory parameter renames.
+  - Proposed, not applied: 9 type, 5 factory and 3 modifier renames, waiting on #27's follow-up.
+- **Shape changes:**
+  - The button family's `Label`/`ContentElement` become one `object? Content`, as Avalonia's.
+  - Expander's `Header`/`HeaderContent` become one `object? Header`.
+  - CheckBox and ToggleButton have one `bool? IsChecked` and one `Action<bool?>` callback; the two-state factories
+    still take an `Action<bool>`.
+  - Grid's `Definition` becomes `ColumnDefinitions` + `RowDefinitions`.
+- **Kept, with no Avalonia counterpart:** AutoSuggestBox's `OnQuerySubmitted` and `OnSuggestionChosen`, and a menu item's
+  `KeyboardAccelerators` and `Description`.
+- **Migrating our own code with the table:** the first build after the renames had 62 compile errors in the tests and
+  the sample. A script that looks each error's name up in the table fixed 50; the 12 Grid ones were fixed by hand.
+- **Sync cost:**
+  - Two transform rules: `gen-manual-content-slot` and `test-textblock-text` (3 vendored test files move to tier 2).
+  - A tier 3 port maps names through the table (`docs/sync/README.md`, and a line in each sync report's tier 3 section).
+- **Tests:** 8 new, all proven to fail. `RenameTableTests` checks every record against its control, the rule and the
+  table.
+
 ## Controls batch 2 leftovers (issue #29, 2026-11-24)
 
 - **What landed:**
@@ -385,7 +410,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 5. **Control layer (from Spike E):**
    - Descriptors are **generated** by a vendored copy of upstream's wrappers generator, and our changes to it are carried as **transform rules**.
    - Element records are **hand-written** for now; projecting them from upstream's `Element.cs` is decided with #4.
-   - Records that mirror upstream's use **Reactor's member names** (mapped with `[WrapAlias]`), and Avalonia-only controls use Avalonia's. Avalonia's names everywhere, with a migration tool from Reactor, may come later (#13).
+   - Records that mirror upstream's use **Reactor's member names** (mapped with `[WrapAlias]`), and Avalonia-only controls use Avalonia's. Avalonia's names everywhere, with a migration tool from Reactor, may come later (#13). *Superseded 2026-11-24 (#27 answer 1, #31): Avalonia's member names.*
 
 ## Seam (issue #1, 2026-11-23)
 

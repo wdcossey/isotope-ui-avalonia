@@ -315,7 +315,6 @@ public sealed class CommandTests : IDisposable
 
         var bound = ToggleButton("Bold", false, v => log.Add("toggled " + v)).Command(cmd);
         Assert.Null(bound.OnIsCheckedChanged);
-        Assert.Null(bound.OnCheckedStateChanged);
     }
 
     [AvaloniaFact]
@@ -353,7 +352,7 @@ public sealed class CommandTests : IDisposable
             Label = "Open", Execute = () => log.Add("open"), CanExecute = false, Description = "Open a file",
             Accelerator = new(Key.O, KeyModifiers.Control),
         });
-        Assert.Equal("Open", item.Text);
+        Assert.Equal("Open", item.Header);
         Assert.False(item.IsEnabled);
         Assert.Equal([new KeyboardAcceleratorData(Key.O, KeyModifiers.Control)], item.KeyboardAccelerators!);
         Assert.Equal("Open a file", item.Description);

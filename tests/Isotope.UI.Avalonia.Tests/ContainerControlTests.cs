@@ -212,38 +212,48 @@ public class ContainerControlTests
     [AvaloniaFact]
     public void Grid_moves_a_child_between_cells_in_place_and_rebuilds_tracks_only_when_they_change()
     {
-        var definition = new GridDefinition(["*", "*"], ["Auto"]);
+        GridSize[] columns = [GridSize.Star(), GridSize.Star()];
+        GridSize[] rows = [GridSize.Auto];
         var column = 1;
-        var host = new TestHost(() => new GridElement(definition, [TextBlock("a").Grid(column: column)]));
+        var host = new TestHost(() => new GridElement(columns, rows, [TextBlock("a").Grid(column: column)]));
         var grid = host.All<Grid>()[0];
         var text = host.All<TextBlock>()[0];
         var firstTrack = grid.ColumnDefinitions[0];
         Assert.Equal(1, AvaloniaGrid.GetColumn(text));
 
-        column = 0; // an equal definition (a new instance, as the Grid factory builds): tracks kept, the cell rewritten
-        definition = new GridDefinition(["*", "*"], ["Auto"]);
+        column = 0; // equal tracks (new arrays, as a component builds each render): tracks kept, the cell rewritten
+        (columns, rows) = ([GridSize.Star(), GridSize.Star()], [GridSize.Auto]);
         host.Render();
         Assert.Same(text, host.All<TextBlock>()[0]);
         Assert.Equal(0, AvaloniaGrid.GetColumn(text));
         Assert.Same(firstTrack, grid.ColumnDefinitions[0]);
 
-        definition = new GridDefinition(["100", "*", "*"], ["Auto"]);
+        var firstRow = grid.RowDefinitions[0];
+        columns = [GridSize.Px(100), GridSize.Star(), GridSize.Star()];
         host.Render();
         Assert.Equal(3, grid.ColumnDefinitions.Count);
         Assert.Equal(new GridLength(100), grid.ColumnDefinitions[0].Width);
+        Assert.Same(firstRow, grid.RowDefinitions[0]); // the rows didn't change: not rebuilt
     }
 
     [AvaloniaFact]
     public void Grid_keeps_its_tracks_when_a_new_definition_has_a_track_Avalonia_rejects()
     {
         // Upstream's GridSize (#22) accepts any Auto value; Avalonia's GridLength rejects NaN when the track is built.
-        var definition = new GridDefinition([GridSize.Px(100), GridSize.Star()], [GridSize.Auto]);
-        var host = new TestHost(() => new GridElement(definition, [TextBlock("a")]));
+        GridSize[] columns = [GridSize.Px(100), GridSize.Star()];
+        GridSize[] rows = [GridSize.Auto];
+        var host = new TestHost(() => new GridElement(columns, rows, [TextBlock("a")]));
         var grid = host.All<Grid>()[0];
 
-        definition = new GridDefinition([new GridSize(double.NaN, GridUnitType.Auto)], [GridSize.Star()]);
+        (columns, rows) = ([new GridSize(double.NaN, GridUnitType.Auto)], [GridSize.Star()]);
         Assert.ThrowsAny<ArgumentException>(() => host.Render());
         // The failed element isn't kept as the rendered one: the same definition fails again rather than being skipped.
+        Assert.ThrowsAny<ArgumentException>(() => host.Render());
+        Assert.Equal([new GridLength(100), new GridLength(1, GridUnitType.Star)], grid.ColumnDefinitions.Select(c => c.Width).ToArray());
+        Assert.Equal([GridLength.Auto], grid.RowDefinitions.Select(r => r.Height).ToArray());
+
+        // A bad row with new columns: the columns aren't rebuilt either (#31: the two sets are written together).
+        (columns, rows) = ([GridSize.Star(), GridSize.Star(), GridSize.Star()], [new GridSize(double.NaN, GridUnitType.Auto)]);
         Assert.ThrowsAny<ArgumentException>(() => host.Render());
         Assert.Equal([new GridLength(100), new GridLength(1, GridUnitType.Star)], grid.ColumnDefinitions.Select(c => c.Width).ToArray());
         Assert.Equal([GridLength.Auto], grid.RowDefinitions.Select(r => r.Height).ToArray());

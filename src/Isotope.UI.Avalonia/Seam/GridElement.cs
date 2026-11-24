@@ -6,12 +6,15 @@ namespace Isotope.UI.Core
 {
     /// <summary>
     /// Children placed in rows and columns, as an Avalonia <see cref="Avalonia.Controls.Grid"/>. Mirrors upstream's
-    /// <c>GridElement</c> (Reactor's member names); each child's cell is attached with <see cref="GridExtensions.Grid{T}"/>.
+    /// <c>GridElement</c>, with Avalonia's member names (#31): Reactor's <c>Definition</c> is
+    /// <see cref="ColumnDefinitions"/> and <see cref="RowDefinitions"/>. Each child's cell is attached with
+    /// <see cref="GridExtensions.Grid{T}"/>.
     /// </summary>
     [GenerateReactorDescriptor(typeof(Grid))]
     [WrapPanelChildren(PerChild = "ApplyGridAttached")]
-    [WrapManual("Definition")]
-    public partial record GridElement(GridDefinition Definition, Element[] Children) : Element
+    [WrapManual("ColumnDefinitions")]
+    [WrapManual("RowDefinitions")]
+    public partial record GridElement(GridSize[] ColumnDefinitions, GridSize[] RowDefinitions, Element[] Children) : Element
     {
         private readonly Element[] _children = Reconciler.Flatten(Children);
 
@@ -51,24 +54,38 @@ namespace Isotope.UI.Core
             else ui.ClearValue(Grid.ColumnSpanProperty);
         }
 
-        // The definition rebuilds the row and column definitions only when it changes. Unlike upstream's, which compares
-        // the instance, it compares the tracks (GridDefinition's equality), so the definition the Grid factory builds on
-        // every render doesn't rebuild the tracks each time.
+        // Each set of tracks is rebuilt only when it changes. Unlike upstream's, which compares the definition's
+        // instance, it compares the tracks, so the arrays a component builds on every render don't rebuild them each
+        // time.
         private static partial ControlDescriptor<GridElement, Grid> Customize(ControlDescriptor<GridElement, Grid> d)
-            => d.OneWay<GridDefinition>(
-                get: static e => e.Definition,
-                set: static (c, v) =>
-                {
-                    // Every track is converted before the grid is touched: upstream's GridSize doesn't check an Auto
-                    // track's value, and Avalonia's GridLength rejects a bad one, so such a render fails with the
-                    // grid's tracks as they were.
-                    var columns = v is null ? [] : Array.ConvertAll(v.Columns, ColumnDefinitionOf);
-                    var rows = v is null ? [] : Array.ConvertAll(v.Rows, RowDefinitionOf);
-                    c.ColumnDefinitions.Clear();
-                    c.RowDefinitions.Clear();
-                    foreach (var col in columns) c.ColumnDefinitions.Add(col);
-                    foreach (var row in rows) c.RowDefinitions.Add(row);
-                });
+            => d.ImperativeBridged(
+                mount: static (ctx, c, e) => WriteTracks(c, e.ColumnDefinitions, e.RowDefinitions, columns: true, rows: true),
+                update: static (ctx, c, o, n) => WriteTracks(c, n.ColumnDefinitions, n.RowDefinitions,
+                    columns: !TracksEqual(o.ColumnDefinitions, n.ColumnDefinitions),
+                    rows: !TracksEqual(o.RowDefinitions, n.RowDefinitions)));
+
+        // Both sets are converted before the grid is touched: upstream's GridSize doesn't check an Auto track's value,
+        // and Avalonia's GridLength rejects a bad one, so such a render fails with all the grid's tracks as they were.
+        private static void WriteTracks(Grid c, GridSize[]? columnSizes, GridSize[]? rowSizes, bool columns, bool rows)
+        {
+            if (!columns && !rows) return;
+            var newColumns = columns ? Array.ConvertAll(columnSizes ?? [], ColumnDefinitionOf) : null;
+            var newRows = rows ? Array.ConvertAll(rowSizes ?? [], RowDefinitionOf) : null;
+            if (newColumns is not null)
+            {
+                c.ColumnDefinitions.Clear();
+                foreach (var col in newColumns) c.ColumnDefinitions.Add(col);
+            }
+            if (newRows is not null)
+            {
+                c.RowDefinitions.Clear();
+                foreach (var row in newRows) c.RowDefinitions.Add(row);
+            }
+        }
+
+        /// <summary>Whether two track arrays hold the same tracks (upstream's record compares the instance).</summary>
+        internal static bool TracksEqual(GridSize[]? a, GridSize[]? b) =>
+            ReferenceEquals(a, b) || (a is not null && b is not null && a.AsSpan().SequenceEqual(b));
 
         private static ColumnDefinition ColumnDefinitionOf(GridSize size)
         {
@@ -84,43 +101,6 @@ namespace Isotope.UI.Core
             if (size.Min is { } min) def.MinHeight = min;
             if (size.Max is { } max) def.MaxHeight = max;
             return def;
-        }
-    }
-
-    /// <summary>
-    /// A grid's column and row tracks (upstream's <c>GridDefinition</c>). Two definitions are equal when their tracks are
-    /// (upstream's record compares the arrays by reference).
-    /// </summary>
-    public record GridDefinition(GridSize[] Columns, GridSize[] Rows)
-    {
-        public virtual bool Equals(GridDefinition? other)
-            => ReferenceEquals(this, other)
-                || (other is not null && EqualityContract == other.EqualityContract
-                    && Columns.AsSpan().SequenceEqual(other.Columns) && Rows.AsSpan().SequenceEqual(other.Rows));
-
-        public override int GetHashCode()
-        {
-            var hash = new HashCode();
-            foreach (var c in Columns) hash.Add(c);
-            hash.Add(Columns.Length);
-            foreach (var r in Rows) hash.Add(r);
-            return hash.ToHashCode();
-        }
-
-        /// <summary>Tracks from strings: <c>"Auto"</c>, <c>"*"</c>, <c>"2*"</c> or a size in DIPs (<see cref="GridSize.Parse"/>).</summary>
-        /// <exception cref="FormatException">A string that isn't a track.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">An infinite size or weight (upstream's <c>GridSize</c>: it parses, then its constructor rejects it).</exception>
-        public GridDefinition(string[] columns, string[] rows)
-            : this(Parse(columns, nameof(columns)), Parse(rows, nameof(rows)))
-        {
-        }
-
-        private static GridSize[] Parse(string[] sizes, string name)
-        {
-            ArgumentNullException.ThrowIfNull(sizes, name);
-            var result = new GridSize[sizes.Length];
-            for (int i = 0; i < sizes.Length; i++) result[i] = GridSize.Parse(sizes[i]);
-            return result;
         }
     }
 

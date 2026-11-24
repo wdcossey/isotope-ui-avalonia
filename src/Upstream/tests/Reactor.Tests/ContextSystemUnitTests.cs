@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ContextSystemUnitTests.cs, last changed upstream in bb856424eebc; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ContextSystemUnitTests.cs, last changed upstream in bb856424eebc; transforms: test-textblock-text, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 using Xunit;
 
@@ -154,7 +154,7 @@ public class ContextSystemUnitTests
     {
         var text = new TextBlockElement("hello").Provide(TestTheme, "dark");
         Assert.IsType<TextBlockElement>(text);
-        Assert.Equal("hello", text.Content);
+        Assert.Equal("hello", text.Text);
     }
 
     // ════════════════════════════════════════════════════════════════

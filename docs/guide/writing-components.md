@@ -12,36 +12,38 @@ its tests, and `DocSnippetTests` fails if the page and the code drift apart.
 
 Component files import the element factories and the element types:
 `using Isotope.UI;`, `using Isotope.UI.Core;` and `using static Isotope.UI.Factories;`. The factories keep
-Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orientation`, …) are Avalonia's.
+Microsoft.UI.Reactor's names. Their parameters and the elements' members have Avalonia's names (`Text`, `Minimum`,
+`IsChecked`, `SelectedDate`; a callback is `On` plus an Avalonia event, `OnClick`, or `On` plus a property and
+`Changed`, `OnTextChanged`), and their value types (`Thickness`, `IBrush`, `Orientation`, …) are Avalonia's.
 
 | Factory | Element | Avalonia control |
 |---|---|---|
-| `TextBlock(content)` | `TextBlockElement` | `TextBlock` |
-| `Button(label, onClick)`, `Button(content, onClick)`, `Button(command)` | `ButtonElement` | `Button` (`content` is any element) |
-| `ToggleButton(label, isChecked, onIsCheckedChanged)`, `ThreeStateToggleButton(label, checkedState, onCheckedStateChanged)`, `ToggleButton(command, isChecked)` | `ToggleButtonElement` | `ToggleButton` |
-| `RepeatButton(label, onClick)`, `RepeatButton(command)` | `RepeatButtonElement` | `RepeatButton` |
+| `TextBlock(text)` | `TextBlockElement` | `TextBlock` |
+| `Button(content, onClick)`, `Button(command)` | `ButtonElement` | `Button` (`content` is a string or any element) |
+| `ToggleButton(content, isChecked, onIsCheckedChanged)`, `ThreeStateToggleButton(content, isChecked, onIsCheckedChanged)`, `ToggleButton(command, isChecked)` | `ToggleButtonElement` | `ToggleButton` |
+| `RepeatButton(content, onClick)`, `RepeatButton(command)` | `RepeatButtonElement` | `RepeatButton` |
 | `HyperlinkButton(content, navigateUri, onClick)`, `HyperlinkButton(command)` | `HyperlinkButtonElement` | `HyperlinkButton` |
-| `TextBox(value, onChanged, placeholderText)` | `TextBoxElement` | `TextBox` |
-| `AutoSuggestBox(text, onTextChanged, onQuerySubmitted)` | `AutoSuggestBoxElement` | `AutoCompleteBox` (its `Suggestions` shown as given; `FilterMode` lets Avalonia filter them) |
-| `Slider(value, min, max, onValueChanged)` | `SliderElement` | `Slider` |
+| `TextBox(text, onTextChanged, placeholderText)` | `TextBoxElement` | `TextBox` |
+| `AutoSuggestBox(text, onTextChanged, onQuerySubmitted)` | `AutoSuggestBoxElement` | `AutoCompleteBox` (its `ItemsSource` shown as given; `FilterMode` lets Avalonia filter them) |
+| `Slider(value, minimum, maximum, onValueChanged)` | `SliderElement` | `Slider` |
 | `NumberBox(value, onValueChanged)` | `NumberBoxElement` | `NumericUpDown` (Reactor's `double` values; `NaN` is an empty box) |
-| `CheckBox(isChecked, onIsCheckedChanged, label)`, `ThreeStateCheckBox(checkedState, onCheckedStateChanged, label)` | `CheckBoxElement` | `CheckBox` |
-| `ToggleSwitch(isOn, onIsOnChanged, onContent, offContent, header)` | `ToggleSwitchElement` | `ToggleSwitch` (`IsOn` is its `IsChecked`, `header` its `Content`) |
-| `RadioButton(label, isChecked, onIsCheckedChanged, groupName)` | `RadioButtonElement` | `RadioButton` |
+| `CheckBox(isChecked, onIsCheckedChanged, content)`, `ThreeStateCheckBox(isChecked, onIsCheckedChanged, content)` | `CheckBoxElement` | `CheckBox` |
+| `ToggleSwitch(isChecked, onIsCheckedChanged, onContent, offContent, content)` | `ToggleSwitchElement` | `ToggleSwitch` |
+| `RadioButton(content, isChecked, onIsCheckedChanged, groupName)` | `RadioButtonElement` | `RadioButton` |
 | `ComboBox(items, selectedIndex, onSelectedIndexChanged)` | `ComboBoxElement` | `ComboBox` |
 | `ListBox(items, selectedIndex, onSelectedIndexChanged)` | `ListBoxElement` | `ListBox` |
-| `DatePicker(date, onDateChanged)` | `DatePickerElement` | `DatePicker` (`Date` is its `SelectedDate`) |
-| `TimePicker(time, onTimeChanged)` | `TimePickerElement` | `TimePicker` (`Time` is its `SelectedTime`) |
+| `DatePicker(selectedDate, onSelectedDateChanged)` | `DatePickerElement` | `DatePicker` |
+| `TimePicker(selectedTime, onSelectedTimeChanged)` | `TimePickerElement` | `TimePicker` |
 | `Progress(value)`, `ProgressIndeterminate()` | `ProgressElement` | `ProgressBar` |
 | `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
 | `Border(child)` | `BorderElement` | `Border` |
-| `ScrollViewer(child)` | `ScrollViewerElement` | `ScrollViewer` |
-| `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.HeaderContent(element)` for an element header) |
+| `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` |
+| `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.Header(element)` for an element header) |
 | `TabView(selectedIndex, onSelectedIndexChanged, Tab(header, content), ...)`, `TabView(Tab(...), ...)` | `TabViewElement` | `TabControl` (a `TabItem` per tab) |
 | `SplitView(pane, content)` | `SplitViewElement` | `SplitView` (open by default, as Reactor's) |
-| `MenuBar(Menu(title, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(text, onClick)` or `MenuItem(command)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
+| `MenuBar(Menu(header, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(header, onClick)` or `MenuItem(command)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
 | `Separator()` | `SeparatorElement` | `Separator` (Avalonia-only, so Avalonia's name) |
-| `Grid(columns, rows, ...)` | `GridElement` | `Grid` (tracks are `GridSize.Auto`, `GridSize.Star(weight)`, `GridSize.Px(size)`) |
+| `Grid(columnDefinitions, rowDefinitions, ...)` | `GridElement` | `Grid` (tracks are `GridSize.Auto`, `GridSize.Star(weight)`, `GridSize.Px(size)`) |
 | `WrapPanel(...)` | `WrapPanelElement` | `WrapPanel` (Avalonia-only, so Avalonia's name) |
 | `VStack(...)`, `HStack(...)`, `VStack(spacing, ...)`, `HStack(spacing, ...)` | `StackElement` | `StackPanel` |
 | `Flex(...)`, `Flex(direction, ...)`, `FlexRow(...)`, `FlexColumn(...)` | `FlexElement` | `FlexPanel` (flexbox) |
@@ -54,7 +56,9 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 > **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
 > same element upstream's `RenderEachTime(render)` builds. Both exist here, and `RenderEachTime` works as it does in
 > Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia, and so do `TabView` and `NumberBox`,
-> which are Avalonia's `TabControl` and `NumericUpDown`.
+> which are Avalonia's `TabControl` and `NumericUpDown`. Members and parameters take Avalonia's names instead of
+> Reactor's (`Text` for `Content`, `Minimum` for `Min`, `IsChecked` for `IsOn`, one `Content` for `Label` and
+> `ContentElement`); `tools/naming/renames.json` lists every one, and the migration tool (#33) reads it.
 
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
 keep their controls when it does. An input control (`TextBox`, `AutoSuggestBox`, `Slider`, `NumberBox`, `CheckBox`, `ToggleSwitch`,
@@ -92,7 +96,7 @@ public static Element FruitPicker(RenderContext ctx, string[] fruit)
     var matches = query.Length == 0 ? [] : fruit.Where(f => f.StartsWith(query, StringComparison.OrdinalIgnoreCase)).ToArray();
     return VStack(
         AutoSuggestBox(onTextChanged: setQuery, onQuerySubmitted: setChosen).SuggestionChosen(setChosen)
-            with { Suggestions = matches },
+            with { ItemsSource = matches },
         TextBlock($"Chosen: {chosen}"));
 }
 ```

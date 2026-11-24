@@ -22,7 +22,8 @@ public static Element Counter(RenderContext ctx)
 }
 ```
 
-The factories (`using static Isotope.UI.Factories;`) keep Reactor's names, with Avalonia's value types. See
+The factories (`using static Isotope.UI.Factories;`) keep Reactor's names; their parameters and the elements' members take
+Avalonia's names (`Text`, `Minimum`, `IsChecked`), with Avalonia's value types. See
 [Writing components](docs/guide/writing-components.md) for the vocabulary, a todo app and an example of each hook.
 
 This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12:
@@ -98,7 +99,7 @@ git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.l
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (569 at `1f078436`; 567 at `28a87225`)
 node spikes/A-engine/run-spike.mjs 4                        # Spike A step 4: + Roslyn rules (502 at `1f078436`)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (1047 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (1055 tests; needs no upstream/)
 node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
 node tools/sync/test/all.mjs                                # the sync harness's own tests (needs dotnet: the Roslyn step)
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms

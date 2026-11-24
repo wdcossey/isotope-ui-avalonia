@@ -9,32 +9,28 @@ namespace Isotope.UI.Core;
 
 // The element records for the first Avalonia controls (#12). Hand-written for now; their descriptors are generated
 // by upstream's wrappers generator, built for Avalonia (src/Isotope.UI.Avalonia.Generators), from
-// [GenerateReactorDescriptor]: each member maps to the Avalonia control's property of the same name, [WrapAlias]
-// bridges Reactor's member names to Avalonia's, and [WrapManual] members are written in Customize. These records
-// mirror upstream's, so they keep Reactor's member names; their value types are Avalonia's.
+// [GenerateReactorDescriptor]: each member maps to the Avalonia control's property of the same name, and [WrapManual]
+// members are written in Customize. These records mirror upstream's, with Avalonia's member names (#31: a property or
+// event of the control, On{Event} or On{Property}Changed; tools/naming/renames.json maps Reactor's) and value types.
 
 /// <summary>Text, as an Avalonia <see cref="Avalonia.Controls.TextBlock"/>.</summary>
 [GenerateReactorDescriptor(typeof(TextBlock))]
-[WrapAlias("Content", "Text")]
-public partial record TextBlockElement(string Content) : Element
+public partial record TextBlockElement(string Text) : Element
 {
     internal Action<TextBlock>[] Setters { get; init; } = [];
 }
 
 /// <summary>
-/// A push button, as an Avalonia <see cref="Avalonia.Controls.Button"/>: a text <see cref="Label"/>, or any element as
-/// its content (<see cref="ContentElement"/>, #26).
+/// A push button, as an Avalonia <see cref="Avalonia.Controls.Button"/>. Its <see cref="Content"/> is a string or any
+/// element (#26), as Avalonia's <c>Content</c>.
 /// </summary>
 [GenerateReactorDescriptor(typeof(Button))]
-[WrapManual("Label")]
+[WrapManual("Content")]
 [WrapManual("IsEnabled")]
 [WrapManual("Command")]
-public partial record ButtonElement(string Label, Action? OnClick = null) : Element
+public partial record ButtonElement(object? Content, Action? OnClick = null) : Element
 {
     public bool IsEnabled { get; init; } = true;
-
-    /// <summary>Declarative content, taking precedence over <see cref="Label"/> (upstream's member).</summary>
-    public Element? ContentElement { get; init; }
 
     /// <summary>
     /// The command the button runs (upstream's member, #29), from <c>Button(command)</c>, <c>.Command(command)</c> or an
@@ -49,9 +45,9 @@ public partial record ButtonElement(string Label, Action? OnClick = null) : Elem
 
     // IsEnabled has a second source, the IsEnabled modifier: the reconciler writes the two as one value
     // (Reconciler.ApplyEnabled), so neither overwrites the other, and the descriptor leaves it alone. As upstream's,
-    // the content is a child subtree when ContentElement is set, else the label (WithContent, #26).
+    // element content is a child subtree, and any other content is written as it is (WithContent, #26).
     private static partial ControlDescriptor<ButtonElement, Button> Customize(ControlDescriptor<ButtonElement, Button> d)
-        => d.WithContent(static e => e.ContentElement, static e => e.Label)
+        => d.WithContent(static e => e.Content)
             .OneWayCommand(static e => e.Command, static e => e.OnClick is not null);
 }
 
@@ -78,16 +74,16 @@ public partial record StackElement(Orientation Orientation, Element[] Children) 
 }
 
 /// <summary>
-/// A text box, as an Avalonia <see cref="Avalonia.Controls.TextBox"/>. <see cref="Value"/> defaults to
+/// A text box, as an Avalonia <see cref="Avalonia.Controls.TextBox"/>. <see cref="Text"/> defaults to
 /// <see cref="Optional{T}.Unset"/>, so the text the user types is kept unless a value is given.
 /// </summary>
-[GenerateReactorDescriptor(typeof(TextBox), ClearValueOnUnset = true)]
-[WrapManual("Value")]
+[GenerateReactorDescriptor(typeof(TextBox), ClearValueOnUnset = true, Exclude = new[] { "TextChanged" })]
+[WrapManual("Text")]
 [WrapManual("AcceptsReturn")]
 [WrapManual("TextWrapping")]
 public partial record TextBoxElement(
-    Optional<string> Value = default,
-    Action<string>? OnChanged = null,
+    Optional<string> Text = default,
+    Action<string>? OnTextChanged = null,
     string? PlaceholderText = null) : Element
 {
     public bool? IsReadOnly { get; init; }
@@ -99,9 +95,9 @@ public partial record TextBoxElement(
 
     internal Action<TextBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnChanged is not null;
+    internal override bool HasCallbacks => OnTextChanged is not null;
 
-    // Reports user edits, as upstream's does: the echo of each write of the engine's own (the controlled Value) carries
+    // Reports user edits, as upstream's does: the echo of each write of the engine's own (the controlled Text) carries
     // a suppression token, which the trampoline consumes. Avalonia posts TextChanged, so the event arrives after the
     // write, and every write of a new text posts one.
     private static readonly EventHandler<TextChangedEventArgs> __TextChangedTrampoline = (s, _) =>
@@ -109,11 +105,11 @@ public partial record TextBoxElement(
         var tb = (TextBox)s!;
         if (!Reconciler.TryGetReactorState(tb, out var state)) return;
         if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
-        (state.Element as TextBoxElement)?.OnChanged?.Invoke(tb.Text ?? string.Empty);
+        (state.Element as TextBoxElement)?.OnTextChanged?.Invoke(tb.Text ?? string.Empty);
     };
 
     // As upstream's: AcceptsReturn and TextWrapping are written before the text (a single-line box strips line
-    // breaks from the text it's given), and Value is a controlled value whose update writes carry a suppression token
+    // breaks from the text it's given), and Text is a controlled value whose update writes carry a suppression token
     // (HandCodedControlled). Unlike upstream's:
     // - the mount write carries a token too (the entry just before HandCodedControlled), because Avalonia raises
     //   TextChanged for it even before the box is in a window, after the trampoline is wired;
@@ -131,16 +127,16 @@ public partial record TextBoxElement(
             .ImperativeBridged(
                 mount:       static (ctx, c, e) =>
                 {
-                    if (e.Value.HasValue && (c.Text ?? string.Empty) != e.Value.Value)
-                        ReactorBinding.WriteSuppressed(c, () => c.Text = e.Value.Value);
+                    if (e.Text.HasValue && (c.Text ?? string.Empty) != e.Text.Value)
+                        ReactorBinding.WriteSuppressed(c, () => c.Text = e.Text.Value);
                 },
                 update:      static (ctx, c, o, n) => { })
             .HandCodedControlled<TextBoxEventPayload, string, EventHandler<TextChangedEventArgs>>(
-                get:         static e => e.Value,
+                get:         static e => e.Text,
                 set:         static (c, v) => c.Text = v,
                 readBack:    static c => c.Text ?? string.Empty,
                 subscribe:   static (c, h) => c.TextChanged += h,
-                callback:    static e => e.OnChanged,
+                callback:    static e => e.OnTextChanged,
                 trampoline:  __TextChangedTrampoline,
                 slotIsNull:  static p => p.TextChangedTrampoline is null,
                 setSlot:     static (p, h) => p.TextChangedTrampoline = h);
@@ -151,12 +147,12 @@ public partial record TextBoxElement(
 /// <see cref="Optional{T}.Unset"/>, so the control owns its value until one is given.
 /// </summary>
 [GenerateReactorDescriptor(typeof(Slider))]
-[WrapManual("Min")]
-[WrapManual("Max")]
+[WrapManual("Minimum")]
+[WrapManual("Maximum")]
 public partial record SliderElement(
     Optional<double> Value = default,
-    double Min = 0,
-    double Max = 100,
+    double Minimum = 0,
+    double Maximum = 100,
     Action<double>? OnValueChanged = null) : Element
 {
     public Orientation Orientation { get; init; } = Orientation.Horizontal;
@@ -170,15 +166,15 @@ public partial record SliderElement(
 
     internal override bool HasCallbacks => OnValueChanged is not null;
 
-    // As upstream's: Min and Max are written before Value (Customize's entries come first), so the first value
+    // As upstream's: Minimum and Maximum are written before Value (Customize's entries come first), so the first value
     // lands in the right range, and a bound that coerces the value drops the change event the coercion raises.
     private static partial ControlDescriptor<SliderElement, Slider> Customize(ControlDescriptor<SliderElement, Slider> d)
         => d.CoercingOneWay(
-                get:               static e => e.Min,
+                get:               static e => e.Minimum,
                 set:               static (c, v) => c.Minimum = v,
                 coercesController: static (c, newMin) => c.Value < newMin)
             .CoercingOneWay(
-                get:               static e => e.Max,
+                get:               static e => e.Maximum,
                 set:               static (c, v) => c.Maximum = v,
                 coercesController: static (c, newMax) => c.Value > newMax);
 }

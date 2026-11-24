@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ComponentModelIntegrationTests.cs, last changed upstream in 4f09a719445e; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ComponentModelIntegrationTests.cs, last changed upstream in 4f09a719445e; transforms: test-textblock-text, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 using Xunit;
 
@@ -650,7 +650,7 @@ public class ComponentModelIntegrationTests : IDisposable
             .Provide(CountCtx, 5);
 
         Assert.IsType<TextBlockElement>(text);
-        Assert.Equal("hello", text.Content);
+        Assert.Equal("hello", text.Text);
         Assert.NotNull(text.ContextValues);
         Assert.Equal(2, text.ContextValues.Count);
     }
