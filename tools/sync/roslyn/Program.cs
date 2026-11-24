@@ -1,5 +1,6 @@
 // tools/sync's Roslyn step. Reads {"files": [{"path", "text", "ops": [op, ...]}]} from stdin (UTF-8 JSON) and
-// writes {"files": [{"path", "text", "results": [{"id", "hits", "error"}], "errors": [...]}]} to stdout.
+// writes {"files": [{"path", "text", "results": [{"id", "hits", "error"}], "errors": [...]}]} to stdout. A file may also
+// carry "original": the upstream text its syntax errors are compared with (with no ops, a syntax check only).
 // An op is {"id", "op": "drop-member" | "retarget-type" | "drop-attribute", ...} (Transforms.cs). Ops run in order,
 // each on the text the one before left. An op that fails leaves the text as it was and reports its error; tools/sync
 // fails the sync on any error. Exit code 0 means the response was written, whatever the ops reported.

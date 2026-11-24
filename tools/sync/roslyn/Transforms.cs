@@ -6,7 +6,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Isotope.Sync.Roslyn;
 
 public sealed record Request(List<FileRequest>? Files);
-public sealed record FileRequest(string Path, string Text, List<Op> Ops);
+/// <summary>One file. Original (optional): the text to compare syntax errors with, when Text already carries
+/// transforms made elsewhere (tools/sync's text rules); by default the check compares with Text.</summary>
+public sealed record FileRequest(string Path, string Text, List<Op>? Ops, string? Original = null);
 /// <summary>
 /// One transform. drop-member: Member (a name; "this" for an indexer), Type (the dotted names of the types that
 /// contain it, innermost last, matched as a suffix; omitted for a type declared in a namespace), Parameters (optional,
@@ -69,12 +71,13 @@ public static class Transforms
             }
         }
         // A transform must never leave broken syntax behind: compare the syntax errors before and after.
-        if (text != file.Text)
+        var baseline = file.Original ?? file.Text;
+        if (text != baseline)
         {
-            var before = SyntaxErrors(file.Text);
+            var before = SyntaxErrors(baseline);
             var added = SyntaxErrors(text).Where(d => !before.Remove(d)).ToList();
             if (added.Count > 0)
-                errors.Add("the Roslyn transforms leave " + added.Count + " new syntax error(s), the first: " + added[0]);
+                errors.Add("the transforms leave " + added.Count + " new syntax error(s), the first: " + added[0]);
         }
         return new FileResponse(file.Path, text, results, errors);
     }
