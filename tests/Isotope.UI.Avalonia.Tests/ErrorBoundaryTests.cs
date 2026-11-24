@@ -149,6 +149,18 @@ public sealed class ErrorBoundaryTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void A_fallback_that_throws_with_no_boundary_out_is_discarded_and_escapes()
+    {
+        var partial = new StrongBox<int>(0);
+        var ex = Assert.Throws<InvalidOperationException>(() => new TestHost(() => ErrorBoundary(
+            Throws("child"),
+            _ => VStack(Tracked(partial, "part of the fallback"), Throws("fallback")))));
+
+        Assert.Equal("fallback", ex.Message);
+        Assert.Equal(1, partial.Value); // what the failed fallback mounted is torn down
+    }
+
+    [AvaloniaFact]
     public void A_re_render_of_the_boundary_retries_the_child_and_recovers()
     {
         bool fail = true;
@@ -257,7 +269,7 @@ public sealed class ErrorBoundaryTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void A_failed_retry_in_place_runs_each_cleanup_once()
+    public void A_failed_retry_in_place_unmounts_the_child_and_what_it_added()
     {
         var kept = new StrongBox<int>(0);
         var added = new StrongBox<int>(0);
