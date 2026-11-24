@@ -209,6 +209,19 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## First automated weekly sync (issue #24, 2026-11-24)
+
+- **The `upstream-sync` job's first real run** (`1f078436` → `561c5573`, 11 upstream commits) worked as designed: it pushed
+  `sync/1f078436-561c5573`, started CI on it and opened #24 with the report.
+- **3 vendored files changed,** no transform rule broke, and Yoga stayed at 780.
+- **9 new upstream paths,** all classified by the tier map.
+- **The compiler caught one break:** upstream's `ChildReconciler` now passes a new `childIndex:` argument to our seam's
+  `Reconciler.UpdateChildTracked` (4 errors). The fix was to mirror the parameter in our seam (unused: it serves staggered
+  animations, which Avalonia doesn't have yet).
+- **Tier 3 PRs** (compositor implicit transitions, transforms on the composition visual, assembly names): none needs porting
+  yet.
+- **Coordinator time:** about 5 minutes from reading the issue to a green branch (session timestamps).
+
 ## Roslyn transforms (issue #4, 2026-11-24)
 
 - **Decision: Roslyn complements the text-based drops; it doesn't replace them.** All 88 text drops convert to Roslyn drops

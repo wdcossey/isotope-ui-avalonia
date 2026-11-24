@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/AppliedModifierMap.cs, last changed upstream in 1dff529a7f11; transforms: winui-usings, winui-alias-panel, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Diagnostics/AppliedModifierMap.cs, last changed upstream in 561c55739d69; transforms: winui-usings, winui-alias-panel, namespace-isotope. Do not edit: change the tools/sync rules.
 
 
 namespace Isotope.UI.Core.Diagnostics;
@@ -18,8 +18,9 @@ namespace Isotope.UI.Core.Diagnostics;
 /// <c>Visual</c> bucket records (their members are listed individually), event handlers,
 /// gesture and drag configs, <c>OnMountAction</c>/<c>OnUnmountAction</c>, <c>Ref</c>,
 /// <c>Backdrop</c> (a window property). <c>Scale</c>/<c>Rotation</c>/<c>Translation</c>/
-/// <c>CenterPoint</c> are composition-backed <c>UIElement</c> facades rather than DPs, but the
-/// reconciler writes them, so they are mapped.
+/// <c>CenterPoint</c> aren't DPs: the reconciler writes them to the element's composition
+/// visual (spec 066 layer 4; <c>Rotation</c> as <c>RotationAngle</c>, in radians), so they are mapped
+/// to its properties. The <c>UIElement</c> facades read identity for them.
 /// <c>AppliedModifierMapTests</c> fails when a new modifier is neither mapped nor listed
 /// as excluded.</para>
 /// </summary>
@@ -100,10 +101,10 @@ internal static class AppliedModifierMap
         new("VerticalContentAlignment", m => m.VerticalContentAlignment, ControlOnly("VerticalContentAlignment")),
         new("Opacity", m => m.Opacity, Always("UIElement.Opacity")),
         // Composition-backed UIElement facades (not DPs), written directly or animated on the visual.
-        new("Scale", m => m.Scale, Always("UIElement.Scale")),
-        new("Rotation", m => m.Rotation, Always("UIElement.Rotation")),
-        new("Translation", m => m.Translation, Always("UIElement.Translation")),
-        new("CenterPoint", m => m.CenterPoint, Always("UIElement.CenterPoint")),
+        new("Scale", m => m.Scale, Always("Visual.Scale")),
+        new("Rotation", m => m.Rotation, Always("Visual.RotationAngle")),
+        new("Translation", m => m.Translation, Always("Visual.Translation")),
+        new("CenterPoint", m => m.CenterPoint, Always("Visual.CenterPoint")),
         new("IsVisible", m => m.IsVisible, Always("UIElement.Visibility")),
         new("RichToolTip", m => m.RichToolTip, Always("ToolTipService.ToolTip")),
         // A rich tooltip wins over the string form, so ToolTip is only applied without one.
