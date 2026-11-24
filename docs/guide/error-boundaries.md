@@ -35,10 +35,13 @@ public static Element Dashboard(RenderContext ctx)
     made before throwing still renders as usual.
 - **The nearest one catches.** A boundary inside another catches first. If its fallback throws too, the next boundary out
   catches that.
-- **Every re-render retries.** When the boundary renders again (its parent renders, as the retry button above makes
-  it do), it tries the child again. A child that now renders is mounted afresh in the fallback's place. A child that
-  throws again leaves the fallback where it is, updated with the new exception, so the fallback's own state (a
-  "show details" toggle, focus on its retry button) survives the retry.
+- **Every re-render retries.** When the boundary's parent renders it again (as the retry button above makes
+  `Dashboard` do), the boundary tries the child again. A child that now renders is mounted afresh in the fallback's
+  place. A child that throws again leaves the fallback where it is, updated with the new exception, so the fallback's
+  own state (a "show details" toggle, focus on its retry button) survives the retry.
+  - A state change inside the fallback re-renders the components above it too, so it also retries the child.
+  - A boundary element the parent reuses (hoisted, or kept by `UseMemo`) isn't rendered again, like any reused
+    element: it doesn't retry, and a state change inside its fallback updates only the fallback.
 - **A new key starts the child afresh.** `ErrorBoundary(child, fallback).WithKey(...)` with a new key remounts the
   child, so its state starts again.
 - **What failed is torn down.** The part of the child that mounted before the error is unmounted and its effects'
@@ -56,6 +59,8 @@ public static Element Dashboard(RenderContext ctx)
 - **A retry doesn't reuse the fallback.** Reactor diffs the retried child against the fallback it replaced, so a child and
   a fallback of the same element type share controls and hook state, and a fallback shown again after a failed retry is
   remounted, losing its state. Here the child is mounted afresh and the fallback is updated in place.
+- **An unchanged boundary element doesn't retry.** When a pass reaches a reused boundary element only on its way to a
+  state change inside the fallback, only the fallback is updated; Reactor retries the child there too.
 - **An effect cleanup that throws while a failed retry unmounts the old child is logged,** and the other cleanups still
   run. In Reactor it escapes the boundary.
 - **Fatal errors pass through.** A boundary doesn't catch `OutOfMemoryException` or `StackOverflowException`, as the

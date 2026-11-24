@@ -369,8 +369,18 @@ public sealed partial class Reconciler
             };
             if (control is not null)
             {
-                ApplyModifiers(control, null, null, element, modifiers);
-                ApplyEnabled(control, element, modifiers);
+                try
+                {
+                    ApplyModifiers(control, null, null, element, modifiers);
+                    ApplyEnabled(control, element, modifiers);
+                }
+                catch
+                {
+                    // The subtree mounted (a wrapper registered its node) but this mount fails: inside an error boundary,
+                    // it is a completed subtree for the boundary to unmount.
+                    NoteMountCompleted(boundaryRootsStart, control);
+                    throw;
+                }
                 GetOrCreateReactorState(control).Element = element;
             }
             NoteMountCompleted(boundaryRootsStart, control);

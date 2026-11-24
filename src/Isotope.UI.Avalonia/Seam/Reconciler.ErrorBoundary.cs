@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
@@ -13,24 +12,18 @@ public sealed partial class Reconciler
     /// <summary>What a mounted boundary rendered last, by its wrapper.</summary>
     internal sealed class ErrorBoundaryNode
     {
-        /// <summary>The child element of the boundary's current element.</summary>
-        public Element ChildElement { get; set; } = null!;
+        /// <summary>The boundary element last mounted or updated.</summary>
+        public ErrorBoundaryElement Element { get; set; } = null!;
         /// <summary>The element the wrapper holds: the child, or the fallback the child's failure produced.</summary>
         public Element? RenderedElement { get; set; }
         /// <summary>The exception the last mount or retry caught; null when the child rendered.</summary>
         public Exception? CaughtException { get; set; }
-        /// <summary>The fallback of the boundary's current element.</summary>
-        public Func<Exception, Element> Fallback { get; set; } = null!;
     }
 
     private readonly Dictionary<UIElement, ErrorBoundaryNode> _errorBoundaryNodes = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The number of mounted error boundaries (diagnostics and tests).</summary>
     internal int ErrorBoundaryNodeCount => _errorBoundaryNodes.Count;
-
-    /// <summary>Tries to find the boundary node a wrapper control belongs to.</summary>
-    internal bool TryFindErrorBoundaryNode(UIElement control, [NotNullWhen(true)] out ErrorBoundaryNode? node)
-        => _errorBoundaryNodes.TryGetValue(control, out node);
 
     // While a boundary mounts or retries its child (null otherwise, so ordinary mounts pay nothing):
     // - the controls whose Mount completed, collapsed as they nest: a completed mount replaces the roots its children
@@ -114,15 +107,14 @@ public sealed partial class Reconciler
         }
         _errorBoundaryNodes[wrapper] = new ErrorBoundaryNode
         {
-            ChildElement = boundary.Child,
+            Element = boundary,
             RenderedElement = rendered,
             CaughtException = caught,
-            Fallback = boundary.Fallback,
         };
         return wrapper;
     }
 
-    // Every update retries the child (upstream: "Always retry the child on re-render").
+    // An update with a new boundary element retries the child (upstream: "Always retry the child on re-render").
     private void UpdateErrorBoundary(ErrorBoundaryElement boundary, Border wrapper, Action requestRerender)
     {
         var node = _errorBoundaryNodes[wrapper];
@@ -131,6 +123,15 @@ public sealed partial class Reconciler
         // than diffed against the fallback, which would render it on the fallback's components and their hook state;
         // and if it fails again, the fallback is updated in place, so its own state survives the retry.
         bool showingFallback = node.CaughtException is not null;
+        if (showingFallback && ReferenceEquals(boundary, node.Element))
+        {
+            // The same element: nothing re-rendered the boundary, and the pass only walks through it to a component in
+            // the fallback whose own state changed. Only the fallback is reconciled (upstream retries the child here).
+            var fallback = node.RenderedElement!;
+            var reconciled = ReconcileSlot(fallback, fallback, existing, requestRerender);
+            if (!ReferenceEquals(reconciled, existing)) wrapper.Child = reconciled;
+            return;
+        }
         Element rendered;
         Exception? caught = null;
         var record = BeginBoundaryMount();
@@ -185,10 +186,9 @@ public sealed partial class Reconciler
                 RollBackBoundaryMount(record, existing);
             EndBoundaryMount(record);
         }
-        node.ChildElement = boundary.Child;
+        node.Element = boundary;
         node.RenderedElement = rendered;
         node.CaughtException = caught;
-        node.Fallback = boundary.Fallback;
     }
 
     /// <summary>

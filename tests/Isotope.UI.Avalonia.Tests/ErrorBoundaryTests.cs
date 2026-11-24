@@ -242,6 +242,43 @@ public sealed class ErrorBoundaryTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void The_same_boundary_element_again_reconciles_the_fallback_without_retrying()
+    {
+        int childRenders = 0;
+        // The parent re-renders when the fallback's state changes (a state change re-renders the components above it),
+        // but hands the boundary the same element instance.
+        var host = new TestHost(() => Component(ctx => ctx.UseMemo(() => ErrorBoundary(
+            Component(_ => { childRenders++; throw new InvalidOperationException("failing"); }),
+            ex => Component(c =>
+            {
+                var (details, setDetails) = c.UseState(false);
+                return VStack(
+                    TextBlock(details ? "details: " + ex.Message : "failed"),
+                    Button("Details", () => setDetails(true)));
+            })), Array.Empty<object>())));
+        Assert.Equal(1, childRenders);
+
+        TestHost.Click(host.All<Button>().Single());
+        host.Flush();
+
+        Assert.Equal(["details: failing"], host.Texts());
+        Assert.Equal(1, childRenders);
+    }
+
+    [AvaloniaFact]
+    public void A_subtree_whose_modifiers_fail_to_apply_is_rolled_back()
+    {
+        var cleanups = new StrongBox<int>(0);
+        var host = new TestHost(() => ErrorBoundary(
+            Tracked(cleanups, "x").Width(-1),
+            ex => TextBlock("fallback: " + ex.GetType().Name)));
+
+        Assert.Equal(["fallback: ArgumentException"], host.Texts());
+        Assert.Equal(1, cleanups.Value);
+        Assert.Equal(0, host.Reconciler.ComponentNodeCount);
+    }
+
+    [AvaloniaFact]
     public void A_failed_retry_detaches_the_child_it_discarded()
     {
         bool fail = false;
