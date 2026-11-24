@@ -396,12 +396,15 @@ test('neutralise puts references, mentions and outside links in code, and leaves
 });
 
 test('a very long report is cut in the issue body at a line end, and points at the file', () => {
-  const report = '# Upstream sync\n' + '| #1654 | \x60src/a.cs\x60 |\n'.repeat(5000);
-  const body = issueBody({ report, branch: 'sync/a-b', reportPath: 'docs/sync/a-b.md', serverUrl: SERVER, repoSlug: SLUG, runUrl: null, ci: { ok: true } });
-  assert.ok(body.length < 65536, String(body.length));
-  assert.match(body, /cut: the whole report is the file on the branch/);
-  for (const line of body.split('\n')) assert.equal((line.match(/\x60/g) ?? []).length % 2, 0, 'an open code span: ' + line);
-  assert.ok(body.includes(SERVER + '/' + SLUG + '/blob/sync/a-b/docs/sync/a-b.md'));
+  // Every offset of the limit within a line, so some cuts fall inside a code span.
+  for (let pad = 0; pad < 25; pad++) {
+    const report = '# Upstream sync' + ' '.repeat(pad) + '\n' + '| #1654 | \x60src/a.cs\x60 |\n'.repeat(5000);
+    const body = issueBody({ report, branch: 'sync/a-b', reportPath: 'docs/sync/a-b.md', serverUrl: SERVER, repoSlug: SLUG, runUrl: null, ci: { ok: true } });
+    assert.ok(body.length < 65536, String(body.length));
+    assert.match(body, /cut: the whole report is the file on the branch/);
+    assert.ok(body.includes(SERVER + '/' + SLUG + '/blob/sync/a-b/docs/sync/a-b.md'));
+    for (const line of body.split('\n')) assert.equal((line.match(/\x60/g) ?? []).length % 2, 0, 'an open code span (pad ' + pad + '): ' + line);
+  }
 });
 
 test('arguments: unknown ones are refused', () => {
