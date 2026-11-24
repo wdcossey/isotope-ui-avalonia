@@ -242,6 +242,57 @@ public sealed class ComponentErrorTests : IDisposable
         for (int i = 0; i < 3; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
     }
 
+    [AvaloniaFact]
+    public void A_host_fallback_with_a_component_that_throws_gets_the_neutral_text_and_the_handler_is_asked_once()
+    {
+        var errors = new List<RenderError>();
+        using var host = new ReactorHostControl(_ => throw new InvalidOperationException("root"))
+        {
+            RenderErrorHandler = e =>
+            {
+                errors.Add(e);
+                return VStack(TextBlock("host fallback"), Throws("in the fallback"));
+            },
+        };
+        Pump();
+
+        Assert.Equal([Reconciler.NeutralFallbackText], Texts(host));
+        Assert.Equal(RenderErrorSource.RootRender, Assert.Single(errors).Source);
+    }
+
+    [AvaloniaFact]
+    public void An_exception_propagated_in_one_pass_is_an_ordinary_error_in_the_next()
+    {
+        var cached = new InvalidOperationException("the same instance");
+        bool fromRoot = false;
+        Action<int>? rerender = null;
+        var sources = new List<RenderErrorSource>();
+        using var host = new ReactorHostControl(ctx =>
+        {
+            var (n, set) = ctx.UseState(0);
+            rerender = set;
+            if (fromRoot) throw cached;
+            return VStack(Component(_ => throw cached));
+        })
+        {
+            RenderErrorHandler = e =>
+            {
+                sources.Add(e.Source);
+                if (e.Source == RenderErrorSource.ComponentRender) e.Propagate();
+                return TextBlock("handled");
+            },
+        };
+        Assert.Same(cached, Assert.Throws<InvalidOperationException>(Pump));
+
+        fromRoot = true;
+        rerender!(1); // the root throws the instance propagated before: the handler is asked
+        Pump();
+
+        Assert.Equal([RenderErrorSource.ComponentRender, RenderErrorSource.RootRender], sources);
+        Assert.Equal(["handled"], Texts(host));
+        for (int i = 0; i < 3; i++) { GC.Collect(); GC.WaitForPendingFinalizers(); }
+    }
+
     // ── A failed mount outside every boundary ────────────────────────────
 
     [AvaloniaFact]

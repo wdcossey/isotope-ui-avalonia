@@ -268,9 +268,11 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
             try
             {
                 // Reconciled against the current tree, so a repeated failure updates the fallback in place and the
-                // replaced tree is unmounted (its cleanups run).
-                var control = _reconciler.Reconcile(_currentTree, appElement, _currentControl, _requestRender);
-                _currentTree = appElement;
+                // replaced tree is unmounted (its cleanups run). Guarded as upstream's: a component in it that throws
+                // gets the neutral text rather than a second call to the handler (#28).
+                var guarded = Reconciler.GuardFallback(appElement);
+                var control = _reconciler.Reconcile(_currentTree, guarded, _currentControl, _requestRender);
+                _currentTree = guarded;
                 _currentControl = control;
                 Child = control;
             }

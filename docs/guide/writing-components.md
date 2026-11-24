@@ -320,7 +320,8 @@ is shown.
 - **A child component that throws** while it renders, or in an effect that render runs, is replaced in its own place.
   The rest of the window keeps its controls and state. The handler gets `IsHostLevel` false, with the source
   `ComponentRender` or `Effects`, and what it returns fills that component's place. Each later render of the
-  component tries it again, so the next render of its parent, or a change of its own state, can recover it.
+  component tries it again: a change of its own state, or a render of its parent that renders it again (a function
+  component always is; a memo component when its dependencies change, a class component when its props do).
 - **The root's render, its effects, or a control that fails to mount or update** replaces the host's whole content
   (`IsHostLevel` true). The next state change renders again.
 - **A handler that throws, or whose element throws,** gets a neutral "Something went wrong." in that place instead. A

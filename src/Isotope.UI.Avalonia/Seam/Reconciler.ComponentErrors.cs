@@ -93,8 +93,15 @@ public sealed partial class Reconciler
             _propagating = ex;
             ExceptionDispatchInfo.Capture(ex).Throw();
         }
-        return appElement is null ? BuiltInFallback(ex) : new ErrorBoundaryElement(appElement, s_neutralFallback);
+        return appElement is null ? BuiltInFallback(ex) : GuardFallback(appElement);
     }
+
+    /// <summary>
+    /// An app handler's fallback inside a boundary whose own fallback is the neutral text (upstream's
+    /// <c>RenderErrorDispatch.Guard</c>): a fallback that throws degrades without exception details, and the handler isn't
+    /// called again for it.
+    /// </summary>
+    internal static Element GuardFallback(Element appElement) => new ErrorBoundaryElement(appElement, s_neutralFallback);
 
     /// <summary>The text of the built-in placeholder for <paramref name="ex"/> (upstream's wording).</summary>
     internal static string FallbackText(Exception ex) => $"⚠ Render error: {ex.GetType().Name}: {ex.Message}\n\n{ex}";
@@ -155,8 +162,10 @@ public sealed partial class Reconciler
     /// <summary>Hands a teardown failure to the active isolation scope (a control handler's or descriptor's unmount hook).</summary>
     internal void ReportIsolatedUnmountFailure(Exception ex) => _unmountCleanupFailures?.Invoke(ex);
 
-    // While a control handler's teardown runs isolated: the controls it has torn down. If it throws part-way, the recovery
-    // walk over its children skips those (_isolatedTeardownSkip), so no child teardown runs twice.
+    // While a control handler's teardown runs isolated (_isolatedTeardownActive): the controls it has torn down, created
+    // on the first one (most handlers tear down no child). If it throws part-way, the recovery walk over its children
+    // skips those (_isolatedTeardownSkip), so no child teardown runs twice.
+    private bool _isolatedTeardownActive;
     private HashSet<UIElement>? _isolatedTeardownTrack;
     private HashSet<UIElement>? _isolatedTeardownSkip;
 
@@ -165,7 +174,8 @@ public sealed partial class Reconciler
     private bool SkipOrTrackIsolatedTeardown(UIElement control)
     {
         if (_isolatedTeardownSkip is { } skip && skip.Contains(control)) return true;
-        _isolatedTeardownTrack?.Add(control);
+        if (_isolatedTeardownActive)
+            (_isolatedTeardownTrack ??= new HashSet<UIElement>(ReferenceEqualityComparer.Instance)).Add(control);
         return false;
     }
 
@@ -176,8 +186,9 @@ public sealed partial class Reconciler
     private bool RunIsolatedTeardown(UIElement control, IV1HandlerEntry entry, out V1Protocol.V1UnmountDisposition disposition)
     {
         disposition = default;
-        var outerTrack = _isolatedTeardownTrack;
-        var track = _isolatedTeardownTrack = new HashSet<UIElement>(ReferenceEqualityComparer.Instance);
+        var (outerActive, outerTrack) = (_isolatedTeardownActive, _isolatedTeardownTrack);
+        (_isolatedTeardownActive, _isolatedTeardownTrack) = (true, null);
+        HashSet<UIElement>? track;
         bool failed = false;
         try
         {
@@ -191,11 +202,13 @@ public sealed partial class Reconciler
         }
         finally
         {
-            _isolatedTeardownTrack = outerTrack;
+            track = _isolatedTeardownTrack;
+            (_isolatedTeardownActive, _isolatedTeardownTrack) = (outerActive, outerTrack);
         }
         if (!failed) return true;
 
         // An enclosing recovery's skips still apply.
+        track ??= new HashSet<UIElement>(ReferenceEqualityComparer.Instance);
         var outerSkip = _isolatedTeardownSkip;
         if (outerSkip is not null) track.UnionWith(outerSkip);
         _isolatedTeardownSkip = track;
