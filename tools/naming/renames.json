@@ -44,6 +44,7 @@
   },
   "members": [
     {"record": "TextBlockElement", "reactor": "Content", "avalonia": "Text", "kind": "rename"},
+    {"record": "TextBlockElement", "reactor": "Weight", "avalonia": "FontWeight", "kind": "rename"},
     {"record": "ButtonElement", "reactor": "Label", "avalonia": "Content", "kind": "shape", "note": "Label and ContentElement are one Content (object?): a string or an element, as Avalonia's ContentControl.Content."},
     {"record": "ButtonElement", "reactor": "ContentElement", "avalonia": "Content", "kind": "shape", "note": "See Label."},
     {"record": "TextBoxElement", "reactor": "Value", "avalonia": "Text", "kind": "rename"},

@@ -14,7 +14,7 @@ namespace Isotope.UI.Core;
 // event of the control, On{Event} or On{Property}Changed; tools/naming/renames.json maps Reactor's) and value types.
 
 /// <summary>Text, as an Avalonia <see cref="Avalonia.Controls.TextBlock"/>.</summary>
-[GenerateReactorDescriptor(typeof(TextBlock))]
+[GenerateReactorDescriptor(typeof(TextBlock), ClearValueOnUnset = true)]
 public partial record TextBlockElement(string Text) : Element
 {
     internal Action<TextBlock>[] Setters { get; init; } = [];
