@@ -69,6 +69,18 @@ public class ControlAndHostingTests
     }
 
     [Fact]
+    public void A_member_missing_on_a_type_parameter_names_its_constraint()
+    {
+        const string reactor = Usings + """
+            static class Modifiers
+            {
+                public static T Glass<T>(this T el) where T : Element => el.Backdrop(1);
+            }
+            """;
+        Assert.Equal(["ISOMIG013: 'Element' has no member 'Backdrop' in Isotope"], Migrate.Analyze(reactor).Describe());
+    }
+
+    [Fact]
     public void A_window_icon_path_becomes_an_icon_factory()
     {
         const string reactor = Usings + """
