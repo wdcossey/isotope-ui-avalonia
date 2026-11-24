@@ -8,6 +8,7 @@ const EOCD = 0x06054b50, CENTRAL = 0x02014b50, LOCAL = 0x04034b50;
 export function readZip(buf) {
   // The end-of-central-directory record is the last 22 bytes, unless the archive has a comment (up to 64 KiB).
   let eocd = -1;
+  if (buf.length < 22) throw new Error('not a ZIP archive (' + buf.length + ' bytes)');
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 0xffff); i--) {
     if (buf.readUInt32LE(i) === EOCD) { eocd = i; break; }
   }

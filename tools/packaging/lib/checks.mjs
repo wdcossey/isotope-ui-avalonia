@@ -78,6 +78,54 @@ export function embeddedPdb(dll) {
   return null;
 }
 
+// Portable PDB compressed unsigned integer (ECMA-335 II.23.2): [value, bytes read].
+function compressed(buf, at) {
+  const b = buf[at];
+  if ((b & 0x80) === 0) return [b, 1];
+  if ((b & 0xc0) === 0x80) return [((b & 0x3f) << 8) | buf[at + 1], 2];
+  return [(((b & 0x1f) << 24) | (buf[at + 1] << 16) | (buf[at + 2] << 8) | buf[at + 3]) >>> 0, 4];
+}
+
+/**
+ * The source document names of a portable PDB (its Document table). A name is stored as a separator and parts on the
+ * blob heap, never as one string, so a plain byte search can't find a local path in it. Throws if the PDB can't be read.
+ */
+export function pdbDocuments(pdb) {
+  if (pdb.toString('latin1', 0, 4) !== 'BSJB') throw new Error('not a portable PDB');
+  const versionLength = pdb.readUInt32LE(12);
+  let at = 16 + versionLength + 2;
+  const streams = {};
+  for (let n = pdb.readUInt16LE(at), i = (at += 2, 0); i < n; i++) {
+    const offset = pdb.readUInt32LE(at), size = pdb.readUInt32LE(at + 4);
+    const end = pdb.indexOf(0, at + 8);
+    streams[pdb.toString('latin1', at + 8, end)] = pdb.subarray(offset, offset + size);
+    at = end + 1 + ((4 - ((end + 1 - (at + 8)) % 4)) % 4);
+  }
+  const tables = streams['#~'] ?? streams['#-'], blobs = streams['#Blob'];
+  if (!tables || !blobs) throw new Error('a portable PDB with no tables or blob heap');
+  const heapSizes = tables[6];
+  const valid = tables.readBigUInt64LE(8);
+  const present = [...Array(64).keys()].filter((t) => (valid >> BigInt(t)) & 1n);
+  const DOCUMENT = 0x30;
+  if (!present.includes(DOCUMENT)) return [];
+  if (present[0] !== DOCUMENT) throw new Error('unexpected tables before Document');
+  const rows = tables.readUInt32LE(24);
+  const blobIndex = heapSizes & 4 ? 4 : 2, guidIndex = heapSizes & 2 ? 4 : 2;
+  const rowSize = 2 * blobIndex + 2 * guidIndex;
+  const readIndex = (buf, o, size) => (size === 4 ? buf.readUInt32LE(o) : buf.readUInt16LE(o));
+  const blob = (index) => { const [len, n] = compressed(blobs, index); return blobs.subarray(index + n, index + n + len); };
+  const names = [];
+  let row = 24 + 4 * present.length;
+  for (let r = 0; r < rows; r++, row += rowSize) {
+    const name = blob(readIndex(tables, row, blobIndex));
+    const separator = name[0] ? String.fromCharCode(name[0]) : '';
+    const parts = [];
+    for (let o = 1; o < name.length;) { const [part, n] = compressed(name, o); o += n; parts.push(part ? blob(part).toString('utf8') : ''); }
+    names.push(parts.join(separator));
+  }
+  return names;
+}
+
 /** Problems with a PDB's SourceLink: it must map the deterministic /_/ root to the repository at the package's commit. */
 export function checkSourceLink(pdb, commit, where) {
   const text = pdb.toString('latin1');
@@ -88,6 +136,15 @@ export function checkSourceLink(pdb, commit, where) {
   if (!commit || !json.includes(commit)) problems.push(where + ': the SourceLink map does not point at the package commit ' + commit);
   if (!/"https:\/\//.test(json)) problems.push(where + ': the SourceLink map has no https URL');
   return problems;
+}
+
+/** Problems with a PDB's documents: each must be under the deterministic /_/ root, so none names a local folder. */
+export function checkDocuments(pdb, where) {
+  let names;
+  try { names = pdbDocuments(pdb); } catch (e) { return [where + ': the PDB could not be read (' + e.message + ')']; }
+  if (!names.length) return [where + ': the PDB lists no source documents'];
+  const outside = names.filter((n) => !n.startsWith('/_/'));
+  return outside.length ? [where + ': ' + outside.length + ' of ' + names.length + ' source documents are outside the deterministic /_/ root, so they name build machine folders'] : [];
 }
 
 /** Where a local path appears in a binary, as UTF-8 or UTF-16, either slash, any case. */
@@ -186,18 +243,19 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
       if (!sym) problems.push(where + ': no symbols package');
       else for (const pdb of spec.symbols) {
         if (!sym.entries.has(pdb)) problems.push(sym.file + ': missing ' + pdb);
-        else problems.push(...checkSourceLink(sym.entries.get(pdb), repo?.commit, sym.file + ' ' + pdb));
+        else problems.push(...checkSourceLink(sym.entries.get(pdb), repo?.commit, sym.file + ' ' + pdb), ...checkDocuments(sym.entries.get(pdb), sym.file + ' ' + pdb));
       }
     } else {
       for (const dll of spec.files.filter((f) => f.endsWith('.dll') && pkg.entries.has(f))) {
         const pdb = embeddedPdb(pkg.entries.get(dll));
         if (!pdb) problems.push(where + ' ' + dll + ': no embedded PDB');
-        else problems.push(...checkSourceLink(pdb, repo?.commit, where + ' ' + dll + ' (embedded PDB)'));
+        else problems.push(...checkSourceLink(pdb, repo?.commit, where + ' ' + dll + ' (embedded PDB)'), ...checkDocuments(pdb, where + ' ' + dll + ' (embedded PDB)'));
       }
     }
   }
 
-  // No local path in any binary, including embedded PDBs (compressed, so a plain scan would miss them).
+  // No local path in any binary, including embedded PDBs (compressed, so a plain scan would miss them). A PDB's
+  // document names are checked above (checkDocuments): they are stored in parts, which this scan can't see.
   for (const pkg of [...packages, ...symbols]) {
     for (const [name, data] of pkg.entries) {
       if (!isDll(name)) continue;

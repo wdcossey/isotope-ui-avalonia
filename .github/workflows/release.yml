@@ -45,6 +45,9 @@ jobs:
         run: |
           [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]] || { echo "tag '$TAG' is not v<major>.<minor>.<patch>[-<pre-release>]"; exit 1; }
           git merge-base --is-ancestor HEAD origin/main || { echo "the tagged commit $(git rev-parse HEAD) is not on main"; exit 1; }
+          # MinVer takes a commit's highest v* tag, so a second one would give the other version.
+          tags="$(git tag --points-at HEAD 'v*' | tr '\n' ' ')"
+          [ "$(git tag --points-at HEAD 'v*' | wc -l)" -eq 1 ] || { echo "the commit has more than one v* tag ($tags): one release per commit"; exit 1; }
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-dotnet@v6

@@ -20,15 +20,17 @@ import { readZip } from './lib/zip.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SMOKE = path.join(REPO, 'tests', 'Isotope.UI.PackageSmoke');
-const USAGE = 'usage: node tools/packaging/pack.mjs [--out <dir>] [--expect-version <version>] [--no-smoke]';
+const USAGE = 'usage: node tools/packaging/pack.mjs [--out <dir> [--clean]] [--expect-version <version>] [--no-smoke]';
+const DEFAULT_OUT = path.join(REPO, 'bin', 'packages');
 
 function parseArgs(argv) {
-  const opts = { out: path.join(REPO, 'bin', 'packages'), smoke: true };
+  const opts = { out: DEFAULT_OUT, smoke: true, clean: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out' && argv[i + 1]) opts.out = path.resolve(argv[++i]);
     else if (a === '--expect-version' && argv[i + 1]) opts.expectVersion = argv[++i].replace(/^v/, '');
     else if (a === '--no-smoke') opts.smoke = false;
+    else if (a === '--clean') opts.clean = true;
     else if (a === '--help' || a === '-h') { console.log(USAGE); process.exit(0); }
     else { console.error(USAGE); process.exit(2); }
   }
@@ -58,12 +60,15 @@ function gitConfig(key) {
 const opts = parseArgs(process.argv.slice(2));
 const timings = [];
 
-// 1. Pack, into a folder that holds nothing but earlier builds of these packages.
+// 1. Pack, into an empty folder. The default folder (git-ignored) is emptied of earlier builds of these packages; another
+// --out must be empty or new, or given --clean to empty it the same way. Anything else in it is refused, never deleted.
 const ours = (name) => PACKAGES.some((s) => name.toLowerCase().startsWith(s.id.toLowerCase() + '.') && /^\d/.test(name.slice(s.id.length + 1)) && /\.s?nupkg$/i.test(name));
 mkdirSync(opts.out, { recursive: true });
-const others = readdirSync(opts.out).filter((n) => !ours(n));
+const existing = readdirSync(opts.out);
+if (existing.length && opts.out !== DEFAULT_OUT && !opts.clean) fail(opts.out + ' is not empty; give an empty or new --out, or --clean to delete earlier builds of these packages in it');
+const others = existing.filter((n) => !ours(n));
 if (others.length) fail(opts.out + ' holds files other than these packages (' + others[0] + '); give an empty or new --out');
-for (const name of readdirSync(opts.out)) rmSync(path.join(opts.out, name));
+for (const name of existing) rmSync(path.join(opts.out, name));
 for (const spec of PACKAGES) {
   const r = run('dotnet', ['pack', spec.project, '-c', 'Release', '-o', opts.out, '-nologo', '-v:q', '-p:ContinuousIntegrationBuild=true']);
   timings.push(['pack ' + spec.id, r.ms]);
@@ -75,12 +80,18 @@ const read = (pattern) => readdirSync(opts.out).filter((n) => pattern.test(n)).s
   .map((file) => ({ file, entries: readZip(readFileSync(path.join(opts.out, file))) }));
 const packages = read(/\.nupkg$/i), symbols = read(/\.snupkg$/i);
 const realRepo = realpathSync(REPO);
+// This machine's identity, which no nuspec or README may hold: git's name (and each word of it) and email (and its local
+// part), and the OS user. os.userInfo() throws where the uid has no passwd entry (some containers).
+let osUser = process.env.USER || process.env.USERNAME || '';
+try { osUser = userInfo().username || osUser; } catch { /* keep the environment's */ }
+const gitName = gitConfig('user.name'), gitEmail = gitConfig('user.email');
+const identities = [...new Set([gitName, ...gitName.split(/\s+/), gitEmail, ...gitEmail.split('@')[0].split('+'), osUser].filter((s) => s && s.length >= 3))];
 const problems = checkPackages({
   packages,
   symbols,
   expectVersion: opts.expectVersion,
   localPaths: [...new Set([REPO, realRepo, homedir()])],
-  identities: [gitConfig('user.name'), gitConfig('user.email'), userInfo().username].filter(Boolean),
+  identities,
 });
 const nuspec = (p) => parseNuspec([...p.entries].find(([n]) => n.endsWith('.nuspec'))[1].toString('utf8'));
 const version = packages.length ? nuspec(packages[0]).version : undefined;

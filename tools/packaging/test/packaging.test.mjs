@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
-import { PACKAGES, checkPackages, embeddedPdb, findLocalPaths, parseNuspec } from '../lib/checks.mjs';
+import { PACKAGES, checkPackages, embeddedPdb, findLocalPaths, parseNuspec, pdbDocuments } from '../lib/checks.mjs';
 import { readZip } from '../lib/zip.mjs';
 
 const VERSION = '0.1.0-preview.1';
@@ -40,7 +40,30 @@ function makeZip(files) {
   return Buffer.concat([...locals, cd, end]);
 }
 
-const pdb = (commit = COMMIT, root = '/_/') => Buffer.from('BSJB....{"documents":{"' + root + '*":"https://raw.githubusercontent.com/example-org/example-repo/' + commit + '/*"}}');
+// A minimal portable PDB, as compilers write it: a metadata root, a #~ stream holding only the Document table, and a
+// #Blob heap with each document name in parts (a separator, then a blob per part) and the SourceLink JSON.
+const enc = (n) => (n < 0x80 ? Buffer.from([n]) : n < 0x4000 ? Buffer.from([0x80 | (n >> 8), n & 0xff]) : Buffer.from([0xc0 | ((n >>> 24) & 0x1f), (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]));
+function makePdb({ docs = ['/_/src/A.cs'], sourceLink = '' } = {}) {
+  const heap = [Buffer.from([0])];
+  let size = 1;
+  const add = (bytes) => { const at = size, b = Buffer.concat([enc(bytes.length), bytes]); heap.push(b); size += b.length; return at; };
+  const names = docs.map((d) => add(Buffer.concat([Buffer.from('/'), ...d.split('/').map((p) => enc(p ? add(Buffer.from(p)) : 0))])));
+  if (sourceLink) add(Buffer.from(sourceLink));
+  let blobs = Buffer.concat(heap);
+  blobs = Buffer.concat([blobs, Buffer.alloc((4 - (blobs.length % 4)) % 4)]);
+  const tables = Buffer.alloc(28 + 8 * docs.length);
+  tables[4] = 2; tables[7] = 1;
+  tables.writeBigUInt64LE(1n << 48n, 8);
+  tables.writeUInt32LE(docs.length, 24);
+  names.forEach((n, i) => tables.writeUInt16LE(n, 28 + 8 * i));
+  const header = Buffer.alloc(60);
+  header.write('BSJB', 0, 'latin1'); header.writeUInt16LE(1, 4); header.writeUInt16LE(1, 6); header.writeUInt32LE(12, 12);
+  header.write('PDB v1.0', 16, 'latin1'); header.writeUInt16LE(2, 30);
+  header.writeUInt32LE(60, 32); header.writeUInt32LE(tables.length, 36); header.write('#~', 40, 'latin1');
+  header.writeUInt32LE(60 + tables.length, 44); header.writeUInt32LE(blobs.length, 48); header.write('#Blob', 52, 'latin1');
+  return Buffer.concat([header, tables, blobs]);
+}
+const pdb = (commit = COMMIT, root = '/_/', docs) => makePdb({ docs, sourceLink: '{"documents":{"' + root + '*":"https://raw.githubusercontent.com/example-org/example-repo/' + commit + '/*"}}' });
 const dllWithEmbeddedPdb = (p = pdb()) => {
   const size = Buffer.alloc(4); size.writeUInt32LE(p.length);
   return Buffer.concat([Buffer.from('MZ....RSDS'), Buffer.from('MPDB'), size, deflateRawSync(p), Buffer.from('tail')]);
@@ -91,6 +114,7 @@ test('the ZIP reader reads stored and deflated entries', () => {
   assert.equal(zip.get('a.txt').toString(), 'stored');
   assert.equal(zip.get('dir/b.txt').toString(), 'deflated '.repeat(50));
   assert.throws(() => readZip(Buffer.from('not a zip at all, just some bytes')), /not a ZIP/);
+  assert.throws(() => readZip(Buffer.alloc(0)), /not a ZIP/);
 });
 
 test('the nuspec parser reads the metadata the checks use', () => {
@@ -171,7 +195,15 @@ test('a local path in a DLL or PDB is reported, embedded PDBs included', () => {
   assert.deepEqual(findLocalPaths(Buffer.from('/_/src/file.cs'), [LOCAL]), []);
 });
 
+test("a PDB's source documents must be under the /_/ root, in the symbols and in an embedded PDB", () => {
+  const local = ['/_/src/A.cs', LOCAL + '/obj/Generated.cs'];
+  assert.deepEqual(pdbDocuments(pdb(COMMIT, '/_/', local)), local);
+  has(problems({ change: (id, e, s) => id === 'Isotope.UI.Avalonia' && s.set('lib/net10.0/Isotope.UI.Avalonia.pdb', pdb(COMMIT, '/_/', local)) }), /Isotope\.UI\.Avalonia\.pdb: 1 of 2 source documents are outside/);
+  has(problems({ change: (id, e) => id === 'Isotope.UI.Migration' && e.set('analyzers/dotnet/cs/Isotope.UI.Migration.dll', dllWithEmbeddedPdb(pdb(COMMIT, '/_/', local))) }), /Migration\.dll \(embedded PDB\): 1 of 2 source documents are outside/);
+  has(problems({ change: (id, e, s) => id === 'Isotope.UI.Avalonia.Desktop' && s.set('lib/net10.0/Isotope.UI.Avalonia.Desktop.pdb', pdb(COMMIT, '/_/', [])) }), /lists no source documents/);
+});
+
 test('the embedded PDB is found in a DLL', () => {
-  assert.equal(embeddedPdb(dllWithEmbeddedPdb()).toString(), pdb().toString());
+  assert.ok(embeddedPdb(dllWithEmbeddedPdb()).equals(pdb()));
   assert.equal(embeddedPdb(Buffer.from('MZ MPDB garbage')), null);
 });

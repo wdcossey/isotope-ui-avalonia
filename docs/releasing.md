@@ -34,14 +34,14 @@ Only tagged versions are published. CI packs the in-between versions to check th
 ```sh
 node tools/packaging/pack.mjs                 # packs into bin/packages, checks, runs the smoke test
 node tools/packaging/pack.mjs --no-smoke      # packs and checks only
-node tools/packaging/pack.mjs --out <dir> --expect-version 0.1.0-preview.1
+node tools/packaging/pack.mjs --out <empty dir> --expect-version 0.1.0-preview.1
 node --test tools/packaging/test/*.test.mjs   # the checks' own tests (no dotnet needed)
 ```
 
 The script packs with `ContinuousIntegrationBuild`, which maps source paths to `/_/`, so no local path reaches a DLL
 or PDB; a plain `dotnet pack` of a package fails on purpose and says so. Then it checks each package (layout,
 metadata, the Isotope dependencies, SourceLink in every PDB at the package's commit, personal data in the nuspecs and
-READMEs, and local paths in every DLL and PDB), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
+READMEs, local paths in every DLL, and every PDB's source documents under the deterministic `/_/` root), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
 packages alone: a fresh packages folder, and a `nuget.config` that takes `Isotope.*` from the packed folder only (never
 nuget.org's copy of the same version):
 
@@ -50,8 +50,9 @@ nuget.org's copy of the same version):
   references only the desktop package and builds with the consumer's default C# version and warnings as errors.
 - `Migration`: `dotnet format analyzers` must find `ISOMIG001` and offer its fix, from the analyzer package.
 
-The output folder is emptied of earlier builds of these packages first; a folder holding anything else is refused,
-so `--out` can't point at an existing feed. The package READMEs' C# blocks are checked by the library tests
+The default output folder is emptied of earlier builds of these packages first. Another `--out` must be empty or
+new, or given `--clean` to delete earlier builds of these packages in it; a folder holding anything else is refused,
+and nothing else is ever deleted. The package READMEs' C# blocks are checked by the library tests
 (`DocSnippetTests`), as the README's and the guide's are.
 
 To try the local packages in an app, add the folder as a source:
@@ -69,18 +70,22 @@ CI's `packages` job (`.github/workflows/ci.yml`, Ubuntu and Windows) runs the sa
    on nuget.org, *Trusted Publishing*, add a GitHub Actions policy with this repository's owner and name, the workflow
    file `release.yml`, and the environment `nuget`. The workflow then gets a short-lived key per run; no API key is
    created or stored.
-4. **GitHub environment `nuget`** (repository *Settings → Environments*): add the secret `NUGET_USER`, the nuget.org
-   *profile name* (not the email) of the account that created the policy. An environment secret is only given to the
-   publish job. Optionally add yourself as a required reviewer, so every publish waits for your approval, and limit
-   the environment's deployment tags to `v*`.
-5. **Optional: a tag ruleset** for `v*` (who may create, update or delete release tags).
+4. **GitHub environment `nuget`** (repository *Settings → Environments*):
+   - add the secret `NUGET_USER`, the nuget.org *profile name* (not the email) of the account that created the policy.
+     An environment secret is only given to the publish job;
+   - add yourself as a **required reviewer**, so every publish waits for your approval. This is the gate that holds:
+     the "tag on main" check lives in the tagged commit's own `release.yml`, so a tag on another commit could bring a
+     copy without it, and nuget.org's policy only names the file and the environment;
+   - limit its deployment branches and tags to the tag pattern `v*`.
+5. **A tag ruleset** for `v*` (*Settings → Rules*), so only you can create, update or delete release tags.
 
 The release workflow references the secret and the environment; this repository doesn't create them (CLAUDE.md: no
 secrets or variables without the developer).
 
 ## Cutting a release
 
-1. Pick the version, e.g. `0.1.0-preview.1`. Every preview so far is `0.1.0-preview.<n>`.
+1. Pick the version, e.g. `0.1.0-preview.1`. Every preview so far is `0.1.0-preview.<n>`. One `v*` tag per commit:
+   MinVer takes a commit's highest tag, so the workflow refuses a commit with two.
 2. Check `main` is green, including the `packages` jobs, and on the commit to release run
    `node tools/packaging/pack.mjs` locally.
 3. Tag that commit of `main` and push the tag:
@@ -92,8 +97,8 @@ secrets or variables without the developer).
    ```
 
 4. The `release` workflow runs:
-   - `pack and check` fails unless the tag is `v<major>.<minor>.<patch>[-<pre-release>]` on a commit of `main`, and
-     unless MinVer's version equals the tag's. It packs, checks, runs the smoke test, and uploads the packages
+   - `pack and check` fails unless the tag is `v<major>.<minor>.<patch>[-<pre-release>]`, the only `v*` tag of a
+     commit of `main`, and unless MinVer's version equals the tag's. It packs, checks, runs the smoke test, and uploads the packages
      (kept 30 days as the run's `packages` artifact).
    - `publish to nuget.org` (after your approval, if the environment requires it) exchanges the run's OIDC token for a
      key and pushes the three packages, each with its symbols. A re-run skips what is already there.
