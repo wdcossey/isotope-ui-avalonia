@@ -18,6 +18,7 @@ test('requests are answered by id, and close ends the server', { timeout: 15000 
   const [a, b] = await Promise.all([server.request('tools/list'), server.request('resources/list')]);
   assert.deepEqual([a.method, b.method], ['tools/list', 'resources/list']);
   await server.close();
+  assert.equal(server.running, false);
 });
 
 test('a server that cannot start fails its requests, and close still resolves', { timeout: 15000 }, async () => {
@@ -31,6 +32,14 @@ test("a server that exits fails its requests with its exit code and stderr", { t
   await assert.rejects(initialize(server), /the server exited \(code 3\): missing a DLL|stopped reading its input/);
   await assert.rejects(server.request('tools/list'));
   await server.close();
+});
+
+test('a server that stops reading but keeps running is stopped by close', { timeout: 15000 }, async () => {
+  const server = startMcp(...node("process.stdin.destroy(); setInterval(() => {}, 1000)"), { timeoutMs: 2000 });
+  await assert.rejects(initialize(server));
+  assert.equal(server.running, true);
+  await server.close();
+  assert.equal(server.running, false);
 });
 
 test('a line on stdout that is not JSON-RPC fails the requests', { timeout: 15000 }, async () => {

@@ -10,6 +10,9 @@ namespace Isotope.UI.Mcp.Tests;
 /// </summary>
 public class StdioTests
 {
+    // A server that breaks the protocol (a log line on stdout) leaves the client waiting: fail instead of hanging.
+    const int Timeout = 60_000;
+
     static async Task<McpClient> StartAsync(CancellationToken ct, string? workingDirectory = null, Action<string>? stderr = null)
     {
         var tool = Path.Combine(AppContext.BaseDirectory, "Isotope.UI.Mcp.dll");
@@ -25,7 +28,7 @@ public class StdioTests
         return await McpClient.CreateAsync(transport, cancellationToken: ct);
     }
 
-    [Fact]
+    [Fact(Timeout = Timeout)]
     public async Task The_tool_lists_its_tools_and_answers_a_call_over_stdio()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -44,7 +47,7 @@ public class StdioTests
         Assert.Contains("Declares a piece of state.", text);
     }
 
-    [Fact]
+    [Fact(Timeout = Timeout)]
     public async Task The_guides_are_resources_over_stdio()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -57,7 +60,7 @@ public class StdioTests
         Assert.Equal(Guides.Find("writing-components")!.Markdown, contents.Text);
     }
 
-    [Fact]
+    [Fact(Timeout = Timeout)]
     public async Task The_folder_it_is_started_in_does_not_configure_it()
     {
         // A client starts the server in the user's project, which may have its own appsettings.json: here one that
@@ -81,7 +84,7 @@ public class StdioTests
         }
     }
 
-    [Fact]
+    [Fact(Timeout = Timeout)]
     public async Task A_failing_call_is_an_error_result_and_the_server_keeps_running()
     {
         var ct = TestContext.Current.CancellationToken;

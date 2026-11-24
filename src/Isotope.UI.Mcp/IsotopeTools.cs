@@ -87,8 +87,11 @@ public static class IsotopeTools
                     sb.AppendLine();
                 }
             }
+            // A member's example must name its type too (ReactorApp.Run, not any Run); a factory, hook or modifier is
+            // called by its name alone.
             var bare = first.IsType ? first.Owner.Split('<')[0] : first.Name;
-            if (Guides.Using(bare).FirstOrDefault() is { } example)
+            var owner = first.Kind == ApiKind.Member ? first.Owner.Split('<')[0] : null;
+            if (Guides.Using(bare, owner).FirstOrDefault() is { } example)
                 sb.AppendLine($"Example (guide `{example.Guide}`, tested snippet `{example.Name}`):").AppendLine()
                     .AppendLine("```csharp").AppendLine(example.Code).AppendLine("```").AppendLine();
         }

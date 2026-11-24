@@ -71,13 +71,16 @@ internal static partial class Guides
 
     /// <summary>
     /// The tested snippets that use a name, best first: the one named after it (<c>use-state</c> for <c>UseState</c>),
-    /// then those that call it or name it.
+    /// then those that call it or name it. With an owner, a snippet must name the owner too (a member's type).
     /// </summary>
-    public static IEnumerable<Snippet> Using(string name)
+    public static IEnumerable<Snippet> Using(string name, string? owner = null)
     {
         var kebab = Kebab().Replace(name, "$1-$2").ToLowerInvariant();
-        var word = new Regex(@"(?<![\w])" + Regex.Escape(name) + @"(?![\w])");
-        return Snippets.Where(s => word.IsMatch(s.Code)).OrderBy(s => s.Name == kebab ? 0 : 1);
+        var word = Word(name);
+        var ownerWord = owner is null ? null : Word(owner);
+        return Snippets.Where(s => word.IsMatch(s.Code) && (ownerWord is null || ownerWord.IsMatch(s.Code))).OrderBy(s => s.Name == kebab ? 0 : 1);
+
+        static Regex Word(string w) => new(@"(?<![\w])" + Regex.Escape(w) + @"(?![\w])");
     }
 
     /// <summary>Each guide as an MCP resource, <c>isotope://guides/&lt;name&gt;</c>, in Markdown.</summary>

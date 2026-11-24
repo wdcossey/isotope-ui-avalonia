@@ -99,8 +99,9 @@ internal sealed class ApiCatalog
         var record = Signatures.IsRecord(type);
         const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
 
-        // C# 14 extension blocks: the compiler's grouping types hold the members as declared (signature and doc), and
-        // the static class holds their implementations under the same names, which are left out.
+        // C# 14 extension blocks: for a static member (ReactorApp.Run), the compiler's grouping type holds it as declared
+        // (signature and doc) and the static class its implementation under the same name, which is left out. An instance
+        // member's implementation is a classic extension method (this T el), listed as such.
         var extensionMembers = ExtensionBlocks(type, xml, signatures, ns).ToList();
         entries.AddRange(extensionMembers);
         var implemented = extensionMembers.Select(e => e.Name).ToHashSet(StringComparer.Ordinal);
@@ -156,15 +157,13 @@ internal sealed class ApiCatalog
                 .SelectMany(n => n.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
                 .FirstOrDefault(m => m.Name == "<Extension>$")?.GetParameters().FirstOrDefault()?.ParameterType;
             if (receiver is null) continue;
-            // extension<T>(T el) where T : Element: members of elements, listed under the static class, as modifiers.
-            var owner = receiver.IsGenericParameter ? Signatures.Display(type) : Signatures.Display(receiver);
-            foreach (var m in group.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(Shown))
+            var owner = Signatures.Display(receiver);
+            foreach (var m in group.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly).Where(Shown))
             {
                 if (m.IsSpecialName) continue;
-                var kind = Classify(receiver, m) is ApiKind.Member && !m.IsStatic && IsElement(receiver) ? ApiKind.Modifier : Classify(receiver, m);
-                yield return new ApiEntry(kind, m.Name, owner, ns, signatures.Method(m, owner), DocIds.Of(m), m, xml);
+                yield return new ApiEntry(Classify(receiver, m), m.Name, owner, ns, signatures.Method(m, owner), DocIds.Of(m), m, xml);
             }
-            foreach (var p in group.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(Shown))
+            foreach (var p in group.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly).Where(Shown))
                 yield return new ApiEntry(ApiKind.Member, p.Name, owner, ns, signatures.Property(p, owner), DocIds.Of(p), p, xml);
         }
     }

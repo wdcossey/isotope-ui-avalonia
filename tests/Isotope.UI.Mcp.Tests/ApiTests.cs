@@ -90,14 +90,33 @@ public class ApiTests
     }
 
     [Fact]
-    public void Get_api_reads_a_CSharp_14_extension_member_through_its_inheritdoc()
+    public void Get_api_reads_a_CSharp_14_extension_member_from_its_declaration()
     {
-        // ReactorApp.Run<TRoot> is declared in an extension block of the desktop package's ReactorAppDesktop; its doc
-        // entry is an inheritdoc pointing at the block's member.
+        // ReactorApp.Run<TRoot> is declared in an extension block of the desktop package's ReactorAppDesktop: it is
+        // listed under ReactorApp, with the signature and doc of the block's member (its implementation's doc is an
+        // inheritdoc pointing there).
         var text = IsotopeTools.GetApi("ReactorApp.Run");
         Assert.Contains("static int ReactorApp.Run<TRoot>(string title = \"Isotope App\", double? width = null", text);
         Assert.Contains("Runs an app whose one window holds a `TRoot` component", text);
         Assert.Contains("- `title`: The window's title.", text);
+        // Its example names ReactorApp and Run.
+        Assert.Contains("tested snippet `run-app`", text);
+    }
+
+    [Fact]
+    public void A_members_example_must_name_its_type()
+    {
+        // A snippet uses the word Text (a text style's), but none uses TextBoxElement: no example.
+        Assert.NotEmpty(Guides.Using("Text"));
+        Assert.DoesNotContain("Example (", IsotopeTools.GetApi("TextBoxElement.Text"));
+    }
+
+    [Fact]
+    public void Default_values_are_written_as_CSharp_literals()
+    {
+        var m = typeof(LiteralProbe).GetMethod(nameof(LiteralProbe.Defaults))!;
+        Assert.Equal("static void LiteralProbe.Defaults(char quote = '\\'', string text = \"a\\nb\\t\\\"c\\\"\", int count = 3, string? none = null)",
+            new Signatures().Method(m, "LiteralProbe"));
     }
 
     [Fact]
@@ -121,6 +140,19 @@ public class ApiTests
         Assert.StartsWith("Isotope's API has no \"Togg\".", text);
         Assert.Contains("Factories.ToggleButton(", text);
         Assert.Throws<McpException>(() => IsotopeTools.GetApi(""));
+    }
+
+    [Fact]
+    public void A_doc_comment_is_followed_through_its_inheritdoc()
+    {
+        var docs = new XmlDocs(System.Xml.Linq.XDocument.Parse("""
+            <doc><members>
+              <member name="M:A.Impl"><inheritdoc cref="M:A.&lt;G&gt;$1.Decl"/></member>
+              <member name="M:A.&lt;G&gt;$1.Decl"><summary>The declared member, as <see cref="T:N.B"/> and <c>code</c>.</summary></member>
+            </members></doc>
+            """));
+        Assert.Equal("The declared member, as `B` and `code`.", docs.Summary("M:A.Impl"));
+        Assert.Equal("", docs.Summary("M:A.Missing"));
     }
 
     [Fact]
@@ -175,4 +207,9 @@ public class ApiTests
                 _ => [],
             });
     }
+}
+
+public static class LiteralProbe
+{
+    public static void Defaults(char quote = '\'', string text = "a\nb\t\"c\"", int count = 3, string? none = null) { }
 }

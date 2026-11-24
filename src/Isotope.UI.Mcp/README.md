@@ -23,6 +23,9 @@ your Isotope packages.
 dotnet tool install --global Isotope.UI.Mcp --prerelease
 ```
 
+From a local build of the repository instead (`node tools/packaging/pack.mjs` packs into `bin/packages`):
+`dotnet tool install --global Isotope.UI.Mcp --version <version> --add-source bin/packages`.
+
 The tool needs the .NET 10 runtime or later. To keep it with a repository instead, use a local tool:
 `dotnet new tool-manifest` (once), then `dotnet tool install Isotope.UI.Mcp --prerelease`. It then runs as
 `dotnet tool run isotope-mcp`.

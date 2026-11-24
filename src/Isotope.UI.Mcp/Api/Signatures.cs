@@ -101,9 +101,9 @@ internal sealed class Signatures
         return value switch
         {
             null => underlying.IsValueType && Nullable.GetUnderlyingType(type) is null ? "default" : "null",
-            string s => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"",
+            string s => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(s, quote: true),
             bool b => b ? "true" : "false",
-            char c => "'" + c + "'",
+            char c => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(c, quote: true),
             _ when underlying.IsEnum => Enum.GetName(underlying, value) is { } name ? underlying.Name + "." + name : "(" + underlying.Name + ")" + Convert.ToString(value, CultureInfo.InvariantCulture),
             IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
             _ => value.ToString() ?? "default",

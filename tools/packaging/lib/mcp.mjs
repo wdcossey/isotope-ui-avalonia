@@ -6,7 +6,8 @@ import { spawn } from 'node:child_process';
 export function startMcp(command, args, { env, timeoutMs = 60000 } = {}) {
   const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...env }, shell: false });
   const waiting = new Map();
-  let buffer = '', nextId = 0, stderr = '', exited = null;
+  // exited: why requests now fail (set on the first failure); gone: the process itself has ended or never started.
+  let buffer = '', nextId = 0, stderr = '', exited = null, gone = false;
   child.stdout.setEncoding('utf8');
   child.stdout.on('data', (chunk) => {
     buffer += chunk;
@@ -24,8 +25,8 @@ export function startMcp(command, args, { env, timeoutMs = 60000 } = {}) {
   child.stderr.on('data', (chunk) => { stderr += chunk; });
   const ended = (error) => { if (exited === null) exited = error; failAll(error); };
   // A server that can't start ('error', with no 'exit'), or that dies with requests unanswered, fails them with its stderr.
-  child.on('error', (e) => ended(new Error('the server did not start: ' + e.message)));
-  child.on('exit', (code, signal) => ended(new Error('the server exited (' + (signal ?? 'code ' + code) + ')' + (stderr ? ': ' + stderr.slice(-2000) : ''))));
+  child.on('error', (e) => { gone = true; ended(new Error('the server did not start: ' + e.message)); });
+  child.on('exit', (code, signal) => (gone = true) && ended(new Error('the server exited (' + (signal ?? 'code ' + code) + ')' + (stderr ? ': ' + stderr.slice(-2000) : ''))));
   // Writing to a server that has exited fails here, not as an unhandled 'error' event.
   child.stdin.on('error', (e) => ended(new Error('the server stopped reading its input (' + e.code + ')' + (stderr ? ': ' + stderr.slice(-2000) : ''))));
   function failAll(error) { for (const [id, w] of waiting) { waiting.delete(id); clearTimeout(w.timer); w.reject(error); } }
@@ -40,11 +41,13 @@ export function startMcp(command, args, { env, timeoutMs = 60000 } = {}) {
         send({ id, method, params });
       });
     },
+    /** Whether the server process is still running. */
+    get running() { return !gone; },
     notify(method, params = {}) { if (exited === null) send({ method, params }); },
     /** Ends the server's input, stops it if it is still running 5 s later, and resolves once it has gone. */
     close() {
       return new Promise((resolve) => {
-        if (exited !== null || child.exitCode !== null || child.pid === undefined) return resolve();
+        if (gone || child.exitCode !== null || child.pid === undefined) return resolve();
         const timer = setTimeout(() => child.kill(), 5000);
         child.once('exit', () => { clearTimeout(timer); resolve(); });
         child.once('error', () => { clearTimeout(timer); resolve(); });

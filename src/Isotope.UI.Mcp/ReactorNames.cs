@@ -87,8 +87,10 @@ internal static class ReactorNames
         var trimmed = name.Trim();
         if (trimmed.StartsWith(ReactorNamespace + ".", StringComparison.Ordinal)) trimmed = trimmed[(ReactorNamespace.Length + 1)..];
         var winui = (tables ?? MigrationTables.Default).WinUI.IsWinUINamespace(trimmed);
-        // Owner.Member as a whole (ButtonElement.OnClick), else its last part (Factories.Button is Button).
-        var found = renamed || winui ? [] : catalog.Find(trimmed) is { Count: > 0 } whole ? whole : catalog.Find(trimmed.Split('.')[^1]);
+        // Owner.Member as a whole (ButtonElement.OnClick), else its last part as a factory, hook, modifier or type
+        // (Factories.Button is Button, Core.Element is Element), never another record's member of that name.
+        var found = renamed || winui ? [] : catalog.Find(trimmed) is { Count: > 0 } whole ? whole
+            : catalog.Find(trimmed.Split('.')[^1]).Where(e => e.Kind != ApiKind.Member).ToList();
         // A bare name that is only some types' member (OnClick) is not one Isotope name; Owner.Member is.
         var same = trimmed.Contains('.') || found.Any(e => e.Kind != ApiKind.Member) ? found.Where(e => e.Kind != ApiKind.Member || trimmed.Contains('.')).ToList() : [];
         var sb = new StringBuilder();

@@ -45,6 +45,15 @@ public class ReactorNameTests
     }
 
     [Fact]
+    public void A_record_member_neither_has_is_not_answered_with_another_records_member()
+    {
+        // SliderElement has no OnClick; ButtonElement's is another record's.
+        Assert.StartsWith("`SliderElement.OnClick` is not in the rename table", IsotopeTools.MapReactorName("SliderElement.OnClick"));
+        // The last part alone still answers a factory or a type: Factories.Button is Button.
+        Assert.Contains("factory `static ButtonElement Factories.Button(", IsotopeTools.MapReactorName("Factories.Button"));
+    }
+
+    [Fact]
     public void A_renamed_parameter_is_not_also_reported_as_a_same_named_modifier()
     {
         // "header" is ToggleSwitch's parameter, renamed; the Header modifier is another name.
