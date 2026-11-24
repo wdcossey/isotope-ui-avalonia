@@ -86,7 +86,8 @@ public abstract record Element
         return (a, b) switch
         {
             (EmptyElement, EmptyElement) => true,
-            (TextBlockElement x, TextBlockElement y) => x.Text == y.Text && ReferenceEquals(x.Setters, y.Setters),
+            (TextBlockElement x, TextBlockElement y) => x.Text == y.Text && TextBlockElement.TextStylingEquals(x, y)
+                && ReferenceEquals(x.Setters, y.Setters),
             // #29: with a command, HasCallbacks is true with or without the button's own callback, which is subscribed
             // when it first appears: its coming declines the skip, as ComboBox's callbacks do.
             (ButtonElement x, ButtonElement y) => SameTextContent(x.Content, y.Content) && x.IsEnabled == y.IsEnabled
@@ -233,7 +234,7 @@ public record MemoElement(Func<RenderContext, Element> RenderFunc, object?[]? De
 /// mounted Avalonia controls need so far; upstream's full set (accessibility, flyouts, gestures, …) comes
 /// with the element vocabulary.
 /// </summary>
-public record ElementModifiers
+public partial record ElementModifiers
 {
     internal static readonly ElementModifiers Empty = new();
 
@@ -278,6 +279,10 @@ public record ElementModifiers
         RichToolTip = other.RichToolTip ?? RichToolTip,
         ToolTipPlacement = other.ToolTipPlacement ?? ToolTipPlacement,
         ContextFlyout = other.ContextFlyout ?? ContextFlyout,
+        Foreground = other.Foreground ?? Foreground,
+        FontSize = other.FontSize ?? FontSize,
+        FontWeight = other.FontWeight ?? FontWeight,
+        FontFamily = other.FontFamily ?? FontFamily,
     };
 }
 
