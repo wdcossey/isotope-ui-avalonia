@@ -210,6 +210,25 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Named text styles (issue #44, 2026-11-24)
+
+- **Upstream's two families, with upstream's names** (kept: Avalonia has no counterparts; a new `kept` status in
+  `tools/naming/renames.json`):
+  - `Heading` (28, Bold, heading level 1), `SubHeading` (20, SemiBold, level 2) and `Caption` (12) set the text
+    block's members, as upstream's `Dsl.cs` does; the level is Avalonia's `AutomationProperties.HeadingLevel`.
+  - `Title`, `Subtitle`, `Body`, `BodyStrong`, `BodyLarge`, `TitleLarge` and `Display` are
+    `TextBlock(text).ApplyStyle(key)` with WinUI's style key, as upstream's are. `Card(child)` comes from the same file.
+- **WinUI's keyed Style is Avalonia's keyed ControlTheme.** `ApplyStyle(key)`, on text blocks only, binds the text
+  block's `Theme` to the key's resource; a theme in the resources the control sees wins and is followed without a
+  re-render. Otherwise Isotope's theme for that WinUI style applies, with WinUI's values from its `generic.xaml`
+  (Windows App SDK 1.8). Avalonia.Themes.Fluent 12.1.6 defines none of these keys (measured headless).
+  - Avalonia's styles outrank a control theme, so an app `Style` for every `TextBlock` that sets `FontSize` wins over
+    the ramp (a test pins it; the guide says so).
+- **Measured on upstream's samples:** ISOMIG012 lost 442 diagnostics (Caption 221, SubHeading 149, Heading 45, …). With
+  #41–#44 and #49 together, after the migration's fixes: 107 of 358 files build (51 before the fixes) and 3,001 compile
+  errors are left (13,699 before) — see `docs/guide/migrating-from-reactor.md`.
+- **Tests:** 27 new library test cases and 1 migration test, each proven to fail. Guide: `docs/guide/text-styles.md`.
+
 ## Layout modifiers (issue #49, 2026-11-24)
 
 - **Upstream's layout modifiers, with Avalonia's value types:** `Padding` (4 overloads), `WithBorder`, `BorderBrush`,
