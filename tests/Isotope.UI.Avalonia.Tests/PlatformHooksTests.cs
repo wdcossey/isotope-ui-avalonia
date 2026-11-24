@@ -749,7 +749,7 @@ public sealed class PlatformHooksTests : IDisposable
             window.Content = host;
             window.Show();
             Pump();
-            string[] Texts() => ((StackPanel)host.Child!).Children.Select(TextOf).ToArray();
+            string?[] Texts() => ((StackPanel)host.Child!).Children.Select(TextOf).ToArray();
 
             var first = Texts();
             Assert.StartsWith("Dark True False True 400x300 400x300 False False ", first[1]);
