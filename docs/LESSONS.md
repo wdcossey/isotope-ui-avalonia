@@ -128,6 +128,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A subtree hung on an attached property (a tooltip) is invisible to walks over children and parents:** the dirty path
   and the context check must go through its owner. (2026-11-24)
 
+- **A record member named like the control's content property becomes a generated child slot, even with
+  `[WrapManual]`** (which does stop an items host); rule `gen-manual-content-slot` handles it. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Actions minutes run out fast on a private repo:** one full CI run bills about 26 minutes (Windows jobs count 2x), and a
