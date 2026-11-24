@@ -94,12 +94,16 @@ public class ControlFactoryTests
         Assert.Equal(["Auto", "*", "2.5*", "120"], new[] { GridSize.Auto, GridSize.Star(), GridSize.Star(2.5), GridSize.Px(120) }.Select(s => s.ToString()));
         Assert.Equal((10.0, 20.0), (GridSize.Star().MinSize(10).MaxSize(20).Min, GridSize.Star().MinSize(10).MaxSize(20).Max));
         Assert.Equal(new GridLength(3, GridUnitType.Star), (GridLength)GridSize.Star(3));
-        foreach (var bad in new[] { "", "x", "*x", "-1", "0*", "Infinity", "Infinity*", "NaN" })
+        foreach (var bad in new[] { "", "x", "*x", "-1", "0*", "NaN" })
             Assert.Throws<FormatException>(() => GridSize.Parse(bad));
+        // Upstream's GridSize (vendored since #22): an infinite size parses, and its constructor rejects it.
+        foreach (var infinite in new[] { "Infinity", "Infinity*" })
+            Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Parse(infinite));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Px(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Star(0));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Auto.MinSize(-1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new GridSize(double.NaN, GridUnitType.Auto));
+        // Upstream doesn't check an Auto track's value; Avalonia's GridLength rejects a bad one when it is converted.
+        Assert.ThrowsAny<ArgumentException>(() => (GridLength)new GridSize(double.NaN, GridUnitType.Auto));
         Assert.Throws<ArgumentOutOfRangeException>(() => TimePicker() with { ClockIdentifier = 13 });
     }
 

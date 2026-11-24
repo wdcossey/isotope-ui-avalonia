@@ -9,6 +9,41 @@
   ],
   "rules": [
     {
+      "id": "drop-ColorScheme-ColorSchemeContext",
+      "roslyn": {
+        "op": "drop-member",
+        "member": "ColorSchemeContext"
+      },
+      "why": "ColorSchemeContext maps WinUI's ElementTheme and reads Windows' AccessibilitySettings; our UseColorScheme (Hosting/RenderContext.PlatformHooks.cs) reads Avalonia's theme variant instead. The ColorScheme enum it shares the file with is compiled as is (#21).",
+      "files": [
+        "src/Reactor/Core/ColorScheme.cs"
+      ]
+    },
+    {
+      "id": "drop-test-WindowHookFallback-WindowBranchShapes",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "WindowHookFallbackTests",
+        "member": "WindowBranchShapes"
+      },
+      "why": "The data of the slot-shape theory below, which is dropped with it (it also names UseIsCovered, which has no Avalonia API).",
+      "files": [
+        "tests/Reactor.Tests/WindowHookFallbackTests.cs"
+      ]
+    },
+    {
+      "id": "drop-test-WindowHookFallback-slot-shape",
+      "roslyn": {
+        "op": "drop-member",
+        "type": "WindowHookFallbackTests",
+        "member": "No_Window_Branch_Reserves_The_Window_Branch_Slots"
+      },
+      "why": "Pins upstream's window hooks' slot shape (UseState(T) + UseEffect). Ours take UseRef + UseEffect, the same slots with or without a window, which is what the theory guards; PlatformHooksTests.A_value_hook_takes_the_same_slots_with_or_without_a_window checks ours.",
+      "files": [
+        "tests/Reactor.Tests/WindowHookFallbackTests.cs"
+      ]
+    },
+    {
       "id": "drop-winuiex-notice",
       "find": "\\n+-+ WinUIEx -+\\n[\\s\\S]*?\\n-{20,}(?=\\r?\\n|$)",
       "replace": "",
@@ -199,6 +234,15 @@
       ]
     },
     {
+      "id": "gen-reference-clear-channel-of",
+      "find": "(\\? global::Microsoft\\.UI\\.Reactor\\.Optional<\\{p\\.ValueType\\}>\\.Unset : )e\\.\\{p\\.Name\\}\"",
+      "replace": "$1global::Microsoft.UI.Reactor.Optional<{p.ValueType}>.Of(e.{p.Name})\"",
+      "why": "A reference-typed member on the ClearValue channel (ClearValueOnUnset, descriptor-only mode) is wrapped with Optional<T>.Of: upstream's ternary converts it implicitly, which C# doesn't allow from an interface such as Avalonia's IBrush. The same value for a class type (#22).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
       "id": "winui-usings",
       "find": "^using (?:WinUI = )?Microsoft\\.UI\\.(?:Xaml|Composition)(?:\\.[A-Za-z]+)*;\\r?$",
       "flags": "m",
@@ -233,6 +277,7 @@
         "src/Reactor/Core/V1Protocol/MountContext.cs",
         "src/Reactor/Core/V1Protocol/V1HandlerAdapter.cs",
         "src/Reactor/Diagnostics/ReactorSourceMap.cs",
+        "src/Reactor/Elements/GridSize.cs",
         "src/Reactor/Hooks/UseElementFocus.cs",
         "src/Reactor/Hooks/UseElementRef.cs",
         "src/Reactor/Hooks/UseFocus.cs",
@@ -850,6 +895,16 @@
       ]
     },
     {
+      "id": "partial-component",
+      "find": "^public abstract class Component(?=\\r?$)",
+      "flags": "m",
+      "replace": "public abstract partial class Component",
+      "why": "Component (the non-generic base) is partial, so class components get our Avalonia versions of the platform hooks, which the drop-Component-* rules remove, from our own part (Hosting/Component.PlatformHooks.cs), with access to its internal Context (#21).",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
       "id": "descriptor-clearvalue-isset",
       "find": "!ReferenceEquals\\(ctrl\\.ReadLocalValue\\(_dp\\), DependencyProperty\\.UnsetValue\\)",
       "replace": "ctrl.IsSet(_dp)",
@@ -1000,19 +1055,22 @@
       ]
     },
     {
-      "id": "drop-test-UseColorScheme-NoApplication",
-      "drop": "public void UseColorScheme_When_NoApplication_Returns_Default_Without_Throwing\\(",
-      "why": "Tests UseColorScheme, a theme hook: tier 3 (dropped from RenderContext by drop-RenderContext-UseColorScheme).",
+      "id": "test-window-state-avalonia",
+      "find": "Assert\\.Equal\\(WindowState\\.Normal,",
+      "replace": "Assert.Equal(global::Avalonia.Controls.WindowState.Normal,",
+      "why": "UseWindowState returns Avalonia's WindowState (upstream: its own enum, with the same four states).",
       "files": [
-        "tests/Reactor.Tests/RenderContextHookOrderTests.cs"
+        "tests/Reactor.Tests/WindowHookFallbackTests.cs"
       ]
     },
     {
-      "id": "drop-test-UseIsDarkTheme-NoApplication",
-      "drop": "public void UseIsDarkTheme_When_NoApplication_Returns_False_Or_True_Without_Throwing\\(",
-      "why": "Tests UseIsDarkTheme, a theme hook: tier 3 (dropped from RenderContext by drop-RenderContext-UseIsDarkTheme).",
+      "id": "test-window-hook-fallback-orphan-comment",
+      "find": "^    // (?:Issue #1396 — the no-window branch|state types, as the window branch|the no-window ↔ window transition|needs a live ReactorWindow, so its shape|transition itself is exercised by)[^\\r\\n]*",
+      "flags": "m",
+      "replace": "",
+      "why": "Blanks the comment of the slot-shape theory the two Roslyn rules above drop (drop-member keeps a // comment), so the file doesn't claim a check it no longer has. Five lines; line numbers still match upstream's.",
       "files": [
-        "tests/Reactor.Tests/RenderContextHookOrderTests.cs"
+        "tests/Reactor.Tests/WindowHookFallbackTests.cs"
       ]
     },
     {
