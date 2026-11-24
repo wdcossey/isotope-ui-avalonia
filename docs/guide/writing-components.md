@@ -20,6 +20,20 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | `Button(label, onClick)` | `ButtonElement` | `Button` |
 | `TextBox(value, onChanged, placeholderText)` | `TextBoxElement` | `TextBox` |
 | `Slider(value, min, max, onValueChanged)` | `SliderElement` | `Slider` |
+| `CheckBox(isChecked, onIsCheckedChanged, label)`, `ThreeStateCheckBox(checkedState, onCheckedStateChanged, label)` | `CheckBoxElement` | `CheckBox` |
+| `ToggleSwitch(isOn, onIsOnChanged, onContent, offContent, header)` | `ToggleSwitchElement` | `ToggleSwitch` (`IsOn` is its `IsChecked`, `header` its `Content`) |
+| `RadioButton(label, isChecked, onIsCheckedChanged, groupName)` | `RadioButtonElement` | `RadioButton` |
+| `ComboBox(items, selectedIndex, onSelectedIndexChanged)` | `ComboBoxElement` | `ComboBox` |
+| `ListBox(items, selectedIndex, onSelectedIndexChanged)` | `ListBoxElement` | `ListBox` |
+| `DatePicker(date, onDateChanged)` | `DatePickerElement` | `DatePicker` (`Date` is its `SelectedDate`) |
+| `TimePicker(time, onTimeChanged)` | `TimePickerElement` | `TimePicker` (`Time` is its `SelectedTime`) |
+| `Progress(value)`, `ProgressIndeterminate()` | `ProgressElement` | `ProgressBar` |
+| `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
+| `Border(child)` | `BorderElement` | `Border` |
+| `ScrollViewer(child)` | `ScrollViewerElement` | `ScrollViewer` |
+| `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` |
+| `Grid(columns, rows, ...)` | `GridElement` | `Grid` (tracks are `GridSize.Auto`, `GridSize.Star(weight)`, `GridSize.Px(size)`) |
+| `WrapPanel(...)` | `WrapPanelElement` | `WrapPanel` (Avalonia-only, so Avalonia's name) |
 | `VStack(...)`, `HStack(...)`, `VStack(spacing, ...)`, `HStack(spacing, ...)` | `StackElement` | `StackPanel` |
 | `Flex(...)`, `Flex(direction, ...)`, `FlexRow(...)`, `FlexColumn(...)` | `FlexElement` | `FlexPanel` (flexbox) |
 | `Component(render)`, `RenderEachTime(render)` | `FuncElement` | a function component |
@@ -32,8 +46,14 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 > Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia.
 
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
-keep their controls when it does. A `TextBox` or `Slider` given no value owns its own; given the state's value and a
-change callback, it is controlled by it.
+keep their controls when it does. An input control (`TextBox`, `Slider`, `CheckBox`, `ToggleSwitch`, `RadioButton`,
+`ComboBox`, `ListBox`, `Expander`, `DatePicker`, `TimePicker`) given no value owns its own; given the state's value
+and a change callback, it is controlled by it: what the user changes reaches the callback, and what the state writes
+doesn't come back through it.
+
+Inside a `Grid`, `.Grid(row: 1, column: 0, columnSpan: 2)` sets a child's cell. With the factories imported, a bare
+`Grid`, `Border` or `ScrollViewer` names the factory, so Avalonia's attached-property calls need the type in full
+(`Avalonia.Controls.Grid.GetRow(...)`) or an alias.
 
 Modifiers and keys chain onto any element: `.Margin(...)` (uniform, horizontal and vertical, per side or a
 `Thickness`), `.Width(...)`, `.Height(...)`, `.Size(...)`, `.HAlign(...)`, `.VAlign(...)`, `.Opacity(...)`,
