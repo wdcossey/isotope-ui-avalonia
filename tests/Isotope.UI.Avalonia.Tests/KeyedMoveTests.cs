@@ -70,7 +70,7 @@ public sealed class KeyedMoveTests : IDisposable
     {
         string[] keys = ["a", "b", "c", "d", "e", "f"];
         var host = ShowRows(() => keys);
-        var before = List(host).Children.ToList();
+        var before = List(host).Children.ToDictionary(KeyOf);
         var (detached, edits) = Watch(List(host));
 
         keys = ["f", "e", "d", "c", "b", "a"];
@@ -78,7 +78,7 @@ public sealed class KeyedMoveTests : IDisposable
         Layout(host);
 
         Assert.Equal(keys, List(host).Children.Select(KeyOf));
-        Assert.All(keys, key => Assert.Contains(Row(host, key), before));
+        Assert.All(keys, key => Assert.Same(before[key], Row(host, key)));
         Assert.NotEmpty(edits);
         Assert.All(edits, e => Assert.Equal(NotifyCollectionChangedAction.Move, e.Action));
         Assert.Equal(0, detached());
@@ -117,6 +117,7 @@ public sealed class KeyedMoveTests : IDisposable
         string[] keys = ["a", "b", "c", "d", "e"];
         var host = ShowRows(() => keys);
         var panel = List(host);
+        var before = panel.Children.ToDictionary(KeyOf);
         var (detached, edits) = Watch(panel);
 
         // Move b after d, or d before b: one row moves, the others keep their order.
@@ -129,8 +130,11 @@ public sealed class KeyedMoveTests : IDisposable
         Assert.Equal(toLater, move.NewStartingIndex > move.OldStartingIndex);
         Assert.Equal(0, detached());
 
+        // Each key's row is the control it had (a wrong index would leave the texts right and the rows swapped: the
+        // reconcile then updates each row in place with another row's element).
         var children = panel.Children.ToList();
         Assert.Equal(keys, children.Select(KeyOf));
+        Assert.All(keys, key => Assert.Same(before[key], Row(host, key)));
         Assert.Equal(children, panel.GetVisualChildren().Cast<Control>());
         Assert.Equal(children, ((ILogical)panel).LogicalChildren.Cast<Control>());
         var tops = children.Select(row => row.Bounds.Top).ToList();
@@ -150,6 +154,7 @@ public sealed class KeyedMoveTests : IDisposable
             Direction = FlexDirection.Row,
         });
         var panel = Assert.IsType<FlexPanel>(host.Root.Child);
+        var before = panel.Children.Cast<TextBlock>().ToDictionary(box => box.Text!);
         var (detached, edits) = Watch(panel);
 
         keys = ["d", "b", "a", "c"]; // d to the front and a after b
@@ -161,6 +166,7 @@ public sealed class KeyedMoveTests : IDisposable
         Assert.Equal(0, detached());
         var boxes = panel.Children.Cast<TextBlock>().ToList();
         Assert.Equal(keys, boxes.Select(box => box.Text));
+        Assert.All(boxes, box => Assert.Same(before[box.Text!], box));
         double left = 0;
         foreach (var box in boxes)
         {
