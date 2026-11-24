@@ -83,6 +83,8 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         // As upstream's host: a state setter called off the UI thread is moved onto it once a host exists.
         if (ReactorApp.UIDispatcher is not { } ui || !ReferenceEquals(ui.Dispatcher, _queue.Dispatcher))
             ReactorApp.UIDispatcher = _queue;
+        // Theme.NotifyResourcesChanged() re-renders every live host (#41; weakly held, ReactorHostControl.Theme.cs).
+        ThemeResourceListeners.Register(this);
     }
 
     /// <summary>Creates a host and mounts <paramref name="rootRender"/> (it renders on the dispatcher).</summary>
@@ -130,6 +132,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         if (_disposed) return;
         VerifyAccess();
         _disposed = true;
+        ThemeResourceListeners.Unregister(this);
         // During a pass (an effect or handler closed the window), the pass sees _disposed and drops what it mounts.
         var failures = RetireRoot();
         ReportCleanupFailures(failures)?.Throw();
@@ -180,6 +183,9 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         _isRendering = true;
         var clock = Stopwatch.StartNew();
         var phase = RenderErrorSource.RootRender;
+        // #41: a requested resource refresh (Theme.NotifyResourcesChanged) is this pass, if it reconciles.
+        _reconciler.BeginResourceRefreshPass();
+        bool reconciled = false;
         try
         {
             _reconciler.BeginRootRender(ctx, _requestRender);
@@ -191,6 +197,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
             {
                 phase = RenderErrorSource.Reconcile;
                 var control = _reconciler.Reconcile(_currentTree, tree, _currentControl, _requestRender);
+                reconciled = true;
                 if (_disposed)
                 {
                     // Disposed during the reconcile (a child's effect closed the window): drop what this pass mounted.
@@ -220,6 +227,7 @@ public sealed partial class ReactorHostControl : Decorator, IDisposable
         }
         finally
         {
+            _reconciler.EndResourceRefreshPass(reconciled);
             _isRendering = false;
             Volatile.Write(ref _lastRenderMs, clock.Elapsed.TotalMilliseconds);
         }

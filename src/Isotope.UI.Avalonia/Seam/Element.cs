@@ -28,6 +28,13 @@ public abstract record Element
     /// <summary>Resource overrides for this element's subtree (tier 3: not applied on Avalonia yet).</summary>
     public Isotope.UI.Elements.ResourceOverrides? ResourceOverrides { get; init; }
 
+    /// <summary>
+    /// Brush properties of this element's control bound to theme tokens, by property name (upstream's member, set by
+    /// <c>.Background(Theme.CardBackground)</c> and the other <see cref="ThemeRef"/> modifiers). They follow the
+    /// control's theme with no re-render (#41).
+    /// </summary>
+    public IReadOnlyDictionary<string, ThemeRef>? ThemeBindings { get; init; }
+
     /// <summary>Context values provided to this element's subtree (see <c>ElementExtensions.Provide</c>).</summary>
     public IReadOnlyDictionary<ContextBase, object?>? ContextValues { get; init; }
 
@@ -81,12 +88,14 @@ public abstract record Element
         if (!ModifiersEqual(a.Modifiers, b.Modifiers)) return false;
         if (!ReferenceEquals(a.ElementTransition, b.ElementTransition) && !Equals(a.ElementTransition, b.ElementTransition)) return false;
         if (!Equals(a.ResourceOverrides, b.ResourceOverrides)) return false;
+        if (!DictionariesEqual(a.ThemeBindings, b.ThemeBindings)) return false;
         if (!ContextValuesEqual(a.ContextValues, b.ContextValues)) return false;
         if (!DictionariesEqual(a.Attached, b.Attached)) return false;
         return (a, b) switch
         {
             (EmptyElement, EmptyElement) => true,
-            (TextBlockElement x, TextBlockElement y) => x.Text == y.Text && ReferenceEquals(x.Setters, y.Setters),
+            (TextBlockElement x, TextBlockElement y) => x.Text == y.Text && TextBlockElement.TextStylingEquals(x, y)
+                && ReferenceEquals(x.Setters, y.Setters),
             // #29: with a command, HasCallbacks is true with or without the button's own callback, which is subscribed
             // when it first appears: its coming declines the skip, as ComboBox's callbacks do.
             (ButtonElement x, ButtonElement y) => SameTextContent(x.Content, y.Content) && x.IsEnabled == y.IsEnabled
@@ -233,7 +242,7 @@ public record MemoElement(Func<RenderContext, Element> RenderFunc, object?[]? De
 /// mounted Avalonia controls need so far; upstream's full set (accessibility, flyouts, gestures, …) comes
 /// with the element vocabulary.
 /// </summary>
-public record ElementModifiers
+public partial record ElementModifiers
 {
     internal static readonly ElementModifiers Empty = new();
 
@@ -245,6 +254,10 @@ public record ElementModifiers
     public double? Opacity { get; init; }
     public bool? IsEnabled { get; init; }
     public IBrush? Background { get; init; }
+
+    /// <summary>The border's width on a templated control (#41, set by <c>.WithBorder(...)</c>); a Border element has its own.</summary>
+    public Thickness? BorderThickness { get; init; }
+
     public string? AutomationName { get; init; }
 
     /// <summary>The text of the control's tooltip (Avalonia's <c>ToolTip.Tip</c>, #26).</summary>
@@ -273,11 +286,16 @@ public record ElementModifiers
         Opacity = other.Opacity ?? Opacity,
         IsEnabled = other.IsEnabled ?? IsEnabled,
         Background = other.Background ?? Background,
+        BorderThickness = other.BorderThickness ?? BorderThickness,
         AutomationName = other.AutomationName ?? AutomationName,
         ToolTip = other.ToolTip ?? ToolTip,
         RichToolTip = other.RichToolTip ?? RichToolTip,
         ToolTipPlacement = other.ToolTipPlacement ?? ToolTipPlacement,
         ContextFlyout = other.ContextFlyout ?? ContextFlyout,
+        Foreground = other.Foreground ?? Foreground,
+        FontSize = other.FontSize ?? FontSize,
+        FontWeight = other.FontWeight ?? FontWeight,
+        FontFamily = other.FontFamily ?? FontFamily,
     };
 }
 

@@ -1071,10 +1071,19 @@
       "tier": 2,
       "lastChanged": "1265b8653d15334c3d2c60314a63d08381cf006a",
       "transforms": [
+        "drop-ThemeRef-Resolve-element",
+        "drop-ThemeRef-ResolveForTheme",
+        "drop-ThemeRef-ResolveForThemeUncached",
+        "drop-ThemeRef-ResolveFromDictionaries",
+        "drop-ThemeRef-GetEffectiveThemeName",
+        "drop-ThemeRef-TryResolveFromThemeDictionaries",
+        "drop-ThemeRef-ResolveFromDictionariesForTest",
+        "theme-ref-partial",
+        "theme-brush-alias",
         "winui-usings",
         "namespace-isotope"
       ],
-      "sha256": "9e3046f93b09c847ad8637d833edc8cfa7457f0d467d4f666a3e805116000aa6"
+      "sha256": "fb0836a9d5b05cfeadb0dca77461a93397994cc42b2c9c2708c63a4a13eb10a5"
     },
     {
       "path": "src/Reactor/Core/ThemeResourceListeners.cs",
@@ -1637,10 +1646,9 @@
       "tier": 2,
       "lastChanged": "c8ac8b3804b9cf63b7ac5cfa2198552aa3eeba12",
       "transforms": [
-        "drop-test-ThemeBindings-not-theme-sensitive",
         "namespace-isotope"
       ],
-      "sha256": "eacf7c13e4a4f9ce8cfd276e6501c130ca99ccfd0d539b301a09ab64f7a51714"
+      "sha256": "5a6958d475187e4813c01168474fd00b06cd8b7ac93c27f704c15bc0944ad64b"
     },
     {
       "path": "tests/Reactor.Tests/ChildReconcilerKeyedMiddleCoreTests.cs",

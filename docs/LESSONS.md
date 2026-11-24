@@ -138,7 +138,15 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **`dotnet build -getItem` without `-t` only evaluates the project;** `dotnet msbuild -t:Build -getItem:…` prints the
   items even when the build fails. (2026-11-24)
 
+- **A break must stop the behaviour, not one path to it:** `if (CheckAccess() && sender is null) Refresh()` still
+  refreshed through the `else Dispatcher.Post(Refresh)` branch, so the test stayed green. Empty the handler instead.
+  (2026-11-24)
+- **`measure-samples.mjs` builds the worktree's library and checks git status at the end:** don't edit the worktree
+  while it runs. (2026-11-24)
+
 ## Git, GitHub and merging
+
+- **The harness can block an agent's write to `FINDINGS.md`:** have agents return the section in their reply. (2026-11-24)
 
 - **`git commit-tree` with the same tree, parent, message and identity in the same second gives the same commit:** a
   crafted "other" commit was the genuine one on a fast runner. Change a file or the date. (2026-11-24)
