@@ -94,6 +94,12 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   removed because the other corrected the layout one pass later. Prove it with both removed, and test what each part
   alone buys. (2026-11-24)
 
+- **A headless benchmark that runs inside one dispatcher job never pumps the queue.** Closed windows piled up until the
+  process reached 8.8 GB. Run `Dispatcher.UIThread.RunJobs()` and render a frame between runs, and print the heap at the
+  end. (2026-11-24)
+- **The first case timed in a fresh process runs cold.** A mount timed first took about 5 times as long as the same work
+  later. Warm the JIT with an unprinted pass of every case before timing. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

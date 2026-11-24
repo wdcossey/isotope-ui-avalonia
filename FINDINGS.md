@@ -152,6 +152,21 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## Spike I: pooling and keyed moves (issue #14, 2026-11-24)
+
+- **No control pooling.**
+  - Creating 4,000 controls takes 4.0 to 4.9 ms.
+  - A 1,000-row re-key in a headless window takes 249 to 273 ms through the engine, nearly all of it Avalonia's attach,
+    styling, templates and layout.
+  - Upstream's 32-per-type pool saves nothing. Only an unbounded pool helps (about 17% on a re-key, 50% on a mount,
+    from reused templates).
+  - #14 is closed without a port.
+- **Keyed moves should use `Controls.Move`.**
+  - Upstream's RemoveAt + Insert detaches every moved row: a reverse takes 193 to 212 ms in a window, and focus is lost.
+  - With `Controls.Move` it takes 7.3 to 10.7 ms, nothing is detached, and focus is kept.
+  - It needs no transform rule, only a tier 3 `IChildCollection` in the seam (#23).
+  - Report: `docs/spikes/I-pooling-and-moves.md`.
+
 ## More controls (issue #19, 2026-11-24)
 
 - **14 more controls** with records, generated descriptors, factories and headless tests: CheckBox (plus three-state),
@@ -238,7 +253,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Leaks:**
   - Avalonia 12 binds `Dispatcher.UIThread` to the first thread that reads it (fixed in the seam).
   - Avalonia clamps `DesiredSize`, so FlexPanel's CSS minimum size is lost (#15).
-  - A keyed move detaches the control; Avalonia's own `Move` is unmeasured (#14).
+  - A keyed move detaches the control; Avalonia's `Controls.Move` doesn't, and is about 20 times faster (#14, Spike I; #23).
 - **Next:** an app host (#16). Report: `docs/spikes/G-vertical-slice.md`.
 
 ## Decisions after Spike F (2026-11-23)
