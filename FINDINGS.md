@@ -210,6 +210,39 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Layout modifiers (issue #49, 2026-11-24)
+
+- **Upstream's layout modifiers, with Avalonia's value types:** `Padding` (4 overloads), `WithBorder`, `BorderBrush`,
+  `BorderThickness`, `CornerRadius`, `MinWidth`/`MinHeight`/`MaxWidth`/`MaxHeight`, `Center`,
+  `HorizontalContentAlignment`/`VerticalContentAlignment`, `IsVisible`, and the `Spacing` and `FlexPadding` sugar.
+  Upstream's names are already Avalonia's.
+  - They are written where Avalonia has the property: a templated control, a `Border`, a `TextBlock` (padding only),
+    and content alignment where the control declares it.
+  - On a `BorderElement`, its own members and the modifiers of the same name are written as one value, the member's
+    first.
+- **A padded panel:** Avalonia 12's `StackPanel` and `Grid` have no `Padding`, `BorderBrush`, `BorderThickness` or
+  `CornerRadius`, while WinUI's have all four.
+  - A stack, grid or wrap panel with padding, a border width or rounded corners is mounted inside a `Border`
+    (`PanelChrome`), which is how Avalonia pads a panel. The border holds the element's margin, size, alignment,
+    background and theme tokens; the panel keeps its own members and children.
+  - When that need comes or goes between renders, the panel is mounted again and components inside lose their state.
+  - A flex panel ignores them, as upstream's (`FlexPadding` is Yoga's padding).
+- **Not done:** the BiDi `MarginInlineStart` family, and upstream's `HorizontalAlignment`/`VerticalAlignment` aliases of
+  `HAlign`/`VAlign` (#46).
+- **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`, 561c5573; before is main at e4e290f, after is
+  this branch; both from fresh clones):
+
+  | | Before | After |
+  |---|---|---|
+  | Compile errors | 3,727 | 3,442 |
+  | Migration diagnostics | 1,885 | 1,630 |
+  | ISOMIG013 (members and modifiers Isotope lacks) | 681 | 426 |
+  | Files that build | 74 | 82 |
+  | Projects that build | 2 | 2 |
+
+  The ISOMIG013 groups now largest are `FullDescription` (39), `ApplyStyle` (27), `Resources` (14) and `SubtleButton` (14).
+- **Tests:** 35 new, each proven to fail.
+
 ## Theme tokens (issue #41, 2026-11-24)
 
 - **Upstream's `Theme` is brush tokens only:** `ThemeRef` and `Theme`'s 36 tokens, `Theme.Ref(key)` and
