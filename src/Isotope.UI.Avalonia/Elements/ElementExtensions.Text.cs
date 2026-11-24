@@ -9,6 +9,8 @@ namespace Isotope.UI;
 // record's members and keep its type for chaining. Not here yet: IsTextSelectionEnabled (Avalonia's TextBlock has no
 // selection; SelectableTextBlock is another control), CharacterSpacing and TextDecorations (their Avalonia counterparts,
 // LetterSpacing in DIPs and a TextDecorationCollection, change shape), and Foreground(ThemeRef) (#41).
+// On a record derived from TextBlockElement, FontSize and FontFamily bind to the element-wide overloads (an identity
+// conversion beats the base-class one), so they set the modifier, which the members of the same name win over.
 
 public static partial class ElementExtensions
 {
@@ -17,7 +19,7 @@ public static partial class ElementExtensions
     /// <summary>The text colour from a colour string Avalonia parses (<c>"#FF0000"</c>, <c>"Red"</c>).</summary>
     public static T Foreground<T>(this T el, string color) where T : Element => el.Foreground(Brush.Parse(color));
 
-    /// <summary>The text colour of a text block or a templated control; <see langword="null"/> leaves the control's own.</summary>
+    /// <summary>The text colour of a text block or a templated control; a null brush leaves the control's own.</summary>
     public static T Foreground<T>(this T el, IBrush? brush) where T : Element =>
         el.WithModifiers(m => m with { Foreground = brush });
 
@@ -44,6 +46,10 @@ public static partial class ElementExtensions
     public static TextBlockElement SemiBold(this TextBlockElement el) => el with { FontWeight = Avalonia.Media.FontWeight.SemiBold };
 
     public static TextBlockElement FontSize(this TextBlockElement el, double size) => el with { FontSize = size };
+
+    // Not in upstream, which has only the element-wide FontWeight: here the member wins over the modifier on a text block,
+    // so without it .Bold().FontWeight(FontWeight.Light) would stay bold.
+    public static TextBlockElement FontWeight(this TextBlockElement el, FontWeight weight) => el with { FontWeight = weight };
 
     public static TextBlockElement FontStyle(this TextBlockElement el, FontStyle style) => el with { FontStyle = style };
 

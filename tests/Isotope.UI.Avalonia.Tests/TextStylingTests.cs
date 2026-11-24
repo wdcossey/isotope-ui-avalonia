@@ -59,6 +59,11 @@ public sealed class TextStylingTests
             c => c.FontWeight, FontWeight.Light, FontWeight.Black);
 
     [AvaloniaFact]
+    public void FontWeight_after_Bold_on_a_text_block_is_the_member_too() =>
+        AssertTextBlock(t => t.Bold().FontWeight(FontWeight.Light), t => t.SemiBold().FontWeight(FontWeight.Black),
+            c => c.FontWeight, FontWeight.Light, FontWeight.Black);
+
+    [AvaloniaFact]
     public void FontStyle_member() =>
         AssertTextBlock(t => t.FontStyle(FontStyle.Italic), t => t.FontStyle(FontStyle.Oblique), c => c.FontStyle, FontStyle.Italic, FontStyle.Oblique);
 
@@ -88,6 +93,13 @@ public sealed class TextStylingTests
     [AvaloniaFact]
     public void MaxLines_member() =>
         AssertTextBlock(t => t.MaxLines(2), t => t.MaxLines(3), c => c.MaxLines, 2, 3);
+
+    [AvaloniaFact]
+    public void An_unset_MaxLines_is_not_written()
+    {
+        var block = new TestHost(() => TextBlock("a")).All<TextBlock>()[0];
+        Assert.False(block.IsSet(AvTextBlock.MaxLinesProperty));
+    }
 
     // ── Element-wide modifiers ──────────────────────────────────────────
 

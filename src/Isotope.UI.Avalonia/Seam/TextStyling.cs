@@ -41,8 +41,11 @@ public partial record TextBlockElement
     /// <summary>The line height, in DIPs; <see langword="null"/> leaves Avalonia's (proportional to the font size).</summary>
     public double? LineHeight { get; init; }
 
-    /// <summary>The most lines shown before the text is trimmed; 0 (the default) means no limit.</summary>
-    public int MaxLines { get; init; }
+    /// <summary>The most lines shown before the text is trimmed; 0 means no limit, and <see langword="null"/> leaves the
+    /// control's own.</summary>
+    /// <remarks>Upstream's is an <c>int</c>, written on every text block; nullable here, so a style's value isn't
+    /// overwritten when none is given.</remarks>
+    public int? MaxLines { get; init; }
 
     // The skip arm's comparison of the text styling members (Element.ShallowEquals).
     internal static bool TextStylingEquals(TextBlockElement x, TextBlockElement y)

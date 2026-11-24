@@ -140,8 +140,9 @@ public static Element Notice(string title, string body, bool urgent, Action dism
         Button("Dismiss", dismiss).Foreground(urgent ? "Red" : "Gray"));
 ```
 
-> **Coming from Reactor?** `TextBlockElement.Weight` is `FontWeight`. A text block has no `IsTextSelectionEnabled`
-> (Avalonia's `SelectableTextBlock` is another control), and no `CharacterSpacing` or `TextDecorations` yet.
+> **Coming from Reactor?** `TextBlockElement.Weight` is `FontWeight`, and its `HorizontalAlignment` member is the
+> `.HAlign(...)` modifier. A text block has no `IsTextSelectionEnabled` (Avalonia's `SelectableTextBlock` is another
+> control), and no `CharacterSpacing` or `TextDecorations` yet.
 
 More factories arrive with their controls. An app host that opens a window on a component is #16; the tests mount
 components with a test host.
