@@ -96,28 +96,31 @@ projects (358 C# files), at the commit in `UPSTREAM.lock`.
 - A file counts as building when the compiler reports no error in it.
 - It also prints the commonest diagnostics and errors left.
 
-Measured on 2026-11-24:
+Measured on 2026-11-24, with the named text styles (#44):
 
 | | Before the fixes | After |
 |---|---|---|
-| Files that build | 51 of 358 | 64 of 358 |
-| Compile errors | 13,699 | 4,202 |
+| Files that build | 51 of 358 | 85 of 358 |
+| Compile errors | 13,699 | 3,325 |
 | Projects that build | 1 of 36 | 2 of 36 |
 
 - No file that built before the fixes fails after them, and no `dotnet format` run failed.
 - The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
 - The two projects that build after are the hello-world app and the chat sample's model.
-- Diagnostics left: 2,624.
-  - 1,192 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FontSize` (193) and `SemiBold` (154) on
-    `TextBlockElement`, and `Padding` (88) on `StackElement`.
-  - 877 ISOMIG012: controls not ported yet. The commonest are `Caption` (221), `SubHeading` (149) and
-    `ScrollView` (139).
+- Diagnostics left: 1,427.
+  - 665 ISOMIG013: members and modifiers Isotope lacks. The commonest are `Padding` (88 on `StackElement`, 40 on
+    `TextBlockElement`), `Center` (53) on `TextBlockElement` and `FullDescription` (44) on `Element`.
+  - 203 ISOMIG012: controls not ported yet. The commonest are `Run` (39), `Paragraph` (14), `Icon` (14) and
+    `ListView` (12).
   - 199 ISOMIG002: Charting (159), Advanced (11), Docking (8), Controls.Validation (8), Animation (7), and 6 in
     Markdown, Diagnostics, Interop and Devtools.
-  - 171 ISOMIG011 and 113 ISOMIG005: WinUI-only controls and types.
-  - 59 ISOMIG016: WinUI names the table doesn't list.
+  - 171 ISOMIG011 and 116 ISOMIG005: WinUI-only controls and types.
+  - 57 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.
-- Most compile errors left are names Isotope doesn't have yet. The largest group is 443 members `TextBlockElement`
-  lacks (CS1061). Reactor's `Theme` tokens (830 errors before #41) now migrate as they are.
+  - 3 ISOMIG007: a ScrollView's `ContentOrientation`, left for a hand fix.
+- Most compile errors left are names Isotope doesn't have yet. The largest groups are 264 CS0234 (`UI`), 128 CS0103
+  (`Palette`), 126 CS1955 (`BorderElement.CornerRadius`) and 112 CS1061 (`TextBlockElement`). Reactor's `Theme`
+  tokens (830 errors before #41) and named text styles (`Caption`, `SubHeading`…: 442 diagnostics before #44) now
+  migrate as they are.
 - The samples' other upstream projects (Charting, Advanced, Devtools…) and their NuGet packages are dropped, and the
   script lists them.
