@@ -43,21 +43,19 @@ public partial record DatePickerElement(
 
     internal override bool HasCallbacks => OnDateChanged is not null;
 
-    // The year bounds Avalonia's constructor gives a picker, which clearing the property wouldn't restore (its default
-    // is the whole DateTimeOffset range). Read once, from a picker of our own, on the UI thread.
-    private static DatePicker? s_defaults;
-    private static DatePicker Defaults => s_defaults ??= new DatePicker();
-
-    // The year bounds are written before the date, so a first date lands in its range; a null bound writes the
-    // constructor's. The control's value is nullable and the record's isn't: a cleared date isn't reported (the
-    // callback takes a date).
+    // The year bounds are written before the date, so a first date lands in its range, and together, in the order that
+    // keeps MinYear at or before MaxYear (Avalonia throws otherwise). The control's value is nullable and the record's
+    // isn't: a cleared date isn't reported (the callback takes a date).
     private static partial ControlDescriptor<DatePickerElement, DatePicker> Customize(ControlDescriptor<DatePickerElement, DatePicker> d)
-        => d.OneWay(
-                get: static e => e.MinYear ?? Defaults.MinYear,
-                set: static (c, v) => c.MinYear = v)
-            .OneWay(
-                get: static e => e.MaxYear ?? Defaults.MaxYear,
-                set: static (c, v) => c.MaxYear = v)
+        => d.ImperativeBridged(
+                mount:  static (ctx, c, e) =>
+                {
+                    if (e.MinYear is not null || e.MaxYear is not null) WriteYears(c, e.MinYear, e.MaxYear, fresh: true);
+                },
+                update: static (ctx, c, o, n) =>
+                {
+                    if (o.MinYear != n.MinYear || o.MaxYear != n.MaxYear) WriteYears(c, n.MinYear, n.MaxYear, fresh: false);
+                })
             .Controlled<DateTimeOffset?, DatePickerSelectedValueChangedEventArgs>(
             get:         static e => e.Date.HasValue ? e.Date.Value : Optional<DateTimeOffset?>.Unset,
             set:         static (c, v) => c.SelectedDate = v,
@@ -65,6 +63,29 @@ public partial record DatePickerElement(
             unsubscribe: static (fe, h) => { },
             callback:    static e => e.OnDateChanged is { } cb ? v => { if (v.HasValue) cb(v.Value); } : null,
             readBack:    static c => c.SelectedDate);
+
+    private static void WriteYears(DatePicker c, DateTimeOffset? min, DateTimeOffset? max, bool fresh)
+    {
+        if (min is null || max is null)
+        {
+            // A bound left to Avalonia gets the one its constructor sets, which clearing the property wouldn't restore
+            // (the property's default is the whole DateTimeOffset range): a control being mounted still has it, and a
+            // picker made here, on the control's thread, gives it otherwise.
+            var defaults = fresh ? c : new DatePicker();
+            min ??= defaults.MinYear;
+            max ??= defaults.MaxYear;
+        }
+        if (min.Value > c.MaxYear)
+        {
+            c.MaxYear = max.Value;
+            c.MinYear = min.Value;
+        }
+        else
+        {
+            c.MinYear = min.Value;
+            c.MaxYear = max.Value;
+        }
+    }
 }
 
 /// <summary>
@@ -81,7 +102,12 @@ public partial record TimePickerElement(
     public int MinuteIncrement { get; init; } = 1;
 
     /// <summary>12 (the default) or 24, as upstream's; Avalonia's <c>"12HourClock"</c> or <c>"24HourClock"</c>.</summary>
-    public int ClockIdentifier { get; init; } = 12;
+    /// <exception cref="ArgumentOutOfRangeException">Any other value.</exception>
+    public int ClockIdentifier
+    {
+        get;
+        init => field = value is 12 or 24 ? value : throw new ArgumentOutOfRangeException(nameof(ClockIdentifier), value, "A clock is 12 or 24 hours.");
+    } = 12;
 
     internal Action<TimePicker>[] Setters { get; init; } = [];
 

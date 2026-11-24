@@ -28,7 +28,7 @@ public partial record ComboBoxElement(
     /// <summary>Whether the user can type into the box.</summary>
     public bool IsEditable { get; init; }
 
-    /// <summary>The open drop-down's most height, in DIPs; NaN (the default) keeps Avalonia's.</summary>
+    /// <summary>The open drop-down's greatest height, in DIPs; NaN (the default) keeps Avalonia's.</summary>
     public double MaxDropDownHeight { get; init; } = double.NaN;
 
     /// <summary>Raised when the user opens the drop-down list.</summary>
@@ -58,7 +58,8 @@ public partial record ComboBoxElement(
 
     // As upstream's: SelectedIndex is the controlled value and the two drop-down events are hand-wired (the generator
     // pairs no callback with a non-generic EventHandler event), all three through one payload type, because a control
-    // holds one event payload; MaxDropDownHeight's NaN means "leave the control's". Unlike upstream's, the selection
+    // holds one event payload; MaxDropDownHeight's NaN means "Avalonia's", through the ClearValue channel as the other
+    // members (upstream's skips the write, leaving the last height). Unlike upstream's, the selection
     // uses the counter channel rather than the value-diff one: Avalonia raises SelectionChanged inside the write.
     private static partial ControlDescriptor<ComboBoxElement, ComboBox> Customize(ControlDescriptor<ComboBoxElement, ComboBox> d)
         => d.HandCodedControlled<ComboBoxEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
@@ -82,10 +83,10 @@ public partial record ComboBoxElement(
                 trampoline:      __DropDownClosedTrampoline,
                 slotIsNull:      static p => p.DropDownClosedTrampoline is null,
                 setSlot:         static (p, h) => p.DropDownClosedTrampoline = h)
-            .OneWayConditional(
-                get:         static e => e.MaxDropDownHeight,
-                set:         static (c, v) => c.MaxDropDownHeight = v,
-                shouldWrite: static e => !double.IsNaN(e.MaxDropDownHeight));
+            .OneWay<double>(
+                get: static e => double.IsNaN(e.MaxDropDownHeight) ? Optional<double>.Unset : e.MaxDropDownHeight,
+                set: static (c, v) => c.MaxDropDownHeight = v,
+                dp:  ComboBox.MaxDropDownHeightProperty);
 }
 
 /// <summary>

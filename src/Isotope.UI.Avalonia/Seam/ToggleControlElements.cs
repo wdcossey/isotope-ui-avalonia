@@ -115,23 +115,15 @@ public partial record RadioButtonElement(
 
     internal override bool HasCallbacks => OnIsCheckedChanged is not null;
 
-    // Engine writes of a radio button's IsChecked in progress on this (the UI) thread.
-    [ThreadStatic] private static int t_engineWrites;
-
-    // As upstream's: the record's value is a bool, the control's a bool?, so the read-back maps null to false. Unlike
-    // upstream's, an engine write doesn't echo through the group either: checking one button unchecks its group's
-    // checked one inside the write, and that button's suppression scope isn't open, so its change is dropped here.
+    // As upstream's: the record's value is a bool, the control's a bool?, so the read-back maps null to false. The write
+    // of a button doesn't echo to it; the uncheck it causes in another button of the group reaches that button's
+    // callback, as on WinUI, so state kept per button follows the group.
     private static partial ControlDescriptor<RadioButtonElement, RadioButton> Customize(ControlDescriptor<RadioButtonElement, RadioButton> d)
         => d.Controlled<bool, RoutedEventArgs>(
             get:         static e => e.IsChecked,
-            set:         static (c, v) =>
-            {
-                t_engineWrites++;
-                try { c.IsChecked = v; }
-                finally { t_engineWrites--; }
-            },
+            set:         static (c, v) => c.IsChecked = v,
             subscribe:   static (fe, h) => ((RadioButton)fe).IsCheckedChanged += h,
             unsubscribe: static (fe, h) => { },
-            callback:    static e => e.OnIsCheckedChanged is { } cb ? v => { if (t_engineWrites == 0) cb(v); } : null,
+            callback:    static e => e.OnIsCheckedChanged,
             readBack:    static c => c.IsChecked ?? false);
 }

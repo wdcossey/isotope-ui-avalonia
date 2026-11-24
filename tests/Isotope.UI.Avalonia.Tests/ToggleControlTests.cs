@@ -166,7 +166,7 @@ public class ToggleControlTests
     }
 
     [AvaloniaFact]
-    public void RadioButtons_in_a_group_report_the_user_choice_and_the_engine_writes_do_not_echo()
+    public void RadioButtons_in_a_group_report_the_user_choice_and_the_engine_write_reaches_only_the_other_button()
     {
         var reported = new List<string>();
         Action<int>? choose = null;
@@ -188,9 +188,9 @@ public class ToggleControlTests
         Assert.Equal(["B True", "A False"], reported);
         Assert.Equal(["chosen 1"], host.Texts());
 
-        choose!(0); // from the state: both written, neither reported
+        choose!(0); // from the state: A's write doesn't echo to A; the uncheck it causes in B reaches B, as upstream's
         host.Flush();
         Assert.Equal((true, false), (radios[0].IsChecked, radios[1].IsChecked));
-        Assert.Equal(["B True", "A False"], reported);
+        Assert.Equal(["B True", "A False", "B False"], reported);
     }
 }

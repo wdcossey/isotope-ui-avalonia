@@ -64,6 +64,39 @@ public class MediaAndPickerTests
     }
 
     [AvaloniaFact]
+    public void Image_disposes_the_bitmap_it_loaded_when_the_source_changes_or_it_unmounts_and_keeps_odd_file_names()
+    {
+        // '%20' and '#' are a plain file name's characters, not a URI's escape and fragment.
+        var dir = Path.GetTempPath();
+        var first = Path.Combine(dir, "isotope image%20" + Guid.NewGuid().ToString("N") + "#1.png");
+        var second = Path.Combine(dir, "isotope-image-" + Guid.NewGuid().ToString("N") + ".png");
+        foreach (var path in new[] { first, second })
+            using (var bitmap = new WriteableBitmap(new PixelSize(2, 2), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul))
+                bitmap.Save(path, new PngBitmapEncoderOptions());
+        try
+        {
+            var source = first;
+            var host = new TestHost(() => Image(source));
+            var image = host.All<Image>()[0];
+            var loaded = Assert.IsType<Bitmap>(image.Source);
+            Assert.Equal(new PixelSize(2, 2), loaded.PixelSize);
+
+            source = second;
+            host.Render();
+            Assert.Throws<ObjectDisposedException>(() => loaded.PixelSize);
+            var next = Assert.IsType<Bitmap>(image.Source);
+
+            host.Unmount();
+            Assert.Throws<ObjectDisposedException>(() => next.PixelSize);
+        }
+        finally
+        {
+            File.Delete(first);
+            File.Delete(second);
+        }
+    }
+
+    [AvaloniaFact]
     public void Image_stretch_set_back_to_null_returns_to_the_default()
     {
         var set = true;
@@ -121,6 +154,23 @@ public class MediaAndPickerTests
         host.Render();
         var defaults = new DatePicker();
         Assert.Equal((defaults.MinYear, defaults.MaxYear, defaults.YearFormat), (picker.MinYear, picker.MaxYear, picker.YearFormat));
+    }
+
+    [AvaloniaFact]
+    public void DatePicker_year_range_moved_past_the_current_one_is_written_in_a_valid_order()
+    {
+        // Avalonia throws for a MinYear after the current MaxYear (or a MaxYear before the current MinYear).
+        var later = true;
+        static DateTimeOffset Year(int y) => new(y, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var host = new TestHost(() => later
+            ? DatePicker() with { MinYear = Year(2200), MaxYear = Year(2300) }
+            : DatePicker() with { MinYear = Year(1700), MaxYear = Year(1800) });
+        var picker = host.All<DatePicker>()[0];
+        Assert.Equal((Year(2200), Year(2300)), (picker.MinYear, picker.MaxYear));
+
+        later = false;
+        host.Render();
+        Assert.Equal((Year(1700), Year(1800)), (picker.MinYear, picker.MaxYear));
     }
 
     [AvaloniaFact]

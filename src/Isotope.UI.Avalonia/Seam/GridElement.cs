@@ -146,6 +146,9 @@ namespace Isotope.UI
                 throw new ArgumentOutOfRangeException(nameof(max), max, "Max size must be a number and >= 0.");
             if (type == GridUnitType.Pixel && !IsFiniteAndNonNegative(value))
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Pixel size must be a number and >= 0.");
+            // Unlike upstream's: an Auto value is checked too, as Avalonia's GridLength rejects it later otherwise.
+            if (type == GridUnitType.Auto && !IsFiniteAndNonNegative(value))
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Auto size must be a number and >= 0.");
             if (type == GridUnitType.Star && (!IsFiniteAndNonNegative(value) || value <= 0))
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Star weight must be a number and > 0.");
             Value = value;

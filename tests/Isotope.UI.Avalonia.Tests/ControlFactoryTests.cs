@@ -99,6 +99,8 @@ public class ControlFactoryTests
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Px(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Star(0));
         Assert.Throws<ArgumentOutOfRangeException>(() => GridSize.Auto.MinSize(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new GridSize(double.NaN, GridUnitType.Auto));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TimePicker() with { ClockIdentifier = 13 });
     }
 
     [AvaloniaFact]

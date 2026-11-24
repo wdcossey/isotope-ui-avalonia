@@ -71,7 +71,7 @@ public class ItemsControlTests
     }
 
     [AvaloniaFact]
-    public void ComboBox_placeholder_set_back_to_null_and_an_unset_drop_down_height_keep_the_defaults()
+    public void ComboBox_placeholder_and_drop_down_height_set_back_return_to_the_defaults()
     {
         var set = true;
         var host = new TestHost(() => set
@@ -84,7 +84,7 @@ public class ItemsControlTests
         host.Render();
         var defaults = new ComboBox();
         Assert.Equal(defaults.PlaceholderText, combo.PlaceholderText);
-        Assert.Equal(120.0, combo.MaxDropDownHeight); // NaN means "leave it", as upstream's
+        Assert.Equal(defaults.MaxDropDownHeight, combo.MaxDropDownHeight); // NaN: Avalonia's
 
         var fresh = new TestHost(() => ComboBox(["a"])).All<ComboBox>()[0];
         Assert.Equal(defaults.MaxDropDownHeight, fresh.MaxDropDownHeight);
