@@ -314,6 +314,23 @@ public sealed class ThemeTokenTests : IDisposable
         Assert.Equal(3, b.Renders);
     }
 
+    [AvaloniaFact]
+    public void ThemeResource_reads_the_Fluent_themes_corner_radii_and_brushes_with_the_tokens_behind_them()
+    {
+        var app = Application.Current!;
+        Assert.True(app.TryGetResource("ControlCornerRadius", app.ActualThemeVariant, out var control));
+        Assert.Equal(Assert.IsType<CornerRadius>(control), ThemeResource.CornerRadius("ControlCornerRadius"));
+        Assert.True(app.TryGetResource("OverlayCornerRadius", app.ActualThemeVariant, out var overlay));
+        Assert.Equal(Assert.IsType<CornerRadius>(overlay), ThemeResource.CornerRadius("OverlayCornerRadius"));
+        Assert.Throws<KeyNotFoundException>(() => ThemeResource.CornerRadius("IsotopeTestNoSuchRadius"));
+
+        // A key the Fluent theme lacks: Isotope's token, for the app's theme.
+        var expected = ThemeTokens.IsDark(app.ActualThemeVariant) ? 0xFF6CCB5Fu : 0xFF0F7B0Fu;
+        Assert.Equal(Hex(expected), ColorOf(ThemeResource.Brush("SystemFillColorSuccessBrush")));
+        Assert.Throws<KeyNotFoundException>(() => ThemeResource.Brush("IsotopeTestNoSuchBrush"));
+        Assert.Equal(7.5, ThemeResource.Get("IsotopeTestNoSuchDouble", 7.5));
+    }
+
     // ── Precedence and changes ──
 
     [AvaloniaFact]

@@ -68,6 +68,15 @@ public static Element Swatch(RenderContext ctx)
 After editing the application's resources in a way that isn't a theme change, call `Theme.NotifyResourcesChanged()`:
 every live host renders again from its root.
 
+## Other theme resources
+
+`ThemeResource` (upstream's helper) reads a resource by key from the application's resources and its styles, for the
+app's theme: `ThemeResource.CornerRadius("ControlCornerRadius")` and `ThemeResource.CornerRadius("OverlayCornerRadius")`
+are the Fluent theme's radii for controls and for flyouts and cards. `ThemeResource.Brush(key)` falls back to the
+built-in tokens, as a `ThemeRef` does. `Double`, `Thickness` and `Get<T>` read other values. Each returns Avalonia's
+type, and throws `KeyNotFoundException` for a missing key (`Get<T>` returns its default instead). Unlike a bound
+token, a value read this way doesn't follow a theme change on its own.
+
 ## Coming from Reactor
 
 - **The values.** WinUI resolves the keys from its own theme resources; here they come from the app's Avalonia
@@ -83,4 +92,5 @@ every live host renders again from its root.
 - **`NotifyResourcesChanged`** renders each host from its root, but a memoized component whose inputs didn't change
   still skips (upstream renders past memoization). Bound tokens don't need it.
 - **Not ported yet:** per-control resource overrides (`.Resources(r => r.Set(key, themeRef))`), and the type-ramp
-  factories (`Title`, `Body`, `Caption`…, #44). Upstream's `Theme` has no spacing or corner-radius tokens.
+  factories (`Title`, `Body`, `Caption`…, #44). Upstream's `Theme` has no spacing or corner-radius tokens: its corner
+  radii are `ThemeResource.CornerRadius(...)`, above.
