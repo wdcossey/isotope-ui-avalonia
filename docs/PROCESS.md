@@ -83,6 +83,8 @@ Claude merges its own branches into `main` (`git merge --no-ff`) once the build,
 clean run hold. The merge commit message records each pass's level, tokens ("not measured" if not visible), what it
 found, fixed and waived, tests proven to fail, **For you to decide** and **Hands-on follow-ups**. Then delete the
 branch and its worktree.
+Merge locally and push, never with GitHub's merge button or `gh pr merge`: a merge made on GitHub takes the author from
+the GitHub profile (the full name), not from git config. A pushed local merge still marks the PR merged.
 
 ## 6. Batches
 

@@ -125,6 +125,15 @@ jobs:
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
 
+      - name: Migration analyzer tests, count unchanged
+        shell: bash
+        run: |
+          dotnet test tests/Isotope.UI.Migration.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee mig.log
+          total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' mig.log | tail -1)"
+          expected="$(cat tests/Isotope.UI.Migration.Tests/expected-total.txt)"
+          echo "total=$total expected=$expected"
+          test "$total" = "$expected"
+
   sync:
     name: sync check (${{ matrix.os }})
     strategy:

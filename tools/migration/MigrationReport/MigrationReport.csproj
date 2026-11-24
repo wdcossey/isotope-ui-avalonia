@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Counts compile errors and migration diagnostics per file for tools/migration/measure-samples.mjs (#33). A build
+       stops before analyzers when a file has declaration errors, so this compiles the project's inputs (from MSBuild's
+       -getItem) with Roslyn and runs the analyzer itself, as dotnet format does. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The pinned SDK's compiler version, as the migration tests. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    <ProjectReference Include="..\..\..\src\Isotope.UI.Migration\Isotope.UI.Migration.csproj" />
+  </ItemGroup>
+</Project>
