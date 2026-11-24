@@ -483,7 +483,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     var at = location.SourceSpan.Start - inv.SpanStart;
                     var renamed = text.Substring(0, at) + factory.Avalonia + text.Substring(at + name.Length);
                     Report(ctx, Rules.NameRenamed, inv.GetLocation(), replace: "(" + renamed + " with { " + with + " })",
-                        usings: factory.Using is { } ns ? [ns] : null, args: ["Factory", name, factory.Avalonia]);
+                        args: ["Factory", name, factory.Avalonia]);
                 }
                 else Report(ctx, Rules.NameRenamed, location, replace: factory.Avalonia, args: ["Factory", name, factory.Avalonia]);
             }

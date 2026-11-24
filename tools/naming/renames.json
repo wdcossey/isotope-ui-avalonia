@@ -164,7 +164,7 @@
     {"reactor": "NumberBox", "avalonia": "NumericUpDown", "status": "proposed"},
     {"reactor": "AutoSuggestBox", "avalonia": "AutoCompleteBox", "status": "proposed"},
     {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"},
-    {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "with": "HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled", "using": "Avalonia.Controls.Primitives", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation): a ScrollViewer with its horizontal scroll bar disabled, which the migration writes (#43)."},
+    {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "with": "HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation): a ScrollViewer with its horizontal scroll bar disabled, which the migration writes (#43)."},
     {"reactor": "TreeNode", "avalonia": "TreeViewItem", "status": "applied", "note": "Avalonia's name for a tree view node (#43)."}
   ]
 }

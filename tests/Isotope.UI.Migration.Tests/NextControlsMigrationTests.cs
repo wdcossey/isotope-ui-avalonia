@@ -14,7 +14,7 @@ public class NextControlsMigrationTests
         """;
 
     // What ScrollView becomes: a ScrollViewer whose content is as wide as the view, as WinUI ScrollView's.
-    const string Disabled = " with { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled })";
+    const string Disabled = " with { HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled })";
 
     [Fact]
     public void ScrollView_becomes_a_ScrollViewer_with_its_layout_and_its_type_is_renamed()
@@ -32,7 +32,8 @@ public class NextControlsMigrationTests
         Assert.Contains("ISOMIG009: Type 'ScrollViewElement' is 'ScrollViewerElement' in Isotope", before);
 
         var fixedText = Migrate.Fix(reactor);
-        Assert.Contains("using Avalonia.Controls.Primitives;", fixedText);
+        // Written in full, with no using: Avalonia.Controls.Primitives would make Reactor's Popup and UniformGrid name its types.
+        Assert.DoesNotContain("using Avalonia.Controls.Primitives;", fixedText);
         Assert.Contains("Render() => (ScrollViewer(content: TextBlock(\"x\"))" + Disabled + ";", fixedText);
         Assert.Contains("Nested() => (ScrollViewer((ScrollViewer(TextBlock(\"z\"))" + Disabled + ")" + Disabled + ".Margin(4);", fixedText);
         Assert.Contains("ScrollViewerElement Qualified() => (Factories.ScrollViewer(TextBlock(\"f\"))" + Disabled + ";", fixedText);
