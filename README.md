@@ -3,7 +3,7 @@
 React-style function components and hooks for **Avalonia 12**, built on the engine of
 [microsoft/microsoft-ui-reactor](https://github.com/microsoft/microsoft-ui-reactor) (MIT), with an Avalonia-native API.
 
-> **Status: research and spikes. Nothing is released and no packages are published.**
+> **Status: early development.** Nothing is released and no packages are published yet, and the API may still change.
 > An independent project, not affiliated with or endorsed by Microsoft or the Avalonia project.
 
 ## What it is
@@ -22,25 +22,48 @@ public static Element Counter(RenderContext ctx)
 }
 ```
 
+`ReactorApp.Run("Counter", Counter, width: 400, height: 300)` opens it in a window (`Isotope.UI.Avalonia.Desktop`).
 The factories (`using static Isotope.UI.Factories;`) keep Reactor's names; their parameters and the elements' members take
 Avalonia's names (`Text`, `Minimum`, `IsChecked`), with Avalonia's value types. See
 [Writing components](docs/guide/writing-components.md) for the vocabulary, a todo app and an example of each hook.
 
-This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12:
-
-- **Hooks for state management:** `UseState`, `UseReducer`, `UseEffect`, `UseMemo`, `UseCallback`, `UseRef`,
-  `UseContext`, plus async data (`UseResource`, `UseMutation`, `UseInfiniteResource`). These come from Reactor's own
-  engine, vendored unchanged or through deterministic transforms, so their semantics and fixes track upstream.
-- **Platform hooks** keep Reactor's names but are written for Avalonia: theme and colour scheme, high contrast,
-  windows, displays and DPI (reduced motion and the tray icon later).
-- **An Avalonia-native element vocabulary and layout:** Avalonia's controls and types, and flexbox through Reactor's Yoga
-  port.
-
+This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12.
 Avalonia's mainstream model is XAML with MVVM. Its declarative options either use F# (Avalonia.FuncUI) or stay with
 classes and bindings in C# (Avalonia.Markup.Declarative). Isotope brings Reactor's C# function components and hooks to
 Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobile.
 
-Package IDs use the `Isotope.` prefix, because `Avalonia.` is reserved on NuGet.
+## What works today
+
+- **Hooks:** `UseState`, `UseReducer`, `UseEffect`, `UseMemo`, `UseCallback`, `UseRef`, `UseContext`, and async data
+  (`UseResource`, `UseMutation`, `UseInfiniteResource`). They come from Reactor's own engine, vendored unchanged or
+  through deterministic transforms, so their semantics and fixes track upstream.
+- **Platform hooks**, with Reactor's names, written for Avalonia: theme and colour scheme, high contrast, windows,
+  displays and DPI ([guide](docs/guide/platform-hooks.md)).
+- **30 controls:** text and image; button, toggle, repeat and hyperlink buttons; check box, radio button, toggle
+  switch; text box, number box, auto-suggest box, combo box, list box, slider, progress; date and time pickers; tabs,
+  menus, context menus and tooltips; split view, expander, border, scroll viewer, separator; and stack, grid, wrap and
+  flexbox layouts (`FlexPanel`, over Reactor's port of Yoga).
+  boundaries** ([guide](docs/guide/error-boundaries.md)).
+- **A one-line app startup**, `ReactorApp.Run<TRoot>(title, width, height)`, and a sample app
+  ([`samples/Isotope.UI.Samples`](samples/Isotope.UI.Samples)).
+- **A Reactor → Isotope migration tool:** a Roslyn analyzer with code fixes, run with `dotnet format analyzers`
+  ([guide](docs/guide/migrating-from-reactor.md)).
+- **Tests:** 1,056 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+
+Not there yet: Reactor's theme tokens, text styling modifiers and more controls (tracked from what the migration tool
+finds missing in upstream's samples, #35), animation, and packages.
+
+## Try it
+
+You need the **.NET 11 SDK** (11.0.100 or later, pinned in `global.json`; the projects target `net10.0`, the LTS) and git.
+
+```sh
+git clone <this repository> isotope && cd isotope
+dotnet run --project samples/Isotope.UI.Samples       # the sample app: a tab per area
+dotnet test tests/Isotope.UI.Avalonia.Tests           # the library's tests (headless)
+```
+
+The library builds from the vendored upstream files in `src/Upstream/`; it needs no copy of upstream.
 
 ## How it stays in step with upstream
 
@@ -61,60 +84,53 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 
 | Path | What |
 |---|---|
-| `FINDINGS.md` | The research results, the sync recommendation and the decisions taken |
-| `docs/PROCESS.md` | How work runs: issues, branches, self-review, merging |
-| `docs/spikes/` | Spike reports: A (engine compile), B (upstream churn), C (Uno and upstream), D (FlexPanel on Avalonia), E (wrappers generator), F (descriptor runtime), G (the vertical slice) |
-| `docs/guide/` | Writing components: the element factories and the hooks, from tested code |
-| `docs/LESSONS.md`, `docs/agent-brief.md` | Traps already hit; the brief for parallel agents |
 | `src/Isotope.UI.Avalonia/` | The library (`Isotope.UI.*`): our Avalonia seam (`Element`, `ElementModifiers`, `Reconciler`, …) plus upstream's engine files, compiled from the vendored `src/Upstream/` (listed in `UpstreamFiles.props`) |
 | `src/Isotope.UI.Avalonia.Desktop/` | The one-line startup, `ReactorApp.Run<TRoot>(title, width, height)`, over a default app builder (platform detection, Fluent theme); desktop only |
-| `src/Isotope.UI.Migration/` | The Reactor → Isotope migration analyzer and code fixes (#33), run with `dotnet format analyzers` |
 | `src/Isotope.UI.Avalonia.Generators/` | Upstream's wrappers generator built for Avalonia (vendored, `gen-*` rules), referenced by the library as an analyzer |
-| `samples/Isotope.UI.Samples/` | The sample app: a tab per area (counter and todo, buttons, menus, numbers, split view, error boundary), with a real-window checklist in its README (`dotnet run`) |
-| `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the seam and the hooks core |
-| `tests/Isotope.UI.Migration.Tests/` | Tests of the migration's rules, compiled against the library |
-| `spikes/A-engine/` | Measures how much of upstream's engine compiles without WinUI |
-| `spikes/F-descriptors/` | Spike F: the descriptor runtime's build errors and the port's measurements |
-| `spikes/G-slice/` | Spike G: headless timings of the slice |
-| `spikes/D-flex/` | `FlexPanel` on Avalonia 12 over upstream's unmodified Yoga, with upstream's Yoga tests |
-| `tools/` | Build-error grouping, the import rewrite, and `tools/sync` (vendor and regenerate: `node tools/sync/sync.mjs --help`) |
-| `tools/migration/` | Measures the migration on upstream's samples, and lists what is left in a project |
+| `src/Isotope.UI.Migration/` | The Reactor → Isotope migration analyzer and code fixes, run with `dotnet format analyzers` |
 | `src/Upstream/` | Vendored tier 1 and 2 upstream files, generated by `tools/sync`; never edited by hand |
+| `samples/Isotope.UI.Samples/` | The sample app: a tab per area (counter and todo, buttons, menus, numbers, split view, error boundary), with a real-window checklist in its README |
+| `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the library, upstream's engine tests, and every C# block in the docs |
+| `tests/Isotope.UI.Migration.Tests/` | Tests of the migration's rules, compiled against the library |
+| `docs/guide/` | Writing components, platform hooks, error boundaries, migrating from Reactor: all from tested code |
+| `docs/spikes/` | Spike reports: A (engine compile), B (upstream churn), C (Uno and upstream), D (FlexPanel), E (wrappers generator), F (descriptor runtime), G (the vertical slice), H (naming and migration), I (pooling and keyed moves) |
 | `docs/sync/` | Sync reports (what changed upstream, and the tier 3 PRs to port) |
+| `FINDINGS.md` | The research results, the sync recommendation and the decisions taken |
+| `docs/PROCESS.md`, `docs/LESSONS.md`, `docs/agent-brief.md` | How work runs; traps already hit; the brief for parallel agents |
+| `spikes/` | The spikes' code: A (engine compile), D (FlexPanel with upstream's Yoga tests), F (descriptors), G (slice timings), I (pooling) |
+| `tools/sync/` | Vendor and regenerate (`node tools/sync/sync.mjs --help`), and the weekly sync job's glue |
+| `tools/migration/` | Measures the migration on upstream's samples, and lists what is left in a project |
+| `tools/` (other) | Build-error grouping and Spike A's import rewrite |
 | `UPSTREAM.lock` | The upstream commit everything is built and compared against |
-| `upstream/` | Git-ignored cache of the upstream repo (you create it, see below) |
+| `upstream/` | Git-ignored cache of the upstream repo, needed only for `tools/sync` and the spikes (see below) |
 
-## Getting started
+## Developing
 
-Prerequisites:
-- the **.NET 11 SDK** (11.0.100 or later, pinned in `global.json`; projects target `net10.0`, the LTS);
-- Node.js 20 or later;
-- git.
-
-Python 3 is optional, needed only for the Spike B scripts.
+Besides the .NET SDK and git: Node.js 20 or later for `tools/`, and Python 3 only for the Spike B scripts.
 
 ```sh
-git clone <this repo> isotope && cd isotope
 # Upstream cache, full history (Spike B needs it), checked out at the pinned commit:
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
-node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (569 at `1f078436`; 567 at `28a87225`)
-node spikes/A-engine/run-spike.mjs 4                        # Spike A step 4: + Roslyn rules (502 at `1f078436`)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (1056 tests; needs no upstream/)
-dotnet test tests/Isotope.UI.Migration.Tests  # the migration analyzer (38 tests)
-node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
-node tools/sync/test/all.mjs                                # the sync harness's own tests (needs dotnet: the Roslyn step)
-node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms
-dotnet test tools/sync/verify/Upstream.Yoga.Tests           # upstream's Yoga tests on the vendored code
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1056 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (38 tests)
+node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
+node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
+dotnet test tools/sync/verify/Upstream.Yoga.Tests        # upstream's Yoga tests on the vendored code
+dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests    # 794 tests: upstream's Yoga tests + FlexPanel
+node spikes/A-engine/run-spike.mjs 3                     # Spike A: groups the engine's compile errors
+node --test tools/rewrite-upstream.test.mjs              # Spike A's build-time rewrite tool
 ```
 
-Run `dotnet` from the repo root, not from inside `upstream/`. Upstream's own `global.json` selects a different test runner.
+Run `dotnet` from the repo root, not from inside `upstream/`: upstream's own `global.json` selects a different test
+runner.
 
 ## Working on it
 
-- **Tasks** are GitHub Issues, with labels for priority, type and `self-drive`/`hands-on`/`blocked`.
+- **Tasks** are [GitHub Issues](../../issues), with labels for priority, type and `self-drive`/`hands-on`/`blocked`.
+- **Changes** reach `main` through pull requests that pass CI (Ubuntu and Windows). Workflow runs on pull requests
+  from forks wait for the maintainer's approval.
 - **Process:** [docs/PROCESS.md](docs/PROCESS.md). Agents (Claude Code) also read [CLAUDE.md](CLAUDE.md).
 - **No personal data in the repo:** no names, emails, usernames, local paths or upstream contributors' names in files,
   outputs, screenshots or issues.
