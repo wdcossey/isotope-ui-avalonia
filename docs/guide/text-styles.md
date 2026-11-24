@@ -62,7 +62,8 @@ this order:
 
 The key is watched. When the resources change, or the theme variant changes (a key defined in `ThemeDictionaries`),
 the text block takes the new theme without a re-render. A key that resolves to nothing keeps the text block's default
-look, and warns once on the `Isotope-UI` event source.
+look and warns once on the `Isotope-UI` event source. A resource of the key that isn't a `ControlTheme` for a
+`TextBlock` is ignored, and warns once too.
 
 An app replaces a style by defining a theme of its key:
 
@@ -94,5 +95,5 @@ Isotope.UI.Factories;`, a bare `TextBlock` names the factory.
 - **Text blocks only.** Upstream's `ApplyStyle` takes any element. Here it is on text blocks, so
   `Button(...).ApplyStyle("AccentButtonStyle")` doesn't compile: Avalonia's Fluent theme has no keyed button themes.
 - **What WinUI's styles set that Avalonia lacks:** `LineStackingStrategy`, `TextLineBounds` and
-  `OpticalMarginAlignment` have no Avalonia counterpart. The font family is Avalonia's default, where WinUI's is the
-  system's.
+  `OpticalMarginAlignment` have no Avalonia counterpart. WinUI's styles set the system's UI font (`XamlAutoFontFamily`);
+  Isotope's set no font family, so a text block keeps the one it inherits (Avalonia's default, or the app's).

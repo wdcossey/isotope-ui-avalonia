@@ -249,17 +249,46 @@ public sealed class TextStyleTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void A_resource_of_the_key_that_is_no_text_block_theme_leaves_the_type_ramp()
+    public void A_resource_of_the_key_that_is_no_text_block_theme_leaves_the_type_ramp_and_warns()
     {
-        var m = Mount(_ => VStack(Title("a"), Body("b")), setUp: window =>
+        var key = "IsotopeTestButtonTheme" + Guid.NewGuid().ToString("N");
+        using var listener = new WarningListener();
+        var m = Mount(_ => VStack(Title("a"), Body("b"), TextBlock("c").ApplyStyle(key)), setUp: window =>
         {
             window.Resources["TitleTextBlockStyle"] = new ControlTheme(typeof(AvaloniaButton));
             window.Resources["BodyTextBlockStyle"] = "not a theme";
+            window.Resources[key] = new ControlTheme(typeof(AvaloniaButton));
         });
         var texts = m.All<TextBlock>();
         Assert.Equal(28, texts[0].FontSize);
         Assert.Equal(14, texts[1].FontSize);
         Assert.Equal(FontWeight.Normal, texts[1].FontWeight);
+        Assert.Null(texts[2].Theme);
+        Assert.Contains(listener.Of(key), s => s.Contains("is not a ControlTheme for a TextBlock", StringComparison.Ordinal));
+    }
+
+    [AvaloniaFact]
+    public void A_key_only_the_window_or_the_application_defines_gives_no_warning()
+    {
+        // The descriptor binds the key before the text block has a parent: only once attached can it see these.
+        var app = Application.Current!;
+        var appKey = "IsotopeTestAppStyle" + Guid.NewGuid().ToString("N");
+        var windowKey = "IsotopeTestWindowStyle" + Guid.NewGuid().ToString("N");
+        app.Resources[appKey] = TextTheme(22);
+        using var listener = new WarningListener();
+        try
+        {
+            var texts = Mount(_ => VStack(TextBlock("a").ApplyStyle(appKey), TextBlock("b").ApplyStyle(windowKey)),
+                setUp: window => window.Resources[windowKey] = TextTheme(24)).All<TextBlock>();
+            Assert.Equal(22, texts[0].FontSize);
+            Assert.Equal(24, texts[1].FontSize);
+            Assert.Empty(listener.Of(appKey));
+            Assert.Empty(listener.Of(windowKey));
+        }
+        finally
+        {
+            app.Resources.Remove(appKey);
+        }
     }
 
     // ── Changes on a render ──
@@ -313,6 +342,12 @@ public sealed class TextStyleTests : IDisposable
             if (e.EventName == "Warning" && e.Payload is { } payload)
                 lock (Messages) Messages.Add(string.Join(" | ", payload));
         }
+
+        // The warnings that name this key (keys are unique per test: warnings are once per key, process-wide).
+        public List<string> Of(string key)
+        {
+            lock (Messages) return Messages.Where(s => s.Contains(key, StringComparison.Ordinal)).ToList();
+        }
     }
 
     [AvaloniaFact]
@@ -323,8 +358,7 @@ public sealed class TextStyleTests : IDisposable
         var texts = Mount(_ => VStack(TextBlock("a").ApplyStyle(key), TextBlock("b").ApplyStyle(key))).All<TextBlock>();
         Assert.All(texts, t => Assert.Null(t.Theme));
         Assert.All(texts, t => Assert.Equal(14, t.FontSize));
-        List<string> mine;
-        lock (listener.Messages) mine = listener.Messages.Where(s => s.Contains(key, StringComparison.Ordinal)).ToList();
+        var mine = listener.Of(key);
         Assert.Single(mine);
         Assert.Contains("ApplyStyle", mine[0], StringComparison.Ordinal);
         Assert.Throws<ArgumentNullException>(() => TextBlock("c").ApplyStyle(null!));

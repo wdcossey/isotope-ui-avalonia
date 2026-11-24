@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Isotope.UI.Core.Diagnostics;
@@ -30,12 +31,13 @@ public partial record TextBlockElement
     internal static bool TextStyleEquals(TextBlockElement x, TextBlockElement y)
         => string.Equals(x.StyleKey, y.StyleKey, StringComparison.Ordinal) && x.HeadingLevel == y.HeadingLevel;
 
-    // The descriptor entries for these members (called from Customize): the theme follows the key on every update
-    // (upstream's applies it at mount only), and the heading level is cleared when it goes.
+    // The descriptor entries for these members (called from Customize): the theme follows the key, written when it
+    // changes (upstream's applies it at mount only), and the heading level is cleared when it goes.
     private static ControlDescriptor<TextBlockElement, TextBlock> CustomizeTextStyles(ControlDescriptor<TextBlockElement, TextBlock> d)
-        => d.Imperative(
-                mount: static (c, e) => TextStyles.Apply(c, e.StyleKey),
-                update: static (c, _, e) => TextStyles.Apply(c, e.StyleKey))
+        => d.OneWay<string?>(
+                get: static e => e.StyleKey,
+                set: static (c, key) => TextStyles.Apply(c, key),
+                comparer: StringComparer.Ordinal)
             .OneWay<int>(
                 get: static e => e.HeadingLevel is { } level ? level : Optional<int>.Unset,
                 set: static (c, v) => AutomationProperties.SetHeadingLevel(c, v),
@@ -52,8 +54,8 @@ internal static class TextStyles
 {
     // WinUI's TextBlock styles, from Microsoft.UI.Xaml's generic.xaml (Windows App SDK 1.8, MIT): every one is based
     // on BaseTextBlockStyle (14, SemiBold, wrapping, character-ellipsis trimming) and sets its size and weight. WinUI's
-    // LineStackingStrategy, TextLineBounds and OpticalMarginAlignment have no Avalonia counterpart; its font family is
-    // the system's, as Avalonia's default is.
+    // LineStackingStrategy, TextLineBounds and OpticalMarginAlignment have no Avalonia counterpart. WinUI's font family
+    // is XamlAutoFontFamily (the system's UI font); these themes set none, so a text block keeps the one it inherits.
     private static readonly (string Key, double Size, FontWeight Weight)[] s_ramp =
     [
         ("BaseTextBlockStyle", 14, FontWeight.SemiBold),
@@ -129,12 +131,19 @@ internal static class TextStyles
 
         public string Key { get; }
 
-        // The resource of the key when it is a theme for a text block; else the built-in one, else none (warned).
+        // The resource of the key when it is a theme for a text block; else the built-in one, else none. A resource of
+        // another kind is warned about. A missing one is warned about only once the control is in a logical tree: the
+        // descriptor binds before the control has a parent, when only its own resources are in reach, and the
+        // observable resolves again when it is attached.
         private object? Resolve(object? resource)
         {
             if (resource is ControlTheme { TargetType: { } target } theme && target.IsInstanceOfType(_control)) return theme;
+            var found = resource is not null && resource != AvaloniaProperty.UnsetValue;
+            if (found) Warn(Key, "is not a ControlTheme for a TextBlock; it is ignored.");
             if (Builtin(Key) is { } builtin) return builtin;
-            WarnUnresolved(Key);
+            if (!found && ((ILogical)_control).IsAttachedToLogicalTree)
+                Warn(Key, "did not resolve to a ControlTheme for a TextBlock in the resources the control sees, and is not " +
+                    "one of WinUI's TextBlock styles; the text block keeps its default appearance.");
             return AvaloniaProperty.UnsetValue;
         }
 
@@ -147,20 +156,19 @@ internal static class TextStyles
         }
     }
 
-    // As upstream's ApplyStyle: an unknown key keeps the default look and warns once per key (on the Isotope-UI event
-    // source, and Debug output in DEBUG builds), up to a bound past which every miss warns; overlong keys are cut.
+    // As upstream's ApplyStyle: an unknown key, or a resource of the key that isn't a theme, warns once per key (on the
+    // Isotope-UI event source, and Debug output in DEBUG builds), up to a bound past which every miss warns. Overlong
+    // keys are cut and never stored, so they warn every time (as upstream's).
     private const int MaxKeyChars = 256;
     private const int WarnedCap = 256;
     private static readonly ConcurrentDictionary<string, byte> s_warned = new(StringComparer.Ordinal);
 
-    private static void WarnUnresolved(string key)
+    private static void Warn(string key, string problem)
     {
         if (s_warned.ContainsKey(key) || !DiagnosticLog.IsWarningEnabled) return;
         var bounded = key.Length <= MaxKeyChars;
         if (bounded && s_warned.Count < WarnedCap && !s_warned.TryAdd(key, 0)) return;
         var safeKey = bounded ? key : string.Concat(key.AsSpan(0, MaxKeyChars), "…");
-        DiagnosticLog.Warning(LogCategory.Theme, "ApplyStyle",
-            $"Style '{safeKey}' did not resolve to a ControlTheme for a TextBlock in the resources the control sees, and " +
-            "is not one of WinUI's TextBlock styles; the text block keeps its default appearance.");
+        DiagnosticLog.Warning(LogCategory.Theme, "ApplyStyle", $"Style '{safeKey}' {problem}");
     }
 }
