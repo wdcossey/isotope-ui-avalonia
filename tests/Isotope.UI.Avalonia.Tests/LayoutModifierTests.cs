@@ -406,9 +406,7 @@ public sealed class LayoutModifierTests
         host.Render();
         AssertTagged();
 
-        var skipped = host.Reconciler.DebugElementsSkipped;
         host.Render();
-        Assert.Equal(skipped + 1, host.Reconciler.DebugElementsSkipped); // the padded stack, not its text block
         Assert.Same(Reconciler.GetMountedElement(panel), Reconciler.GetMountedElement(chrome));
     }
 
@@ -427,14 +425,22 @@ public sealed class LayoutModifierTests
     [AvaloniaFact]
     public void An_unchanged_padded_stack_is_skipped()
     {
-        Element[] children = [TextBlock("a")]; // one array, so the stack compares equal
-        var host = new TestHost(() => VStack(new StackElement(Orientation.Vertical, children).Padding(4).WithBorder("Red").CornerRadius(2)));
+        // One children array and one setter array, so the stack compares equal; the setter runs on each update.
+        Element[] children = [TextBlock("a")];
+        var updates = 0;
+        Action<StackPanel>[] setters = [_ => updates++];
+        var padding = 4.0;
+        var host = new TestHost(() => VStack(new StackElement(Orientation.Vertical, children) { Setters = setters }
+            .Padding(padding).WithBorder("Red").CornerRadius(2)));
         var chrome = ChromeOf(host.All<StackPanel>()[1]);
-        var before = host.Reconciler.DebugElementsSkipped;
+        var before = updates;
         host.Render();
-        // Only the padded stack is skipped: its text block, under it, is never reached.
-        Assert.Equal(before + 1, host.Reconciler.DebugElementsSkipped);
+        Assert.Equal(before, updates);
         Assert.Same(chrome, ChromeOf(host.All<StackPanel>()[1]));
+
+        padding = 5; // a change is an update
+        host.Render();
+        Assert.Equal(before + 1, updates);
     }
 
     [AvaloniaFact]
