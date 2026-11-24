@@ -117,7 +117,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 | xunit version for Spike D | upstream's 4.0.3 / 3.2.2 | **3.2.2** | what Avalonia.Headless.XUnit 12.1.6 is built against; upstream tests ran unchanged |
 | Screenshots | real window / headless render | **headless render** | a real window is ask-first |
 | SDK after you installed 11.0.100 | keep the net10 pin / pin 11.0.100 | **pinned 11.0.100**, targets stay `net10.0` | you had said you would install it; it was open question 3; upstream and Uno both hinge on it |
-| Spike D review findings on behaviour inherited from upstream (ambient Yoga mode) | fix in our port / keep upstream parity | **keep parity**, logged as upstream-fix candidates | a tier 3 file is easier to watch when it diffs cleanly against upstream |
+| Spike D review findings on behaviour inherited from upstream (ambient Yoga mode) | fix in our port / keep upstream parity | **keep parity**, logged as upstream-fix candidates (superseded by #9: fixed in our port as an intended divergence) | a tier 3 file is easier to watch when it diffs cleanly against upstream |
 
 ## Decisions on the open questions (2026-11-23)
 
