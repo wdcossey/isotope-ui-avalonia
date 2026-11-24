@@ -330,6 +330,42 @@ public sealed class TextStyleTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => TextBlock("c").ApplyStyle(null!));
     }
 
+    // ── The guide's examples ──
+
+    [AvaloniaFact]
+    public void The_guides_article_renders_its_styles_and_keeps_them_across_a_render()
+    {
+        var m = Mount(TextStyleExamples.Article, ThemeVariant.Light);
+        var texts = m.All<AvaloniaTextBlock>();
+        Assert.Equal((28.0, FontWeight.SemiBold), (texts[0].FontSize, texts[0].FontWeight));
+        Assert.Equal(12, texts[1].FontSize);
+        Assert.Equal((14.0, FontWeight.Normal), (texts[2].FontSize, texts[2].FontWeight));
+        Assert.Equal(new CornerRadius(8), m.First<Border>().CornerRadius);
+
+        TestHost.Click(m.First<Button>());
+        Pump();
+        Assert.Equal(2, m.Renders);
+        Assert.Equal("Like (1)", m.First<Button>().Content);
+        Assert.Same(texts[0], m.All<AvaloniaTextBlock>()[0]);
+        Assert.Equal(28, texts[0].FontSize);
+    }
+
+    [AvaloniaFact]
+    public void The_guides_override_gives_every_title_the_apps_theme()
+    {
+        var app = Application.Current!;
+        TextStyleExamples.UseLargerTitles(app);
+        try
+        {
+            var text = Mount(_ => Title("x")).First<AvaloniaTextBlock>();
+            Assert.Equal((32.0, FontWeight.Bold), (text.FontSize, text.FontWeight));
+        }
+        finally
+        {
+            app.Resources.Remove("TitleTextBlockStyle");
+        }
+    }
+
     // ── Card ──
 
     [AvaloniaFact]

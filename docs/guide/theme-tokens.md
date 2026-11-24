@@ -89,6 +89,6 @@ token, a value read this way doesn't follow a theme change on its own.
 - **Borders on panels.** Avalonia's panels (`VStack`, `Grid`…) have no border, so `WithBorder` and `BorderBrush` on
   one do nothing: wrap it in a `Border`. A property a control doesn't have, or whose type isn't a brush, is skipped,
   as is `Foreground` on a `Border`.
-- **Not ported yet:** per-control resource overrides (`.Resources(r => r.Set(key, themeRef))`), and the type-ramp
-  factories (`Title`, `Body`, `Caption`…, #44). Upstream's `Theme` has no spacing or corner-radius tokens: its corner
-  radii are `ThemeResource.CornerRadius(...)`, above.
+- **Not ported yet:** per-control resource overrides (`.Resources(r => r.Set(key, themeRef))`). The type ramp is the
+  named text styles (`Title`, `Body`, `Caption`…, [text styles](text-styles.md)). Upstream's `Theme` has no spacing or
+  corner-radius tokens: its corner radii are `ThemeResource.CornerRadius(...)`, above.
