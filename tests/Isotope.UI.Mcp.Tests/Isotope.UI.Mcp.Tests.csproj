@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests of the MCP server (#60): each tool called in process, and the built tool started over stdio with the SDK's
+       client. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- xunit.v3 3.2.x, as the other test projects. -->
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The tool (its internals: the catalog, the tables, the guides), and through it the SDK's client. -->
+    <ProjectReference Include="..\..\src\Isotope.UI.Mcp\Isotope.UI.Mcp.csproj" />
+  </ItemGroup>
+</Project>
