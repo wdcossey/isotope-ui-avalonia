@@ -44,13 +44,15 @@ public sealed class SampleAppTests : IDisposable
         return (host, window);
     }
 
-    private static void Click(Control control, MouseButton button = MouseButton.Left)
+    // holdMs: a pause between press and release, as a slow runner makes (#55).
+    private static void Click(Control control, MouseButton button = MouseButton.Left, int holdMs = 0)
     {
         var top = TopLevel.GetTopLevel(control) ?? throw new InvalidOperationException("not shown");
         var centre = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), top)
             ?? throw new InvalidOperationException("not shown");
         TestHost.HoldOffRepeat(control);
         top.MouseDown(centre, button);
+        if (holdMs > 0) Thread.Sleep(holdMs);
         top.MouseUp(centre, button);
         Dispatcher.UIThread.RunJobs(); // the posted root pass and the layout that follows it
     }
@@ -210,6 +212,18 @@ public sealed class SampleAppTests : IDisposable
         Click(Labelled<Button>(page, "Bring the files back"));
         Assert.Contains("photo.png", Texts(page));
         Save(window, "sample-menus.png");
+    }
+
+    [AvaloniaFact]
+    public void After_a_slow_click_no_tooltip_takes_the_next_click()
+    {
+        // #55: a headless MouseUp runs the due timers first. Held past a tooltip's ShowDelay (400 ms), as on a slow
+        // runner, Bold's tooltip opened over Filter and took its click.
+        var (host, _) = Open();
+        var page = Page(host, "Buttons");
+        Click(Labelled<ToggleButton>(page, "Bold"), holdMs: 500);
+        Click(Labelled<ToggleButton>(page, "Filter"));
+        Assert.Contains("Filter: on", Texts(page));
     }
 
     [AvaloniaFact]
