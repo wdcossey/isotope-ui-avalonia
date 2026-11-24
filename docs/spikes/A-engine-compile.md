@@ -254,6 +254,6 @@ types when the name is overloaded). Then it regenerates the vendored tree.
     - An op whose target also appears in code an `#if` leaves out fails, and says so. A text rule has to handle that
       code.
     - The syntax check also parses files that have an `#if` without `DEBUG`.
-    - Upstream's `src/Reactor` has 11 `#if` lines, in 6 files.
+    - Upstream's `src/Reactor` has 7 `#if` lines, in 6 files.
 - **Not done:** the "matches a file it does not list" guard that find rules have. A `retarget-type` doesn't yet fail
   when new upstream code in an unlisted file uses the type.
