@@ -17,11 +17,12 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | Factory | Element | Avalonia control |
 |---|---|---|
 | `TextBlock(content)` | `TextBlockElement` | `TextBlock` |
-| `Button(label, onClick)`, `Button(content, onClick)` | `ButtonElement` | `Button` (`content` is any element) |
-| `ToggleButton(label, isChecked, onIsCheckedChanged)`, `ThreeStateToggleButton(label, checkedState, onCheckedStateChanged)` | `ToggleButtonElement` | `ToggleButton` |
-| `RepeatButton(label, onClick)` | `RepeatButtonElement` | `RepeatButton` |
-| `HyperlinkButton(content, navigateUri, onClick)` | `HyperlinkButtonElement` | `HyperlinkButton` |
+| `Button(label, onClick)`, `Button(content, onClick)`, `Button(command)` | `ButtonElement` | `Button` (`content` is any element) |
+| `ToggleButton(label, isChecked, onIsCheckedChanged)`, `ThreeStateToggleButton(label, checkedState, onCheckedStateChanged)`, `ToggleButton(command, isChecked)` | `ToggleButtonElement` | `ToggleButton` |
+| `RepeatButton(label, onClick)`, `RepeatButton(command)` | `RepeatButtonElement` | `RepeatButton` |
+| `HyperlinkButton(content, navigateUri, onClick)`, `HyperlinkButton(command)` | `HyperlinkButtonElement` | `HyperlinkButton` |
 | `TextBox(value, onChanged, placeholderText)` | `TextBoxElement` | `TextBox` |
+| `AutoSuggestBox(text, onTextChanged, onQuerySubmitted)` | `AutoSuggestBoxElement` | `AutoCompleteBox` (its `Suggestions` shown as given; `FilterMode` lets Avalonia filter them) |
 | `Slider(value, min, max, onValueChanged)` | `SliderElement` | `Slider` |
 | `NumberBox(value, onValueChanged)` | `NumberBoxElement` | `NumericUpDown` (Reactor's `double` values; `NaN` is an empty box) |
 | `CheckBox(isChecked, onIsCheckedChanged, label)`, `ThreeStateCheckBox(checkedState, onCheckedStateChanged, label)` | `CheckBoxElement` | `CheckBox` |
@@ -38,7 +39,7 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 | `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.HeaderContent(element)` for an element header) |
 | `TabView(selectedIndex, onSelectedIndexChanged, Tab(header, content), ...)`, `TabView(Tab(...), ...)` | `TabViewElement` | `TabControl` (a `TabItem` per tab) |
 | `SplitView(pane, content)` | `SplitViewElement` | `SplitView` (open by default, as Reactor's) |
-| `MenuBar(Menu(title, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(text, onClick)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
+| `MenuBar(Menu(title, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(text, onClick)` or `MenuItem(command)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
 | `Separator()` | `SeparatorElement` | `Separator` (Avalonia-only, so Avalonia's name) |
 | `Grid(columns, rows, ...)` | `GridElement` | `Grid` (tracks are `GridSize.Auto`, `GridSize.Star(weight)`, `GridSize.Px(size)`) |
 | `WrapPanel(...)` | `WrapPanelElement` | `WrapPanel` (Avalonia-only, so Avalonia's name) |
@@ -56,7 +57,7 @@ Microsoft.UI.Reactor's names; their value types (`Thickness`, `IBrush`, `Orienta
 > which are Avalonia's `TabControl` and `NumericUpDown`.
 
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
-keep their controls when it does. An input control (`TextBox`, `Slider`, `NumberBox`, `CheckBox`, `ToggleSwitch`,
+keep their controls when it does. An input control (`TextBox`, `AutoSuggestBox`, `Slider`, `NumberBox`, `CheckBox`, `ToggleSwitch`,
 `RadioButton`, `ComboBox`, `ListBox`, `TabView`, `Expander`, `DatePicker`, `TimePicker`) given no value owns its own; given the state's value
 and a change callback, it is controlled by it: what the user changes reaches the callback, and what the state writes
 doesn't come back through it. `ToggleButton`'s `isChecked`, a toggle menu item's and `SplitView`'s `IsPaneOpen` are
@@ -73,10 +74,52 @@ Inside a `Grid`, `.Grid(row: 1, column: 0, columnSpan: 2)` sets a child's cell. 
 Modifiers and keys chain onto any element: `.Margin(...)` (uniform, horizontal and vertical, per side or a
 `Thickness`), `.Width(...)`, `.Height(...)`, `.Size(...)`, `.HAlign(...)`, `.VAlign(...)`, `.Opacity(...)`,
 `.IsEnabled(...)`, `.Background(...)` (a brush or a colour string), `.AutomationName(...)`, `.ToolTip(text)` (or
-`.ToolTip(text, placement)`), `.WithContextFlyout(MenuItems(...))` (a context menu, as an Avalonia `MenuFlyout`) and
+`.ToolTip(text, placement)`), `.WithToolTip(element)` (any element as the tooltip; a component inside keeps its
+state), `.WithContextFlyout(MenuItems(...))` (a context menu, as an Avalonia `MenuFlyout`) and
 `.WithKey(...)`. Inside
 a `Flex` container, `.Flex(grow: 1, ...)` sets a child's flex data. Container settings that have no factory parameter
 are set with `with`: `FlexRow(...) with { ColumnGap = 8 }`.
+
+An auto-suggest box reports what the user types to `onTextChanged`, a suggestion they pick to `OnSuggestionChosen`,
+and Enter to `onQuerySubmitted`. Its suggestions are a function of the state, so derive them from the typed text:
+
+<!-- snippet: auto-suggest-box -->
+```csharp
+public static Element FruitPicker(RenderContext ctx, string[] fruit)
+{
+    var (query, setQuery) = ctx.UseState("");
+    var (chosen, setChosen) = ctx.UseState("");
+    var matches = query.Length == 0 ? [] : fruit.Where(f => f.StartsWith(query, StringComparison.OrdinalIgnoreCase)).ToArray();
+    return VStack(
+        AutoSuggestBox(onTextChanged: setQuery, onQuerySubmitted: setChosen).SuggestionChosen(setChosen)
+            with { Suggestions = matches },
+        TextBlock($"Chosen: {chosen}"));
+}
+```
+
+A `Command` bundles an action with its label, enabled state, description and shortcut. `Button(command)`,
+`MenuItem(command)` and `.Command(command)` on any button use it: a click runs it, the button is disabled while
+`IsEnabled` is false, the description is the tooltip and the `Accelerator` the shortcut. It is Avalonia's
+`ICommand` underneath. `UseCommand` tracks an async action, so the button is disabled while it runs:
+
+<!-- snippet: command -->
+```csharp
+public static Element Uploader(RenderContext ctx, Func<Task> upload)
+{
+    var send = ctx.UseCommand(new Command { Label = "Upload", ExecuteAsync = upload, Description = "Upload the file" });
+    return VStack(
+        Button(send),
+        TextBlock(send.IsExecuting ? "Uploading..." : "Ready"));
+}
+```
+
+A menu item's `KeyboardAccelerators` and `Description` are its shortcut and tooltip:
+`MenuItem("Save", save) with { KeyboardAccelerators = [new(Key.S, KeyModifiers.Control)] }`.
+
+> **Coming from Reactor?** `AutoSuggestBox` has no `Header` or `QueryIcon` here, a command's `AccessKey` isn't written
+> (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet. Avalonia selects a
+> suggestion the user types out exactly, so that reaches `OnSuggestionChosen` too, and a click on a suggestion doesn't
+> submit the query.
 
 More factories arrive with their controls. An app host that opens a window on a component is #16; the tests mount
 components with a test host.
