@@ -12,8 +12,8 @@ public static partial class Factories
     /// A text box that suggests completions, as an Avalonia <see cref="Avalonia.Controls.AutoCompleteBox"/> (upstream's
     /// name: AutoSuggestBox). <paramref name="text"/> defaults to <see cref="Optional{T}.Unset"/>: omit it to let the
     /// control own its text. Give the suggestions with <c>with { ItemsSource = ... }</c>; a picked suggestion reaches
-    /// <see cref="AutoSuggestBoxElement.OnSuggestionChosen"/>.
+    /// <see cref="AutoCompleteBoxElement.OnSuggestionChosen"/>.
     /// </summary>
-    public static AutoSuggestBoxElement AutoSuggestBox(Optional<string> text = default, Action<string>? onTextChanged = null, Action<string>? onQuerySubmitted = null)
+    public static AutoCompleteBoxElement AutoCompleteBox(Optional<string> text = default, Action<string>? onTextChanged = null, Action<string>? onQuerySubmitted = null)
         => new(text, onTextChanged, onQuerySubmitted);
 }

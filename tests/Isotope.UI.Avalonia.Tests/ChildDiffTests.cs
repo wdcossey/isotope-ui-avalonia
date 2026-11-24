@@ -80,8 +80,8 @@ public class ChildDiffTests
     public void A_conditional_child_does_not_shift_its_siblings_onto_other_controls()
     {
         var show = false;
-        // A raw StackElement, so the reconciler (not the factory) handles the EmptyElement child.
-        var host = new TestHost(() => new StackElement(Orientation.Vertical,
+        // A raw StackPanelElement, so the reconciler (not the factory) handles the EmptyElement child.
+        var host = new TestHost(() => new StackPanelElement(Orientation.Vertical,
             [show ? TextBlock("banner") : EmptyElement.Instance, TextBlock("a"), TextBlock("b")]));
         var a = host.All<TextBlock>()[0];
         var b = host.All<TextBlock>()[1];
@@ -191,8 +191,8 @@ public class ChildDiffTests
     public void Groups_are_flattened_and_a_resized_group_keeps_its_siblings_controls()
     {
         var count = 1;
-        // A raw StackElement, so the group is flattened by the element (Reconciler.Flatten), not the factory.
-        var host = new TestHost(() => new StackElement(Orientation.Vertical, [
+        // A raw StackPanelElement, so the group is flattened by the element (Reconciler.Flatten), not the factory.
+        var host = new TestHost(() => new StackPanelElement(Orientation.Vertical, [
             new GroupElement(Enumerable.Range(0, count).Select(i => (Element)TextBlock("g" + i)).ToArray()),
             TextBlock("after")]));
         Assert.Equal(["g0", "after"], host.Texts());

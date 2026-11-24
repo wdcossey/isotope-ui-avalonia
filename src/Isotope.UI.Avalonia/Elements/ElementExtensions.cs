@@ -38,10 +38,10 @@ public static partial class ElementExtensions
     public static T Size<T>(this T el, double width, double height) where T : Element =>
         el.WithModifiers(m => m with { Width = width, Height = height });
 
-    public static T HAlign<T>(this T el, HorizontalAlignment alignment) where T : Element =>
+    public static T HorizontalAlignment<T>(this T el, HorizontalAlignment alignment) where T : Element =>
         el.WithModifiers(m => m with { HorizontalAlignment = alignment });
 
-    public static T VAlign<T>(this T el, VerticalAlignment alignment) where T : Element =>
+    public static T VerticalAlignment<T>(this T el, VerticalAlignment alignment) where T : Element =>
         el.WithModifiers(m => m with { VerticalAlignment = alignment });
 
     public static T Opacity<T>(this T el, double opacity) where T : Element =>

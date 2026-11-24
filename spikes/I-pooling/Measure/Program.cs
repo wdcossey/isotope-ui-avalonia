@@ -338,7 +338,7 @@ sealed class Bench(int n, int runs, bool quiet)
 
         public void Render()
         {
-            var element = new StackElement(Orientation.Vertical, Keys.Select(Row).ToArray());
+            var element = new StackPanelElement(Orientation.Vertical, Keys.Select(Row).ToArray());
             var next = Reconciler.Reconcile(_last, element, Root.Child, () => { });
             if (!ReferenceEquals(next, Root.Child)) Root.Child = next;
             _last = element;
@@ -376,7 +376,7 @@ sealed class Bench(int n, int runs, bool quiet)
         private static Element Row(string key) => new MemoElement(ctx =>
         {
             var (count, setCount) = ctx.UseState(0);
-            return new StackElement(Orientation.Horizontal,
+            return new StackPanelElement(Orientation.Horizontal,
                 [new TextBlockElement($"{key}: {count}"), new ButtonElement("+", () => setCount(count + 1))]);
         }) { Key = key };
     }

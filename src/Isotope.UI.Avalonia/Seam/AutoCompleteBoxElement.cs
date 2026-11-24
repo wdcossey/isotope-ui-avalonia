@@ -7,7 +7,7 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// The auto-suggest box (#29): upstream's AutoSuggestBoxElement, as an Avalonia AutoCompleteBox. The record mirrors
+// The auto-complete box (#29): upstream's AutoSuggestBoxElement, as an Avalonia AutoCompleteBox (AutoCompleteBoxElement, #46). The record mirrors
 // upstream's, with Avalonia's member names (#31) and value types; members with no Avalonia counterpart (Header,
 // QueryIcon) aren't on it, and OnQuerySubmitted and OnSuggestionChosen keep Reactor's names (no Avalonia event matches
 // them). FilterMode is Avalonia's member, and defaults to none: as on WinUI, the app's suggestions are shown as given, so
@@ -34,7 +34,7 @@ namespace Isotope.UI.Core;
 [WrapManual("Text")]
 [WrapManual("ItemsSource")]
 [WrapManual("FilterMode")]
-public partial record AutoSuggestBoxElement(
+public partial record AutoCompleteBoxElement(
     Optional<string> Text = default,
     Action<string>? OnTextChanged = null,
     Action<string>? OnQuerySubmitted = null,
@@ -68,14 +68,14 @@ public partial record AutoSuggestBoxElement(
         var box = (AutoCompleteBox)s!;
         if (!Reconciler.TryGetReactorState(box, out var state)) return;
         var text = box.Text ?? string.Empty;
-        var payload = Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(box);
+        var payload = Reconciler.GetOrCreateControlEventPayload<AutoCompleteBoxEventPayload>(box);
         var changed = !string.Equals(payload.LastText, text, StringComparison.Ordinal);
         payload.LastText = text;
         var picked = box.SelectedItem is { } selected && string.Equals(selected.ToString(), text, StringComparison.Ordinal);
         payload.PickedText = picked ? text : null;
         if (ChangeEchoSuppressor.ShouldSuppressEcho(state, text)) return;
         if (!changed || picked) return;
-        (state.Element as AutoSuggestBoxElement)?.OnTextChanged?.Invoke(text);
+        (state.Element as AutoCompleteBoxElement)?.OnTextChanged?.Invoke(text);
     };
 
     // A pick raises SelectionChanged right after the text change that put its text in the box. A selection with no
@@ -84,18 +84,18 @@ public partial record AutoSuggestBoxElement(
     {
         var box = (AutoCompleteBox)s!;
         if (!ReferenceEquals(args.Source, box) || box.SelectedItem is not { } selected) return;
-        var payload = Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(box);
+        var payload = Reconciler.GetOrCreateControlEventPayload<AutoCompleteBoxEventPayload>(box);
         var text = selected.ToString() ?? string.Empty;
         if (!string.Equals(payload.PickedText, text, StringComparison.Ordinal)) return;
         payload.PickedText = null;
-        (Reconciler.GetElementTag(box) as AutoSuggestBoxElement)?.OnSuggestionChosen?.Invoke(text);
+        (Reconciler.GetElementTag(box) as AutoCompleteBoxElement)?.OnSuggestionChosen?.Invoke(text);
     };
 
     private static readonly EventHandler<KeyEventArgs> __KeyDownTrampoline = (s, args) =>
     {
         if (args.Key != Avalonia.Input.Key.Enter) return;
         var box = (AutoCompleteBox)s!;
-        (Reconciler.GetElementTag(box) as AutoSuggestBoxElement)?.OnQuerySubmitted?.Invoke(box.Text ?? string.Empty);
+        (Reconciler.GetElementTag(box) as AutoCompleteBoxElement)?.OnQuerySubmitted?.Invoke(box.Text ?? string.Empty);
     };
 
     // As upstream's: the suggestions are written before the text, so a first text lands with its list in place; the text
@@ -104,7 +104,7 @@ public partial record AutoSuggestBoxElement(
     // suggestions are filtered as declared. Suggestions compare by content: a list rebuilt each render with the same
     // strings isn't rewritten, which would reset the open list. New suggestions while the user types re-populate the
     // list, as WinUI's does when its items change (Avalonia's doesn't).
-    private static partial ControlDescriptor<AutoSuggestBoxElement, AutoCompleteBox> Customize(ControlDescriptor<AutoSuggestBoxElement, AutoCompleteBox> d)
+    private static partial ControlDescriptor<AutoCompleteBoxElement, AutoCompleteBox> Customize(ControlDescriptor<AutoCompleteBoxElement, AutoCompleteBox> d)
         => d.OneWay(
                 get: static e => e.FilterMode,
                 set: static (c, v) => c.FilterMode = v)
@@ -116,13 +116,13 @@ public partial record AutoSuggestBoxElement(
                     if (c.IsKeyboardFocusWithin) c.PopulateComplete();
                 },
                 comparer: SameStrings.Instance)
-            .HandCodedControlled<AutoSuggestBoxEventPayload, string, EventHandler<TextChangedEventArgs>>(
+            .HandCodedControlled<AutoCompleteBoxEventPayload, string, EventHandler<TextChangedEventArgs>>(
                 get:         static e => e.Text,
                 set:         static (c, v) => c.Text = v,
                 readBack:    static c => c.Text ?? string.Empty,
                 subscribe:   static (c, h) =>
                 {
-                    Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(c).LastText = c.Text ?? string.Empty;
+                    Reconciler.GetOrCreateControlEventPayload<AutoCompleteBoxEventPayload>(c).LastText = c.Text ?? string.Empty;
                     c.TextChanged += h;
                 },
                 callback:    static e => e.OnTextChanged,
@@ -130,13 +130,13 @@ public partial record AutoSuggestBoxElement(
                 slotIsNull:  static p => p.TextChangedTrampoline is null,
                 setSlot:     static (p, h) => p.TextChangedTrampoline = h,
                 valueDiffEcho: true)
-            .HandCodedEvent<AutoSuggestBoxEventPayload, EventHandler<SelectionChangedEventArgs>>(
+            .HandCodedEvent<AutoCompleteBoxEventPayload, EventHandler<SelectionChangedEventArgs>>(
                 subscribe:       static (c, h) => c.SelectionChanged += h,
                 callbackPresent: static e => e.OnSuggestionChosen,
                 trampoline:      __SelectionChangedTrampoline,
                 slotIsNull:      static p => p.SelectionChangedTrampoline is null,
                 setSlot:         static (p, h) => p.SelectionChangedTrampoline = h)
-            .HandCodedEvent<AutoSuggestBoxEventPayload, EventHandler<KeyEventArgs>>(
+            .HandCodedEvent<AutoCompleteBoxEventPayload, EventHandler<KeyEventArgs>>(
                 subscribe:       static (c, h) => c.AddHandler(InputElement.KeyDownEvent, h, RoutingStrategies.Bubble, handledEventsToo: true),
                 callbackPresent: static e => e.OnQuerySubmitted,
                 trampoline:      __KeyDownTrampoline,

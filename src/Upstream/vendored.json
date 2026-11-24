@@ -1684,9 +1684,10 @@
       "transforms": [
         "drop-test-TextBlockElement-FontSize-equality",
         "test-winui-orientation",
+        "test-stack-panel-element",
         "namespace-isotope"
       ],
-      "sha256": "7d7c1b564c1e655f72629fb1bfacc67303bf507ab8f2d4b04975e2cb7076e825"
+      "sha256": "7540292a231a4468e362286e0c6b365957f24491f2cdad2cfcb20d71bfaa2161"
     },
     {
       "path": "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",

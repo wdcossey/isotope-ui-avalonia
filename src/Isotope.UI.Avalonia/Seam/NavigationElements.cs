@@ -11,8 +11,8 @@ namespace Isotope.UI.Core;
 // header and footer) aren't on it. The descriptor is generated; the tabs go through upstream's TabItemsHost strategy
 // (vendored), which keeps each TabItem and reconciles its content in place, so a component in a tab keeps its state.
 
-/// <summary>One tab of a <see cref="TabViewElement"/>: its header text and its content (upstream's record).</summary>
-public record TabViewItemData(string Header, Element Content);
+/// <summary>One tab of a <see cref="TabControlElement"/>: its header text and its content (upstream's record).</summary>
+public record TabItemData(string Header, Element Content);
 
 /// <summary>
 /// Tabs, as an Avalonia <see cref="Avalonia.Controls.TabControl"/> (upstream's name: TabView). <see cref="SelectedIndex"/>
@@ -21,7 +21,7 @@ public record TabViewItemData(string Header, Element Content);
 [GenerateReactorDescriptor(typeof(TabControl), ClearValueOnUnset = true, Exclude = new[] { "SelectionChanged" })]
 [WrapManual("Items")]
 [WrapManual("SelectedIndex")]
-public partial record TabViewElement(TabViewItemData[] Items) : Element
+public partial record TabControlElement(TabItemData[] Items) : Element
 {
     /// <summary>The selected tab's index; <see cref="Optional{T}.Unset"/> (the default) leaves it to the control.</summary>
     public Optional<int> SelectedIndex { get; init; } = default;
@@ -43,16 +43,16 @@ public partial record TabViewElement(TabViewItemData[] Items) : Element
         if (!ReferenceEquals(args.Source, tabs)) return;
         if (!Reconciler.TryGetReactorState(tabs, out var state)) return;
         if (ChangeEchoSuppressor.ShouldSuppressEcho(state, tabs.SelectedIndex)) return;
-        (state.Element as TabViewElement)?.OnSelectedIndexChanged?.Invoke(tabs.SelectedIndex);
+        (state.Element as TabControlElement)?.OnSelectedIndexChanged?.Invoke(tabs.SelectedIndex);
     };
 
-    // As upstream's: the TabItemsHost (each TabViewItemData a TabItem, its content mounted as the item's content) and
+    // As upstream's: the TabItemsHost (each TabItemData a TabItem, its content mounted as the item's content) and
     // the controlled SelectedIndex on the value-diff channel: the write arms the value it expects to read back, and an
     // index the control doesn't take (past the end) clears the arm rather than leaving a token for the user's next
     // click to be dropped by.
-    private static partial ControlDescriptor<TabViewElement, TabControl> Customize(ControlDescriptor<TabViewElement, TabControl> d)
+    private static partial ControlDescriptor<TabControlElement, TabControl> Customize(ControlDescriptor<TabControlElement, TabControl> d)
     {
-        d.Children = new TabItemsHost<TabViewElement, TabControl, TabViewItemData>(
+        d.Children = new TabItemsHost<TabControlElement, TabControl, TabItemData>(
             GetItems:        static e => e.Items,
             GetCollection:   static c => new EchoScopedItems(c, ItemsList.Of(c.Items)),
             GetContent:      static item => item.Content,
@@ -64,7 +64,7 @@ public partial record TabViewElement(TabViewItemData[] Items) : Element
         // Avalonia's TabControl always keeps a tab selected: adding the first tab, or removing the selected one, moves the
         // selection and raises SelectionChanged in the middle of the engine's update. That change is the engine's, not
         // the user's, so it is dropped (the controlled index, written next, corrects the selection when it differs).
-        return d.HandCodedControlled<TabViewEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
+        return d.HandCodedControlled<TabControlEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
             get:         static e => e.SelectedIndex,
             set:         static (c, v) => c.SelectedIndex = v,
             readBack:    static c => c.SelectedIndex,

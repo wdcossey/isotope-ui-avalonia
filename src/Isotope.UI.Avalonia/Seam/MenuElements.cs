@@ -8,7 +8,7 @@ using Isotope.UI.Wrappers;
 namespace Isotope.UI.Core;
 
 // Menus (#26): upstream's menu data records (MenuFlyoutItemBase and its kinds), a menu bar as an Avalonia Menu, and a
-// context menu as an Avalonia MenuFlyout on a control's ContextFlyout (the WithContextFlyout modifier). The records
+// context menu as an Avalonia MenuFlyout on a control's ContextFlyout (the ContextFlyout modifier, Reactor's WithContextFlyout). The records
 // mirror upstream's, with Avalonia's member names (#31: an item's text is its Header); members with no Avalonia
 // counterpart yet (icons, access keys) aren't on them, and KeyboardAccelerators and Description keep Reactor's names. A menu item's keyboard accelerators and description came with #29. Menu items hold no elements, so they are Avalonia MenuItems built from
 // the data and updated in place by position (MenuItemsSync); a click reads the item's current data, so it calls the
@@ -51,11 +51,11 @@ public record ToggleMenuFlyoutItemData(string Header, bool IsChecked = false, Ac
 /// </summary>
 public record RadioMenuFlyoutItemData(string Header, string GroupName, bool IsChecked = false, Action? OnClick = null) : MenuFlyoutItemBase;
 
-/// <summary>A top-level menu of a <see cref="MenuBarElement"/>: its header and its items.</summary>
+/// <summary>A top-level menu of a <see cref="MenuElement"/>: its header and its items.</summary>
 public record MenuBarItemData(string Header, MenuFlyoutItemBase[] Items);
 
 /// <summary>
-/// The menu a <c>.WithContextFlyout(...)</c> modifier opens, as an Avalonia <see cref="Avalonia.Controls.MenuFlyout"/>.
+/// The menu a <c>.ContextFlyout(...)</c> modifier opens, as an Avalonia <see cref="Avalonia.Controls.MenuFlyout"/>.
 /// Not mounted on its own: it describes a flyout.
 /// </summary>
 public record MenuFlyoutContentElement(MenuFlyoutItemBase[] Items) : Element
@@ -67,14 +67,14 @@ public record MenuFlyoutContentElement(MenuFlyoutItemBase[] Items) : Element
 /// <summary>A menu bar, as an Avalonia <see cref="Avalonia.Controls.Menu"/>: one top-level menu per item.</summary>
 [GenerateReactorDescriptor(typeof(Menu))]
 [WrapManual("Items")]
-public partial record MenuBarElement(MenuBarItemData[] Items) : Element
+public partial record MenuElement(MenuBarItemData[] Items) : Element
 {
     internal Action<Menu>[] Setters { get; init; } = [];
 
     // The items are written on every update, by position; they hold no elements, so there is nothing to tear down.
-    private static partial ControlDescriptor<MenuBarElement, Menu> Customize(ControlDescriptor<MenuBarElement, Menu> d)
+    private static partial ControlDescriptor<MenuElement, Menu> Customize(ControlDescriptor<MenuElement, Menu> d)
     {
-        d.Children = new Imperative<MenuBarElement, Menu>(static (ctx, oldElement, newElement, control) =>
+        d.Children = new Imperative<MenuElement, Menu>(static (ctx, oldElement, newElement, control) =>
             MenuItemsSync.Sync(ItemsList.Of(control.Items), MenuItemsSync.TopLevel(newElement.Items)));
         return d;
     }
@@ -234,7 +234,7 @@ internal static class MenuItemsSync
         AvaloniaProperty.RegisterAttached<FlyoutOwner, Control, MenuFlyout?>("IsotopeContextFlyout");
 
     /// <summary>
-    /// Writes the <c>.WithContextFlyout(...)</c> modifier: a MenuFlyout created once and updated in place, removed when
+    /// Writes the <c>.ContextFlyout(...)</c> modifier: a MenuFlyout created once and updated in place, removed when
     /// the modifier goes.
     /// </summary>
     internal static void ApplyContextFlyout(Control control, MenuFlyoutContentElement? oldMenu, MenuFlyoutContentElement? newMenu)

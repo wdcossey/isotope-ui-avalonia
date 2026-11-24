@@ -11,8 +11,10 @@ its tests, and `DocSnippetTests` fails if the page and the code drift apart.
 ## The vocabulary
 
 Component files import the element factories and the element types:
-`using Isotope.UI;`, `using Isotope.UI.Core;` and `using static Isotope.UI.Factories;`. The factories keep
-Microsoft.UI.Reactor's names. Their parameters and the elements' members have Avalonia's names (`Text`, `Minimum`,
+`using Isotope.UI;`, `using Isotope.UI.Core;` and `using static Isotope.UI.Factories;`. The names are Avalonia's: a
+factory and its element are named after the Avalonia control (`TabControl(...)` builds a `TabControlElement`), and a
+modifier after the property it sets (`.HorizontalAlignment(...)`). Microsoft.UI.Reactor's names stay where Avalonia has
+no counterpart, and for the stack shortcuts `VStack` and `HStack`. Factory parameters and element members have Avalonia's names (`Text`, `Minimum`,
 `IsChecked`, `SelectedDate`; a callback is `On` plus an Avalonia event, `OnClick`, or `On` plus a property and
 `Changed`, `OnTextChanged`), and their value types (`Thickness`, `IBrush`, `Orientation`, …) are Avalonia's.
 
@@ -24,9 +26,9 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 | `RepeatButton(content, onClick)`, `RepeatButton(command)` | `RepeatButtonElement` | `RepeatButton` |
 | `HyperlinkButton(content, navigateUri, onClick)`, `HyperlinkButton(command)` | `HyperlinkButtonElement` | `HyperlinkButton` |
 | `TextBox(text, onTextChanged, placeholderText)` | `TextBoxElement` | `TextBox` |
-| `AutoSuggestBox(text, onTextChanged, onQuerySubmitted)` | `AutoSuggestBoxElement` | `AutoCompleteBox` (its `ItemsSource` shown as given; `FilterMode` lets Avalonia filter them) |
+| `AutoCompleteBox(text, onTextChanged, onQuerySubmitted)` | `AutoCompleteBoxElement` | `AutoCompleteBox` (its `ItemsSource` shown as given; `FilterMode` lets Avalonia filter them) |
 | `Slider(value, minimum, maximum, onValueChanged)` | `SliderElement` | `Slider` |
-| `NumberBox(value, onValueChanged)` | `NumberBoxElement` | `NumericUpDown` (Reactor's `double` values; `NaN` is an empty box) |
+| `NumericUpDown(value, onValueChanged)` | `NumericUpDownElement` | `NumericUpDown` (Reactor's `double` values; `NaN` is an empty box) |
 | `CheckBox(isChecked, onIsCheckedChanged, content)`, `ThreeStateCheckBox(isChecked, onIsCheckedChanged, content)` | `CheckBoxElement` | `CheckBox` |
 | `ToggleSwitch(isChecked, onIsCheckedChanged, onContent, offContent, content)` | `ToggleSwitchElement` | `ToggleSwitch` |
 | `RadioButton(content, isChecked, onIsCheckedChanged, groupName)` | `RadioButtonElement` | `RadioButton` |
@@ -34,20 +36,20 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 | `ListBox(items, selectedIndex, onSelectedIndexChanged)` | `ListBoxElement` | `ListBox` |
 | `DatePicker(selectedDate, onSelectedDateChanged)` | `DatePickerElement` | `DatePicker` |
 | `TimePicker(selectedTime, onSelectedTimeChanged)` | `TimePickerElement` | `TimePicker` |
-| `Progress(value)`, `ProgressIndeterminate()` | `ProgressElement` | `ProgressBar` |
+| `ProgressBar(value)`, `ProgressIndeterminate()` | `ProgressBarElement` | `ProgressBar` |
 | `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
 | `Border(child)` | `BorderElement` | `Border` |
 | `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` (Reactor's `ScrollView` is one with `HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled`, content as wide as the view; the migration writes it) |
 | `Viewbox(child)` | `ViewboxElement` | `Viewbox` |
 | `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.Header(element)` for an element header) |
-| `TabView(selectedIndex, onSelectedIndexChanged, Tab(header, content), ...)`, `TabView(Tab(...), ...)` | `TabViewElement` | `TabControl` (a `TabItem` per tab) |
+| `TabControl(selectedIndex, onSelectedIndexChanged, TabItem(header, content), ...)`, `TabControl(TabItem(...), ...)` | `TabControlElement` | `TabControl` (a `TabItem` per tab) |
 | `TreeView(TreeViewItem(header, items...), ...)` | `TreeViewElement` | `TreeView` (a `TreeViewItem` per `TreeViewItemData`; `OnItemInvoked` and `OnExpanding` get the node's data) |
 | `SplitView(pane, content)` | `SplitViewElement` | `SplitView` (open by default, as Reactor's) |
-| `MenuBar(Menu(header, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(header, onClick)` or `MenuItem(command)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
+| `MenuBar(Menu(header, items...), ...)` | `MenuElement` | `Menu` (items: `MenuItem(header, onClick)` or `MenuItem(command)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
 | `Separator()` | `SeparatorElement` | `Separator` (Avalonia-only, so Avalonia's name) |
 | `Grid(columnDefinitions, rowDefinitions, ...)` | `GridElement` | `Grid` (tracks are `GridSize.Auto`, `GridSize.Star(weight)`, `GridSize.Px(size)`) |
 | `WrapPanel(...)` | `WrapPanelElement` | `WrapPanel` (Avalonia-only, so Avalonia's name) |
-| `VStack(...)`, `HStack(...)`, `VStack(spacing, ...)`, `HStack(spacing, ...)` | `StackElement` | `StackPanel` |
+| `VStack(...)`, `HStack(...)`, `VStack(spacing, ...)`, `HStack(spacing, ...)` | `StackPanelElement` | `StackPanel` |
 | `Flex(...)`, `Flex(direction, ...)`, `FlexRow(...)`, `FlexColumn(...)` | `FlexElement` | `FlexPanel` (flexbox) |
 | `Component(render)`, `RenderEachTime(render)` | `FuncElement` | a function component |
 | `Component<T>()`, `Component<T, TProps>(props)` | `ComponentElement` | a `Component` class |
@@ -58,15 +60,19 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 
 > **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
 > same element upstream's `RenderEachTime(render)` builds. Both exist here, and `RenderEachTime` works as it does in
-> Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia, and so do `TabView` and `NumberBox`,
-> which are Avalonia's `TabControl` and `NumericUpDown`. Members and parameters take Avalonia's names instead of
-> Reactor's (`Text` for `Content`, `Minimum` for `Min`, `IsChecked` for `IsOn`, one `Content` for `Label` and
-> `ContentElement`), and so do factories and types new since then (`ScrollViewer` for `ScrollView`, `TreeViewItem` for
-> `TreeNode`); `tools/naming/renames.json` lists every one, and the migration tool (#33) reads it.
+> Reactor. Factories, elements and modifiers take Avalonia's names where Reactor's differ: `TabControl` and `TabItem`
+> for `TabView` and `Tab`, `NumericUpDown` for `NumberBox`, `AutoCompleteBox` for `AutoSuggestBox`, `ProgressBar` for
+> `Progress`, `ScrollViewer` for `ScrollView`, `TreeViewItem` for `TreeNode`, `.HorizontalAlignment` and
+> `.VerticalAlignment` for `.HAlign` and `.VAlign` (Reactor has them as aliases), and `.ContextFlyout` for
+> `.WithContextFlyout`. The elements follow (`StackPanelElement` for `StackElement`, `MenuElement` for `MenuBarElement`).
+> `VStack`, `HStack` and the menu factories (`MenuBar`, `Menu`, `MenuItem`, `MenuItems`…) keep Reactor's names.
+> Members and parameters take Avalonia's names too (`Text` for `Content`, `Minimum` for `Min`, `IsChecked` for `IsOn`,
+> one `Content` for `Label` and `ContentElement`). `tools/naming/renames.json` lists every one, with the reason for each
+> name kept, and the migration tool (#33) reads it.
 
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
-keep their controls when it does. An input control (`TextBox`, `AutoSuggestBox`, `Slider`, `NumberBox`, `CheckBox`, `ToggleSwitch`,
-`RadioButton`, `ComboBox`, `ListBox`, `TabView`, `Expander`, `DatePicker`, `TimePicker`) given no value owns its own; given the state's value
+keep their controls when it does. An input control (`TextBox`, `AutoCompleteBox`, `Slider`, `NumericUpDown`, `CheckBox`, `ToggleSwitch`,
+`RadioButton`, `ComboBox`, `ListBox`, `TabControl`, `Expander`, `DatePicker`, `TimePicker`) given no value owns its own; given the state's value
 and a change callback, it is controlled by it: what the user changes reaches the callback, and what the state writes
 doesn't come back through it. `ToggleButton`'s `isChecked`, a toggle menu item's and `SplitView`'s `IsPaneOpen` are
 written when they change, as in Reactor: a click toggles the control, and it keeps that state until the value changes.
@@ -77,18 +83,20 @@ pane and content are reconciled in place, so a component inside keeps its state.
 
 Inside a `Grid`, `.Grid(row: 1, column: 0, columnSpan: 2)` sets a child's cell. With the factories imported, a bare
 `Grid`, `Border` or `ScrollViewer` names the factory, so Avalonia's attached-property calls need the type in full
-(`Avalonia.Controls.Grid.GetRow(...)`) or an alias. The same goes for `Menu`, `MenuItem`, `SplitView`, `Separator`, `Viewbox`, `TreeView` and `TreeViewItem`.
+(`Avalonia.Controls.Grid.GetRow(...)`) or an alias. The same goes for `Menu`, `MenuItem`, `SplitView`, `Separator`, `Viewbox`, `TreeView`,
+`TreeViewItem`, `TabControl`, `TabItem`, `NumericUpDown`, `AutoCompleteBox` and `ProgressBar`. A type still names
+Avalonia's control: `new TabControl()`, `typeof(ProgressBar)` and a variable's type are unaffected.
 
 Modifiers and keys chain onto any element: `.Margin(...)` (uniform, horizontal and vertical, per side or a
-`Thickness`), `.Width(...)`, `.Height(...)`, `.Size(...)`, `.HAlign(...)`, `.VAlign(...)`, `.Opacity(...)`,
+`Thickness`), `.Width(...)`, `.Height(...)`, `.Size(...)`, `.HorizontalAlignment(...)`, `.VerticalAlignment(...)`, `.Opacity(...)`,
 `.IsEnabled(...)`, `.Background(...)` (a brush or a colour string), `.AutomationName(...)`, `.ToolTip(text)` (or
 `.ToolTip(text, placement)`), `.WithToolTip(element)` (any element as the tooltip; a component inside keeps its
-state), `.WithContextFlyout(MenuItems(...))` (a context menu, as an Avalonia `MenuFlyout`) and
+state), `.ContextFlyout(MenuItems(...))` (a context menu, as an Avalonia `MenuFlyout`) and
 `.WithKey(...)`. Inside
 a `Flex` container, `.Flex(grow: 1, ...)` sets a child's flex data. Container settings that have no factory parameter
 are set with `with`: `FlexRow(...) with { ColumnGap = 8 }`.
 
-An auto-suggest box reports what the user types to `onTextChanged`, a suggestion they pick to `OnSuggestionChosen`,
+An auto-complete box reports what the user types to `onTextChanged`, a suggestion they pick to `OnSuggestionChosen`,
 and Enter to `onQuerySubmitted`. Its suggestions are a function of the state, so derive them from the typed text:
 
 <!-- snippet: auto-suggest-box -->
@@ -99,7 +107,7 @@ public static Element FruitPicker(RenderContext ctx, string[] fruit)
     var (chosen, setChosen) = ctx.UseState("");
     var matches = query.Length == 0 ? [] : fruit.Where(f => f.StartsWith(query, StringComparison.OrdinalIgnoreCase)).ToArray();
     return VStack(
-        AutoSuggestBox(onTextChanged: setQuery, onQuerySubmitted: setChosen).SuggestionChosen(setChosen)
+        AutoCompleteBox(onTextChanged: setQuery, onQuerySubmitted: setChosen).SuggestionChosen(setChosen)
             with { ItemsSource = matches },
         TextBlock($"Chosen: {chosen}"));
 }
@@ -124,7 +132,7 @@ public static Element Uploader(RenderContext ctx, Func<Task> upload)
 A menu item's `KeyboardAccelerators` and `Description` are its shortcut and tooltip:
 `MenuItem("Save", save) with { KeyboardAccelerators = [new(Key.S, KeyModifiers.Control)] }`.
 
-> **Coming from Reactor?** `AutoSuggestBox` has no `Header` or `QueryIcon` here, a command's `AccessKey` isn't written
+> **Coming from Reactor?** `AutoCompleteBox` (Reactor's `AutoSuggestBox`) has no `Header` or `QueryIcon` here, a command's `AccessKey` isn't written
 > (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet. A click on a
 > suggestion doesn't submit the query.
 
@@ -145,7 +153,7 @@ public static Element Notice(string title, string body, bool urgent, Action dism
 ```
 
 > **Coming from Reactor?** `TextBlockElement.Weight` is `FontWeight`, and its `HorizontalAlignment` member is the
-> `.HAlign(...)` modifier. A text block has no `IsTextSelectionEnabled` (Avalonia's `SelectableTextBlock` is another
+> `.HorizontalAlignment(...)` modifier. A text block has no `IsTextSelectionEnabled` (Avalonia's `SelectableTextBlock` is another
 > control), and no `CharacterSpacing` or `TextDecorations` yet.
 
 Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:

@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ChildReconcilerTests.cs, last changed upstream in 58c2f12a13d4; transforms: drop-test-TextBlockElement-FontSize-equality, test-winui-orientation, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/ChildReconcilerTests.cs, last changed upstream in 58c2f12a13d4; transforms: drop-test-TextBlockElement-FontSize-equality, test-winui-orientation, test-stack-panel-element, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Core;
 using Xunit;
 
@@ -161,8 +161,8 @@ public class ChildReconcilerTests
     public void StackElement_With_Same_Children_Are_Equal()
     {
         var children = new Element[] { new TextBlockElement("A"), new TextBlockElement("B") };
-        var a = new StackElement(global::Avalonia.Layout.Orientation.Vertical, children);
-        var b = new StackElement(global::Avalonia.Layout.Orientation.Vertical, children);
+        var a = new StackPanelElement(global::Avalonia.Layout.Orientation.Vertical, children);
+        var b = new StackPanelElement(global::Avalonia.Layout.Orientation.Vertical, children);
         Assert.Equal(a, b);
     }
 }

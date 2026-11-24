@@ -20,11 +20,11 @@ public static partial class ElementExtensions
         el.WithModifiers(m => m with { ToolTipPlacement = placement });
 
     /// <summary>
-    /// A context menu: <c>TextBlock(name).WithContextFlyout(MenuItems(MenuItem("Rename", rename), MenuItem("Delete", delete)))</c>,
+    /// A context menu: <c>TextBlock(name).ContextFlyout(MenuItems(MenuItem("Rename", rename), MenuItem("Delete", delete)))</c>,
     /// opened by a right-click or the menu key, as an Avalonia <see cref="Avalonia.Controls.MenuFlyout"/> on the
     /// control's <c>ContextFlyout</c>.
     /// </summary>
-    public static T WithContextFlyout<T>(this T el, MenuFlyoutContentElement contextFlyout) where T : Element =>
+    public static T ContextFlyout<T>(this T el, MenuFlyoutContentElement contextFlyout) where T : Element =>
         el.WithModifiers(m => m with { ContextFlyout = contextFlyout });
 
     /// <summary>An element as the expander's header, in place of its string header (Reactor's <c>HeaderContent</c>).</summary>

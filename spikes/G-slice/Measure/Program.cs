@@ -104,7 +104,7 @@ sealed class Host
 
     public void Render()
     {
-        var element = new StackElement(Orientation.Vertical, _keys().Select(Row).ToArray());
+        var element = new StackPanelElement(Orientation.Vertical, _keys().Select(Row).ToArray());
         var next = Reconciler.Reconcile(_last, element, Root.Child, () => _pending = true);
         if (!ReferenceEquals(next, Root.Child)) Root.Child = next;
         _last = element;
@@ -119,7 +119,7 @@ sealed class Host
     {
         var (count, setCount) = ctx.UseState(0);
         Increment[key] = () => setCount(count + 1);
-        return new StackElement(Orientation.Horizontal, [new TextBlockElement($"{key}: {count}"), new ButtonElement("+", () => setCount(count + 1))]);
+        return new StackPanelElement(Orientation.Horizontal, [new TextBlockElement($"{key}: {count}"), new ButtonElement("+", () => setCount(count + 1))]);
     }) { Key = key };
 
     public Dictionary<string, Control> RowControls()

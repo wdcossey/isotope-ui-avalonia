@@ -176,7 +176,7 @@ public sealed class MenuAndToolTipTests : IDisposable
         Assert.Throws<ArgumentNullException>(() => MenuSubItem("Recent", null!));
         Assert.Throws<ArgumentNullException>(() => MenuItems(null!));
         Assert.Throws<ArgumentNullException>(() => MenuItems(PlacementMode.Bottom, null!));
-        Assert.Throws<ArgumentNullException>(() => Tab("A", null!));
+        Assert.Throws<ArgumentNullException>(() => TabItem("A", null!));
     }
 
     [AvaloniaFact]
@@ -207,7 +207,7 @@ public sealed class MenuAndToolTipTests : IDisposable
         {
             var current = n;
             var text = TextBlock("row");
-            return on ? text.WithContextFlyout(MenuItems(MenuItem("Delete " + current, () => log.Add("delete " + current)))) : text;
+            return on ? text.ContextFlyout(MenuItems(MenuItem("Delete " + current, () => log.Add("delete " + current)))) : text;
         });
         var text = host.All<TextBlock>()[0];
         var flyout = Assert.IsType<MenuFlyout>(text.ContextFlyout);
@@ -231,7 +231,7 @@ public sealed class MenuAndToolTipTests : IDisposable
     public void Context_flyout_toggle_item_click_reports_the_new_value()
     {
         var reported = new List<bool>();
-        var host = new TestHost(() => TextBlock("row").WithContextFlyout(MenuItems(ToggleMenuItem("Pinned", true, v => reported.Add(v)))));
+        var host = new TestHost(() => TextBlock("row").ContextFlyout(MenuItems(ToggleMenuItem("Pinned", true, v => reported.Add(v)))));
         var text = host.All<TextBlock>()[0];
         var pinned = (AvMenuItem)((MenuFlyout)text.ContextFlyout!).Items[0]!;
 
@@ -244,7 +244,7 @@ public sealed class MenuAndToolTipTests : IDisposable
     public void Context_flyout_placement_is_written_and_cleared()
     {
         PlacementMode? placement = PlacementMode.Right;
-        var host = new TestHost(() => TextBlock("row").WithContextFlyout(
+        var host = new TestHost(() => TextBlock("row").ContextFlyout(
             placement is { } p ? MenuItems(p, MenuItem("Copy")) : MenuItems(MenuItem("Copy"))));
         var flyout = Assert.IsType<MenuFlyout>(host.All<TextBlock>()[0].ContextFlyout);
         Assert.Equal(PlacementMode.Right, flyout.Placement);
@@ -263,7 +263,7 @@ public sealed class MenuAndToolTipTests : IDisposable
         var host = new TestHost(() =>
         {
             var b = TextBlock("row") with { Setters = [t => t.ContextFlyout = own] };
-            return on ? b.WithContextFlyout(MenuItems(MenuItem("Copy"))) : b;
+            return on ? b.ContextFlyout(MenuItems(MenuItem("Copy"))) : b;
         });
         var text = host.All<TextBlock>()[0];
         var flyout = Assert.IsType<MenuFlyout>(text.ContextFlyout);

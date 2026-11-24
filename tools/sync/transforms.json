@@ -1247,7 +1247,16 @@
       "id": "test-winui-orientation",
       "find": "\\bMicrosoft\\.UI\\.Xaml\\.Controls\\.Orientation\\b",
       "replace": "global::Avalonia.Layout.Orientation",
-      "why": "StackElement takes Avalonia's Orientation (Avalonia value types on the seam).",
+      "why": "The stack record takes Avalonia's Orientation (Avalonia value types on the seam).",
+      "files": [
+        "tests/Reactor.Tests/ChildReconcilerTests.cs"
+      ]
+    },
+    {
+      "id": "test-stack-panel-element",
+      "find": "\\bStackElement\\b",
+      "replace": "StackPanelElement",
+      "why": "Reactor's StackElement is StackPanelElement here, after Avalonia's StackPanel (#46, tools/naming/renames.json).",
       "files": [
         "tests/Reactor.Tests/ChildReconcilerTests.cs"
       ]

@@ -4,7 +4,7 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// Number entry and the separator (#26). NumberBox mirrors upstream's, with Avalonia's member names (#31), as an
+// Number entry and the separator (#26). NumericUpDown mirrors upstream's NumberBox, with Avalonia's member names (#31), as an
 // Avalonia NumericUpDown; members with no Avalonia counterpart (Header, LargeChange, the spin-button placement, number
 // formatters, expressions, validation mode, description) aren't on it. Separator is Avalonia-only, so Avalonia's name.
 
@@ -23,7 +23,7 @@ namespace Isotope.UI.Core;
 [WrapManual("Minimum")]
 [WrapManual("Maximum")]
 [WrapManual("Increment")]
-public partial record NumberBoxElement(Optional<double> Value = default, Action<double>? OnValueChanged = null) : Element
+public partial record NumericUpDownElement(Optional<double> Value = default, Action<double>? OnValueChanged = null) : Element
 {
     public double Minimum { get; init; } = double.MinValue;
     public double Maximum { get; init; } = double.MaxValue;
@@ -47,7 +47,7 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
         var box = (NumericUpDown)s!;
         if (!Reconciler.TryGetReactorState(box, out var state)) return;
         if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
-        (state.Element as NumberBoxElement)?.OnValueChanged?.Invoke(ToDouble(box.Value));
+        (state.Element as NumericUpDownElement)?.OnValueChanged?.Invoke(ToDouble(box.Value));
     };
 
     // As upstream's: Minimum and Maximum are written before Value (Customize's entries come first), so a new value lands
@@ -58,7 +58,7 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
     // value, even with ClipValueToMinMax). Values compare as the decimals the control holds, so a double that doesn't
     // round-trip through decimal isn't taken for drift (a write that changes nothing raises no event, and its token
     // would swallow the next user change).
-    private static partial ControlDescriptor<NumberBoxElement, NumericUpDown> Customize(ControlDescriptor<NumberBoxElement, NumericUpDown> d)
+    private static partial ControlDescriptor<NumericUpDownElement, NumericUpDown> Customize(ControlDescriptor<NumericUpDownElement, NumericUpDown> d)
         => d.CoercingOneWay(
                 get:               static e => e.Minimum,
                 set:               static (c, v) => c.Minimum = Clamp(v),
@@ -70,7 +70,7 @@ public partial record NumberBoxElement(Optional<double> Value = default, Action<
             .OneWay(
                 get: static e => e.Increment,
                 set: static (c, v) => c.Increment = Clamp(v))
-            .HandCodedControlled<V1Protocol.NumberBoxEventPayload, double, EventHandler<NumericUpDownValueChangedEventArgs>>(
+            .HandCodedControlled<V1Protocol.NumericUpDownEventPayload, double, EventHandler<NumericUpDownValueChangedEventArgs>>(
                 get:         static e => e.Value,
                 set:         static (c, v) => c.Value = ToDecimal(v),
                 readBack:    static c => ToDouble(c.Value),

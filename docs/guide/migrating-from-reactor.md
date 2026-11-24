@@ -1,6 +1,7 @@
 # Migrating from Reactor
 
-Isotope keeps Reactor's model, hooks and most of its names, so a Reactor app moves over mostly mechanically. The
+Isotope keeps Reactor's model and hooks, and takes Avalonia's names where Reactor's differ, so a Reactor app moves over
+mostly mechanically. The
 migration tool (`src/Isotope.UI.Migration`, #33) is a Roslyn analyzer with code fixes. It renames what has a
 counterpart, and reports what has none, saying what to use instead.
 
@@ -13,7 +14,10 @@ What it changes:
   - The table is `src/Isotope.UI.Migration/Tables/winui-types.json`.
 - Element members and factory parameters take Avalonia's names: `Value` is `Text`, `label:` is `content:`.
   - The table is `tools/naming/renames.json`.
-  - Type, factory and modifier renames apply once the table marks them `applied`.
+- Factories, element types and modifiers take Avalonia's names: `TabView(Tab(...))` is `TabControl(TabItem(...))`,
+  `NumberBox` is `NumericUpDown`, `StackElement` is `StackPanelElement`, `.HAlign(...)` is `.HorizontalAlignment(...)`.
+  - The same table; it applies the entries marked `applied`, and leaves the `kept` ones (`VStack`, `HStack`, `MenuBar`)
+    alone.
 - Reactor's `icon: WindowIcon.FromPath(path)` becomes Isotope's icon factory.
 - Reactor's `ScrollView(x)` becomes `(ScrollViewer(x) with { HorizontalScrollBarVisibility = ... Disabled })`. That is a
   ScrollViewer whose content is as wide as the view, as WinUI's ScrollView is. Its `ContentOrientation` is left for you

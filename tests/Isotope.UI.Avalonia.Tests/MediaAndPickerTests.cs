@@ -11,16 +11,16 @@ using static Isotope.UI.Factories;
 namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
-/// ProgressBar, Image, DatePicker and TimePicker (#19): mount and update in place, Progress's one-way value, the image
+/// ProgressBar, Image, DatePicker and TimePicker (#19): mount and update in place, ProgressBar's one-way value, the image
 /// source loaded as a bitmap, and the pickers' controlled values, whose engine writes don't echo.
 /// </summary>
 public class MediaAndPickerTests
 {
     [AvaloniaFact]
-    public void Progress_writes_its_value_after_its_range_and_null_is_indeterminate()
+    public void ProgressBar_writes_its_value_after_its_range_and_null_is_indeterminate()
     {
         double? value = 150;
-        var host = new TestHost(() => (value is { } v ? Progress(v) : ProgressIndeterminate()) with { Maximum = 200 });
+        var host = new TestHost(() => (value is { } v ? ProgressBar(v) : ProgressIndeterminate()) with { Maximum = 200 });
         var bar = host.All<ProgressBar>()[0];
         Assert.Equal((150.0, 200.0, false), (bar.Value, bar.Maximum, bar.IsIndeterminate));
 

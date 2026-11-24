@@ -53,7 +53,7 @@ public partial record ButtonElement(object? Content, Action? OnClick = null) : E
 
 /// <summary>Children stacked in one direction, as an Avalonia <see cref="Avalonia.Controls.StackPanel"/>.</summary>
 [GenerateReactorDescriptor(typeof(StackPanel))]
-public partial record StackElement(Orientation Orientation, Element[] Children) : Element
+public partial record StackPanelElement(Orientation Orientation, Element[] Children) : Element
 {
     private readonly Element[] _children = Reconciler.Flatten(Children);
 

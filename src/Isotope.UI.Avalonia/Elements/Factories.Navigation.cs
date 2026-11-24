@@ -10,10 +10,10 @@ public static partial class Factories
 {
     /// <summary>
     /// Tabs, as an Avalonia <see cref="Avalonia.Controls.TabControl"/> (upstream's name: TabView); the control owns its
-    /// selection. Build each tab with <see cref="Tab"/>.
+    /// selection. Build each tab with <see cref="TabItem"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
-    public static TabViewElement TabView(params TabViewItemData[] items)
+    public static TabControlElement TabControl(params TabItemData[] items)
     {
         ArgumentNullException.ThrowIfNull(items);
         return new(items);
@@ -24,17 +24,17 @@ public static partial class Factories
     /// pass <c>(int?)null</c> or <see cref="Optional{T}.Unset"/> to leave the selection to the control.
     /// </summary>
     /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
-    public static TabViewElement TabView(int selectedIndex, Action<int>? onSelectedIndexChanged = null, params TabViewItemData[] items)
-        => TabView(Optional<int>.Of(selectedIndex), onSelectedIndexChanged, items);
+    public static TabControlElement TabControl(int selectedIndex, Action<int>? onSelectedIndexChanged = null, params TabItemData[] items)
+        => TabControl(Optional<int>.Of(selectedIndex), onSelectedIndexChanged, items);
 
     /// <summary>Tabs whose selected index is left to the control when <paramref name="selectedIndex"/> is null.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
-    public static TabViewElement TabView(int? selectedIndex, Action<int>? onSelectedIndexChanged = null, params TabViewItemData[] items)
-        => TabView(selectedIndex is { } i ? Optional<int>.Of(i) : Optional<int>.Unset, onSelectedIndexChanged, items);
+    public static TabControlElement TabControl(int? selectedIndex, Action<int>? onSelectedIndexChanged = null, params TabItemData[] items)
+        => TabControl(selectedIndex is { } i ? Optional<int>.Of(i) : Optional<int>.Unset, onSelectedIndexChanged, items);
 
     /// <summary>Tabs whose selected index is controlled only when <paramref name="selectedIndex"/> has a value.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
-    public static TabViewElement TabView(Optional<int> selectedIndex, Action<int>? onSelectedIndexChanged = null, params TabViewItemData[] items)
+    public static TabControlElement TabControl(Optional<int> selectedIndex, Action<int>? onSelectedIndexChanged = null, params TabItemData[] items)
     {
         ArgumentNullException.ThrowIfNull(items);
         return new(items) { SelectedIndex = selectedIndex, OnSelectedIndexChanged = onSelectedIndexChanged };
@@ -42,7 +42,7 @@ public static partial class Factories
 
     /// <summary>One tab: its header text and its content.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is null.</exception>
-    public static TabViewItemData Tab(string header, Element content)
+    public static TabItemData TabItem(string header, Element content)
     {
         ArgumentNullException.ThrowIfNull(content);
         return new(header, content);
@@ -59,7 +59,7 @@ public static partial class Factories
 
     /// <summary>A menu bar, as an Avalonia <see cref="Avalonia.Controls.Menu"/>: <c>MenuBar(Menu("File", MenuItem("Open", open)))</c>.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
-    public static MenuBarElement MenuBar(params MenuBarItemData[] items)
+    public static MenuElement MenuBar(params MenuBarItemData[] items)
     {
         ArgumentNullException.ThrowIfNull(items);
         return new(items);
@@ -95,7 +95,7 @@ public static partial class Factories
         return new(header, items);
     }
 
-    /// <summary>The items of a context menu, for <c>.WithContextFlyout(...)</c>.</summary>
+    /// <summary>The items of a context menu, for <c>.ContextFlyout(...)</c>.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
     public static MenuFlyoutContentElement MenuItems(params MenuFlyoutItemBase[] items)
     {

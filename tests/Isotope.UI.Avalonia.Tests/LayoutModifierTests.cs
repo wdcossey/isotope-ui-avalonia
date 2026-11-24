@@ -141,7 +141,7 @@ public sealed class LayoutModifierTests
     [AvaloniaFact]
     public void Center_centres_both_ways() =>
         AssertSetChangedAndCleared<AvTextBlock, (HorizontalAlignment, VerticalAlignment)>(() => TextBlock("a").Center(),
-            () => TextBlock("a").Center().HAlign(HorizontalAlignment.Right), () => TextBlock("a"),
+            () => TextBlock("a").Center().HorizontalAlignment(HorizontalAlignment.Right), () => TextBlock("a"),
             c => (c.HorizontalAlignment, c.VerticalAlignment),
             (HorizontalAlignment.Center, VerticalAlignment.Center), (HorizontalAlignment.Right, VerticalAlignment.Center));
 
@@ -249,7 +249,7 @@ public sealed class LayoutModifierTests
     public void A_padded_stack_is_mounted_inside_a_border_that_holds_its_modifiers()
     {
         var host = new TestHost(() => VStack(TextBlock("a")).Padding(10).WithBorder("Red", 2).CornerRadius(6)
-            .Background("Blue").Margin(3).Width(120).HAlign(HorizontalAlignment.Left).Opacity(0.5));
+            .Background("Blue").Margin(3).Width(120).HorizontalAlignment(HorizontalAlignment.Left).Opacity(0.5));
         var panel = host.All<StackPanel>()[0];
         var chrome = ChromeOf(panel);
         Assert.Same(chrome, host.Root.Child);
@@ -389,9 +389,9 @@ public sealed class LayoutModifierTests
         // The engine reads the element a slot's control represents (a keyed diff reads its key), and a handler reads its
         // panel's: both are the render's element, and a skip leaves them as they were.
         var padding = 2.0;
-        StackElement? latest = null;
+        StackPanelElement? latest = null;
         Element[] children = [TextBlock("a")]; // one array, so an unchanged stack compares equal and is skipped
-        var host = new TestHost(() => VStack(latest = new StackElement(Orientation.Vertical, children).Padding(padding).WithKey("k")));
+        var host = new TestHost(() => VStack(latest = new StackPanelElement(Orientation.Vertical, children).Padding(padding).WithKey("k")));
         var panel = host.All<StackPanel>()[1];
         var chrome = ChromeOf(panel);
         void AssertTagged()
@@ -428,12 +428,12 @@ public sealed class LayoutModifierTests
     {
         Element[] children = [TextBlock("a")]; // one array, so the stack compares equal and is skipped
         Action<int>? set = null;
-        StackElement? latest = null;
+        StackPanelElement? latest = null;
         var host = new TestHost(() => Component(ctx =>
         {
             var (_, s) = ctx.UseState(0);
             set = s;
-            return latest = new StackElement(Orientation.Vertical, children).Padding(4);
+            return latest = new StackPanelElement(Orientation.Vertical, children).Padding(4);
         }));
         var panel = host.All<StackPanel>()[0];
         var chrome = ChromeOf(panel);
@@ -521,7 +521,7 @@ public sealed class LayoutModifierTests
         var updates = 0;
         Action<StackPanel>[] setters = [_ => updates++];
         var padding = 4.0;
-        var host = new TestHost(() => VStack(new StackElement(Orientation.Vertical, children) { Setters = setters }
+        var host = new TestHost(() => VStack(new StackPanelElement(Orientation.Vertical, children) { Setters = setters }
             .Padding(padding).WithBorder("Red").CornerRadius(2)));
         var chrome = ChromeOf(host.All<StackPanel>()[1]);
         var before = updates;

@@ -119,8 +119,8 @@ public class RenameTableTests
     public void Type_factory_and_modifier_entries_match_their_status()
     {
         // An applied entry is in the code under its Avalonia name only; a proposed one is still under Reactor's, so
-        // applying it later is a rename in the code and a status change here. A kept one has no Avalonia counterpart,
-        // so it is in the code under Reactor's name, with the reason (#44).
+        // applying it later is a rename in the code and a status change here. A kept one is in the code under Reactor's
+        // name, with the reason: no Avalonia counterpart (#44), or Avalonia's name is taken or set aside (#46).
         var table = RenameTable.Load();
         var types = Library.GetExportedTypes().Select(t => t.Name).ToHashSet();
         var factories = typeof(Factories).GetMethods(BindingFlags.Public | BindingFlags.Static).Select(m => m.Name).ToHashSet();
@@ -151,6 +151,66 @@ public class RenameTableTests
             }
         }
     }
+
+    [Fact]
+    public void Every_record_is_named_after_its_Avalonia_control_or_kept()
+    {
+        // Types follow Avalonia too (#46): a record is {Control}Element, or {Control}Data for an item's data (TabItemData),
+        // unless a kept entry says why it isn't. A proposed rename fails here, since the code still has Reactor's name.
+        var table = RenameTable.Load();
+        var problems = new List<string>();
+        foreach (var (recordName, controlName) in table.Records)
+        {
+            var isotope = table.IsotopeName(recordName);
+            var control = ShortName(controlName);
+            if (isotope == control + "Element" || isotope == control + "Data") continue;
+            if (!table.Types.Any(t => t.Reactor == recordName && t.Status == "kept" && t.Note is not null))
+                problems.Add($"{isotope}: not {control}Element or {control}Data, and no kept type entry for {recordName} says why");
+        }
+        Assert.True(problems.Count == 0, string.Join("\n", problems));
+    }
+
+    [Fact]
+    public void Every_factory_of_a_record_is_named_after_its_control_or_kept()
+    {
+        // A factory that builds a record is named after the record's Avalonia control (TabControl, TabItem), unless a
+        // kept entry says why it isn't (VStack and HStack, the named text styles).
+        var table = RenameTable.Load();
+        var problems = new List<string>();
+        var factories = typeof(Factories).GetMethods(BindingFlags.Public | BindingFlags.Static);
+        foreach (var factory in factories.DistinctBy(f => (f.Name, f.ReturnType)))
+        {
+            if (!table.Records.TryGetValue(table.ReactorName(factory.ReturnType.Name), out var controlName)) continue;
+            var control = ShortName(controlName);
+            if (factory.Name == control) continue;
+            if (!table.Factories.Any(f => f.Reactor == factory.Name && f.Status == "kept" && f.Note is not null))
+                problems.Add($"{factory.Name}: builds a {factory.ReturnType.Name}, so it is {control}, or a kept factory entry says why it isn't");
+        }
+        Assert.True(problems.Count == 0, string.Join("\n", problems));
+    }
+
+    [Fact]
+    public void Applied_modifier_renames_are_properties_of_their_controls()
+    {
+        // A renamed modifier takes the name of the Avalonia property it writes: on its target's control, or on every
+        // control (HorizontalAlignment, ContextFlyout).
+        var table = RenameTable.Load();
+        var problems = new List<string>();
+        foreach (var m in table.Modifiers.Where(m => m.Status == "applied" && m.Avalonia is not null))
+        {
+            if (m.Target is { } target && !table.Records.ContainsKey(target))
+            {
+                problems.Add($"modifiers: {m.Reactor} targets {target}, which is not in the table's records");
+                continue;
+            }
+            var control = m.Target is { } t ? Control(table.Records[t]) : typeof(global::Avalonia.Controls.Control);
+            if (control.GetProperty(m.Avalonia!, BindingFlags.Public | BindingFlags.Instance) is null)
+                problems.Add($"modifiers: {m.Reactor} -> {m.Avalonia}, which is not a property of {control.FullName}");
+        }
+        Assert.True(problems.Count == 0, string.Join("\n", problems));
+    }
+
+    private static string ShortName(string fullName) => fullName[(fullName.LastIndexOf('.') + 1)..];
 
     [Fact]
     public void The_naming_rule_reads_events_properties_and_callbacks()
@@ -233,7 +293,7 @@ internal sealed record RenameTable(
             : Types.FirstOrDefault(t => t.Status == "applied" && t.Avalonia == isotope)?.Reactor ?? isotope;
 
     /// <summary>A rename, or a removal when <see cref="Avalonia"/> is null (then <see cref="Note"/> says what replaces it).</summary>
-    internal sealed record Rename(string Reactor, string? Avalonia, string Status, string? Note);
+    internal sealed record Rename(string Reactor, string? Avalonia, string Status, string? Note, string? Target = null);
 
     internal static RenameTable Load()
     {
@@ -262,7 +322,8 @@ internal sealed record RenameTable(
             e.GetProperty("reactor").GetString()!,
             e.GetProperty("avalonia").GetString(),
             e.TryGetProperty("status", out var status) ? status.GetString()! : "applied",
-            e.TryGetProperty("note", out var note) ? note.GetString() : null)).ToList();
+            e.TryGetProperty("note", out var note) ? note.GetString() : null,
+            e.TryGetProperty("target", out var target) ? target.GetString() : null)).ToList();
 
     private static string Path()
     {

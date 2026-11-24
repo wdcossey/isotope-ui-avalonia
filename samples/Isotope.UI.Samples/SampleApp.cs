@@ -43,7 +43,7 @@ public static class SampleApp
             MenuBar(
                 Menu("Go", Pages.Select((p, i) => (MenuFlyoutItemBase)RadioMenuItem(p.Name, "page", i == page, () => setPage(i))).ToArray()),
                 Menu("View", ToggleMenuItem("Show tooltips", tips, setTips))),
-            TabView(page, setPage, Pages.Select(p => Tab(p.Name, Component(p.Render))).ToArray())
+            TabControl(page, setPage, Pages.Select(p => TabItem(p.Name, Component(p.Render))).ToArray())
                 .Provide(ShowTips, tips)
                 .Flex(grow: 1));
     }

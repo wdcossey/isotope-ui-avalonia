@@ -15,7 +15,7 @@ namespace Isotope.UI.Avalonia.Tests;
 /// OnTextChanged and the engine's own writes don't, new suggestions show while the user types, a picked suggestion
 /// reaches OnSuggestionChosen, Enter submits the query.
 /// </summary>
-public sealed class AutoSuggestBoxTests : IDisposable
+public sealed class AutoCompleteBoxTests : IDisposable
 {
     private readonly List<Window> _windows = new();
 
@@ -65,9 +65,9 @@ public sealed class AutoSuggestBoxTests : IDisposable
         query.Length == 0 ? [] : new[] { "apple", "apricot", "avocado", "banana" }.Where(f => f.StartsWith(query, StringComparison.Ordinal)).ToArray();
 
     [AvaloniaFact]
-    public void AutoSuggestBox_mounts_its_text_suggestions_and_placeholder_and_shows_them_unfiltered()
+    public void AutoCompleteBox_mounts_its_text_suggestions_and_placeholder_and_shows_them_unfiltered()
     {
-        var host = new TestHost(() => AutoSuggestBox("ap").PlaceholderText("Fruit") with { ItemsSource = ["banana", "apple"] });
+        var host = new TestHost(() => AutoCompleteBox("ap").PlaceholderText("Fruit") with { ItemsSource = ["banana", "apple"] });
         var box = Box(host);
         Assert.Equal(("ap", "Fruit"), (box.Text, box.PlaceholderText));
         Assert.Equal(["banana", "apple"], box.ItemsSource!.Cast<string>());
@@ -76,10 +76,10 @@ public sealed class AutoSuggestBoxTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void AutoSuggestBox_modifiers_set_the_callbacks()
+    public void AutoCompleteBox_modifiers_set_the_callbacks()
     {
         Action<string> a = _ => { }, b = _ => { }, c = _ => { };
-        var el = AutoSuggestBox().TextChanged(a).QuerySubmitted(b).SuggestionChosen(c);
+        var el = AutoCompleteBox().TextChanged(a).QuerySubmitted(b).SuggestionChosen(c);
         Assert.Equal((a, b, c), (el.OnTextChanged!, el.OnQuerySubmitted!, el.OnSuggestionChosen!));
         Assert.Null(el.TextChanged(null).OnTextChanged);
     }
@@ -93,7 +93,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
         {
             var (text, setText) = ctx.UseState("");
             set = setText;
-            return AutoSuggestBox(text, t => { reported.Add(t); setText(t); });
+            return AutoCompleteBox(text, t => { reported.Add(t); setText(t); });
         }));
         Type(host, "a");
         Assert.Equal(["a"], reported);
@@ -114,7 +114,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
     {
         // Avalonia fills the template's text box with the text when the box is shown, and raises TextChanged for it.
         var reported = new List<string>();
-        var host = new TestHost(() => AutoSuggestBox("pear", t => reported.Add(t)));
+        var host = new TestHost(() => AutoCompleteBox("pear", t => reported.Add(t)));
         Show(host);
         Assert.Equal("pear", Box(host).Text);
         Assert.Empty(reported);
@@ -127,7 +127,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
         var host = new TestHost(() => Component(ctx =>
         {
             var (query, setQuery) = ctx.UseState("");
-            return AutoSuggestBox(onTextChanged: setQuery) with { ItemsSource = Fruit(query) };
+            return AutoCompleteBox(onTextChanged: setQuery) with { ItemsSource = Fruit(query) };
         }));
         Type(host, "ap");
         var box = Box(host);
@@ -142,7 +142,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
     public void Suggestions_rebuilt_with_the_same_strings_are_not_rewritten()
     {
         var n = 0;
-        var host = new TestHost(() => AutoSuggestBox() with { ItemsSource = n >= 0 ? ["apple", "avocado"] : [] });
+        var host = new TestHost(() => AutoCompleteBox() with { ItemsSource = n >= 0 ? ["apple", "avocado"] : [] });
         var items = Box(host).ItemsSource;
         n = 1;
         host.Render();
@@ -154,7 +154,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
     {
         var typed = new List<string>();
         var chosen = new List<string>();
-        var host = new TestHost(() => AutoSuggestBox(onTextChanged: t => typed.Add(t)).SuggestionChosen(s => chosen.Add(s))
+        var host = new TestHost(() => AutoCompleteBox(onTextChanged: t => typed.Add(t)).SuggestionChosen(s => chosen.Add(s))
             with { ItemsSource = ["apple", "avocado"] });
         Type(host, "a");
         Assert.True(Box(host).IsDropDownOpen);
@@ -171,7 +171,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
         // Avalonia selects the suggestion the typed text equals; as on WinUI, only a pick is a choice.
         var typed = new List<string>();
         var chosen = new List<string>();
-        var host = new TestHost(() => AutoSuggestBox(onTextChanged: t => typed.Add(t)).SuggestionChosen(s => chosen.Add(s))
+        var host = new TestHost(() => AutoCompleteBox(onTextChanged: t => typed.Add(t)).SuggestionChosen(s => chosen.Add(s))
             with { ItemsSource = ["apple", "avocado"] });
         Type(host, "avocado");
         Assert.Equal("avocado", Box(host).SelectedItem);
@@ -185,7 +185,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
         // Avalonia selects the suggestion a written text equals; that selection is the engine's, not the user's.
         var chosen = new List<string>();
         var text = "a";
-        var host = new TestHost(() => AutoSuggestBox(text).SuggestionChosen(s => chosen.Add(s)) with { ItemsSource = ["apple", "avocado"] });
+        var host = new TestHost(() => AutoCompleteBox(text).SuggestionChosen(s => chosen.Add(s)) with { ItemsSource = ["apple", "avocado"] });
         Show(host);
         text = "avocado";
         host.Render();
@@ -197,7 +197,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
     public void Enter_submits_the_query_with_the_text()
     {
         var submitted = new List<string>();
-        var host = new TestHost(() => AutoSuggestBox(onQuerySubmitted: q => submitted.Add(q)) with { ItemsSource = ["apple"] });
+        var host = new TestHost(() => AutoCompleteBox(onQuerySubmitted: q => submitted.Add(q)) with { ItemsSource = ["apple"] });
         Type(host, "pie");
         Press(host, PhysicalKey.Enter);
         Assert.Equal(["pie"], submitted);
@@ -207,7 +207,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
     public void IsDropDownOpen_opens_and_closes_the_list()
     {
         var open = false;
-        var host = new TestHost(() => AutoSuggestBox("a") with { ItemsSource = ["apple"], IsDropDownOpen = open });
+        var host = new TestHost(() => AutoCompleteBox("a") with { ItemsSource = ["apple"], IsDropDownOpen = open });
         Show(host);
         Assert.False(Box(host).IsDropDownOpen);
         open = true;
@@ -221,7 +221,7 @@ public sealed class AutoSuggestBoxTests : IDisposable
     [AvaloniaFact]
     public void FilterMode_lets_Avalonia_filter_the_suggestions()
     {
-        var host = new TestHost(() => AutoSuggestBox() with { ItemsSource = ["apple", "banana"], FilterMode = AutoCompleteFilterMode.StartsWith });
+        var host = new TestHost(() => AutoCompleteBox() with { ItemsSource = ["apple", "banana"], FilterMode = AutoCompleteFilterMode.StartsWith });
         Assert.Equal(AutoCompleteFilterMode.StartsWith, Box(host).FilterMode);
         Type(host, "b");
         Assert.True(Box(host).IsDropDownOpen);

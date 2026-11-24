@@ -210,6 +210,44 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Avalonia type, factory and modifier names (issue #46, 2026-11-24)
+
+- **Types, factories and modifiers take Avalonia's names** where Reactor's differ (#27 answer 1a). Callbacks keep `On` (1b).
+  - Applied in `tools/naming/renames.json`: 7 types (`TabControlElement`, `TabItemData`, `NumericUpDownElement`,
+    `AutoCompleteBoxElement`, `ProgressBarElement`, `StackPanelElement`, `MenuElement`), 5 factories (`TabControl`,
+    `TabItem`, `NumericUpDown`, `AutoCompleteBox`, `ProgressBar`) and 3 modifiers (`HorizontalAlignment`,
+    `VerticalAlignment`, `ContextFlyout`).
+  - Kept with a reason: `VStack` and `HStack` (the decision's exception). Two proposed entries were kept rather than
+    applied, because Avalonia's name would give another Reactor name a different meaning:
+    - `MenuBarItemData`: Avalonia's `MenuItem` covers five Reactor item records, and `MenuItem(...)` builds another one.
+    - `MenuFlyoutContentElement`: `MenuFlyoutElement` is Reactor's record for `MenuFlyout(target, items)`.
+  - Also kept: the rest of the menu factories (`MenuBar`, `Menu`, `MenuItems`…), `ThreeState*`, `ProgressIndeterminate`
+    and the flex family. That is 5 type and 14 factory entries.
+- **Clashes:** the new factories hide Avalonia's types of the same name in expressions where the factories are imported
+  (`TabControl.SelectedIndexProperty` is CS0119), as `Button` and `Grid` already did. A type position still names
+  Avalonia's control. The modifiers don't clash, because extension methods aren't found by simple names. A test compiles
+  both cases.
+- **Migration:** a Reactor factory call that names only a type in the migrated project is now handled as a factory call.
+  Reactor's `Progress(0.5)` with `using System;` names `System.Progress<T>`.
+- **Measured** with `node tools/migration/measure-samples.mjs --out <empty temp folder> --samples <copy of upstream's
+  samples>` (36 projects, 358 files, upstream 561c5573). Main (f3c3ea5) and the branch, after the fixes:
+
+  | | main | #46 |
+  |---|---|---|
+  | Files that build | 107 | 107 |
+  | Compile errors | 3,001 | 3,001 |
+  | Projects that build | 2 | 2 |
+  | Renames fixed (ISOMIG009) | 169 | 206 |
+  | Migration diagnostics left | 1,169 | 1,172 |
+
+  - The renamed names compiled before too, under Reactor's names, so the build counts don't move. The migration now
+    rewrites 37 more names to Avalonia's.
+  - The +3 left are `ItemsView` calls that name a type, now reported as a control not ported (ISOMIG012).
+- **Tests:** `RenameTableTests` checks that every record is named after its control and every factory after its record's
+  control, unless kept, and that applied modifier renames are properties of their control. With a clash test and 2
+  migration tests, that is 6 new tests, all proven to fail.
+- **Sync cost:** one transform rule, `test-stack-panel-element`, for upstream's `ChildReconcilerTests`.
+
 ## Packaging (issue #52, 2026-11-24)
 
 - **Three packages:** `Isotope.UI.Avalonia` (the library, with the wrappers generator bundled as an analyzer, as
@@ -269,8 +307,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
     background and theme tokens; the panel keeps its own members and children.
   - When that need comes or goes between renders, the panel is mounted again and components inside lose their state.
   - A flex panel ignores them, as upstream's (`FlexPadding` is Yoga's padding).
-- **Not done:** the BiDi `MarginInlineStart` family, and upstream's `HorizontalAlignment`/`VerticalAlignment` aliases of
-  `HAlign`/`VAlign` (#46).
+- **Not done:** the BiDi `MarginInlineStart` family. (Upstream's `HorizontalAlignment`/`VerticalAlignment` aliases of
+  `HAlign`/`VAlign` are the modifiers' names since #46.)
 - **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`, 561c5573; before is main at e4e290f, after is
   this branch; both from fresh clones):
 
@@ -492,7 +530,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **ToggleButton, RepeatButton, HyperlinkButton.**
 - **Navigation:** TabView as Avalonia's TabControl (the vendored `TabItemsHost`, with a controlled `SelectedIndex`), and
   SplitView.
-- **Menus:** `MenuBar`/`Menu`/`MenuItem` and toggle, radio and sub items; context menus via `.WithContextFlyout(...)`.
+- **Menus:** `MenuBar`/`Menu`/`MenuItem` and toggle, radio and sub items; context menus via `.WithContextFlyout(...)` (`.ContextFlyout(...)` since #46).
 - **Input and decoration:** the ToolTip modifier, NumberBox as NumericUpDown (upstream's `double` values, converted), and
   Separator.
 - **Tests:** 49 new, all proven to fail.
