@@ -25,9 +25,9 @@ names in camel case (`text`, `onTextChanged`).
 | `records` | `"<record>": "<control>"` | Each element or data record (by Reactor's type name) and the full name of the Avalonia type its members are named after. Every record with `[GenerateReactorDescriptor]` is listed, with the control in that attribute. |
 | `members` | `{ "record", "reactor", "avalonia", "kind", "note"? }` | A record member whose Reactor name or shape differs, or that keeps Reactor's name. |
 | `parameters` | `{ "factory", "reactor", "avalonia" }` | A factory parameter renamed, in every overload of that factory. |
-| `modifiers` | `{ "reactor", "avalonia", "target"?, "status" }` | An extension method on elements (`target`: the record it extends, when only one). |
-| `types` | `{ "reactor", "avalonia", "status" }` | A record or data type. |
-| `factories` | `{ "reactor", "avalonia", "status" }` | A factory method. |
+| `modifiers` | `{ "reactor", "avalonia", "target"?, "status", "note"? }` | An extension method on elements (`target`: the record it extends, when only one). |
+| `types` | `{ "reactor", "avalonia", "status", "note"? }` | A record or data type. |
+| `factories` | `{ "reactor", "avalonia", "status", "note"? }` | A factory method. |
 
 In `members`:
 
@@ -42,7 +42,9 @@ In `members`:
   - `kept`: no Avalonia counterpart, so the name stays (`avalonia` equals `reactor`); `note` says why.
 
 `status` is `applied` (the code has the Avalonia name only) or `proposed` (the code still has Reactor's name, and
-applying it is a rename in the code plus a status change here). Entries in `members` and `parameters` are applied.
+applying it is a rename in the code plus a status change here). An `avalonia` of `null` in `modifiers`, `types` or
+`factories` means Reactor's name is gone with no counterpart (`GridDefinition`); it is applied, and `note` says what
+replaces it. Entries in `members` and `parameters` are applied.
 Type and factory renames (`TabView` → `TabControl` and the like) are proposed until the question on #27 is settled.
 
 ## Porting a tier 3 change from upstream

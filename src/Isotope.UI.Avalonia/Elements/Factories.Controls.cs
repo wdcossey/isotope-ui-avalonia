@@ -25,7 +25,8 @@ public static partial class Factories
     public static CheckBoxElement ThreeStateCheckBox(Optional<bool?> isChecked = default, Action<bool?>? onIsCheckedChanged = null, string? content = null)
         => new(isChecked, onIsCheckedChanged, content) { IsThreeState = true };
 
-    // A two-state callback on a record's three-state one: called only for a checked or unchecked value.
+    // A two-state callback on a record's three-state one (CheckBox, ToggleButton): called only for a checked or unchecked
+    // value, so a control set three-state with a with-expression doesn't report its indeterminate state as unchecked.
     private static Action<bool?>? TwoState(Action<bool>? callback) =>
         callback is null ? null : value =>
         {

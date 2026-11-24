@@ -134,7 +134,12 @@ public class RenameTableTests
         {
             foreach (var e in entries)
             {
-                if (e.Status == "applied" && (!present.Contains(e.Avalonia) || present.Contains(e.Reactor)))
+                if (e.Avalonia is null)
+                {
+                    if (e.Status != "applied" || present.Contains(e.Reactor) || e.Note is null)
+                        problems.Add($"{section}: {e.Reactor} is removed, so it is applied, gone from the code, and says what replaces it (note)");
+                }
+                else if (e.Status == "applied" && (!present.Contains(e.Avalonia) || present.Contains(e.Reactor)))
                     problems.Add($"{section}: {e.Reactor} -> {e.Avalonia} is applied, so only {e.Avalonia} exists");
                 else if (e.Status == "proposed" && !present.Contains(e.Reactor))
                     problems.Add($"{section}: {e.Reactor} -> {e.Avalonia} is proposed, so {e.Reactor} exists");
@@ -208,7 +213,8 @@ internal sealed record RenameTable(
 
     internal sealed record Parameter(string Factory, string Reactor, string Avalonia);
 
-    internal sealed record Rename(string Reactor, string Avalonia, string Status);
+    /// <summary>A rename, or a removal when <see cref="Avalonia"/> is null (then <see cref="Note"/> says what replaces it).</summary>
+    internal sealed record Rename(string Reactor, string? Avalonia, string Status, string? Note);
 
     internal static RenameTable Load()
     {
@@ -235,8 +241,9 @@ internal sealed record RenameTable(
     private static List<Rename> Renames(JsonElement root, string section) =>
         root.GetProperty(section).EnumerateArray().Select(e => new Rename(
             e.GetProperty("reactor").GetString()!,
-            e.GetProperty("avalonia").GetString()!,
-            e.TryGetProperty("status", out var status) ? status.GetString()! : "applied")).ToList();
+            e.GetProperty("avalonia").GetString(),
+            e.TryGetProperty("status", out var status) ? status.GetString()! : "applied",
+            e.TryGetProperty("note", out var note) ? note.GetString() : null)).ToList();
 
     private static string Path()
     {

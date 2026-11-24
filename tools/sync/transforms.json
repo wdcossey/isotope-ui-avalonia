@@ -265,8 +265,8 @@
     },
     {
       "id": "test-textblock-text",
-      "find": "(\\btext|\\bel\\?|\\(\\(TextBlockElement\\)fallbackResult\\))\\.Content\\b",
-      "replace": "$1.Text",
+      "find": "(Assert\\.Equal\\(\"[^\"]*\", (?:text|el\\?|\\(\\(TextBlockElement\\)fallbackResult\\)))\\.Content\\)",
+      "replace": "$1.Text)",
       "why": "Our TextBlockElement has Avalonia's member name, Text, where upstream's has Content (#31; tools/naming/renames.json).",
       "files": [
         "tests/Reactor.Tests/ComponentModelIntegrationTests.cs",

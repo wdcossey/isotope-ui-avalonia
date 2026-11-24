@@ -23,6 +23,12 @@ public class ControlFactoryTests
         cb.OnIsCheckedChanged(true);
         Assert.Equal([false, true], reported);
         Assert.False(CheckBox().IsChecked.HasValue);
+        // ToggleButton's two-state factories adapt their callback the same way.
+        var toggled = new List<bool>();
+        var toggle = ToggleButton("Bold", false, toggled.Add);
+        toggle.OnIsCheckedChanged!(null);
+        toggle.OnIsCheckedChanged(true);
+        Assert.Equal([true], toggled);
         Assert.Null(CheckBox().OnIsCheckedChanged);
 
         Action<bool?> states = _ => { };

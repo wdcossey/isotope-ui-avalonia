@@ -25,14 +25,14 @@ public static partial class Factories
     /// <paramref name="onIsCheckedChanged"/>.
     /// </summary>
     public static ToggleButtonElement ToggleButton(string content, bool isChecked = false, Action<bool>? onIsCheckedChanged = null)
-        => new(content, isChecked, TwoStateToggle(onIsCheckedChanged));
+        => new(content, isChecked, TwoState(onIsCheckedChanged));
 
     /// <summary>A toggle button with any element as its content.</summary>
     /// <exception cref="ArgumentNullException"><paramref name="content"/> is null.</exception>
     public static ToggleButtonElement ToggleButton(Element content, bool isChecked = false, Action<bool>? onIsCheckedChanged = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return new(content, isChecked, TwoStateToggle(onIsCheckedChanged));
+        return new(content, isChecked, TwoState(onIsCheckedChanged));
     }
 
     /// <summary>A three-state toggle button: a click cycles checked, unchecked and indeterminate (null).</summary>
@@ -46,10 +46,6 @@ public static partial class Factories
         ArgumentNullException.ThrowIfNull(content);
         return new(content, isChecked, onIsCheckedChanged) { IsThreeState = true };
     }
-
-    // A two-state toggle's callback on the record's three-state one (a two-state button is never indeterminate).
-    private static Action<bool?>? TwoStateToggle(Action<bool>? callback) =>
-        callback is null ? null : value => callback(value ?? false);
 
     /// <summary>
     /// A button whose click repeats while it is held, as an Avalonia <see cref="Avalonia.Controls.RepeatButton"/>.

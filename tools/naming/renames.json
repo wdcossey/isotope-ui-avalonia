@@ -82,7 +82,7 @@
     {"record": "AutoSuggestBoxElement", "reactor": "IsSuggestionListOpen", "avalonia": "IsDropDownOpen", "kind": "rename"},
     {"record": "AutoSuggestBoxElement", "reactor": "OnQuerySubmitted", "avalonia": "OnQuerySubmitted", "kind": "kept", "note": "No Avalonia counterpart: AutoCompleteBox has no query-submitted event (this is Enter in the box)."},
     {"record": "AutoSuggestBoxElement", "reactor": "OnSuggestionChosen", "avalonia": "OnSuggestionChosen", "kind": "kept", "note": "No exact counterpart: Avalonia's SelectionChanged also fires when typed text matches a suggestion; this reports the user's picks only."},
-    {"record": "GridElement", "reactor": "Definition", "avalonia": ["ColumnDefinitions", "RowDefinitions"], "kind": "shape", "note": "GridDefinition(Columns, Rows) is two GridSize[] members, as Avalonia's ColumnDefinitions and RowDefinitions."},
+    {"record": "GridElement", "reactor": "Definition", "avalonia": ["ColumnDefinitions", "RowDefinitions"], "kind": "shape", "note": "GridDefinition(Columns, Rows) is two GridSize[] members, as Avalonia's ColumnDefinitions and RowDefinitions; GridDefinition is gone (see types)."},
     {"record": "MenuFlyoutItemData", "reactor": "Text", "avalonia": "Header", "kind": "rename"},
     {"record": "MenuFlyoutSubItemData", "reactor": "Text", "avalonia": "Header", "kind": "rename"},
     {"record": "ToggleMenuFlyoutItemData", "reactor": "Text", "avalonia": "Header", "kind": "rename"},
@@ -132,6 +132,7 @@
     {"reactor": "WithContextFlyout", "avalonia": "ContextFlyout", "status": "proposed"}
   ],
   "types": [
+    {"reactor": "GridDefinition", "avalonia": null, "status": "applied", "note": "Removed with GridElement.Definition: pass the GridSize[] columns and rows to GridElement or Grid(...); strings become tracks through GridSize.Parse (Array.ConvertAll(columns, GridSize.Parse))."},
     {"reactor": "TabViewElement", "avalonia": "TabControlElement", "status": "proposed"},
     {"reactor": "TabViewItemData", "avalonia": "TabItemData", "status": "proposed"},
     {"reactor": "NumberBoxElement", "avalonia": "NumericUpDownElement", "status": "proposed"},
