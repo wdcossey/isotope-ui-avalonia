@@ -137,13 +137,33 @@ public sealed class TextStylingTests
     [AvaloniaFact]
     public void The_element_wide_font_modifiers_reach_a_text_block_too()
     {
-        // As modifiers (the generic overloads), not the TextBlockElement members.
+        // Through the generic overloads, and as modifiers.
         AssertSetChangedAndCleared<TextBlock, double>(() => ((Element)TextBlock("a")).FontSize(20), () => ((Element)TextBlock("a")).FontSize(30),
             () => TextBlock("a"), c => c.FontSize, 20.0, 30.0);
         AssertSetChangedAndCleared<TextBlock, FontWeight>(() => ((Element)TextBlock("a")).FontWeight(FontWeight.Bold),
             () => ((Element)TextBlock("a")).FontWeight(FontWeight.Light), () => TextBlock("a"), c => c.FontWeight, FontWeight.Bold, FontWeight.Light);
         AssertSetChangedAndCleared<TextBlock, string>(() => ((Element)TextBlock("a")).FontFamily(Mono),
             () => ((Element)TextBlock("a")).FontFamily("Times New Roman"), () => TextBlock("a"), c => c.FontFamily.Name, "Courier New", "Times New Roman");
+        AssertSetChangedAndCleared<TextBlock, double>(() => TextBlock("a").WithModifiers(m => m with { FontSize = 20 }),
+            () => TextBlock("a").WithModifiers(m => m with { FontSize = 30 }), () => TextBlock("a"), c => c.FontSize, 20.0, 30.0);
+        AssertSetChangedAndCleared<TextBlock, FontWeight>(() => TextBlock("a").WithModifiers(m => m with { FontWeight = FontWeight.Bold }),
+            () => TextBlock("a").WithModifiers(m => m with { FontWeight = FontWeight.Light }), () => TextBlock("a"), c => c.FontWeight, FontWeight.Bold, FontWeight.Light);
+        AssertSetChangedAndCleared<TextBlock, string>(() => TextBlock("a").WithModifiers(m => m with { FontFamily = Mono }),
+            () => TextBlock("a").WithModifiers(m => m with { FontFamily = Serif }), () => TextBlock("a"), c => c.FontFamily.Name, "Courier New", "Times New Roman");
+    }
+
+    private sealed record Heading(string Title) : TextBlockElement(Title);
+
+    [AvaloniaFact]
+    public void The_last_font_call_wins_on_a_text_block_typed_as_Element_or_derived()
+    {
+        Element typed = TextBlock("a").Bold();
+        var block = new TestHost(() => typed.FontWeight(FontWeight.Light)).All<TextBlock>()[0];
+        Assert.Equal(FontWeight.Light, block.FontWeight);
+
+        var heading = new TestHost(() => (new Heading("b") { FontSize = 14, FontFamily = Mono }).FontSize(20).FontFamily("Times New Roman"))
+            .All<TextBlock>()[0];
+        Assert.Equal((20.0, "Times New Roman"), (heading.FontSize, heading.FontFamily.Name));
     }
 
     [AvaloniaFact]
@@ -154,7 +174,7 @@ public sealed class TextStylingTests
         var host = new TestHost(() =>
         {
             var text = member ? TextBlock("a").FontSize(20) : TextBlock("a");
-            return ((Element)text).FontSize(modifier);
+            return text.WithModifiers(m => m with { FontSize = modifier });
         });
         var block = host.All<TextBlock>()[0];
         Assert.Equal(20, block.FontSize);

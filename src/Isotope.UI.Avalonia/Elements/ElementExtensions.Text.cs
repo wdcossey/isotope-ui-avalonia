@@ -9,8 +9,6 @@ namespace Isotope.UI;
 // record's members and keep its type for chaining. Not here yet: IsTextSelectionEnabled (Avalonia's TextBlock has no
 // selection; SelectableTextBlock is another control), CharacterSpacing and TextDecorations (their Avalonia counterparts,
 // LetterSpacing in DIPs and a TextDecorationCollection, change shape), and Foreground(ThemeRef) (#41).
-// On a record derived from TextBlockElement, FontSize and FontFamily bind to the element-wide overloads (an identity
-// conversion beats the base-class one), so they set the modifier, which the members of the same name win over.
 
 public static partial class ElementExtensions
 {
@@ -23,19 +21,23 @@ public static partial class ElementExtensions
     public static T Foreground<T>(this T el, IBrush? brush) where T : Element =>
         el.WithModifiers(m => m with { Foreground = brush });
 
+    // On a text block (typed as Element, or a record derived from TextBlockElement), FontSize, FontWeight and FontFamily
+    // set its member, as the TextBlockElement overloads do: the member wins over the modifier, so the last call must
+    // set the member for it to take effect.
+
     /// <summary>The font size of a text block or a templated control, in DIPs.</summary>
     public static T FontSize<T>(this T el, double size) where T : Element =>
-        el.WithModifiers(m => m with { FontSize = size });
+        el is TextBlockElement text ? (T)(Element)(text with { FontSize = size }) : el.WithModifiers(m => m with { FontSize = size });
 
     /// <summary>The font weight of a text block or a templated control: <c>.FontWeight(FontWeight.SemiBold)</c>.</summary>
     public static T FontWeight<T>(this T el, FontWeight weight) where T : Element =>
-        el.WithModifiers(m => m with { FontWeight = weight });
+        el is TextBlockElement text ? (T)(Element)(text with { FontWeight = weight }) : el.WithModifiers(m => m with { FontWeight = weight });
 
     /// <summary>The font family of a text block or a templated control, by name: <c>.FontFamily("Consolas")</c>.</summary>
     public static T FontFamily<T>(this T el, string family) where T : Element => el.FontFamily(Avalonia.Media.FontFamily.Parse(family));
 
     public static T FontFamily<T>(this T el, FontFamily family) where T : Element =>
-        el.WithModifiers(m => m with { FontFamily = family });
+        el is TextBlockElement text ? (T)(Element)(text with { FontFamily = family }) : el.WithModifiers(m => m with { FontFamily = family });
 
     // ── TextBlockElement ────────────────────────────────────────────
 
@@ -47,8 +49,8 @@ public static partial class ElementExtensions
 
     public static TextBlockElement FontSize(this TextBlockElement el, double size) => el with { FontSize = size };
 
-    // Not in upstream, which has only the element-wide FontWeight: here the member wins over the modifier on a text block,
-    // so without it .Bold().FontWeight(FontWeight.Light) would stay bold.
+    // Not in upstream, which has only the element-wide FontWeight (here it sets the member too, so this one only keeps the
+    // TextBlockElement type for chaining).
     public static TextBlockElement FontWeight(this TextBlockElement el, FontWeight weight) => el with { FontWeight = weight };
 
     public static TextBlockElement FontStyle(this TextBlockElement el, FontStyle style) => el with { FontStyle = style };
