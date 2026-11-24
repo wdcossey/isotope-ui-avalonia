@@ -1,0 +1,30 @@
+<Project>
+  <!-- Packing rules for the shipped projects under src/ (#52); see Directory.Build.props. -->
+
+  <!-- This file hides any Directory.Build.targets further up, so import it (there is none today). -->
+  <PropertyGroup>
+    <_IsotopeTargetsAbove>$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)..'))</_IsotopeTargetsAbove>
+  </PropertyGroup>
+  <Import Project="$(_IsotopeTargetsAbove)" Condition="'$(_IsotopeTargetsAbove)' != ''" />
+
+  <!-- Every package carries its README, this repository's licence, and upstream's licence and third-party notices
+       (the packages ship upstream's code, Yoga included). -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildProjectDirectory)/README.md" Pack="true" PackagePath="" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)../LICENSE" Pack="true" PackagePath="" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)Upstream/LICENSE" Pack="true" PackagePath="licenses/microsoft-ui-reactor/" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)Upstream/src/Reactor/ThirdPartyNoticeText.txt" Pack="true" PackagePath="licenses/microsoft-ui-reactor/" Visible="false" />
+  </ItemGroup>
+
+  <!-- A pack without ContinuousIntegrationBuild would put this machine's paths into the DLLs and PDBs. -->
+  <Target Name="_IsotopeRequireMappedPaths" BeforeTargets="GenerateNuspec" Condition="'$(IsPackable)' == 'true' and '$(ContinuousIntegrationBuild)' != 'true'">
+    <Error Text="Pack with tools/packaging/pack.mjs (or -p:ContinuousIntegrationBuild=true), so no local path reaches the package's DLLs or PDBs." />
+  </Target>
+
+  <!-- The project URL is the repository's, as SourceLink reads it from git. -->
+  <Target Name="_IsotopePackageProjectUrl" BeforeTargets="GenerateNuspec" DependsOnTargets="InitializeSourceControlInformation" Condition="'$(IsPackable)' == 'true' and '$(PackageProjectUrl)' == ''">
+    <PropertyGroup>
+      <PackageProjectUrl>$([System.Text.RegularExpressions.Regex]::Replace('$(PrivateRepositoryUrl)', '\.git$', ''))</PackageProjectUrl>
+    </PropertyGroup>
+  </Target>
+</Project>

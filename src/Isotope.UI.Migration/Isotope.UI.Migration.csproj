@@ -10,12 +10,31 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <AssemblyName>Isotope.UI.Migration</AssemblyName>
     <RootNamespace>Isotope.UI.Migration</RootNamespace>
-    <IsPackable>false</IsPackable>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <!-- RS2008: analyzer release tracking; RS1038: the code fixes share the analyzer's assembly (one file to reference). -->
     <NoWarn>$(NoWarn);RS2008;RS1038</NoWarn>
   </PropertyGroup>
+  <!-- The package (#52; shared metadata in src/Directory.Build.props): an analyzer-only package, referenced with
+       PrivateAssets="all" for the migration and removed after it. The DLL goes to analyzers/dotnet/cs, nothing to lib/,
+       and no dependencies (the host supplies Roslyn). Its PDB is embedded, so there is no symbols package. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Isotope.UI.Migration</PackageId>
+    <Description>Moves a Microsoft.UI.Reactor (WinUI) app to Isotope.UI.Avalonia: a Roslyn analyzer with code fixes, run with dotnet format analyzers, that renames what has a counterpart and reports what has none.</Description>
+    <PackageTags>$(PackageTags);migration;analyzers;roslyn</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <IncludeSymbols>false</IncludeSymbols>
+    <DebugType>embedded</DebugType>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_IsotopePackAnalyzer</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+  <Target Name="_IsotopePackAnalyzer">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetPath)" PackagePath="analyzers/dotnet/cs" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <!-- 4.14: no newer than the compiler of the pinned .NET 11 SDK, as the generator. Workspaces: the code fixes. -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" PrivateAssets="all" />

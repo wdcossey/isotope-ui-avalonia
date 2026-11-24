@@ -10,12 +10,24 @@
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
+  <!-- The package (#52; shared metadata in src/Directory.Build.props). -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Isotope.UI.Avalonia.Desktop</PackageId>
+    <!-- XML docs in the package, for IntelliSense. CS1574/CS0419/CS1734: crefs in vendored upstream comments that name
+         WinUI types or members this library doesn't have. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1574;CS0419;CS1734</NoWarn>
+    <Description>The one-line desktop startup for Isotope.UI.Avalonia: ReactorApp.Run&lt;TRoot&gt;(title, width, height) on Windows, macOS and Linux, over a default Avalonia app builder (platform detection and the Fluent theme).</Description>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
+    <!-- PrivateAssets none: the package's dependency on Isotope.UI.Avalonia flows all its assets, so an app that
+         references only this package still gets the library's bundled generator (NuGet would exclude analyzers). -->
+    <ProjectReference Include="..\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" PrivateAssets="none" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Isotope.UI.Avalonia.Tests" />
