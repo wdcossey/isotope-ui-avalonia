@@ -121,6 +121,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A break that crashes the test host (a stack overflow) shows as a smaller Total, not as the failing test.** Rerun
   that break filtered to the one test. (2026-11-24)
 
+- **Avalonia's AutoCompleteBox raises `TextChanged` when it is shown with text,** without the text changing: drop a
+  change event that leaves the text as it was. (2026-11-24)
+- **A control's command disables it only once it is in a logical tree:** test command buttons in a headless window.
+  (2026-11-24)
+- **A subtree hung on an attached property (a tooltip) is invisible to walks over children and parents:** the dirty path
+  and the context check must go through its owner. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would
