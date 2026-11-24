@@ -234,6 +234,20 @@ public class ContainerControlTests
     }
 
     [AvaloniaFact]
+    public void Grid_keeps_its_tracks_when_a_new_definition_has_a_track_Avalonia_rejects()
+    {
+        // Upstream's GridSize (#22) accepts any Auto value; Avalonia's GridLength rejects NaN when the track is built.
+        var definition = new GridDefinition([GridSize.Px(100), GridSize.Star()], [GridSize.Auto]);
+        var host = new TestHost(() => new GridElement(definition, [TextBlock("a")]));
+        var grid = host.All<Grid>()[0];
+
+        definition = new GridDefinition([new GridSize(double.NaN, GridUnitType.Auto)], [GridSize.Star()]);
+        Assert.ThrowsAny<ArgumentException>(() => host.Render());
+        Assert.Equal([new GridLength(100), new GridLength(1, GridUnitType.Star)], grid.ColumnDefinitions.Select(c => c.Width).ToArray());
+        Assert.Equal([GridLength.Auto], grid.RowDefinitions.Select(r => r.Height).ToArray());
+    }
+
+    [AvaloniaFact]
     public void Grid_child_that_loses_its_cell_returns_to_the_first_one()
     {
         var placed = true;

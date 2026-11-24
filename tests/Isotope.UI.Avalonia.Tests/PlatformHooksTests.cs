@@ -714,8 +714,6 @@ public sealed class PlatformHooksTests : IDisposable
         => $"{scheme} {dark} {contrast} {window is not null} {size.W}x{size.H} {sizeOf.W}x{sizeOf.H} {wide} {wideOf} " +
            $"{state} {active} {position.X},{position.Y} {dpi} {displays}";
 
-    private static Window? s_probeTopLevel;
-
     // A component's text, through any decorator the component's node puts around it.
     private static string? TextOf(Control? c) => c switch
     {
@@ -724,11 +722,15 @@ public sealed class PlatformHooksTests : IDisposable
         _ => null,
     };
 
-    private sealed class PlatformProbe : Component
+    private sealed record ProbeProps(TopLevel TopLevel);
+
+    // Component<TProps> derives from Component, so it has the hooks too; the props carry the top level for the explicit
+    // overloads.
+    private sealed class PlatformProbe : Component<ProbeProps>
     {
         public override Element Render() => TextBlock(Describe(UseColorScheme(), UseIsDarkTheme(), UseHighContrast(),
-            UseWindow(), UseWindowSize(), UseWindowSize(s_probeTopLevel!), UseBreakpoint(450),
-            UseBreakpoint(s_probeTopLevel!, 450), UseWindowState(), UseIsActive(), UseWindowPosition(), UseDpi(),
+            UseWindow(), UseWindowSize(), UseWindowSize(Props.TopLevel), UseBreakpoint(450),
+            UseBreakpoint(Props.TopLevel, 450), UseWindowState(), UseIsActive(), UseWindowPosition(), UseDpi(),
             UseDisplays().Count));
     }
 
@@ -737,36 +739,28 @@ public sealed class PlatformHooksTests : IDisposable
     {
         var window = NewWindow(400, 300);
         window.RequestedThemeVariant = ThemeVariant.Dark;
-        s_probeTopLevel = window;
-        try
-        {
-            var host = Track(new ReactorHostControl(_ => VStack(
-                Component(ctx => TextBlock(Describe(ctx.UseColorScheme(), ctx.UseIsDarkTheme(), ctx.UseHighContrast(),
-                    ctx.UseWindow(), ctx.UseWindowSize(), ctx.UseWindowSize(window), ctx.UseBreakpoint(450),
-                    ctx.UseBreakpoint(window, 450), ctx.UseWindowState(), ctx.UseIsActive(), ctx.UseWindowPosition(),
-                    ctx.UseDpi(), ctx.UseDisplays().Count))),
-                new ComponentElement(typeof(PlatformProbe)))));
-            window.Content = host;
-            window.Show();
-            Pump();
-            string?[] Texts() => ((StackPanel)host.Child!).Children.Select(TextOf).ToArray();
+        var host = Track(new ReactorHostControl(_ => VStack(
+            Component(ctx => TextBlock(Describe(ctx.UseColorScheme(), ctx.UseIsDarkTheme(), ctx.UseHighContrast(),
+                ctx.UseWindow(), ctx.UseWindowSize(), ctx.UseWindowSize(window), ctx.UseBreakpoint(450),
+                ctx.UseBreakpoint(window, 450), ctx.UseWindowState(), ctx.UseIsActive(), ctx.UseWindowPosition(),
+                ctx.UseDpi(), ctx.UseDisplays().Count))),
+            new ComponentElement<ProbeProps>(typeof(PlatformProbe), new ProbeProps(window)))));
+        window.Content = host;
+        window.Show();
+        Pump();
+        string?[] Texts() => ((StackPanel)host.Child!).Children.Select(TextOf).ToArray();
 
-            var first = Texts();
-            Assert.StartsWith("Dark True False True 400x300 400x300 False False ", first[1]);
-            Assert.Equal(first[0], first[1]);
+        var first = Texts();
+        Assert.StartsWith("Dark True False True 400x300 400x300 False False ", first[1]);
+        Assert.Equal(first[0], first[1]);
 
-            // A theme change and a resize across the breakpoint re-render the class component too.
-            window.RequestedThemeVariant = ThemeVariant.Light;
-            window.Width = 500;
-            Pump();
-            var second = Texts();
-            Assert.StartsWith("Light False False True 500x300 500x300 True True ", second[1]);
-            Assert.Equal(second[0], second[1]);
-        }
-        finally
-        {
-            s_probeTopLevel = null;
-        }
+        // A theme change and a resize across the breakpoint re-render the class component too.
+        window.RequestedThemeVariant = ThemeVariant.Light;
+        window.Width = 500;
+        Pump();
+        var second = Texts();
+        Assert.StartsWith("Light False False True 500x300 500x300 True True ", second[1]);
+        Assert.Equal(second[0], second[1]);
     }
 
     private static bool s_probeAllowsClose;
@@ -784,22 +778,30 @@ public sealed class PlatformHooksTests : IDisposable
     public void A_class_components_closing_guard_cancels_a_close()
     {
         s_probeAllowsClose = false;
-        var window = NewWindow();
-        var host = Track(new ReactorHostControl(_ => new ComponentElement(typeof(GuardProbe))));
-        window.Content = host;
-        window.Show();
-        Pump();
-        bool closed = false;
-        window.Closed += (_, _) => closed = true;
+        try
+        {
+            var window = NewWindow();
+            var host = Track(new ReactorHostControl(_ => new ComponentElement(typeof(GuardProbe))));
+            window.Content = host;
+            window.Show();
+            Pump();
+            bool closed = false;
+            window.Closed += (_, _) => closed = true;
 
-        window.Close();
-        Pump();
-        Assert.False(closed);
+            window.Close();
+            Pump();
+            Assert.False(closed);
 
-        s_probeAllowsClose = true;
-        window.Close();
-        Pump();
-        Assert.True(closed);
+            s_probeAllowsClose = true;
+            window.Close();
+            Pump();
+            Assert.True(closed);
+        }
+        finally
+        {
+            // A failed assert mustn't leave the guard cancelling the cleanup's close.
+            s_probeAllowsClose = true;
+        }
     }
 
     // ── The host as content owner ──

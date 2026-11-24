@@ -59,11 +59,15 @@ namespace Isotope.UI.Core
                 get: static e => e.Definition,
                 set: static (c, v) =>
                 {
+                    // Every track is converted before the grid is touched: upstream's GridSize doesn't check an Auto
+                    // track's value, and Avalonia's GridLength rejects a bad one, so such a render fails with the
+                    // grid's tracks as they were.
+                    var columns = v is null ? [] : Array.ConvertAll(v.Columns, ColumnDefinitionOf);
+                    var rows = v is null ? [] : Array.ConvertAll(v.Rows, RowDefinitionOf);
                     c.ColumnDefinitions.Clear();
                     c.RowDefinitions.Clear();
-                    if (v is null) return;
-                    foreach (var col in v.Columns) c.ColumnDefinitions.Add(ColumnDefinitionOf(col));
-                    foreach (var row in v.Rows) c.RowDefinitions.Add(RowDefinitionOf(row));
+                    foreach (var col in columns) c.ColumnDefinitions.Add(col);
+                    foreach (var row in rows) c.RowDefinitions.Add(row);
                 });
 
         private static ColumnDefinition ColumnDefinitionOf(GridSize size)
