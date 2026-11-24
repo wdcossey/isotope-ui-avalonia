@@ -48,7 +48,7 @@ internal static partial class Guides
     /// <summary>A guide by its name, its file name or its title, in any case.</summary>
     public static Guide? Find(string name)
     {
-        var n = name.Trim();
+        var n = name.Trim().Replace('\\', '/');
         if (n.StartsWith(UriPrefix, StringComparison.OrdinalIgnoreCase)) n = n[UriPrefix.Length..];
         if (n.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) n = n[..^3];
         n = n.Replace("docs/guide/", "", StringComparison.OrdinalIgnoreCase);

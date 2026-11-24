@@ -37,6 +37,23 @@ public class ReactorNameTests
     }
 
     [Fact]
+    public void A_record_member_the_table_does_not_rename_is_found_on_its_record()
+    {
+        var text = IsotopeTools.MapReactorName("ButtonElement.OnClick");
+        Assert.Contains("Same name: the rename table has no entry for `ButtonElement.OnClick`", text);
+        Assert.Contains("member `Action? ButtonElement.OnClick { get; init; }`", text);
+    }
+
+    [Fact]
+    public void A_renamed_parameter_is_not_also_reported_as_a_same_named_modifier()
+    {
+        // "header" is ToggleSwitch's parameter, renamed; the Header modifier is another name.
+        var text = IsotopeTools.MapReactorName("header");
+        Assert.Contains("Factory parameter: `ToggleSwitch(header: …)`", text);
+        Assert.DoesNotContain("Same name", text);
+    }
+
+    [Fact]
     public void An_unknown_name_says_so()
     {
         Assert.StartsWith("`NoSuchReactorThing` is not in the rename table", IsotopeTools.MapReactorName("NoSuchReactorThing"));

@@ -4,9 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-// isotope-mcp: an MCP server over stdio. stdout carries the protocol, so every log goes to stderr.
-var builder = Host.CreateApplicationBuilder(args);
-builder.Logging.ClearProviders();
+// isotope-mcp: an MCP server over stdio. stdout carries the protocol, so every log goes to stderr. An empty builder: the
+// tool needs no configuration, so it reads no appsettings.json or user secrets from the folder a client starts it in,
+// and watches no files.
+var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings { Args = args });
 builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 

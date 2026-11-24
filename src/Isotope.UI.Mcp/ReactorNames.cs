@@ -81,11 +81,16 @@ internal static class ReactorNames
         var hits = Lookup(name, tables);
         catalog ??= ApiCatalog.Default;
         // A Reactor name the rename table doesn't hold is Isotope's name too (Button, UseState), unless the table renames it.
-        var renamed = hits.Any(h => h.StartsWith("Type:", StringComparison.Ordinal) || h.StartsWith("Factory:", StringComparison.Ordinal)
-            || h.StartsWith("Modifier:", StringComparison.Ordinal) || h.StartsWith("Member:", StringComparison.Ordinal));
-        var winui = (tables ?? MigrationTables.Default).WinUI.IsWinUINamespace(name.Trim());
-        var found = renamed || winui ? [] : catalog.Find(name.Trim().Split('.')[^1]);
-        var same = found.Any(e => e.Kind != ApiKind.Member) ? found.Where(e => e.Kind != ApiKind.Member).ToList() : [];
+        // A hit of any table section answers the name (a parameter "header" is not the Header modifier).
+        string[] answered = ["Type:", "Factory:", "Modifier:", "Member:", "Factory parameter:", "Element record:"];
+        var renamed = hits.Any(h => answered.Any(a => h.StartsWith(a, StringComparison.Ordinal)));
+        var trimmed = name.Trim();
+        if (trimmed.StartsWith(ReactorNamespace + ".", StringComparison.Ordinal)) trimmed = trimmed[(ReactorNamespace.Length + 1)..];
+        var winui = (tables ?? MigrationTables.Default).WinUI.IsWinUINamespace(trimmed);
+        // Owner.Member as a whole (ButtonElement.OnClick), else its last part (Factories.Button is Button).
+        var found = renamed || winui ? [] : catalog.Find(trimmed) is { Count: > 0 } whole ? whole : catalog.Find(trimmed.Split('.')[^1]);
+        // A bare name that is only some types' member (OnClick) is not one Isotope name; Owner.Member is.
+        var same = trimmed.Contains('.') || found.Any(e => e.Kind != ApiKind.Member) ? found.Where(e => e.Kind != ApiKind.Member || trimmed.Contains('.')).ToList() : [];
         var sb = new StringBuilder();
         if (hits.Count == 0 && same.Count == 0)
             return $"`{name.Trim()}` is not in the rename table or the migration's tables, and Isotope's API has nothing by that name. "
@@ -94,7 +99,7 @@ internal static class ReactorNames
         foreach (var h in hits) sb.AppendLine("- " + h);
         if (same.Count > 0)
         {
-            sb.AppendLine($"- Same name: the rename table has no entry for `{same[0].Name.Split('<')[0]}`, so Isotope keeps Reactor's name. Isotope has:");
+            sb.AppendLine($"- Same name: the rename table has no entry for `{trimmed}`, so Isotope keeps Reactor's name. Isotope has:");
             foreach (var e in same.Take(10)) sb.AppendLine($"  - {e.Kind.ToString().ToLowerInvariant()} `{e.Signature}`");
             if (same.Count > 10) sb.AppendLine($"  - … {same.Count - 10} more (get_api lists them all)");
         }

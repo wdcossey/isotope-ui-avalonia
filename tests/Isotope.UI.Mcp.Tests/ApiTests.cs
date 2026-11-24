@@ -38,6 +38,10 @@ public class ApiTests
         Assert.All(hooks, l => Assert.StartsWith("- hook ", l));
         Assert.Equal(2, IsotopeTools.SearchApi("button", limit: 2).Split('\n').Count(l => l.StartsWith("- ", StringComparison.Ordinal)));
         Assert.Throws<McpException>(() => IsotopeTools.SearchApi("button", kind: "widget"));
+        // Only the kinds' names: not a number, a list, or the members get_api lists.
+        Assert.Throws<McpException>(() => IsotopeTools.SearchApi("button", kind: "4"));
+        Assert.Throws<McpException>(() => IsotopeTools.SearchApi("button", kind: "factory, hook"));
+        Assert.Throws<McpException>(() => IsotopeTools.SearchApi("button", kind: "member"));
         Assert.Throws<McpException>(() => IsotopeTools.SearchApi(" "));
         Assert.StartsWith("Nothing in Isotope's API matches", IsotopeTools.SearchApi("zzqqxx"));
     }
@@ -53,6 +57,26 @@ public class ApiTests
         var snippet = Guides.Snippets.Single(s => s.Name == "use-state");
         Assert.Contains("tested snippet `use-state`", text);
         Assert.Contains(snippet.Code, text);
+    }
+
+    [Fact]
+    public void Get_api_ignores_generic_arguments_nested_or_not()
+    {
+        Assert.Contains("# RenderContext.UseState (hook)", IsotopeTools.GetApi("UseState<List<int>>"));
+        Assert.Contains("# RenderContext.UseState (hook)", IsotopeTools.GetApi("RenderContext.UseState<Dictionary<string, List<int>>>()"));
+    }
+
+    [Fact]
+    public void Hooks_are_the_Use_methods_of_a_components_context()
+    {
+        var hooks = ApiCatalog.Default.Entries.Where(e => e.Kind == ApiKind.Hook).ToList();
+        Assert.Contains(hooks, h => h.Owner == "RenderContext" && h.Name == "UseState");
+        var owners = hooks.Select(h => h.Member is System.Reflection.MethodInfo m && m.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false)
+            ? m.GetParameters()[0].ParameterType : ((System.Reflection.MethodInfo)h.Member).DeclaringType!).Distinct();
+        Assert.All(owners, t => Assert.True(typeof(RenderContext).IsAssignableFrom(t) || typeof(Component).IsAssignableFrom(t), t + " has a hook"));
+        // A Use* method elsewhere is not a hook.
+        var others = ApiCatalog.Default.Entries.Where(e => e.Kind != ApiKind.Hook && e.Member is System.Reflection.MethodInfo && e.Name.StartsWith("Use", StringComparison.Ordinal) && e.Name.Length > 3 && char.IsUpper(e.Name[3])).ToList();
+        Assert.All(others, e => Assert.False(typeof(RenderContext).IsAssignableFrom(((System.Reflection.MethodInfo)e.Member).DeclaringType!), e.Signature));
     }
 
     [Fact]

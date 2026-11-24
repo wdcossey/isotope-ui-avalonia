@@ -36,6 +36,7 @@ public class GuideTests
         }
         Assert.Equal(IsotopeTools.GetGuide("writing-components"), IsotopeTools.GetGuide("Writing components"));
         Assert.Equal(IsotopeTools.GetGuide("writing-components"), IsotopeTools.GetGuide("docs/guide/writing-components.md"));
+        Assert.Equal(IsotopeTools.GetGuide("writing-components"), IsotopeTools.GetGuide("docs\\guide\\writing-components.md"));
         var missing = Assert.Throws<McpException>(() => IsotopeTools.GetGuide("no-such-guide"));
         Assert.Contains("writing-components", missing.Message);
     }

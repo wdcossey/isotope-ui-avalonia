@@ -3,7 +3,7 @@
 // [--no-smoke]. CI runs it on every push, and the release workflow before it publishes; docs/releasing.md has the rest.
 //
 // 1. dotnet pack of each package (Release, ContinuousIntegrationBuild so no local path reaches a DLL or PDB), into
-//    --out (default bin/packages under the repo root, which git ignores). Old builds of these three packages there are
+//    --out (default bin/packages under the repo root, which git ignores). Old builds of these packages there are
 //    deleted first; a folder holding anything else is refused.
 // 2. The checks in lib/checks.mjs: layout, metadata, dependencies, symbols and SourceLink, personal data, local paths.
 // 3. The smoke test (tests/Isotope.UI.PackageSmoke): an app built against the packed packages alone, from a fresh

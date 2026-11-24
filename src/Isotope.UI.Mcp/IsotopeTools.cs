@@ -25,9 +25,10 @@ public static class IsotopeTools
         ApiKind[]? kinds = null;
         if (!string.IsNullOrWhiteSpace(kind))
         {
-            if (!Enum.TryParse<ApiKind>(kind.Trim(), ignoreCase: true, out var k) || k == ApiKind.Member)
-                throw new McpException($"Unknown kind '{kind}': use factory, modifier, hook, element or type.");
-            kinds = [k];
+            // By name only: Enum.TryParse would take "42" and "factory, hook" too.
+            var k = ApiCatalog.Searchable.Where(s => s.ToString().Equals(kind.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (k.Length == 0) throw new McpException($"Unknown kind '{kind}': use factory, modifier, hook, element or type.");
+            kinds = k;
         }
         limit = Math.Clamp(limit, 1, 200);
         var results = ApiCatalog.Default.Search(query, kinds);

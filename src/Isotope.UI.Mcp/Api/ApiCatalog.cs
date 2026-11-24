@@ -128,11 +128,18 @@ internal sealed class ApiCatalog
 
     static ApiKind Classify(Type type, MethodInfo m)
     {
-        if (m.Name.Length > 3 && m.Name.StartsWith("Use", StringComparison.Ordinal) && char.IsUpper(m.Name[3])) return ApiKind.Hook;
+        if (m.Name.Length > 3 && m.Name.StartsWith("Use", StringComparison.Ordinal) && char.IsUpper(m.Name[3]) && IsHookOwner(type, m)) return ApiKind.Hook;
         if (type.Name == "Factories" && m.IsStatic) return ApiKind.Factory;
         if (m.IsDefined(typeof(ExtensionAttribute), false) && m.GetParameters() is [var first, ..] && IsElement(first.ParameterType)) return ApiKind.Modifier;
         return ApiKind.Member;
     }
+
+    // A hook is called on a component's context: a method of RenderContext or Component, or an extension of one.
+    static bool IsHookOwner(Type type, MethodInfo m) =>
+        IsContext(type)
+        || (m.IsDefined(typeof(ExtensionAttribute), false) && m.GetParameters() is [var first, ..] && IsContext(first.ParameterType));
+
+    static bool IsContext(Type t) => typeof(RenderContext).IsAssignableFrom(t) || typeof(Isotope.UI.Core.Component).IsAssignableFrom(t);
 
     // An element type, or a type parameter constrained to one (T Margin<T>(this T el) where T : Element).
     static bool IsElement(Type t) =>
@@ -149,11 +156,13 @@ internal sealed class ApiCatalog
                 .SelectMany(n => n.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
                 .FirstOrDefault(m => m.Name == "<Extension>$")?.GetParameters().FirstOrDefault()?.ParameterType;
             if (receiver is null) continue;
-            var owner = Signatures.Display(receiver);
+            // extension<T>(T el) where T : Element: members of elements, listed under the static class, as modifiers.
+            var owner = receiver.IsGenericParameter ? Signatures.Display(type) : Signatures.Display(receiver);
             foreach (var m in group.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(Shown))
             {
                 if (m.IsSpecialName) continue;
-                yield return new ApiEntry(Classify(receiver, m), m.Name, owner, ns, signatures.Method(m, owner), DocIds.Of(m), m, xml);
+                var kind = Classify(receiver, m) is ApiKind.Member && !m.IsStatic && IsElement(receiver) ? ApiKind.Modifier : Classify(receiver, m);
+                yield return new ApiEntry(kind, m.Name, owner, ns, signatures.Method(m, owner), DocIds.Of(m), m, xml);
             }
             foreach (var p in group.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(Shown))
                 yield return new ApiEntry(ApiKind.Member, p.Name, owner, ns, signatures.Property(p, owner), DocIds.Of(p), p, xml);
@@ -234,8 +243,16 @@ internal sealed class ApiCatalog
         if (n.EndsWith("()", StringComparison.Ordinal)) n = n[..^2];
         var paren = n.IndexOf('(');
         if (paren >= 0) n = n[..paren];
-        // Generic arguments, anywhere: Command<T>.Execute, UseState<int>.
-        while (n.IndexOf('<') is var lt and >= 0 && n.IndexOf('>', lt) is var gt and > 0) n = n[..lt] + n[(gt + 1)..];
+        // Generic arguments, nested or not, anywhere: Command<T>.Execute, UseState<List<int>>.
+        var sb = new System.Text.StringBuilder(n.Length);
+        var depth = 0;
+        foreach (var ch in n)
+        {
+            if (ch == '<') depth++;
+            else if (ch == '>') depth = Math.Max(0, depth - 1);
+            else if (depth == 0) sb.Append(ch);
+        }
+        n = sb.ToString();
         if (n.StartsWith("global::", StringComparison.Ordinal)) n = n["global::".Length..];
         return n.Trim();
     }

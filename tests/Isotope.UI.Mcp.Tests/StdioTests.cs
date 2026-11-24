@@ -10,7 +10,7 @@ namespace Isotope.UI.Mcp.Tests;
 /// </summary>
 public class StdioTests
 {
-    static async Task<McpClient> StartAsync(CancellationToken ct)
+    static async Task<McpClient> StartAsync(CancellationToken ct, string? workingDirectory = null, Action<string>? stderr = null)
     {
         var tool = Path.Combine(AppContext.BaseDirectory, "Isotope.UI.Mcp.dll");
         Assert.True(File.Exists(tool), tool + " is missing");
@@ -19,6 +19,8 @@ public class StdioTests
             Name = "isotope-mcp",
             Command = "dotnet",
             Arguments = [tool],
+            WorkingDirectory = workingDirectory,
+            StandardErrorLines = stderr,
         });
         return await McpClient.CreateAsync(transport, cancellationToken: ct);
     }
@@ -28,7 +30,7 @@ public class StdioTests
     {
         var ct = TestContext.Current.CancellationToken;
         await using var client = await StartAsync(ct);
-        Assert.Equal("isotope-mcp", client.ServerInfo.Name);
+        Assert.Equal("isotope-mcp", client.ServerInfo?.Name);
         Assert.Contains("RenderContext", client.ServerInstructions ?? "");
 
         var tools = await client.ListToolsAsync(cancellationToken: ct);
@@ -53,6 +55,30 @@ public class StdioTests
         var read = await client.ReadResourceAsync("isotope://guides/writing-components", cancellationToken: ct);
         var contents = Assert.IsType<TextResourceContents>(Assert.Single(read.Contents));
         Assert.Equal(Guides.Find("writing-components")!.Markdown, contents.Text);
+    }
+
+    [Fact]
+    public async Task The_folder_it_is_started_in_does_not_configure_it()
+    {
+        // A client starts the server in the user's project, which may have its own appsettings.json: here one that
+        // would turn on every log. The server reads no configuration, so it stays quiet on stderr.
+        var ct = TestContext.Current.CancellationToken;
+        var folder = Directory.CreateTempSubdirectory("isotope-mcp-test-");
+        try
+        {
+            File.WriteAllText(Path.Combine(folder.FullName, "appsettings.json"), """{ "Logging": { "LogLevel": { "Default": "Trace" } } }""");
+            var lines = new System.Collections.Concurrent.ConcurrentQueue<string>();
+            await using (var client = await StartAsync(ct, folder.FullName, lines.Enqueue))
+            {
+                await client.ListToolsAsync(cancellationToken: ct);
+                await client.CallToolAsync("list_guides", cancellationToken: ct);
+            }
+            Assert.True(lines.IsEmpty, "the server logged:\n" + string.Join("\n", lines.Take(10)));
+        }
+        finally
+        {
+            folder.Delete(recursive: true);
+        }
     }
 
     [Fact]
