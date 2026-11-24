@@ -43,7 +43,6 @@
     {"factory": "XamlHost", "status": "winui-only", "alternative": "WinUI XAML interop: Avalonia has no WinUI XAML. Port the XAML to elements, or host an Avalonia control."},
     {"factory": "XamlPage", "status": "winui-only", "alternative": "WinUI XAML interop: Avalonia has no WinUI XAML. Port the XAML to elements."},
     {"factory": "AcrylicBrush", "status": "winui-only", "alternative": "Avalonia's acrylic is a window backdrop (TransparencyLevelHint), not a brush."},
-    {"factory": "Accelerator", "status": "not-ported", "alternative": "Not in Isotope yet: Avalonia uses KeyGesture (HotKey on buttons and menu items)."},
     {"factory": "BitmapIcon", "status": "not-ported", "alternative": "Not in Isotope yet: Avalonia has an Image."},
     {"factory": "Body", "status": "not-ported", "alternative": "Not in Isotope yet (named text style): use TextBlock(...)."},
     {"factory": "BodyLarge", "status": "not-ported", "alternative": "Not in Isotope yet (named text style): use TextBlock(...)."},
