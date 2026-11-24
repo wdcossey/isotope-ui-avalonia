@@ -444,7 +444,7 @@
     {
       "path": "src/Reactor/Core/Theme.cs",
       "tier": 2,
-      "note": "Spike A: needs edits (8 edit lines)"
+      "note": "Compiled since #41: ThemeRef's WinUI resolution dropped (Roslyn rules), Avalonia's in Seam/ThemeRef.Avalonia.cs; Theme's tokens as upstream's"
     },
     {
       "path": "src/Reactor/Controls/Virtualization/VirtualListElement.cs",

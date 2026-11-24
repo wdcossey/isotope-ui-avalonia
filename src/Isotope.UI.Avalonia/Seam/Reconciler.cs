@@ -616,6 +616,8 @@ public sealed partial class Reconciler
 
     private static void ApplyModifiers(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
     {
+        // #41: the element's theme tokens (Reconciler.Theme.cs), below the modifiers' own brushes.
+        ApplyThemeBindings(control, newEl.ThemeBindings);
         // Background has two sources on a Border element, its own and the modifier: written as one value, the
         // element's first, so neither overwrites the other (upstream folds them in Border's descriptor).
         if (BackgroundProperty(control) is { } background)
@@ -631,6 +633,9 @@ public sealed partial class Reconciler
         Set(control, Layoutable.HorizontalAlignmentProperty, oldM?.HorizontalAlignment, newM?.HorizontalAlignment);
         Set(control, Layoutable.VerticalAlignmentProperty, oldM?.VerticalAlignment, newM?.VerticalAlignment);
         Set(control, Visual.OpacityProperty, oldM?.Opacity, newM?.Opacity);
+        // #41: a Border element's own BorderThickness is its descriptor's to write.
+        if (control is TemplatedControl)
+            Set(control, TemplatedControl.BorderThicknessProperty, oldM?.BorderThickness, newM?.BorderThickness);
         SetRef(control, AutomationProperties.NameProperty, oldM?.AutomationName, newM?.AutomationName);
         // #26: the tooltip's placement (its text is written above) and the context menu.
         Set(control, ToolTip.PlacementProperty, oldM?.ToolTipPlacement, newM?.ToolTipPlacement);

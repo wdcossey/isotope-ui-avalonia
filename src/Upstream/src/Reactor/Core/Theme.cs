@@ -1,6 +1,6 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Theme.cs, last changed upstream in 1265b8653d15; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Theme.cs, last changed upstream in 1265b8653d15; transforms: drop-ThemeRef-Resolve-element, drop-ThemeRef-ResolveForTheme, drop-ThemeRef-ResolveForThemeUncached, drop-ThemeRef-ResolveFromDictionaries, drop-ThemeRef-GetEffectiveThemeName, drop-ThemeRef-TryResolveFromThemeDictionaries, drop-ThemeRef-ResolveFromDictionariesForTest, theme-ref-partial, theme-brush-alias, winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 
-
+using Brush = Avalonia.Media.IBrush;
 
 namespace Isotope.UI.Core;
 
@@ -9,22 +9,22 @@ namespace Isotope.UI.Core;
 /// Use via <see cref="Theme"/> tokens or <see cref="Theme.Ref"/> for custom keys.
 /// </summary>
 // <snippet:theme-ref>
-public readonly record struct ThemeRef(string ResourceKey)
+public readonly partial record struct ThemeRef(string ResourceKey)
 {
     public override string ToString() => $"ThemeRef({ResourceKey})";
 
-    /// <summary>
-    /// Resolves this theme reference using the element's actual theme.
-    /// The theme is the element's effective theme (which respects per-element
-    /// RequestedTheme overrides, not just the app-level theme). WinUI resolves the
-    /// key for that theme, as a <c>{ThemeResource}</c> reference on an element in that
-    /// theme would, instead of Reactor reading the theme dictionaries (issue #1534).
-    /// </summary>
-    internal static Brush? Resolve(string resourceKey, FrameworkElement fe)
-    {
-        var themeName = GetEffectiveThemeName(fe);
-        return ResolveForTheme(resourceKey, themeName);
-    }
+
+
+
+
+
+
+
+
+
+
+
+
 // </snippet:theme-ref>
 
     /// <summary>
@@ -111,139 +111,139 @@ public readonly record struct ThemeRef(string ResourceKey)
     internal static bool IsResolutionCachedForTest(string resourceKey, string themeName, int capturedGeneration)
         => TryGetCurrentResolution((resourceKey, themeName), capturedGeneration, out _);
 
-    private static Brush? ResolveForTheme(string resourceKey, string themeName)
-    {
-        var resources = Application.Current?.Resources;
-        // Don't consult or populate the cache while resources are transiently
-        // unavailable (very early startup) — caching a null here would be stale
-        // once XamlControlsResources loads. A theme change later clears the cache
-        // anyway, but this avoids a poisoned entry in the first place.
-        if (resources is null) return null;
 
-        var cacheKey = (resourceKey, themeName);
-        int generation = Volatile.Read(ref s_resolutionGeneration);
-        if (TryGetCurrentResolution(cacheKey, generation, out var cached))
-            return cached;
 
-        var resolved = ResolveForThemeUncached(resources, resourceKey, themeName);
-        // Issue #660 review: cache ONLY a successful (non-null) resolution. A null
-        // means "key not found right now" — caching it would go stale if a
-        // ResourceDictionary defining that key is merged in after this first
-        // resolve (a dictionary add fires no theme-change event, so the cache
-        // wouldn't be cleared). Unknown keys are rare, so each resolve of one simply
-        // looks again: since issue #1534 that is a failed WinUI parse plus the dictionary
-        // walk (roughly 1.5 ms on a dev machine), so don't resolve a missing key per cell.
-        if (resolved is not null)
-            s_resolutionCache[cacheKey] = (generation, resolved);
-        return resolved;
-    }
 
-    private static Brush? ResolveForThemeUncached(ResourceDictionary resources, string resourceKey, string themeName)
-    {
-        // Issue #1534: let WinUI resolve the key for the theme instead of reading the theme
-        // dictionaries from code. WinUI creates a theme dictionary entry on its first read and
-        // resolves it for the APPLICATION theme, so reading the other theme's entry here returned
-        // the app theme's brush and fixed that brush for every element in the app.
-        // ThemeResourceProbe explains how the probe avoids that.
-        var theme = themeName == "Dark" ? ElementTheme.Dark : ElementTheme.Light;
-        if (ThemeResourceProbe.TryResolve(resourceKey, theme, out var value))
-            return value as Brush;
 
-        // WinUI did not find the key for this theme. That covers keys missing everywhere and
-        // keys an app dictionary defines only for some themes (for example only in Dark, or
-        // only in Default next to Light and Dark), which the dictionary walk below has always
-        // found. The walk never reads XamlControlsResources' own theme dictionaries: reading them
-        // from code is what caused issue #1534, and every key WinUI can resolve has already been
-        // answered above.
-        return ResolveFromDictionaries(resources, resourceKey, themeName);
-    }
 
-    private static Brush? ResolveFromDictionaries(ResourceDictionary resources, string resourceKey, string themeName)
-    {
-        // WinUI's XamlControlsResources ThemeDictionary keys vary by app configuration:
-        //   Keys observed: "Default", "Light", "HighContrast" (no "Dark")
-        // "Default" contains the base/dark brushes; "Light" contains light overrides.
-        // Try the exact theme name first, then "Default" as the universal fallback.
-        if (TryResolveFromThemeDictionaries(resources, resourceKey, themeName, out var brush))
-            return brush;
-        if (TryResolveFromThemeDictionaries(resources, resourceKey, "Default", out brush))
-            return brush;
 
-        // Fallback: non-themed resource lookup (including MergedDictionaries)
-        if (ResourceLookup.TryFind<Brush>(resources, resourceKey, out var fb))
-            return fb;
 
-        return null;
-    }
 
-    /// <summary>
-    /// Determines the effective theme by walking up the visual tree looking for
-    /// the nearest explicit RequestedTheme. This is more reliable than ActualTheme
-    /// during reconciliation, because ActualTheme is a dependency property that
-    /// may not have propagated yet within the same synchronous update pass.
-    /// </summary>
-    private static string GetEffectiveThemeName(FrameworkElement fe)
-    {
-        // Check the element's own RequestedTheme first
-        if (fe.RequestedTheme != ElementTheme.Default)
-            return fe.RequestedTheme == ElementTheme.Dark ? "Dark" : "Light";
 
-        // Walk up the visual tree for the nearest override
-        var parent = VisualTreeHelper.GetParent(fe) as FrameworkElement;
-        while (parent is not null)
-        {
-            if (parent.RequestedTheme != ElementTheme.Default)
-                return parent.RequestedTheme == ElementTheme.Dark ? "Dark" : "Light";
-            parent = VisualTreeHelper.GetParent(parent) as FrameworkElement;
-        }
 
-        // No override found — check ActualTheme (reliable for elements already in the tree)
-        if (fe.ActualTheme != ElementTheme.Default)
-            return fe.ActualTheme == ElementTheme.Dark ? "Dark" : "Light";
 
-        // Final fallback: application theme
-        return Application.Current?.RequestedTheme == ApplicationTheme.Dark ? "Dark" : "Light";
-    }
 
-    private static bool TryResolveFromThemeDictionaries(
-        ResourceDictionary resources, string key, string themeName, out Brush? brush)
-    {
-        // Never read XamlControlsResources' theme dictionaries from code, whether it is a merged
-        // dictionary or Application.Resources itself (ReactorApplication.xaml): that fixes WinUI's
-        // entries to the app theme's values for every element (#1534). Its keys resolve through
-        // ThemeResourceProbe instead.
-        bool isWinUIResources = resources is Microsoft.UI.Xaml.Controls.XamlControlsResources;
 
-        // Check this dictionary's ThemeDictionaries
-        if (!isWinUIResources
-            && resources.ThemeDictionaries.TryGetValue(themeName, out var themeObj)
-            && themeObj is ResourceDictionary themeDict
-            && themeDict.TryGetValue(key, out var themed)
-            && themed is Brush themedBrush)
-        {
-            brush = themedBrush;
-            return true;
-        }
 
-        // Check MergedDictionaries, including those of a XamlControlsResources: the guard above
-        // skips WinUI's own theme entries at every level, and app dictionaries merged into it
-        // are still searched.
-        foreach (var merged in resources.MergedDictionaries)
-        {
-            if (TryResolveFromThemeDictionaries(merged, key, themeName, out brush))
-                return true;
-        }
 
-        brush = null;
-        return false;
-    }
 
-    /// <summary>
-    /// Test seam: the dictionary-walk fallback alone, against <c>Application.Current.Resources</c>,
-    /// so a fresh-process test can prove it never reads WinUI's own theme entries.
-    /// </summary>
-    internal static Brush? ResolveFromDictionariesForTest(string resourceKey, string themeName)
-        => Application.Current?.Resources is { } resources ? ResolveFromDictionaries(resources, resourceKey, themeName) : null;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 /// <summary>

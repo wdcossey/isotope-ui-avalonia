@@ -54,12 +54,6 @@ namespace Isotope.UI.Input
     }
 }
 
-namespace Isotope.UI.Core
-{
-    /// <summary>A reference to a theme resource by key. Theming is tier 3.</summary>
-    public readonly record struct ThemeRef(string ResourceKey);
-}
-
 namespace Isotope.UI.Elements
 {
     /// <summary>Per-control resource overrides. Tier 3: recorded on elements, not applied on Avalonia yet.</summary>
