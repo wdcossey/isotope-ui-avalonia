@@ -6,7 +6,7 @@ the library's tests use them, .NET SDK 11.0.100 targeting `net10.0`, Release. Pr
 ## Answer
 
 - **Pooling: don't port it. Close #14 with these numbers.**
-  - Creating controls is cheap on Avalonia: 4,000 controls (1,000 rows) in 2.3 to 3.9 ms.
+  - Creating controls is cheap on Avalonia: 4,000 controls (1,000 rows) in 2.4 to 2.8 ms.
   - With upstream's pool policy (at most 32 controls per type), re-keying 1,000 rows in a window gains nothing
     measurable over creating them.
   - Reuse only pays with a pool big enough to hold every row: in a window, 16% on a full re-key and 52% on a mount. That
@@ -65,7 +65,7 @@ Border, so a row is 4 controls.
   `dotnet run -c Release --project spikes/I-pooling/Measure` (1,000 rows, 7 runs), in ms of the change plus layout and
   posted jobs. The change alone is in brackets where it matters.
 - **A floor of about 5 ms** shows in every window case that changes the tree, even a one-row move (5.0 to 6.9 ms). It is
-  the layout pass and the jobs a change posts, whatever its size; a re-render that changes nothing doesn't pay it.
+  the layout pass and the jobs a change posts, whatever its size [J]; a re-render that changes nothing doesn't pay it.
 
 ## Results
 
