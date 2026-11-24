@@ -152,6 +152,21 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## Weekly sync job and the first real sync (issue #5, 2026-11-24)
+
+- **The job:** `.github/workflows/upstream-sync.yml` runs weekly (Monday 05:17 UTC), and on `workflow_dispatch` with a
+  `dry_run` input. A push touching the workflow or `tools/sync/**` gets a dry run.
+  - **Runner:** `vars.SYNC_RUNNER || 'ubuntu-latest'`.
+  - **When upstream changed:** it pushes `sync/<old>-<new>` with the regenerated files, starts CI on it, and opens an issue
+    with the report (upstream references are put in code spans, so nobody upstream is pinged). Duplicate ranges are skipped.
+  - **The glue:** `tools/sync/ci/upstream-sync.mjs`, with 22 tests.
+- **The first sync that changed vendored files** (`14172dce` → `1f078436`): 7 upstream commits, 5 vendored files changed, no
+  transform broke.
+  - The library build broke on one new tier 3 type (2 errors), fixed with a placeholder.
+  - 3 tier 3 PRs were read; none needs porting.
+  - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
+  - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
+
 ## Roslyn transforms (issue #4, 2026-11-24)
 
 - **Decision: Roslyn complements the text-based drops; it doesn't replace them.** All 88 text drops convert to Roslyn drops

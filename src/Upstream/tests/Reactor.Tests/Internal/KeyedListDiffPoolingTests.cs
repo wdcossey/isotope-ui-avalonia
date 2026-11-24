@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/Internal/KeyedListDiffPoolingTests.cs, last changed upstream in 628fb7f4d10a; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/Internal/KeyedListDiffPoolingTests.cs, last changed upstream in e24d1a498a55; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Specialized;
 using Isotope.UI.Core.Internal;
 using Xunit;
@@ -8,7 +8,7 @@ namespace Isotope.UI.Tests.Internal;
 /// <summary>
 /// Regression coverage for the per-diff allocation-elimination work
 /// (issue #653): the keyed list diff now rents its working buffers from
-/// <see cref="System.Buffers.ArrayPool{T}"/> and reuses <see cref="ReactorListState.Scratch"/>
+/// <see cref="global::System.Buffers.ArrayPool{T}"/> and reuses <see cref="ReactorListState.Scratch"/>
 /// for the duplicate scan, and the no-op / empty fast paths now run ABOVE the
 /// duplicate check. These tests assert that pooling never corrupts results —
 /// across sequential diffs that share the pool, across interleaved diffs on

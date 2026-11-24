@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildReconciler.cs, last changed upstream in 7258869cc711; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/ChildReconciler.cs, last changed upstream in 244b77b228af; transforms: winui-usings, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Buffers;
 using System.Collections.Concurrent;
 
@@ -1369,11 +1369,10 @@ internal static class ChildReconciler
         try
         {
             var visual = Animation.AnimationHelper.GetElementVisual(ctrl);
-            var compositor = visual.Compositor;
-            var anim = Animation.AnimationHelper.CreateVector3ImplicitAnimation(compositor, "Offset", curve);
-            var coll = compositor.CreateImplicitAnimationCollection();
-            coll["Offset"] = anim;
-            visual.ImplicitAnimations = coll;
+            var anim = Animation.AnimationHelper.CreateVector3ImplicitAnimation(visual.Compositor, "Offset", curve);
+            // A declared layout, .Animate() or transition Offset key wins over the ambient move,
+            // and the element's other keys stay (spec 066 §6).
+            Animation.ImplicitAnimationSlots.Claim(ctrl, "Offset", Animation.ImplicitFeature.Move, 0, anim);
         }
         catch
         {

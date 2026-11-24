@@ -7,3 +7,4 @@ import './check.test.mjs';
 import './report.test.mjs';
 import './personal.test.mjs';
 import './roslyn.test.mjs';
+import '../ci/upstream-sync.test.mjs';
