@@ -8,8 +8,8 @@ namespace Isotope.UI.Core;
 
 // The rest of the button family (#26): ToggleButton, RepeatButton and HyperlinkButton. Records mirror upstream's
 // (Reactor's member names, Avalonia's value types); descriptors are generated. Each takes a string or, through
-// ContentElement, any element as its content (WithContent, as upstream's). Upstream's Command members aren't here yet:
-// no button on Avalonia binds a Command so far.
+// ContentElement, any element as its content (WithContent, as upstream's). Each takes upstream's Command (#29), mapped
+// to Avalonia's ICommand (CommandBindings).
 
 /// <summary>
 /// A button that stays pressed, as an Avalonia <see cref="Avalonia.Controls.Primitives.ToggleButton"/>.
@@ -21,6 +21,7 @@ namespace Isotope.UI.Core;
 [WrapManual("IsThreeState")]
 [WrapManual("IsChecked")]
 [WrapManual("CheckedState")]
+[WrapManual("Command")]
 public partial record ToggleButtonElement(string Label, bool IsChecked = false, Action<bool>? OnIsCheckedChanged = null) : Element
 {
     /// <summary>Whether a click cycles through the indeterminate state (null) too; uses <see cref="CheckedState"/>.</summary>
@@ -35,9 +36,16 @@ public partial record ToggleButtonElement(string Label, bool IsChecked = false, 
     /// <summary>Declarative content, taking precedence over <see cref="Label"/>.</summary>
     public Element? ContentElement { get; init; }
 
+    /// <summary>
+    /// The command each toggle runs (upstream's member, #29), unless a checked-changed callback is set, which wins. It
+    /// disables the button while <see cref="Core.Command.IsEnabled"/> is false.
+    /// </summary>
+    public Command? Command { get; init; }
+
     internal Action<ToggleButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsCheckedChanged is not null || OnCheckedStateChanged is not null;
+    internal override bool HasCallbacks =>
+        OnIsCheckedChanged is not null || CommandBindings.EffectiveCallback(OnCheckedStateChanged, Command) is not null;
 
     // As upstream's: the click reads the toggled value back and calls both callbacks. Avalonia's ToggleButton toggles in
     // OnClick before it raises Click, as WinUI's does. Listening to Click, not IsCheckedChanged, means the engine's own
@@ -65,7 +73,8 @@ public partial record ToggleButtonElement(string Label, bool IsChecked = false, 
                 callbackPresent: static e => (Delegate?)e.OnIsCheckedChanged ?? e.OnCheckedStateChanged,
                 trampoline:      __ClickTrampoline,
                 slotIsNull:      static p => p.ClickTrampoline is null,
-                setSlot:         static (p, h) => p.ClickTrampoline = h);
+                setSlot:         static (p, h) => p.ClickTrampoline = h)
+            .OneWayCommand(static e => e.Command, static e => e.OnIsCheckedChanged is not null || e.OnCheckedStateChanged is not null);
 }
 
 /// <summary>
@@ -74,6 +83,7 @@ public partial record ToggleButtonElement(string Label, bool IsChecked = false, 
 /// </summary>
 [GenerateReactorDescriptor(typeof(RepeatButton))]
 [WrapManual("Label")]
+[WrapManual("Command")]
 public partial record RepeatButtonElement(string Label, Action? OnClick = null) : Element
 {
     /// <summary>Milliseconds before the first repeat (upstream's default, 250).</summary>
@@ -85,12 +95,16 @@ public partial record RepeatButtonElement(string Label, Action? OnClick = null) 
     /// <summary>Declarative content, taking precedence over <see cref="Label"/>.</summary>
     public Element? ContentElement { get; init; }
 
+    /// <summary>The command each repeat runs (upstream's member, #29), unless <see cref="OnClick"/> is set, which wins.</summary>
+    public Command? Command { get; init; }
+
     internal Action<RepeatButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnClick is not null;
+    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
 
     private static partial ControlDescriptor<RepeatButtonElement, RepeatButton> Customize(ControlDescriptor<RepeatButtonElement, RepeatButton> d)
-        => d.WithContent(static e => e.ContentElement, static e => e.Label);
+        => d.WithContent(static e => e.ContentElement, static e => e.Label)
+            .OneWayCommand(static e => e.Command, static e => e.OnClick is not null);
 }
 
 /// <summary>
@@ -100,15 +114,20 @@ public partial record RepeatButtonElement(string Label, Action? OnClick = null) 
 [GenerateReactorDescriptor(typeof(HyperlinkButton), ClearValueOnUnset = true)]
 [WrapManual("Content")]
 [WrapManual("ContentElement")]
+[WrapManual("Command")]
 public partial record HyperlinkButtonElement(string Content, Uri? NavigateUri = null, Action? OnClick = null) : Element
 {
     /// <summary>Declarative content, taking precedence over the text <see cref="Content"/>.</summary>
     public Element? ContentElement { get; init; }
 
+    /// <summary>The command a click runs (upstream's member, #29), unless <see cref="OnClick"/> is set, which wins.</summary>
+    public Command? Command { get; init; }
+
     internal Action<HyperlinkButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnClick is not null;
+    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
 
     private static partial ControlDescriptor<HyperlinkButtonElement, HyperlinkButton> Customize(ControlDescriptor<HyperlinkButtonElement, HyperlinkButton> d)
-        => d.WithContent(static e => e.ContentElement, static e => e.Content);
+        => d.WithContent(static e => e.ContentElement, static e => e.Content)
+            .OneWayCommand(static e => e.Command, static e => e.OnClick is not null);
 }

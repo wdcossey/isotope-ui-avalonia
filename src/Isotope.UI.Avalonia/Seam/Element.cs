@@ -85,7 +85,8 @@ public abstract record Element
             (EmptyElement, EmptyElement) => true,
             (TextBlockElement x, TextBlockElement y) => x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
             (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
             (FlexElement x, FlexElement y) => x.Direction == y.Direction && x.JustifyContent == y.JustifyContent
@@ -130,11 +131,14 @@ public abstract record Element
             // upstream's, ToggleButton's compares the three-state members too, so a changed CheckedState is written.
             (ToggleButtonElement x, ToggleButtonElement y) => x.Label == y.Label && x.IsChecked == y.IsChecked
                 && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command),
             (RepeatButtonElement x, RepeatButtonElement y) => x.Label == y.Label && x.Delay == y.Delay && x.Interval == y.Interval
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command),
             (HyperlinkButtonElement x, HyperlinkButtonElement y) => x.Content == y.Content && x.NavigateUri == y.NavigateUri
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command),
             (NumberBoxElement x, NumberBoxElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && x.SmallChange == y.SmallChange && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
                 && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
