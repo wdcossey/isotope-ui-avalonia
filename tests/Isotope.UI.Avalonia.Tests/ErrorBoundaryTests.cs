@@ -391,6 +391,14 @@ public sealed class ErrorBoundaryTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void A_fatal_error_passes_through_a_boundary()
+    {
+        Assert.Throws<OutOfMemoryException>(() => new TestHost(() => ErrorBoundary(
+            Component(_ => throw new OutOfMemoryException()),
+            _ => TextBlock("fallback"))));
+    }
+
+    [AvaloniaFact]
     public void An_error_outside_every_boundary_still_reaches_the_host()
     {
         var errors = new List<RenderError>();
