@@ -51,9 +51,11 @@ public partial record TextBlockElement
     internal static bool TextStylingEquals(TextBlockElement x, TextBlockElement y)
         => x.FontSize == y.FontSize && x.FontWeight == y.FontWeight && x.FontStyle == y.FontStyle
             && Equals(x.FontFamily, y.FontFamily) && x.TextWrapping == y.TextWrapping && x.TextAlignment == y.TextAlignment
-            && Equals(x.TextTrimming, y.TextTrimming) && x.LineHeight == y.LineHeight && x.MaxLines == y.MaxLines;
+            && Equals(x.TextTrimming, y.TextTrimming) && x.LineHeight == y.LineHeight && x.MaxLines == y.MaxLines
+            && TextStyleEquals(x, y);
 
-    private static partial ControlDescriptor<TextBlockElement, TextBlock> Customize(ControlDescriptor<TextBlockElement, TextBlock> d) => d;
+    // The named text styles' members (#44, TextStyles.cs).
+    private static partial ControlDescriptor<TextBlockElement, TextBlock> Customize(ControlDescriptor<TextBlockElement, TextBlock> d) => CustomizeTextStyles(d);
 }
 
 public partial record ElementModifiers

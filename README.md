@@ -38,7 +38,8 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   (`UseResource`, `UseMutation`, `UseInfiniteResource`). They come from Reactor's own engine, vendored unchanged or
   through deterministic transforms, so their semantics and fixes track upstream.
 - **Platform hooks**, with Reactor's names, written for Avalonia: theme and colour scheme, high contrast, windows,
-  displays and DPI ([guide](docs/guide/platform-hooks.md)), and Reactor's theme tokens (`Theme.*`, [guide](docs/guide/theme-tokens.md)).
+  displays and DPI ([guide](docs/guide/platform-hooks.md)), Reactor's theme tokens (`Theme.*`, [guide](docs/guide/theme-tokens.md)), and its named text styles (`Title`, `Body`,
+  `Caption`…, [guide](docs/guide/text-styles.md)).
 - **32 controls:** text and image; button, toggle, repeat and hyperlink buttons; check box, radio button, toggle
   switch; text box, number box, auto-suggest box, combo box, list box, slider, progress; date and time pickers; tabs,
   menus, context menus and tooltips; split view, expander, border, scroll viewer, separator, tree view, viewbox; and
@@ -49,10 +50,10 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   ([`samples/Isotope.UI.Samples`](samples/Isotope.UI.Samples)).
 - **A Reactor → Isotope migration tool:** a Roslyn analyzer with code fixes, run with `dotnet format analyzers`
   ([guide](docs/guide/migrating-from-reactor.md)).
-- **Tests:** 1,156 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,183 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
-Not there yet: Reactor's named text styles and more controls (tracked from what the migration tool
-finds missing in upstream's samples, #35), animation, and packages.
+Not there yet: more controls (rich text, icons, list views…), tracked from what the migration tool finds missing in
+upstream's samples (#35); animation; and packages.
 
 ## Try it
 
@@ -93,7 +94,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `samples/Isotope.UI.Samples/` | The sample app: a tab per area (counter and todo, buttons, menus, numbers, split view, error boundary), with a real-window checklist in its README |
 | `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the library, upstream's engine tests, and every C# block in the docs |
 | `tests/Isotope.UI.Migration.Tests/` | Tests of the migration's rules, compiled against the library |
-| `docs/guide/` | Writing components, platform hooks, error boundaries, migrating from Reactor: all from tested code |
+| `docs/guide/` | Writing components, platform hooks, theme tokens, text styles, error boundaries, migrating from Reactor: all from tested code |
 | `FINDINGS.md`, `docs/spikes/`, `spikes/` | Research notes and the spikes behind the design |
 | `docs/sync/` | Sync reports (what changed upstream, and the tier 3 PRs to port) |
 | `tools/sync/` | Vendor and regenerate (`node tools/sync/sync.mjs --help`), and the weekly sync job's glue |
@@ -110,8 +111,8 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1156 tests; needs no upstream/)
-dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (44 tests)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1183 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (45 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
 dotnet test tools/sync/verify/Upstream.Yoga.Tests        # upstream's Yoga tests on the vendored code

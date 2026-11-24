@@ -137,13 +137,24 @@
     {"factory": "Grid", "reactor": "rows", "avalonia": "rowDefinitions"},
     {"factory": "TreeView", "reactor": "nodes", "avalonia": "items"},
     {"factory": "TreeViewItem", "reactor": "content", "avalonia": "header"},
-    {"factory": "TreeViewItem", "reactor": "children", "avalonia": "items"}
+    {"factory": "TreeViewItem", "reactor": "children", "avalonia": "items"},
+    {"factory": "Heading", "reactor": "content", "avalonia": "text"},
+    {"factory": "SubHeading", "reactor": "content", "avalonia": "text"},
+    {"factory": "Caption", "reactor": "content", "avalonia": "text"},
+    {"factory": "Title", "reactor": "content", "avalonia": "text"},
+    {"factory": "Subtitle", "reactor": "content", "avalonia": "text"},
+    {"factory": "Body", "reactor": "content", "avalonia": "text"},
+    {"factory": "BodyStrong", "reactor": "content", "avalonia": "text"},
+    {"factory": "BodyLarge", "reactor": "content", "avalonia": "text"},
+    {"factory": "TitleLarge", "reactor": "content", "avalonia": "text"},
+    {"factory": "Display", "reactor": "content", "avalonia": "text"}
   ],
   "modifiers": [
     {"reactor": "HeaderContent", "avalonia": "Header", "target": "ExpanderElement", "status": "applied"},
     {"reactor": "HAlign", "avalonia": "HorizontalAlignment", "status": "proposed"},
     {"reactor": "VAlign", "avalonia": "VerticalAlignment", "status": "proposed"},
-    {"reactor": "WithContextFlyout", "avalonia": "ContextFlyout", "status": "proposed"}
+    {"reactor": "WithContextFlyout", "avalonia": "ContextFlyout", "status": "proposed"},
+    {"reactor": "ApplyStyle", "avalonia": "ApplyStyle", "target": "TextBlockElement", "status": "kept", "note": "No Avalonia counterpart by name: Avalonia sets a ControlTheme through Theme. This sets one by resource key (a WinUI style key), with Isotope's type ramp as the fallback; text blocks only (#44)."}
   ],
   "types": [
     {"reactor": "GridDefinition", "avalonia": null, "status": "applied", "note": "Removed with GridElement.Definition: pass the GridSize[] columns and rows to GridElement or Grid(...); strings become tracks through GridSize.Parse (Array.ConvertAll(columns, GridSize.Parse))."},
@@ -166,6 +177,17 @@
     {"reactor": "AutoSuggestBox", "avalonia": "AutoCompleteBox", "status": "proposed"},
     {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"},
     {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "with": "HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation): a ScrollViewer with its horizontal scroll bar disabled, which the migration writes (#43)."},
-    {"reactor": "TreeNode", "avalonia": "TreeViewItem", "status": "applied", "note": "Avalonia's name for a tree view node (#43)."}
+    {"reactor": "TreeNode", "avalonia": "TreeViewItem", "status": "applied", "note": "Avalonia's name for a tree view node (#43)."},
+    {"reactor": "Heading", "avalonia": "Heading", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no named text-style factories): a TextBlock with upstream's fixed values (#44)."},
+    {"reactor": "SubHeading", "avalonia": "SubHeading", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no named text-style factories): a TextBlock with upstream's fixed values (#44)."},
+    {"reactor": "Caption", "avalonia": "Caption", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no named text-style factories): a TextBlock with upstream's fixed values (#44)."},
+    {"reactor": "Title", "avalonia": "Title", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's TitleTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "Subtitle", "avalonia": "Subtitle", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's SubtitleTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "Body", "avalonia": "Body", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's BodyTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "BodyStrong", "avalonia": "BodyStrong", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's BodyStrongTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "BodyLarge", "avalonia": "BodyLarge", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's BodyLargeTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "TitleLarge", "avalonia": "TitleLarge", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's TitleLargeTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "Display", "avalonia": "Display", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no type-ramp factories): a TextBlock with WinUI's DisplayTextBlockStyle, a ControlTheme by key (#44)."},
+    {"reactor": "Card", "avalonia": "Card", "status": "kept", "note": "No Avalonia counterpart (Avalonia has no card control): a Border with WinUI's card look and theme brushes (#44)."}
   ]
 }
