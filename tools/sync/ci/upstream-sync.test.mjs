@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, symlinkSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -318,6 +318,55 @@ test('a GET of a list follows the Link pages; other replies are returned as they
   await assert.rejects(api('GET', '/missing'), /GET \/missing failed: HTTP 404/);
 });
 
+test('a dry run runs the sync even where a real run would skip it, and says what the real run would do', async () => {
+  const f = fixture();
+  try {
+    const next = f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    const title = 'Upstream sync ' + f.base.slice(0, 8) + ' → ' + next.slice(0, 8);
+    let r = await f.job({ dryRun: true }, { api: fakeApi({ issues: [{ number: 7, title, state: 'open' }] }).api });
+    assert.equal(r.status, 'dry-run');
+    assert.match(r.plan, /^do nothing: issue #7 \(open\) is for this range$/);
+    assert.match(r.body, /# Upstream sync/, 'the sync ran');
+    // A branch already pushed: the real run would only open the issue; the dry run still syncs locally.
+    f.git('push', '-q', 'origin', 'main:refs/heads/' + r.branch);
+    r = await f.job({ dryRun: true }, { api: fakeApi().api });
+    assert.match(r.plan, /^open the issue only \(sync\/[0-9a-f-]+ is already pushed\)/);
+    assert.match(r.body, /Changed by this sync: 1 changed/, 'from a local sync, not the pushed branch');
+    assert.equal(f.git('rev-parse', '--abbrev-ref', 'HEAD'), 'main');
+    assert.equal(f.git('branch', '--list', 'sync/*'), '');
+    assert.equal(f.git('status', '--porcelain'), '');
+  } finally { f.cleanup(); }
+});
+
+test('a real run whose push fails leaves the checkout as it found it', async () => {
+  const f = fixture();
+  try {
+    f.advance({ 'src/Lib/Yoga/Node.cs': 'class Node2 {}\n' }, 'Change (#8)');
+    writeFileSync(path.join(f.root, 'origin.git', 'hooks', 'pre-receive'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const gh = fakeApi();
+    await assert.rejects(f.job({}, { api: gh.api }));
+    assert.deepEqual(gh.posts(), []);
+    assert.equal(f.git('rev-parse', '--abbrev-ref', 'HEAD'), 'main');
+    assert.equal(f.git('branch', '--list', 'sync/*'), '');
+    assert.equal(f.git('status', '--porcelain'), '');
+  } finally { f.cleanup(); }
+});
+
+test('the command runs when it is reached through a linked folder (a junction on Windows)', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'isotope-sync-job-link-'));
+  const link = path.join(root, 'ci');
+  try {
+    symlinkSync(here, link, process.platform === 'win32' ? 'junction' : 'dir');
+    const r = spawnSync(process.execPath, [path.join(link, 'upstream-sync.mjs'), '--help'], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /^Usage: node tools\/sync\/ci\/upstream-sync\.mjs/, 'it ran, rather than exiting 0 silently');
+  } finally {
+    // The link itself first, never through it.
+    rmSync(link, { force: true, recursive: false });
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('a dirty working tree is refused before anything is written', async () => {
   const f = fixture();
   try {
@@ -339,9 +388,9 @@ test('neutralise puts references, mentions and outside links in code, and leaves
     ['## Heading, C# and issue#5', '## Heading, C# and issue#5'],
     ['(see https://github.com/up/stream/pull/2) <https://h.invalid/x>', '(see \x60https://github.com/up/stream/pull/2\x60) <\x60https://h.invalid/x\x60>'],
     // Nothing a replacement wrapped is wrapped again (which would split the span and leave the match live).
-    ['[see up/stream#12](https://x.invalid) and https://h.invalid/?q=up/stream#5', '\x60see up/stream#12\x60 and \x60https://h.invalid/?q=up/stream#5\x60'],
-    // A link whose label is a code span still loses its upstream URL.
-    ['[\x60Foo\x60](https://github.com/up/stream/pull/1650)', '[\x60Foo\x60](\x60https://github.com/up/stream/pull/1650\x60)'],
+    ['[see up/stream#12](https://x.invalid) and https://h.invalid/?q=up/stream#5', 'see \x60up/stream#12\x60 and \x60https://h.invalid/?q=up/stream#5\x60'],
+    // A link whose label is a code span keeps only its label.
+    ['[\x60Foo.cs\x60](https://github.com/up/stream/pull/1650) and [a \x60b\x60 #3](https://x.invalid)', '\x60Foo.cs\x60 and a \x60b\x60 \x60#3\x60'],
   ];
   for (const [input, want] of cases) assert.equal(neutralise(input, own), want, input);
 });
@@ -374,7 +423,7 @@ test('the command line: a dry run writes the step outputs and summary; a failure
     assert.equal(r.status, 0, r.stderr);
     assert.match(readFileSync(outFile, 'utf8'), new RegExp('^status=dry-run\nbranch=sync/' + range(f.base, next) + '\nissue=\n$'));
     assert.match(readFileSync(sumFile, 'utf8'), /Dry run: upstream moved[^]*The issue it would open[^]*# Upstream sync/);
-    assert.match(r.stdout, /dry run: would push sync\//);
+    assert.match(r.stdout, /dry run: a real run would push sync\//);
     r = cli();
     assert.equal(r.status, 1);
     assert.match(r.stderr, /needs GITHUB_TOKEN/);

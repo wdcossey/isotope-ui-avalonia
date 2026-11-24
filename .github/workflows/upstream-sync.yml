@@ -85,6 +85,7 @@ jobs:
         run: node --test tools/sync/ci/upstream-sync.test.mjs
 
       - name: Sync
+        id: sync # outputs: status (up-to-date, exists, dry-run, opened), branch, issue
         shell: bash
         env:
           DRY: ${{ steps.mode.outputs.dry }}

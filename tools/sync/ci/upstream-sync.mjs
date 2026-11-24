@@ -11,7 +11,7 @@
 // GitHub is reached through its REST API (GITHUB_TOKEN, GITHUB_REPOSITORY), so the runner needs no gh CLI.
 // Tests: node --test tools/sync/ci/upstream-sync.test.mjs
 import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normUrl } from '../lib/run.mjs';
@@ -84,21 +84,20 @@ export function githubApi({ token, apiUrl = 'https://api.github.com', fetchImpl 
 
 // Code spans are left alone; outside them, whatever GitHub would turn into a reference or a mention is put in a code
 // span: URLs other than this repo's (a link to an upstream PR records a cross-reference on it), "owner/repo#n",
-// "owner/repo@sha", "#n" and "@name". Markdown links to other sites keep their text, as code.
+// "owner/repo@sha", "#n" and "@name". A markdown link to another site keeps only its label.
 export function neutralise(markdown, ownUrl) {
   const own = ownUrl ? ownUrl.replace(/\/+$/, '') + '/' : null;
   const isOwn = (url) => own !== null && (url + '/').startsWith(own);
   const wrap = (s) => (s.includes('\x60') ? '\x60\x60 ' + s + ' \x60\x60' : '\x60' + s + '\x60');
-  // One pass, so nothing a replacement wrapped is matched again: a markdown link, a URL, or a reference/mention.
+  // First, a link to another site becomes its label (code spans in a label included); code spans are skipped.
+  const unlinked = markdown.replace(/(\x60+)[^]*?\1|\[((?:[^[\]\n\x60]|\x60[^\x60\n]*\x60)*)\]\((https?:\/\/[^)\s]+)\)/g,
+    (m, ticks, label, url) => (ticks !== undefined || isOwn(url) ? m : label || url));
+  // Then one pass, so nothing a replacement wrapped is matched again: a URL, or a reference or mention.
   const plain = (text) => text.replace(
-    /\[([^\]\n]*)\]\((https?:\/\/[^)\s]+)\)|(?<![\w\x60])(https?:\/\/[^\s<>()\x60|]*[^\s<>()\x60|.,;:!?'"])|(?<![\w\x60/])((?:[\w.-]+\/[\w.-]+)?[#@][A-Za-z0-9][\w.-]*)/g,
-    (m, label, linkUrl, url, ref) => {
-      if (linkUrl !== undefined) return isOwn(linkUrl) ? m : wrap(label || linkUrl);
-      if (url !== undefined) return isOwn(url) ? url : wrap(url);
-      return wrap(ref);
-    });
+    /(?<![\w\x60])(https?:\/\/[^\s<>()\x60|]*[^\s<>()\x60|.,;:!?'"])|(?<![\w\x60/])((?:[\w.-]+\/[\w.-]+)?[#@][A-Za-z0-9][\w.-]*)/g,
+    (m, url, ref) => (url !== undefined ? (isOwn(url) ? url : wrap(url)) : wrap(ref)));
   // Split on code spans (a run of backticks up to the same run), which stay as they are.
-  return markdown.split(/(\x60+)([^]*?)(\1)/).reduce((acc, part, i, parts) => {
+  return unlinked.split(/(\x60+)([^]*?)(\1)/).reduce((acc, part, i, parts) => {
     const k = i % 4;
     if (k === 0) return acc + plain(part);
     if (k === 1) return acc + part + parts[i + 1] + parts[i + 2];
@@ -169,57 +168,65 @@ export async function runJob(opts, { api = null, log = console.log } = {}) {
   const existing = issues?.find((i) => i.title === title);
   // An issue for the range, open or closed, means it was handled: a closed one whose branch is gone was turned down,
   // and is not opened again. A branch with no issue is a run that failed after its push: open the issue now.
-  if (existing) {
-    log('already done: issue #' + existing.number + ' (' + existing.state + ') is for this range' + (onRemote ? ', and ' + branch + ' is pushed' : '') + '; nothing to do');
+  // A dry run notes what a real run would skip, but always runs the sync: testing it is what a dry run is for.
+  const plan = existing
+    ? 'do nothing: issue #' + existing.number + ' (' + existing.state + ') is for this range' + (onRemote ? ', and ' + branch + ' is pushed' : '')
+    : (onRemote ? 'open the issue only (' + branch + ' is already pushed)' : 'push ' + branch) + ', dispatch ' + CI_WORKFLOW + ' on it and open the issue "' + title + '"';
+  if (existing && !opts.dryRun) {
+    log('already done: ' + plan.replace(/^do nothing: /, '') + '; nothing to do');
     return { status: 'exists', branch, issue: existing.number, issueState: existing.state, pushed: onRemote, old: baseline, new: target };
   }
 
-  let report;
   // The branch to return to after a dry run, or the commit when HEAD is detached.
   const start = tryRun(() => git('symbolic-ref', '--quiet', '--short', 'HEAD')) || git('rev-parse', 'HEAD');
-  if (onRemote) {
-    log('branch ' + branch + ' is already pushed; reading its report');
-    git('fetch', '--quiet', 'origin', 'refs/heads/' + branch);
-    report = git('show', 'FETCH_HEAD:' + reportPath) + '\n';
-  } else {
-    if (git('status', '--porcelain') !== '') throw new Fail('the working tree is not clean; run in a fresh checkout');
-    git('checkout', '--quiet', '-b', branch);
-    const sync = spawnSync(process.execPath, [syncScript, target, '--commit', '--no-fetch', '--no-checkout', '--repo', repo, '--upstream', upstream],
-      { encoding: 'utf8', maxBuffer: 1 << 28 });
-    if (sync.stdout) log(sync.stdout.trimEnd());
-    if (sync.status !== 0) {
-      // The tree was clean, so whatever the sync wrote before it failed goes (ignored files such as upstream/ stay).
+  const build = !onRemote || opts.dryRun;
+  let pushed = false;
+  try {
+    let report;
+    if (build) {
+      if (git('status', '--porcelain') !== '') throw new Fail('the working tree is not clean; run in a fresh checkout');
+      git('checkout', '--quiet', '-b', branch);
+      const sync = spawnSync(process.execPath, [syncScript, target, '--commit', '--no-fetch', '--no-checkout', '--repo', repo, '--upstream', upstream],
+        { encoding: 'utf8', maxBuffer: 1 << 28 });
+      if (sync.stdout) log(sync.stdout.trimEnd());
+      if (sync.status !== 0)
+        throw new Fail('tools/sync failed (exit ' + sync.status + '); nothing was pushed or opened:\n' + (sync.stderr || sync.error?.message || '').trimEnd());
+      if (sync.stderr) log(sync.stderr.trimEnd()); // its warnings
+      report = readFileSync(path.join(repo, ...reportPath.split('/')), 'utf8');
+    } else {
+      log('branch ' + branch + ' is already pushed; reading its report');
+      git('fetch', '--quiet', 'origin', 'refs/heads/' + branch);
+      report = git('show', 'FETCH_HEAD:' + reportPath) + '\n';
+    }
+
+    const superseded = (issues ?? []).filter((i) => i.state === 'open' && i.title !== title && i.title.startsWith('Upstream sync '));
+    const bodyFor = (ci) => issueBody({ report, branch, base: start, reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
+    if (opts.dryRun) {
+      log('dry run: a real run would ' + plan + (superseded.length && !existing ? ' (superseding #' + superseded.map((i) => i.number).join(', #') + ')' : ''));
+      return { status: 'dry-run', branch, title, plan, body: bodyFor({ ok: true }), old: baseline, new: target };
+    }
+
+    if (!onRemote) {
+      git('push', '--quiet', 'origin', 'refs/heads/' + branch + ':refs/heads/' + branch);
+      log('pushed ' + branch);
+    }
+    pushed = true;
+    let ci = { ok: true };
+    try { await api('POST', '/repos/' + opts.repoSlug + '/actions/workflows/' + CI_WORKFLOW + '/dispatches', { ref: branch }); }
+    catch (e) { ci = { ok: false, error: e.message.split('\n')[0] }; log('warning: could not dispatch ' + CI_WORKFLOW + ': ' + ci.error); }
+    const issue = await api('POST', '/repos/' + opts.repoSlug + '/issues', { title, body: bodyFor(ci) });
+    log('opened issue #' + issue.number + ': ' + title);
+    return { status: 'opened', branch, issue: issue.number, ci: ci.ok, old: baseline, new: target };
+  } finally {
+    // A dry run, or a real run that stopped before its push, leaves the checkout as it found it: the tree was clean, so
+    // whatever the sync wrote goes (ignored files such as upstream/ stay), and so does the local branch.
+    if (build && !pushed) {
       tryRun(() => git('reset', '--quiet', '--hard'));
       tryRun(() => git('clean', '--quiet', '-fd'));
       tryRun(() => git('checkout', '--quiet', start));
       tryRun(() => git('branch', '--quiet', '-D', branch));
-      throw new Fail('tools/sync failed (exit ' + sync.status + '); nothing was pushed or opened:\n' + (sync.stderr || sync.error?.message || '').trimEnd());
     }
-    report = readFileSync(path.join(repo, ...reportPath.split('/')), 'utf8');
   }
-
-  const superseded = (issues ?? []).filter((i) => i.state === 'open' && i.title !== title && i.title.startsWith('Upstream sync '));
-  const bodyFor = (ci) => issueBody({ report, branch, base: start, reportPath, serverUrl: opts.serverUrl, repoSlug: opts.repoSlug, runUrl: opts.runUrl, ci, superseded });
-  if (opts.dryRun) {
-    log('dry run: would ' + (onRemote ? '' : 'push ' + branch + ', ') + 'dispatch ' + CI_WORKFLOW + ' on it and open the issue "' + title + '"' +
-      (superseded.length ? ' (superseding #' + superseded.map((i) => i.number).join(', #') + ')' : ''));
-    if (!onRemote) {
-      git('checkout', '--quiet', start);
-      git('branch', '--quiet', '-D', branch);
-    }
-    return { status: 'dry-run', branch, title, body: bodyFor({ ok: true }), old: baseline, new: target };
-  }
-
-  if (!onRemote) {
-    git('push', '--quiet', 'origin', 'refs/heads/' + branch + ':refs/heads/' + branch);
-    log('pushed ' + branch);
-  }
-  let ci = { ok: true };
-  try { await api('POST', '/repos/' + opts.repoSlug + '/actions/workflows/' + CI_WORKFLOW + '/dispatches', { ref: branch }); }
-  catch (e) { ci = { ok: false, error: e.message.split('\n')[0] }; log('warning: could not dispatch ' + CI_WORKFLOW + ': ' + ci.error); }
-  const issue = await api('POST', '/repos/' + opts.repoSlug + '/issues', { title, body: bodyFor(ci) });
-  log('opened issue #' + issue.number + ': ' + title);
-  return { status: 'opened', branch, issue: issue.number, ci: ci.ok, old: baseline, new: target };
 }
 
 export function summarise(r) {
@@ -258,4 +265,8 @@ async function main(argv, env) {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exitCode = await main(process.argv.slice(2), process.env);
+// Run as a command (not imported by the tests). Compared as real paths, case-folded on Windows, so a junction or a drive
+// letter in another case still runs it.
+const canonical = (p) => { try { const r = realpathSync.native(p); return process.platform === 'win32' ? r.toLowerCase() : r; } catch { return null; } };
+const invoked = process.argv[1] ? canonical(process.argv[1]) : null;
+if (invoked && invoked === canonical(fileURLToPath(import.meta.url))) process.exitCode = await main(process.argv.slice(2), process.env);
