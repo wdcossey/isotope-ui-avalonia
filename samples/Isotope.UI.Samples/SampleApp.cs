@@ -20,8 +20,19 @@ public static class SampleApp
     /// <summary>Whether the pages put tooltips on their controls (the View menu's "Show tooltips").</summary>
     public static readonly Context<bool> ShowTips = new(true);
 
-    /// <summary>The pages, in tab order.</summary>
-    public static readonly string[] Pages = ["Basics", "Buttons", "Menus", "Numbers", "Split view", "Errors"];
+    /// <summary>The window's size, as Program opens it.</summary>
+    public const double WindowWidth = 640, WindowHeight = 680;
+
+    /// <summary>The pages, in tab order: each tab and each item of the Go menu comes from this list.</summary>
+    public static readonly (string Name, Func<RenderContext, Element> Render)[] Pages =
+    [
+        ("Basics", Basics),
+        ("Buttons", ButtonsPage.Render),
+        ("Menus", MenusPage.Render),
+        ("Numbers", NumbersPage.Render),
+        ("Split view", SplitViewPage.Render),
+        ("Errors", ErrorsPage.Render),
+    ];
 
     public static Element Root(RenderContext ctx)
     {
@@ -30,15 +41,9 @@ public static class SampleApp
         return FlexColumn(
             // The Go menu and the tabs show one state: choosing either moves both.
             MenuBar(
-                Menu("Go", Pages.Select((name, i) => (MenuFlyoutItemBase)RadioMenuItem(name, "page", i == page, () => setPage(i))).ToArray()),
+                Menu("Go", Pages.Select((p, i) => (MenuFlyoutItemBase)RadioMenuItem(p.Name, "page", i == page, () => setPage(i))).ToArray()),
                 Menu("View", ToggleMenuItem("Show tooltips", tips, setTips))),
-            TabView(page, setPage,
-                Tab("Basics", Component(Basics)),
-                Tab("Buttons", Component(ButtonsPage.Render)),
-                Tab("Menus", Component(MenusPage.Render)),
-                Tab("Numbers", Component(NumbersPage.Render)),
-                Tab("Split view", Component(SplitViewPage.Render)),
-                Tab("Errors", Component(ErrorsPage.Render)))
+            TabView(page, setPage, Pages.Select(p => Tab(p.Name, Component(p.Render))).ToArray())
                 .Provide(ShowTips, tips)
                 .Flex(grow: 1));
     }

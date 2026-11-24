@@ -8,7 +8,7 @@ internal static class Program
 {
     [STAThread]
     public static int Main(string[] args) =>
-        ReactorApp.Run(BuildAvaloniaApp(), "Isotope samples", SampleApp.Root, args, width: 640, height: 680);
+        ReactorApp.Run(BuildAvaloniaApp(), "Isotope samples", SampleApp.Root, args, width: SampleApp.WindowWidth, height: SampleApp.WindowHeight);
 
     // The app's Application, platform and theme; ReactorApp.Run adds the window and the root component.
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UsePlatformDetect();
