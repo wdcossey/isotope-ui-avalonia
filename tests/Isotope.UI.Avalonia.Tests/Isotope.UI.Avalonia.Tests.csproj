@@ -14,8 +14,9 @@
     <!-- Upstream's own engine tests (#2), vendored by tools/sync (tiers.json; tier 2 drops in transforms.json), run against
          the library. The Yoga tests are left out: tools/sync/verify/Upstream.Yoga.Tests runs them. -->
     <Compile Include="$(VendoredTests)**\*.cs" Exclude="$(VendoredTests)Yoga*.cs;$(VendoredTests)YogaGenerated\**" LinkBase="Upstream\Tests" />
-    <!-- The sample app's components (#16), rendered headless by HostTests (the sample itself is an app, not referenced). -->
-    <Compile Include="..\..\samples\Isotope.UI.Samples\SampleApp.cs" Link="Samples\SampleApp.cs" />
+    <!-- The sample app's components (#16, #30), rendered headless by HostTests and SampleAppTests (the sample itself is an
+         app, not referenced): every file but Program.cs, which holds the app's entry point. -->
+    <Compile Include="..\..\samples\Isotope.UI.Samples\**\*.cs" Exclude="..\..\samples\Isotope.UI.Samples\Program.cs;..\..\samples\Isotope.UI.Samples\bin\**;..\..\samples\Isotope.UI.Samples\obj\**" Link="Samples\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <!-- xunit.v3 3.2.x: the version Avalonia.Headless.XUnit 12.1.6 is built against (as in Spike D). -->

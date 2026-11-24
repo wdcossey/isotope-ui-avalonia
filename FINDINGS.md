@@ -287,7 +287,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 - **`ReactorHostControl`** (`Isotope.UI.Hosting`) renders a root component into any Avalonia layout, coalescing re-renders
   per dispatcher pass and surfacing render errors. `ReactorApp.Run(AppBuilder, …)` runs one window.
-- **Sample app:** `samples/Isotope.UI.Samples` (counter and todo, public factories); CI builds it. Running it in a real
+- **Sample app:** `samples/Isotope.UI.Samples` (a tab per area, #16 and #30; `SampleAppTests` drive each page headless; the real-window checklist is in its README); CI builds it. Running it in a real
   window is #18 (hands-on).
 - **Tests:** 756 (16 new, all proven to fail). A flaky test, caused by an unobserved task exception after a dispatcher
   error, was found and fixed.
