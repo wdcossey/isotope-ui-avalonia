@@ -957,6 +957,16 @@
       "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"
     },
     {
+      "path": "src/Reactor/Elements/GridSize.cs",
+      "tier": 2,
+      "note": "#22: the Grid factory's track type, compiled by the library; GridLength and GridUnitType are Avalonia's (global aliases)"
+    },
+    {
+      "path": "src/Reactor/Elements/GridSizeExtensions.cs",
+      "tier": 1,
+      "note": "#22: GridSize's MinSize/MaxSize, compiled by the library; no listed rules (only the namespace rename)"
+    },
+    {
       "glob": "src/Reactor/Elements/**",
       "tier": 3,
       "note": "Spike A: the WinUI-heavy layer, rewritten for Avalonia"

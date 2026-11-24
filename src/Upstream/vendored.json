@@ -1387,6 +1387,25 @@
       "sha256": "c0ed7a5ae316c96885f7c311a38f1fa1ff83b1aac689d629deaced0b0a28a93d"
     },
     {
+      "path": "src/Reactor/Elements/GridSize.cs",
+      "tier": 2,
+      "lastChanged": "60774b9cfae3030030cf6503717cd2087264ff40",
+      "transforms": [
+        "winui-usings",
+        "namespace-isotope"
+      ],
+      "sha256": "6405739b8dca1ebead5f06be5f22bb8e607b76cedb93332ba33e7eecaeeb9e1b"
+    },
+    {
+      "path": "src/Reactor/Elements/GridSizeExtensions.cs",
+      "tier": 1,
+      "lastChanged": "60774b9cfae3030030cf6503717cd2087264ff40",
+      "transforms": [
+        "namespace-isotope"
+      ],
+      "sha256": "67255f38741b57981cdbd887c47837561f89bfa6fc07508385d3133ff0308e4c"
+    },
+    {
       "path": "src/Reactor/Hooks/Pending.cs",
       "tier": 2,
       "lastChanged": "27ed666262354a6ac56c81491f341e7dd6d170ef",

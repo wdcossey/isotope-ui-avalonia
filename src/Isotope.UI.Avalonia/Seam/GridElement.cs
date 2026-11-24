@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Globalization;
 using Avalonia.Controls;
 using Isotope.UI.Core.V1Protocol.Descriptor;
 using Isotope.UI.Wrappers;
@@ -127,99 +125,6 @@ namespace Isotope.UI.Core
 namespace Isotope.UI
 {
     using Isotope.UI.Core;
-
-    /// <summary>
-    /// One grid track: <see cref="Auto"/>, a <see cref="Star"/> weight or a size in pixels (<see cref="Px"/>), with an
-    /// optional minimum and maximum. Our version (tier 3) of upstream's <c>Elements/GridSize.cs</c>, with the same
-    /// members; it converts to Avalonia's <see cref="GridLength"/>.
-    /// </summary>
-    [DebuggerDisplay("{ToString(),nq}")]
-    public readonly record struct GridSize
-    {
-        /// <summary>A track of <paramref name="value"/> in <paramref name="type"/> units.</summary>
-        /// <exception cref="ArgumentOutOfRangeException">A negative or non-finite size, a weight that isn't positive, or a negative bound.</exception>
-        public GridSize(double value, GridUnitType type, double? min = null, double? max = null)
-        {
-            if (min is { } mn && !IsFiniteAndNonNegative(mn))
-                throw new ArgumentOutOfRangeException(nameof(min), min, "Min size must be a number and >= 0.");
-            if (max is { } mx && (mx < 0 || double.IsNaN(mx)))
-                throw new ArgumentOutOfRangeException(nameof(max), max, "Max size must be a number and >= 0.");
-            if (type == GridUnitType.Pixel && !IsFiniteAndNonNegative(value))
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Pixel size must be a number and >= 0.");
-            // Unlike upstream's: an Auto value is checked too, as Avalonia's GridLength rejects it later otherwise.
-            if (type == GridUnitType.Auto && !IsFiniteAndNonNegative(value))
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Auto size must be a number and >= 0.");
-            if (type == GridUnitType.Star && (!IsFiniteAndNonNegative(value) || value <= 0))
-                throw new ArgumentOutOfRangeException(nameof(value), value, "Star weight must be a number and > 0.");
-            Value = value;
-            Type = type;
-            Min = min;
-            Max = max;
-        }
-
-        public double Value { get; }
-        public GridUnitType Type { get; }
-        public double? Min { get; }
-        public double? Max { get; }
-
-        public void Deconstruct(out double value, out GridUnitType type) => (value, type) = (Value, Type);
-
-        public void Deconstruct(out double value, out GridUnitType type, out double? min, out double? max)
-            => (value, type, min, max) = (Value, Type, Min, Max);
-
-        /// <summary>Sized to the track's content.</summary>
-        public static GridSize Auto { get; } = new(1, GridUnitType.Auto);
-
-        /// <summary>A share of the space left, by <paramref name="weight"/>.</summary>
-        public static GridSize Star(double weight = 1) => new(weight, GridUnitType.Star);
-
-        /// <summary>A fixed size in DIPs.</summary>
-        public static GridSize Px(double pixels) => new(pixels, GridUnitType.Pixel);
-
-        public static implicit operator GridLength(GridSize s) => new(s.Value, s.Type);
-
-        public override string ToString() => Type switch
-        {
-            GridUnitType.Auto => "Auto",
-            GridUnitType.Star when Value == 1 => "*",
-            GridUnitType.Star => Value.ToString("R", CultureInfo.InvariantCulture) + "*",
-            GridUnitType.Pixel => Value.ToString("R", CultureInfo.InvariantCulture),
-            _ => $"GridSize({Value}, {Type})",
-        };
-
-        /// <summary>Parses <c>"Auto"</c>, <c>"*"</c>, <c>"2.5*"</c> or a size in DIPs (invariant culture).</summary>
-        /// <exception cref="FormatException">Any other text.</exception>
-        public static GridSize Parse(string s)
-        {
-            ArgumentNullException.ThrowIfNull(s);
-            var trimmed = s.Trim();
-            if (trimmed.Length == 0) throw new FormatException("Empty grid track string.");
-            if (string.Equals(trimmed, "Auto", StringComparison.OrdinalIgnoreCase)) return Auto;
-            if (trimmed == "*") return Star();
-            if (trimmed.EndsWith('*'))
-            {
-                var numeric = trimmed[..^1];
-                if (numeric.Length > 0
-                    && double.TryParse(numeric, NumberStyles.Float, CultureInfo.InvariantCulture, out var stars)
-                    && double.IsFinite(stars) && stars > 0)
-                    return Star(stars);
-                throw new FormatException($"Invalid grid track '{s}': could not parse star weight.");
-            }
-            if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var px) && double.IsFinite(px) && px >= 0)
-                return Px(px);
-            throw new FormatException($"Invalid grid track '{s}'.");
-        }
-
-        private static bool IsFiniteAndNonNegative(double value) => double.IsFinite(value) && value >= 0;
-    }
-
-    /// <summary>A track's bounds (upstream's <c>GridSizeExtensions</c>): <c>GridSize.Star().MinSize(100)</c>.</summary>
-    public static class GridSizeExtensions
-    {
-        public static GridSize MinSize(this GridSize size, double min) => new(size.Value, size.Type, min, size.Max);
-
-        public static GridSize MaxSize(this GridSize size, double max) => new(size.Value, size.Type, size.Min, max);
-    }
 
     /// <summary>Sets an element's cell for a <see cref="GridElement"/> parent (upstream's <c>GridExtensions</c>).</summary>
     public static class GridExtensions

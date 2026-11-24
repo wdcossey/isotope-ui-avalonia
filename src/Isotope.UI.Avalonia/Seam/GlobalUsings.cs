@@ -9,3 +9,5 @@ global using CompositionEasingFunction = Avalonia.Animation.Easings.Easing;
 global using DependencyProperty = Avalonia.AvaloniaProperty;
 global using DependencyObject = Avalonia.AvaloniaObject;
 global using RoutedEvent = Avalonia.Interactivity.RoutedEvent;
+global using GridLength = Avalonia.Controls.GridLength;
+global using GridUnitType = Avalonia.Controls.GridUnitType;

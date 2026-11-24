@@ -95,6 +95,9 @@
     <Compile Include="$(UpstreamSrc)Core\V1Protocol\V1HandlerAdapter.cs" Link="Upstream\Core\V1Protocol\V1HandlerAdapter.cs" />
     <Compile Include="$(UpstreamSrc)Core\V1Protocol\ItemsHostReconciliation.cs" Link="Upstream\Core\V1Protocol\ItemsHostReconciliation.cs" />
     <Compile Include="$(UpstreamSrc)Core\V1Protocol\ReportedUnmountFailureException.cs" Link="Upstream\Core\V1Protocol\ReportedUnmountFailureException.cs" />
+    <!-- GridSize, the Grid factory's track type (#22). -->
+    <Compile Include="$(UpstreamSrc)Elements\GridSize.cs" Link="Upstream\Elements\GridSize.cs" />
+    <Compile Include="$(UpstreamSrc)Elements\GridSizeExtensions.cs" Link="Upstream\Elements\GridSizeExtensions.cs" />
     <Compile Include="$(UpstreamAbstractions)WrapperAttributes.cs" Link="Upstream\Reactor.Wrappers.Abstractions\WrapperAttributes.cs" />
     <!-- Yoga (tier 1), under our FlexPanel (Layout/FlexPanel.cs, tier 3; upstream's FlexPanel.cs isn't vendored). -->
     <Compile Include="$(UpstreamSrc)Yoga\AlgorithmUtils.cs" Link="Upstream\Yoga\AlgorithmUtils.cs" />
