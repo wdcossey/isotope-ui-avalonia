@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Generator/WrapperGenerator.cs, last changed upstream in df815e2ce697; transforms: gen-target-base, gen-target-message, gen-uielement, gen-member-walk-cutoff, gen-full-wrapper-cutoffs, gen-routed-event-handler, gen-routed-event-args, gen-panel-children, gen-template-exclusions, gen-polymorphic-textblock, gen-avalonia-property-lookup, gen-avalonia-content-attribute, gen-obsolete-filter, gen-items-host-ilist, gen-items-host-adapter, gen-missing-counterpart-check, gen-missing-counterpart-report, gen-drop-try-register-assembly, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Generator/WrapperGenerator.cs, last changed upstream in df815e2ce697; transforms: gen-target-base, gen-target-message, gen-uielement, gen-member-walk-cutoff, gen-full-wrapper-cutoffs, gen-routed-event-handler, gen-routed-event-args, gen-panel-children, gen-template-exclusions, gen-polymorphic-textblock, gen-avalonia-property-lookup, gen-avalonia-content-attribute, gen-obsolete-filter, gen-items-host-ilist, gen-items-host-adapter, gen-missing-counterpart-check, gen-missing-counterpart-report, gen-drop-try-register-assembly, gen-reference-clear-channel-of, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -1645,7 +1645,7 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
                 var dpGet = !descriptorOnly
                     ? $"static e => e.{p.Name}"
                     : p.IsReference
-                        ? $"static e => e.{p.Name} is null ? global::Isotope.UI.Optional<{p.ValueType}>.Unset : e.{p.Name}"
+                        ? $"static e => e.{p.Name} is null ? global::Isotope.UI.Optional<{p.ValueType}>.Unset : global::Isotope.UI.Optional<{p.ValueType}>.Of(e.{p.Name})"
                         : $"static e => e.{p.Name}.HasValue ? e.{p.Name}.Value : global::Isotope.UI.Optional<{p.ValueType}>.Unset";
                 sb.Append($"        .OneWay<{p.ValueType}>({dpGet}, static (c, v) => c.{p.ControlProp} = {ConvertRhs(p)}, {p.Dp})");
             }

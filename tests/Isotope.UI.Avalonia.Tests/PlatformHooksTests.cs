@@ -705,6 +705,105 @@ public sealed class PlatformHooksTests : IDisposable
         host.Dispose();
     }
 
+    // ── Class components (#21) ──
+
+    // Every platform hook, as one line of text, from a function component's context or a class component's methods.
+    private static string Describe(ColorScheme scheme, bool dark, bool contrast, Window? window, (double W, double H) size,
+        (double W, double H) sizeOf, bool wide, bool wideOf, WindowState state, bool active, (double X, double Y) position,
+        uint dpi, int displays)
+        => $"{scheme} {dark} {contrast} {window is not null} {size.W}x{size.H} {sizeOf.W}x{sizeOf.H} {wide} {wideOf} " +
+           $"{state} {active} {position.X},{position.Y} {dpi} {displays}";
+
+    // A component's text, through any decorator the component's node puts around it.
+    private static string? TextOf(Control? c) => c switch
+    {
+        TextBlock t => t.Text,
+        Decorator d => TextOf(d.Child),
+        _ => null,
+    };
+
+    private sealed record ProbeProps(TopLevel TopLevel);
+
+    // Component<TProps> derives from Component, so it has the hooks too; the props carry the top level for the explicit
+    // overloads.
+    private sealed class PlatformProbe : Component<ProbeProps>
+    {
+        public override Element Render() => TextBlock(Describe(UseColorScheme(), UseIsDarkTheme(), UseHighContrast(),
+            UseWindow(), UseWindowSize(), UseWindowSize(Props.TopLevel), UseBreakpoint(450),
+            UseBreakpoint(Props.TopLevel, 450), UseWindowState(), UseIsActive(), UseWindowPosition(), UseDpi(),
+            UseDisplays().Count));
+    }
+
+    [AvaloniaFact]
+    public void A_class_component_reads_the_same_platform_values_as_a_function_component_and_follows_them()
+    {
+        var window = NewWindow(400, 300);
+        window.RequestedThemeVariant = ThemeVariant.Dark;
+        var host = Track(new ReactorHostControl(_ => VStack(
+            Component(ctx => TextBlock(Describe(ctx.UseColorScheme(), ctx.UseIsDarkTheme(), ctx.UseHighContrast(),
+                ctx.UseWindow(), ctx.UseWindowSize(), ctx.UseWindowSize(window), ctx.UseBreakpoint(450),
+                ctx.UseBreakpoint(window, 450), ctx.UseWindowState(), ctx.UseIsActive(), ctx.UseWindowPosition(),
+                ctx.UseDpi(), ctx.UseDisplays().Count))),
+            new ComponentElement<ProbeProps>(typeof(PlatformProbe), new ProbeProps(window)))));
+        window.Content = host;
+        window.Show();
+        Pump();
+        string?[] Texts() => ((StackPanel)host.Child!).Children.Select(TextOf).ToArray();
+
+        var first = Texts();
+        Assert.StartsWith("Dark True False True 400x300 400x300 False False ", first[1]);
+        Assert.Equal(first[0], first[1]);
+
+        // A theme change and a resize across the breakpoint re-render the class component too.
+        window.RequestedThemeVariant = ThemeVariant.Light;
+        window.Width = 500;
+        Pump();
+        var second = Texts();
+        Assert.StartsWith("Light False False True 500x300 500x300 True True ", second[1]);
+        Assert.Equal(second[0], second[1]);
+    }
+
+    private static bool s_probeAllowsClose;
+
+    private sealed class GuardProbe : Component
+    {
+        public override Element Render()
+        {
+            UseClosingGuard(() => s_probeAllowsClose);
+            return TextBlock("guarded");
+        }
+    }
+
+    [AvaloniaFact]
+    public void A_class_components_closing_guard_cancels_a_close()
+    {
+        s_probeAllowsClose = false;
+        try
+        {
+            var window = NewWindow();
+            var host = Track(new ReactorHostControl(_ => new ComponentElement(typeof(GuardProbe))));
+            window.Content = host;
+            window.Show();
+            Pump();
+            bool closed = false;
+            window.Closed += (_, _) => closed = true;
+
+            window.Close();
+            Pump();
+            Assert.False(closed);
+
+            s_probeAllowsClose = true;
+            window.Close();
+            Pump();
+            Assert.True(closed);
+        }
+        finally
+        {
+            // A failed assert mustn't leave the guard cancelling the cleanup's close.
+            s_probeAllowsClose = true;
+        }
+    }
+
     // ── The host as content owner ──
 
     [AvaloniaFact]

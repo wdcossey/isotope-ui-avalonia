@@ -2,7 +2,8 @@
 
 Hooks that read the platform a component runs on: its theme, its window and its displays. They keep
 Microsoft.UI.Reactor's names, return Avalonia's types, and work wherever Avalonia runs (nothing here is Windows-only).
-Each one is a method of `RenderContext`, called at the top of a component like any other hook.
+Each one is a method of `RenderContext`, called at the top of a component like any other hook, and a protected method
+of `Component` with the same name, for class components (as upstream's).
 
 Every code block on this page is a region of the test project, run by `PlatformHooksTests` in a headless window.
 
@@ -93,7 +94,6 @@ What differs from upstream's hooks:
 - **`UseWindow`** follows the host, so it takes hook slots like the others (upstream's is a plain read, with no slot).
 - **`UseClosingGuard`** keeps one registration while mounted and asks the latest render's predicate (upstream
   re-registers when the predicate changes).
-- **Class components** (`Component`) don't have these hooks as methods yet; function components do.
 
 Not on Avalonia (yet):
 

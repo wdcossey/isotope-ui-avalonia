@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Component.cs, last changed upstream in aa7fd62817e4; transforms: drop-Component-UseWindowSize-for-window, drop-Component-UseWindowSize, drop-Component-UseBreakpoint-for-window, drop-Component-UseBreakpoint, drop-Component-UseDpi, drop-Component-UseWindow, drop-Component-UseWindowState, drop-Component-UseIsActive, drop-Component-UseClosingGuard, drop-Component-PickFileAsync, drop-Component-PickMultipleFilesAsync, drop-Component-PickFolderAsync, drop-Component-PickMultipleFoldersAsync, drop-Component-PickSaveFileAsync, drop-Component-UseWindowPosition, drop-Component-UseDisplays, drop-Component-UseIsCovered, drop-Component-UseWindowAspectRatio, drop-Component-UseWindowDragMove, drop-Component-UseOpenWindow, drop-Component-UseTrayIcon, drop-Component-UseColorScheme, drop-Component-UseIsDarkTheme, drop-Component-UseReducedMotion, drop-Component-UseIntl, drop-Component-UseSystemBackButton, drop-Component-UseAnnounce, drop-Component-UseHighContrast, drop-Component-UseHighContrastScheme, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/Component.cs, last changed upstream in aa7fd62817e4; transforms: drop-Component-UseWindowSize-for-window, drop-Component-UseWindowSize, drop-Component-UseBreakpoint-for-window, drop-Component-UseBreakpoint, drop-Component-UseDpi, drop-Component-UseWindow, drop-Component-UseWindowState, drop-Component-UseIsActive, drop-Component-UseClosingGuard, drop-Component-PickFileAsync, drop-Component-PickMultipleFilesAsync, drop-Component-PickFolderAsync, drop-Component-PickMultipleFoldersAsync, drop-Component-PickSaveFileAsync, drop-Component-UseWindowPosition, drop-Component-UseDisplays, drop-Component-UseIsCovered, drop-Component-UseWindowAspectRatio, drop-Component-UseWindowDragMove, drop-Component-UseOpenWindow, drop-Component-UseTrayIcon, drop-Component-UseColorScheme, drop-Component-UseIsDarkTheme, drop-Component-UseReducedMotion, drop-Component-UseIntl, drop-Component-UseSystemBackButton, drop-Component-UseAnnounce, drop-Component-UseHighContrast, drop-Component-UseHighContrastScheme, partial-component, namespace-isotope. Do not edit: change the tools/sync rules.
 using Isotope.UI.Hooks;
 
 namespace Isotope.UI.Core;
@@ -8,7 +8,7 @@ namespace Isotope.UI.Core;
 /// Components hold a RenderContext that tracks their hook state across re-renders.
 /// </summary>
 // <snippet:render-loop>
-public abstract class Component
+public abstract partial class Component
 {
     // Settable so the reconciler can transfer a live RenderContext (hooks +
     // cleanups) onto a freshly-constructed instance when a Hot Reload edit

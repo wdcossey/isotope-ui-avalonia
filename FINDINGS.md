@@ -152,6 +152,18 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## Sync follow-ups (issues #21, #22, 2026-11-24)
+
+- **Class components have the platform hooks** (a partial-component rule).
+- **Upstream's `ColorScheme`, `GridSize` and `GridSizeExtensions` are compiled,** and our copies are gone. The first Roslyn
+  rules in `transforms.json` remove the WinUI-only `ColorSchemeContext`.
+- **9 more upstream tests run** (614).
+- **The generator wraps a reference member on the ClearValue channel with `Optional.Of`,** so Border's `BorderBrush` is
+  generated.
+- **`GridSize` now behaves as upstream's:** an Auto value is checked only when Avalonia converts it, and an infinite size in
+  `Parse` throws ArgumentOutOfRangeException. Kept for parity; the grid keeps its tracks if it throws.
+- **Tests:** 881, 13 of them new, all proven to fail.
+
 ## Spike I: pooling and keyed moves (issue #14, 2026-11-24)
 
 - **No control pooling.**
