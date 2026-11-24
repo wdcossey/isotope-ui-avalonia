@@ -413,10 +413,11 @@ public sealed class HostTests : IDisposable
     [AvaloniaFact]
     public void The_sample_renders_in_a_window_and_closing_it_disposes_the_host()
     {
-        var window = ReactorApp.OpenWindow("Isotope samples", SampleApp.Root, width: 520, height: 640);
+        var window = ReactorApp.OpenWindow("Isotope samples", SampleApp.Root, width: SampleApp.WindowWidth, height: SampleApp.WindowHeight);
         Pump();
         var host = Assert.IsType<ReactorHostControl>(window.Content);
-        var texts = Texts(host);
+        // The counter and the todo app are the first tab's content, which only the visual tree reaches.
+        var texts = host.GetSelfAndVisualDescendantsOfType<TextBlock>().Select(t => t.Text).ToList();
         Assert.Contains("Clicked 0 times", texts);
         Assert.Contains("0 of 0 left", texts);
 
