@@ -140,6 +140,10 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 
 ## Git, GitHub and merging
 
+- **A merge made on GitHub (its button or `gh pr merge`) takes the author from the GitHub profile:** the full name, and
+  the primary email unless email privacy is on. Merge locally (`git merge --no-ff`, then push); GitHub still marks the
+  PR merged. (2026-11-24)
+
 - **Actions minutes run out fast on a private repo:** one full CI run billed about 26 minutes (Windows jobs count 2x), and a
   day of agent work pushed about 90 runs. The repo went public on 2026-11-24, where hosted runners are free. (2026-11-24)
 
