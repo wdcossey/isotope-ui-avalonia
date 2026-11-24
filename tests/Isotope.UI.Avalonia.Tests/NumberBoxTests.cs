@@ -9,8 +9,8 @@ namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
 /// NumberBox as an Avalonia NumericUpDown, and the Separator (#26): the controlled value, whose engine writes don't echo
-/// while the user's changes reach the state; bounds written before the value; NaN as an empty box; the double-to-decimal
-/// conversion.
+/// while the user's changes reach the state; bounds, their coercion echo and stranded tokens; NaN as an empty box; the
+/// double-to-decimal conversion.
 /// </summary>
 public class NumberBoxTests
 {
@@ -60,7 +60,7 @@ public class NumberBoxTests
     }
 
     [AvaloniaFact]
-    public void NumberBox_bounds_are_written_before_the_value_and_NaN_is_an_empty_box()
+    public void NumberBox_writes_its_bounds_step_and_value_and_NaN_is_an_empty_box()
     {
         double value = 150;
         var host = new TestHost(() => NumberBox(value) with { Minimum = 100, Maximum = 200, SmallChange = 5 });
