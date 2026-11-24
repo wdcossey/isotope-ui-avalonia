@@ -1,0 +1,47 @@
+diff --git a/src/Isotope.UI.Avalonia/Seam/MovingPanelChildCollection.cs b/src/Isotope.UI.Avalonia/Seam/MovingPanelChildCollection.cs
+new file mode 100644
+index 0000000..a86f8d1
+--- /dev/null
++++ b/src/Isotope.UI.Avalonia/Seam/MovingPanelChildCollection.cs
+@@ -0,0 +1,28 @@
++using Avalonia.Controls;
++
++namespace Isotope.UI.Core;
++
++// Spike I (#14) experiment, applied by spikes/I-pooling/move-collection.patch: upstream's PanelChildCollection (vendored
++// Core/ChildCollection.cs) with Move done by Avalonia's Controls.Move, which keeps the moved control in the visual and
++// logical trees. Upstream's Move is RemoveAt then Insert, which on Avalonia detaches the control and re-attaches it.
++internal sealed class MovingPanelChildCollection(UIElementCollection children) : IChildCollection
++{
++    public int Count => children.Count;
++    public UIElement Get(int index) => children[index];
++    public int IndexOf(UIElement element) => children.IndexOf(element);
++    public void Insert(int index, UIElement element) => children.Insert(index, element);
++    public void RemoveAt(int index) => children.RemoveAt(index);
++
++    // Same contract as upstream's: newIndex is the final position (AvaloniaList.Move removes, then inserts there).
++    public void Move(int oldIndex, int newIndex)
++    {
++        if (oldIndex != newIndex) children.Move(oldIndex, newIndex);
++    }
++
++    // As upstream: RemoveAt + Insert, so the old control leaves the trees.
++    public void Replace(int index, UIElement element)
++    {
++        children.RemoveAt(index);
++        children.Insert(index, element);
++    }
++}
+diff --git a/src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs b/src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs
+index ddabba8..f26ca5a 100644
+--- a/src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs
++++ b/src/Isotope.UI.Avalonia/Seam/Reconciler.V1.cs
+@@ -161,7 +161,7 @@ public sealed partial class Reconciler
+     /// <summary>Keyed reconcile of a panel strategy's children through upstream's ChildReconciler.</summary>
+     internal void ReconcilePanelChildrenInto(Element[] oldChildren, Element[] newChildren, UIElementCollection collection,
+         Action requestRerender, UIElement? parentControl = null)
+-        => ChildReconciler.Reconcile(Flatten(oldChildren), Flatten(newChildren), new PanelChildCollection(collection), this,
++        => ChildReconciler.Reconcile(Flatten(oldChildren), Flatten(newChildren), new MovingPanelChildCollection(collection), this,
+             requestRerender, parentControl);
+ 
+     // ════════════════════════════════════════════════════════════════════

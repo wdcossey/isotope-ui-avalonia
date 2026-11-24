@@ -45,8 +45,8 @@ sealed class MeasureApp : Application
         .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 }
 
-/// <summary>Medians of one case: the change, the change plus the layout pass, and KB allocated over both.</summary>
-readonly record struct Stats(double ChangeMs, double TotalMs, double Kb);
+/// <summary>Medians of one case: the change, the change plus the layout pass, KB allocated and gen0 GCs over both.</summary>
+readonly record struct Stats(double ChangeMs, double TotalMs, double Kb, double Gen0);
 
 /// <summary>A move the engine made: the child at From ends up at To (RemoveAt(From) then Insert(To), as upstream).</summary>
 readonly record struct MoveOp(int From, int To);
@@ -58,7 +58,7 @@ sealed class Bench(int n, int runs)
 
     public int Run()
     {
-        Console.WriteLine($"rows={n} runs={runs}; medians: change ms | change + layout ms | KB allocated; then notes");
+        Console.WriteLine($"rows={n} runs={runs}; medians: change ms | change + layout ms | KB allocated | gen0 GCs; then notes");
         EngineSection();
         PoolSection();
         MoveSection();
@@ -77,6 +77,7 @@ sealed class Bench(int n, int runs)
         var changeMs = new List<double>();
         var totalMs = new List<double>();
         var kb = new List<double>();
+        var gen0 = new List<double>();
         for (int run = -1; run < runs; run++)
         {
             var state = setup();
@@ -85,20 +86,23 @@ sealed class Bench(int n, int runs)
             GC.WaitForPendingFinalizers();
             GC.Collect();
             long before = GC.GetAllocatedBytesForCurrentThread();
+            int gcBefore = GC.CollectionCount(0);
             var sw = Stopwatch.StartNew();
             change(state);
             double t1 = sw.Elapsed.TotalMilliseconds;
             layout(state);
             double t2 = sw.Elapsed.TotalMilliseconds;
             long after = GC.GetAllocatedBytesForCurrentThread();
+            int gcAfter = GC.CollectionCount(0);
             teardown(state);
             Settle();
             if (run < 0) continue; // warm-up
             changeMs.Add(t1);
             totalMs.Add(t2);
             kb.Add((after - before) / 1024.0);
+            gen0.Add(gcAfter - gcBefore);
         }
-        return new Stats(Median(changeMs), Median(totalMs), Median(kb));
+        return new Stats(Median(changeMs), Median(totalMs), Median(kb), Median(gen0));
     }
 
     // The whole run is one dispatcher job, so nothing else pumps the queue: run what setup and teardown posted (window
@@ -117,7 +121,7 @@ sealed class Bench(int n, int runs)
     }
 
     private static void Print(string name, string where, Stats s, string note = "")
-        => Console.WriteLine($"  {name,-34} {where,-8} {s.ChangeMs,8:F2} | {s.TotalMs,8:F2} | {s.Kb,9:F0} KB  {note}");
+        => Console.WriteLine($"  {name,-34} {where,-8} {s.ChangeMs,8:F2} | {s.TotalMs,8:F2} | {s.Kb,9:F0} KB | {s.Gen0,3:F0} gen0  {note}");
 
     private void Check(bool ok, string what)
     {
@@ -251,7 +255,7 @@ sealed class Bench(int n, int runs)
                         Check(h.RowKeys().SequenceEqual(h.Keys), $"engine {name} {where}: rows in key order");
                         keptMin = Math.Min(keptMin, h.Kept());
                         detachedMax = Math.Max(detachedMax, h.Detached);
-                        if (h.FocusedButton is { } b && h.RowKeys().Contains(h.FocusedKey))
+                        if (h.FocusedButton is { } b && _engineMoves.ContainsKey(name) && h.RowKeys().Contains(h.FocusedKey))
                         {
                             focusRuns++;
                             if (b.IsFocused) focusKept++;

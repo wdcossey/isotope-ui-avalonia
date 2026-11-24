@@ -1,0 +1,2 @@
+# Keep the experiment's patch byte-exact (LF) on every checkout, so git apply sees what git diff wrote.
+*.patch -text
