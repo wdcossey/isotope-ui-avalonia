@@ -158,8 +158,8 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **`dotnet build` keeps MSBuild nodes alive that lock DLLs in a temp `NUGET_PACKAGES` folder:** pass
   `--disable-build-servers`. (2026-11-24)
 - **A headless `MouseDown`/`MouseUp` runs the due dispatcher timers first,** so a slow runner turns a click into a hold:
-  a RepeatButton repeats, and a hover tooltip opens over the next control and takes its click. Mouse-driven click
-  helpers call `TestHost.HoldOffRepeat`, and the test app gives tooltips a one-minute `ShowDelay`. Reproduce with a
+  a RepeatButton repeats, and a hover tooltip opens over the next control and takes its click. Mouse-click helpers that
+  can reach a RepeatButton call `TestHost.HoldOffRepeat`, and the test app gives tooltips a one-minute `ShowDelay`. Reproduce with a
   `Thread.Sleep` between press and release (#55). (2026-11-24)
 
 ## Git, GitHub and merging
