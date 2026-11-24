@@ -17,7 +17,7 @@ name: upstream-sync
 #                    issue. ci's "tools/sync --check" on the branch then checks the vendored bytes.
 #   publish-dry-run  (dry runs; read-only) the same check, then says what a real run would do.
 #
-# Runners: GitHub-hosted. prepare takes vars.SYNC_RUNNER (a repo variable) when it is set; it is unset.
+# Runners: GitHub-hosted only. prepare runs upstream's code, so it must never run on a self-hosted runner (CLAUDE.md).
 on:
   schedule:
     # Mondays 05:17 UTC (off the hour, when scheduled runs bunch up).
@@ -102,7 +102,7 @@ jobs:
   prepare:
     needs: plan
     if: needs.plan.outputs.status == 'build'
-    runs-on: ${{ vars.SYNC_RUNNER || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read # check out this repo; this job runs upstream's code, so it gets nothing more
