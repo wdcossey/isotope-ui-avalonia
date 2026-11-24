@@ -6,3 +6,4 @@ import './changes.test.mjs';
 import './check.test.mjs';
 import './report.test.mjs';
 import './personal.test.mjs';
+import './roslyn.test.mjs';

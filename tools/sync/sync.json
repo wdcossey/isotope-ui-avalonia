@@ -2,7 +2,9 @@
   "$comment": [
     "Settings for tools/sync. vendorDir: where tier 1 and 2 files are vendored, under their upstream paths. reportDir: sync reports.",
     "watch: upstream roots whose added, renamed and deleted paths the report lists. verify: test projects run against the vendored tree",
-    "(dotnet test with -p:VendoredRoot=<tree>/), each of which must report counts, at least one test and no failures."
+    "(dotnet test with -p:VendoredRoot=<tree>/), each of which must report counts, at least one test and no failures.",
+    "syntaxCheck: every C# file a transform rule changes must parse with no syntax error upstream's text lacks (checked by",
+    "the Roslyn tool, tools/sync/roslyn; needs dotnet)."
   ],
   "vendorDir": "src/Upstream",
   "reportDir": "docs/sync",
@@ -15,5 +17,6 @@
       "name": "Yoga",
       "project": "tools/sync/verify/Upstream.Yoga.Tests/Upstream.Yoga.Tests.csproj"
     }
-  ]
+  ],
+  "syntaxCheck": true
 }

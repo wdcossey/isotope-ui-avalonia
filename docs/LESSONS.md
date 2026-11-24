@@ -74,6 +74,11 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   later, it failed upstream's `UseResourceThreadingTests`, which count unobserved task exceptions. A test that lets one
   escape forces a collection while it runs alone. (2026-11-23)
 
+- **A deliberate break that doesn't compile proves nothing:** with TreatWarningsAsErrors, `if (false)` fails the build
+  and every test with it. Break with a condition the compiler can't fold. (2026-11-24)
+- **A temp clone of upstream on Windows needs `git -c core.longpaths=true`;** its tests/ paths are too long otherwise.
+  (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

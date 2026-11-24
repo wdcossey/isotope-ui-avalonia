@@ -3,7 +3,7 @@
 // compiles the files tools/sync vendors, transformed by tools/sync/transforms.json.
 // Reads the linked upstream files from a props file, applies the rules in a rules file, and writes each file the rules
 // change to <outDir>/<relative path>. Writes <outDir>/manifest.txt: one "upstreamPath|rewrittenPath|hits" line per file.
-// Usage: node tools/rewrite-upstream.mjs <files.props> <rules.json> <upstreamSrcDir> <outDir>
+// Usage: node tools/rewrite-upstream.mjs <files.props> <rules.json> <upstreamSrcDir> <outDir> [<more rules.json> ...]
 //
 // A rules file is a JSON array. Each rule has a "why", optionally "files" (paths relative to upstreamSrcDir; default:
 // every file), and one of:
@@ -11,12 +11,16 @@
 //   {"drop": regex}  deletes the one member whose declaration the regex matches (in code, not in a comment or string),
 //                    with its doc comment and attributes and its body ({...}, => ...; or = ...;). The deleted lines
 //                    are left blank, so line numbers still match upstream's.
+//   {"roslyn": {"op", ...}, "files": [...]}  a syntax-aware transform by tools/sync/roslyn (ops as in
+//                    tools/sync/lib/transforms.mjs). Roslyn rules run first, on upstream's text, in one batch.
 // Every rule must match: a "find" rule at least once over its files, a "drop" rule exactly once in each of its files.
 // Otherwise the import fails (exit 1), so a rule upstream has outgrown can't pass silently.
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dropMember } from './sync/lib/csharp.mjs';
+import { runRoslyn } from './sync/lib/roslyn.mjs';
+import { checkRoslynOp } from './sync/lib/transforms.mjs';
 
 // The C# lexer lives in tools/sync/lib/csharp.mjs (one implementation, shared with tools/sync's drop rules).
 export { codeMask } from './sync/lib/csharp.mjs';
@@ -25,6 +29,7 @@ export function applyRules(rel, text, rules) {
   let hits = 0;
   for (const r of rules) {
     if (r.files && !r.files.includes(rel)) continue;
+    if (r.roslyn !== undefined) continue; // applied before, in one batch (applyRoslynRules)
     if (r.drop !== undefined) {
       const d = dropMember(text, r.re);
       if (d.error) throw new Error(rel + ': drop rule ' + d.error + ': ' + r.drop);
@@ -45,11 +50,39 @@ export function applyRules(rel, text, rules) {
 }
 
 export function loadRules(rulesFile) {
-  return JSON.parse(readFileSync(rulesFile, 'utf8')).map((r) => ({
-    ...r,
-    hits: 0,
-    re: new RegExp(r.drop ?? r.find, 'g' + (r.flags ?? '')),
-  }));
+  return JSON.parse(readFileSync(rulesFile, 'utf8')).map((r) => {
+    if (r.roslyn === undefined) return { ...r, hits: 0, re: new RegExp(r.drop ?? r.find, 'g' + (r.flags ?? '')) };
+    if (!Array.isArray(r.files) || !r.files.length) throw new Error('a "roslyn" rule lists its files: ' + JSON.stringify(r.roslyn));
+    if (['find', 'drop', 'replace', 'flags'].some((k) => r[k] !== undefined)) throw new Error('a "roslyn" rule takes no find, drop, replace or flags: ' + JSON.stringify(r.roslyn));
+    checkRoslynOp(r.roslyn, rulesFile + ': rule ' + JSON.stringify(r.roslyn));
+    return { ...r, hits: 0 };
+  });
+}
+
+/**
+ * Runs the Roslyn rules over the files they list, in one run of the tool. texts: Map(rel -> upstream text).
+ * Returns Map(rel -> {text, hits}) for the files they change; throws on a rule that fails or matches nothing.
+ */
+export function applyRoslynRules(texts, rules, run = runRoslyn) {
+  const roslyn = rules.filter((r) => r.roslyn !== undefined);
+  const batch = [...texts].map(([rel, text]) => ({ path: rel, text, ops: roslyn.filter((r) => r.files.includes(rel)).map((r) => ({ id: String(rules.indexOf(r)), ...r.roslyn })) }))
+    .filter((f) => f.ops.length);
+  const out = new Map();
+  const problems = [];
+  for (const f of run(batch)) {
+    let hits = 0;
+    for (const x of f.results) {
+      const r = rules[+x.id];
+      if (x.error) problems.push(f.path + ': roslyn rule ' + JSON.stringify(r.roslyn) + ': ' + x.error);
+      r.hits += x.hits ? 1 : 0;
+      hits += x.hits;
+    }
+    problems.push(...f.errors.map((e) => f.path + ': ' + e));
+    out.set(f.path, { text: f.text, hits });
+  }
+  for (const r of roslyn) for (const f of r.files) if (!texts.has(f)) problems.push('roslyn rule ' + JSON.stringify(r.roslyn) + ' lists ' + f + ', which the props file does not compile');
+  if (problems.length) throw new Error(problems.join('\n'));
+  return out;
 }
 
 // Writes a file only when its content changed, so an unchanged rewrite keeps its timestamp and the compile
@@ -69,9 +102,9 @@ function listFiles(dir) {
 }
 
 function main() {
-  const [propsFile, rulesFile, srcDir, outDir] = process.argv.slice(2);
+  const [propsFile, rulesFile, srcDir, outDir, ...moreRules] = process.argv.slice(2);
   const props = readFileSync(propsFile, 'utf8');
-  const rules = loadRules(rulesFile);
+  const rules = [rulesFile, ...moreRules].flatMap(loadRules);
   const rels = [...props.matchAll(/Include="\$\(UpstreamSrc\)([^"]+)"/g)].map((m) => m[1].replace(/\\/g, '/'));
   const manifest = [];
   const written = new Set();
@@ -82,11 +115,22 @@ function main() {
     console.error(message);
     process.exit(1);
   };
+  // Roslyn rules first, on upstream's text, in one run of the tool.
+  let pre = new Map();
+  if (rules.some((r) => r.roslyn !== undefined)) {
+    try {
+      pre = applyRoslynRules(new Map(rels.map((rel) => [rel, readFileSync(path.join(srcDir, rel), 'utf8')])), rules);
+    } catch (e) {
+      fail('rewrite-upstream: ' + e.message);
+    }
+  }
   for (const rel of rels) {
     const src = path.join(srcDir, rel);
     let text, hits;
     try {
-      ({ text, hits } = applyRules(rel, readFileSync(src, 'utf8'), rules));
+      const before = pre.get(rel);
+      ({ text, hits } = applyRules(rel, before?.text ?? readFileSync(src, 'utf8'), rules));
+      hits += before?.hits ?? 0;
     } catch (e) {
       fail('rewrite-upstream: ' + e.message);
     }
@@ -99,7 +143,7 @@ function main() {
   }
   const unmatched = rules.filter((r) => r.hits === 0 || (r.drop !== undefined && r.files && r.hits !== r.files.length));
   if (unmatched.length)
-    fail(unmatched.map((r) => 'rewrite-upstream: rule did not match: ' + (r.drop ?? r.find)).join('\n'));
+    fail(unmatched.map((r) => 'rewrite-upstream: rule did not match: ' + (r.drop ?? r.find ?? JSON.stringify(r.roslyn))).join('\n'));
   for (const stale of listFiles(outDir)) if (!written.has(stale) && stale !== manifestFile) rmSync(stale);
   writeIfChanged(manifestFile, manifest.join('\n') + (manifest.length ? '\n' : ''));
   console.log('rewrote ' + manifest.length + ' files');
