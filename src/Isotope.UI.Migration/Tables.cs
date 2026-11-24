@@ -28,6 +28,13 @@ internal sealed class NameEntry
     public string Reactor = "", Status = "";
     public string? Avalonia, Target, Note;
 
+    /// <summary>
+    /// A factory's object initializer, written onto each call it renames as <c>(Name(...) with { With })</c>, so the call
+    /// keeps the Reactor factory's layout (ScrollView, #43). Its names are written in full: a using added for them could
+    /// give an unported factory's name a meaning (Avalonia.Controls.Primitives has a Popup and a UniformGrid).
+    /// </summary>
+    public string? With;
+
     /// <summary>Only applied entries migrate: a proposed one is still Reactor's name in Isotope's code.</summary>
     public bool Applied => Status == "applied";
 }
@@ -73,7 +80,7 @@ internal sealed class RenameTable
         Arr(root, section).Select(o => Obj(o, section)).Select(e => new NameEntry
         {
             Reactor = Str(e, "reactor")!, Avalonia = Str(e, "avalonia"), Status = Str(e, "status")!,
-            Target = Str(e, "target"), Note = Str(e, "note"),
+            Target = Str(e, "target"), Note = Str(e, "note"), With = Str(e, "with"),
         }).ToList();
 
     internal static Dictionary<string, object?> Obj(object? o, string what) =>

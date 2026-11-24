@@ -18,8 +18,12 @@
     "HyperlinkButtonElement": "Avalonia.Controls.HyperlinkButton",
     "BorderElement": "Avalonia.Controls.Border",
     "ScrollViewerElement": "Avalonia.Controls.ScrollViewer",
+    "ScrollViewElement": "Avalonia.Controls.ScrollViewer",
     "ExpanderElement": "Avalonia.Controls.Expander",
     "WrapPanelElement": "Avalonia.Controls.WrapPanel",
+    "ViewboxElement": "Avalonia.Controls.Viewbox",
+    "TreeViewElement": "Avalonia.Controls.TreeView",
+    "TreeViewNodeData": "Avalonia.Controls.TreeViewItem",
     "DatePickerElement": "Avalonia.Controls.DatePicker",
     "TimePickerElement": "Avalonia.Controls.TimePicker",
     "NumberBoxElement": "Avalonia.Controls.NumericUpDown",
@@ -70,6 +74,7 @@
     {"record": "HyperlinkButtonElement", "reactor": "Content", "avalonia": "Content", "kind": "shape", "note": "Now an object? (it was string): a string or an element."},
     {"record": "HyperlinkButtonElement", "reactor": "ContentElement", "avalonia": "Content", "kind": "shape", "note": "Content and ContentElement are one Content (object?)."},
     {"record": "ScrollViewerElement", "reactor": "Child", "avalonia": "Content", "kind": "rename"},
+    {"record": "ScrollViewElement", "reactor": "ContentOrientation", "avalonia": ["HorizontalScrollBarVisibility", "VerticalScrollBarVisibility"], "kind": "shape", "note": "Upstream's ScrollView is Avalonia's ScrollViewer here, and its ContentOrientation (WinUI's ScrollingContentOrientation) is the scroll bar visibilities: Vertical, ScrollView's default, is a Disabled horizontal scroll bar; Horizontal a Disabled vertical one; Both leaves both Auto; None disables both."},
     {"record": "ExpanderElement", "reactor": "Header", "avalonia": "Header", "kind": "shape", "note": "Now an object? (it was string): a string or an element."},
     {"record": "ExpanderElement", "reactor": "HeaderContent", "avalonia": "Header", "kind": "shape", "note": "Header and HeaderContent are one Header (object?): a string or an element."},
     {"record": "DatePickerElement", "reactor": "Date", "avalonia": "SelectedDate", "kind": "rename"},
@@ -90,7 +95,12 @@
     {"record": "RadioMenuFlyoutItemData", "reactor": "Text", "avalonia": "Header", "kind": "rename"},
     {"record": "MenuBarItemData", "reactor": "Title", "avalonia": "Header", "kind": "rename"},
     {"record": "MenuFlyoutItemData", "reactor": "KeyboardAccelerators", "avalonia": "KeyboardAccelerators", "kind": "kept", "note": "No exact counterpart: Avalonia's MenuItem takes one gesture (HotKey and InputGesture, both written from the first); upstream's Command.Accelerator shares the type."},
-    {"record": "MenuFlyoutItemData", "reactor": "Description", "avalonia": "Description", "kind": "kept", "note": "No single counterpart: written as the item's ToolTip.Tip and AutomationProperties.HelpText."}
+    {"record": "MenuFlyoutItemData", "reactor": "Description", "avalonia": "Description", "kind": "kept", "note": "No single counterpart: written as the item's ToolTip.Tip and AutomationProperties.HelpText."},
+    {"record": "TreeViewElement", "reactor": "Nodes", "avalonia": "Items", "kind": "rename"},
+    {"record": "TreeViewElement", "reactor": "OnItemInvoked", "avalonia": "OnItemInvoked", "kind": "kept", "note": "No Avalonia counterpart: TreeView has no item-invoked event (this is a tap on an item, or Enter or Space on it)."},
+    {"record": "TreeViewElement", "reactor": "OnExpanding", "avalonia": "OnExpanding", "kind": "kept", "note": "No Avalonia event on TreeView: raised from TreeViewItem's Expanded, after the item expands (WinUI's Expanding comes before)."},
+    {"record": "TreeViewNodeData", "reactor": "Content", "avalonia": "Header", "kind": "rename"},
+    {"record": "TreeViewNodeData", "reactor": "Children", "avalonia": "Items", "kind": "rename"}
   ],
   "parameters": [
     {"factory": "TextBlock", "reactor": "content", "avalonia": "text"},
@@ -124,7 +134,10 @@
     {"factory": "RadioMenuItem", "reactor": "text", "avalonia": "header"},
     {"factory": "MenuSubItem", "reactor": "text", "avalonia": "header"},
     {"factory": "Grid", "reactor": "columns", "avalonia": "columnDefinitions"},
-    {"factory": "Grid", "reactor": "rows", "avalonia": "rowDefinitions"}
+    {"factory": "Grid", "reactor": "rows", "avalonia": "rowDefinitions"},
+    {"factory": "TreeView", "reactor": "nodes", "avalonia": "items"},
+    {"factory": "TreeViewItem", "reactor": "content", "avalonia": "header"},
+    {"factory": "TreeViewItem", "reactor": "children", "avalonia": "items"}
   ],
   "modifiers": [
     {"reactor": "HeaderContent", "avalonia": "Header", "target": "ExpanderElement", "status": "applied"},
@@ -142,13 +155,17 @@
     {"reactor": "StackElement", "avalonia": "StackPanelElement", "status": "proposed"},
     {"reactor": "MenuBarElement", "avalonia": "MenuElement", "status": "proposed"},
     {"reactor": "MenuBarItemData", "avalonia": "MenuItemData", "status": "proposed"},
-    {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"}
+    {"reactor": "MenuFlyoutContentElement", "avalonia": "MenuFlyoutElement", "status": "proposed"},
+    {"reactor": "ScrollViewElement", "avalonia": "ScrollViewerElement", "status": "applied", "note": "Upstream's ScrollView is Avalonia's ScrollViewer (#43)."},
+    {"reactor": "TreeViewNodeData", "avalonia": "TreeViewItemData", "status": "applied", "note": "A node is Avalonia's TreeViewItem (#43): Header and Items for Content and Children."}
   ],
   "factories": [
     {"reactor": "TabView", "avalonia": "TabControl", "status": "proposed"},
     {"reactor": "Tab", "avalonia": "TabItem", "status": "proposed"},
     {"reactor": "NumberBox", "avalonia": "NumericUpDown", "status": "proposed"},
     {"reactor": "AutoSuggestBox", "avalonia": "AutoCompleteBox", "status": "proposed"},
-    {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"}
+    {"reactor": "Progress", "avalonia": "ProgressBar", "status": "proposed"},
+    {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "with": "HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation): a ScrollViewer with its horizontal scroll bar disabled, which the migration writes (#43)."},
+    {"reactor": "TreeNode", "avalonia": "TreeViewItem", "status": "applied", "note": "Avalonia's name for a tree view node (#43)."}
   ]
 }

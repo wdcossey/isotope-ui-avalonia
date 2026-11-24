@@ -144,6 +144,10 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **`measure-samples.mjs` builds the worktree's library and checks git status at the end:** don't edit the worktree
   while it runs. (2026-11-24)
 
+- **A scripted replace of a multi-line block must match exactly that block:** a pattern for "this bullet plus two
+  lines" took the next bullet with it, and the README lost a line on `main` unnoticed. Diff the result before committing.
+  (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **The harness can block an agent's write to `FINDINGS.md`:** have agents return the section in their reply. (2026-11-24)

@@ -37,9 +37,11 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 | `Progress(value)`, `ProgressIndeterminate()` | `ProgressElement` | `ProgressBar` |
 | `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
 | `Border(child)` | `BorderElement` | `Border` |
-| `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` |
+| `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` (Reactor's `ScrollView` is one with `HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled`, content as wide as the view; the migration writes it) |
+| `Viewbox(child)` | `ViewboxElement` | `Viewbox` |
 | `Expander(header, content, isExpanded, onIsExpandedChanged)` | `ExpanderElement` | `Expander` (`.Header(element)` for an element header) |
 | `TabView(selectedIndex, onSelectedIndexChanged, Tab(header, content), ...)`, `TabView(Tab(...), ...)` | `TabViewElement` | `TabControl` (a `TabItem` per tab) |
+| `TreeView(TreeViewItem(header, items...), ...)` | `TreeViewElement` | `TreeView` (a `TreeViewItem` per `TreeViewItemData`; `OnItemInvoked` and `OnExpanding` get the node's data) |
 | `SplitView(pane, content)` | `SplitViewElement` | `SplitView` (open by default, as Reactor's) |
 | `MenuBar(Menu(header, items...), ...)` | `MenuBarElement` | `Menu` (items: `MenuItem(header, onClick)` or `MenuItem(command)`, `ToggleMenuItem`, `RadioMenuItem`, `MenuSubItem`, `MenuSeparator()`) |
 | `Separator()` | `SeparatorElement` | `Separator` (Avalonia-only, so Avalonia's name) |
@@ -51,6 +53,7 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 | `Component<T>()`, `Component<T, TProps>(props)` | `ComponentElement` | a `Component` class |
 | `Memo(render, dependencies...)` | `MemoElement` | a function component that re-renders only when a dependency changes |
 | `Group(...)`, `Empty()` | `GroupElement`, `EmptyElement` | none (a fragment; nothing) |
+| `When(condition, then)`, `If(condition, then, otherwise)`, `Expr(render)`, `ForEach(items, render)` | the element they choose, `EmptyElement` or a `GroupElement` | none (helpers: `ForEach` keys each element from an `IReactorKeyed` item) |
 | `ErrorBoundary(child, fallback)` | `ErrorBoundaryElement` | a `Border` holding the child, or the fallback when the child throws ([Error boundaries](error-boundaries.md)) |
 
 > **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
@@ -58,7 +61,8 @@ Microsoft.UI.Reactor's names. Their parameters and the elements' members have Av
 > Reactor. `TextBlock` keeps its name: it's the same control in WinUI and Avalonia, and so do `TabView` and `NumberBox`,
 > which are Avalonia's `TabControl` and `NumericUpDown`. Members and parameters take Avalonia's names instead of
 > Reactor's (`Text` for `Content`, `Minimum` for `Min`, `IsChecked` for `IsOn`, one `Content` for `Label` and
-> `ContentElement`); `tools/naming/renames.json` lists every one, and the migration tool (#33) reads it.
+> `ContentElement`), and so do factories and types new since then (`ScrollViewer` for `ScrollView`, `TreeViewItem` for
+> `TreeNode`); `tools/naming/renames.json` lists every one, and the migration tool (#33) reads it.
 
 Children may be `null`, so `show ? TextBlock("Saved") : null` is a child that comes and goes. Its unkeyed siblings
 keep their controls when it does. An input control (`TextBox`, `AutoSuggestBox`, `Slider`, `NumberBox`, `CheckBox`, `ToggleSwitch`,
@@ -73,7 +77,7 @@ pane and content are reconciled in place, so a component inside keeps its state.
 
 Inside a `Grid`, `.Grid(row: 1, column: 0, columnSpan: 2)` sets a child's cell. With the factories imported, a bare
 `Grid`, `Border` or `ScrollViewer` names the factory, so Avalonia's attached-property calls need the type in full
-(`Avalonia.Controls.Grid.GetRow(...)`) or an alias. The same goes for `Menu`, `MenuItem`, `SplitView` and `Separator`.
+(`Avalonia.Controls.Grid.GetRow(...)`) or an alias. The same goes for `Menu`, `MenuItem`, `SplitView`, `Separator`, `Viewbox`, `TreeView` and `TreeViewItem`.
 
 Modifiers and keys chain onto any element: `.Margin(...)` (uniform, horizontal and vertical, per side or a
 `Thickness`), `.Width(...)`, `.Height(...)`, `.Size(...)`, `.HAlign(...)`, `.VAlign(...)`, `.Opacity(...)`,
@@ -103,7 +107,7 @@ public static Element FruitPicker(RenderContext ctx, string[] fruit)
 
 A `Command` bundles an action with its label, enabled state, description and shortcut. `Button(command)`,
 `MenuItem(command)` and `.Command(command)` on any button use it: a click runs it, the button is disabled while
-`IsEnabled` is false, the description is the tooltip and the `Accelerator` the shortcut. It is Avalonia's
+`IsEnabled` is false, the description is the tooltip and the `Accelerator` the shortcut (`Accelerator(Key.S, KeyModifiers.Control)`). It is Avalonia's
 `ICommand` underneath. `UseCommand` tracks an async action, so the button is disabled while it runs:
 
 <!-- snippet: command -->

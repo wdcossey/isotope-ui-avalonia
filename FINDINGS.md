@@ -292,6 +292,48 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The glue:** 63 tests (was 22); 41 deliberate breaks each turned their tests red. A full dry run on a probe branch:
   plan 18 s, prepare 47 s, publish-dry-run 11 s.
 
+## Next controls by migration count (issue #43, 2026-11-24)
+
+- **What landed** (the top of ISOMIG012 without the text styles, #44), with Avalonia's names for what is new (the
+  developer's naming decision of 2026-11-24, recorded `applied` in `tools/naming/renames.json`):
+  - Reactor's `ScrollView` is Avalonia's `ScrollViewer`. The migration writes `(ScrollViewer(x) with {
+    HorizontalScrollBarVisibility = Disabled })`, which keeps WinUI ScrollView's layout (content as wide as the view), from
+    a new `with` field on a factory entry. `ScrollViewElement` is `ScrollViewerElement`; its `ContentOrientation` is
+    left for a hand fix (ISOMIG007, with a note).
+  - `TreeView` as Avalonia's TreeView. A node is `TreeViewItemData` (Reactor's `TreeViewNodeData`) with `Header`,
+    `Items` and `IsExpanded`, built by `TreeViewItem(...)` (Reactor's `TreeNode`).
+    - Nodes keep their items by header, so the user's expansions survive sorts, inserts and removals. Upstream
+      rebuilds the tree on any change.
+    - `OnItemInvoked` fires on a tap, or on an unmodified Enter or Space. `OnExpanding` fires on the user's
+      expansions only.
+  - `Viewbox`, as Avalonia's.
+  - Upstream's `When`, `If`, `Expr` and `ForEach` helpers, and `Accelerator(key, modifiers)` for the existing
+    `KeyboardAcceleratorData`.
+- **Measured** with `node tools/migration/measure-samples.mjs --out <empty temp folder>` (upstream's 36 samples, 358
+  files, upstream 561c5573). Columns are after the fixes, on main before this branch and on the branch:
+
+  | | main | #43 |
+  |---|---|---|
+  | Files that build | 62 | 63 |
+  | Compile errors | 5,544 | 5,394 |
+  | Projects that build | 2 | 2 |
+  | Migration diagnostics left | 2,948 | 2,724 |
+  | ISOMIG012 (controls not ported) | 877 | 645 |
+
+  - ISOMIG012 lost 232 diagnostics: ScrollView 139, When 31, Accelerator 22, TreeNode 20, Viewbox 9, TreeView 4,
+    Expr 4 and ForEach 3.
+  - Some code that compiles further now shows errors that were hidden (`TextBlockElement` members +30, `Theme` +19).
+  - No file that built before the fixes fails after them, and no `dotnet format` run failed.
+- **Next by count** (not in this issue): the rich text family (`Run` 39, `Paragraph` 14, `RichTextBlock` 9,
+  `InlineUI` 8), icons (`Icon` 14, `FontIcon` 10), `ListView` with element items (12), and the typed
+  `TreeView<T>`.
+- **Measured** (headless, Avalonia 12.1.6):
+  - Enter on a TreeViewItem with children expands it.
+  - A TreeViewItem's `Expanded` routes Tunnel and Bubble, raised inside the `IsExpanded` write.
+  - The migration fix must not add `using Avalonia.Controls.Primitives`. It makes Reactor's `Popup` and
+    `UniformGrid` name Avalonia types, which hid 4 ISOMIG012 diagnostics.
+- **Tests:** 16 library tests and 3 migration tests, all proven to fail.
+
 ## Migration tool (issue #33, 2026-11-24)
 
 - **An analyzer with 16 rules (ISOMIG001–016) and code fixes,** run with `dotnet format analyzers` after the project file
