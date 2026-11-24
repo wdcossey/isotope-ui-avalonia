@@ -110,22 +110,32 @@ public sealed class TreeViewTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void A_node_whose_header_changes_as_its_level_gains_a_node_is_another_node_and_gets_its_declared_expansion()
+    public void Nodes_that_move_come_or_go_keep_their_items_and_the_user_s_expansions()
     {
-        var archived = false;
-        var host = new TestHost(() =>
-        {
-            TreeViewItemData docs = TreeViewItem("Documents", TreeViewItem("Report.docx"));
-            return TreeView(archived ? [TreeViewItem("Archive", TreeViewItem("Old")), docs] : [docs]);
-        });
-        var first = Item(Tree(host), 0);
-        first.IsExpanded = true; // the user expands Documents
+        string[] order = ["A", "B"];
+        var host = new TestHost(() => TreeView(order.Select(h => TreeViewItem(h, TreeViewItem(h + ".child"))).ToArray()));
+        var tree = Tree(host);
+        var (a, b) = (Item(tree, 0), Item(tree, 1));
+        a.IsExpanded = true; // the user expands A only
 
-        archived = true; // Archive is inserted before it: the item at 0 now shows Archive, which isn't expanded
+        order = ["B", "A"]; // a sort
         host.Render();
-        Assert.Same(first, Item(Tree(host), 0));
-        Assert.Equal("Archive", first.Header);
-        Assert.False(first.IsExpanded);
+        Assert.Equal([b, a], tree.Items.Cast<AvTreeViewItem>());
+        Assert.Equal([false, true], tree.Items.Cast<AvTreeViewItem>().Select(i => i.IsExpanded));
+        Assert.Equal(["A.child"], Headers(a)); // each item keeps its own node's children
+
+        order = ["X", "B", "A"]; // one comes first: a new item, the others untouched
+        host.Render();
+        Assert.Equal(["X", "B", "A"], Headers(tree));
+        Assert.Same(b, Item(tree, 1));
+        Assert.Same(a, Item(tree, 2));
+        Assert.True(a.IsExpanded);
+        Assert.False(Item(tree, 0).IsExpanded);
+
+        order = ["A"]; // the others go
+        host.Render();
+        Assert.Equal([a], tree.Items.Cast<AvTreeViewItem>());
+        Assert.True(a.IsExpanded);
     }
 
     [AvaloniaFact]
@@ -170,6 +180,12 @@ public sealed class TreeViewTests : IDisposable
         round = 2;
         host.Render();
         window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(["1B", "2B"], invoked);
+
+        // A modified key changes a multiple selection: no invoke.
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.Control);
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.Shift);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(["1B", "2B"], invoked);
     }

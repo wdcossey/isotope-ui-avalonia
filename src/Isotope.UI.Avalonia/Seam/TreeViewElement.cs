@@ -14,11 +14,11 @@ namespace Isotope.UI.Core;
 // naming decision new names are Avalonia's: a node is TreeViewItemData (upstream's TreeViewNodeData), with a TreeViewItem's
 // Header, Items and IsExpanded (upstream's Content, Children, IsExpanded), and the tree's nodes are its Items. Upstream's
 // ContentElement (an element per node, obsolete upstream) and the drag members have no counterpart here. Nodes hold no
-// elements, so they are TreeViewItems built from the data and updated in place by position (TreeItemsSync), as menu
-// items are. A node's IsExpanded is written when its declared value changes, so what the user expands stays expanded
-// across renders, also when its header text changes (a live count); when its level gains or loses nodes, a node whose
-// header changed is another node, and gets its declared value. Upstream rebuilds the whole tree from the data whenever
-// any header, expansion or node count changes, so there the user's expansions last only while nothing changes. OnItemInvoked and OnExpanding keep
+// elements, so they are TreeViewItems built from the data and kept in step with it (TreeItemsSync): a node keeps the
+// item that showed its header, so nodes that move, come or go leave the others' items alone, and a node whose header
+// changed (a live count) takes an item left over, in order. A node's IsExpanded is written when its declared value
+// changes, so what the user expands stays expanded across renders. Upstream rebuilds the whole tree from the data
+// whenever any header, expansion or node count changes, so there the user's expansions last only while nothing changes. OnItemInvoked and OnExpanding keep
 // Reactor's names: Avalonia's TreeView has no such events. An item is invoked by a tap on it (not on its expand
 // chevron) or by Enter or Space on it, as WinUI's ItemInvoked; OnExpanding runs on TreeViewItem's Expanded, which comes
 // after the item expands where WinUI's Expanding comes before, and not for the engine's own writes.
@@ -65,7 +65,8 @@ public partial record TreeViewElement(TreeViewItemData[] Items) : Element
 
     private static readonly EventHandler<KeyEventArgs> __KeyDownTrampoline = (s, args) =>
     {
-        if (args.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Space) Invoke((TreeView)s!, args.Source);
+        // Unmodified only: Ctrl+Space and Shift+Space change a multiple selection.
+        if (args.Key is Avalonia.Input.Key.Enter or Avalonia.Input.Key.Space && args.KeyModifiers == KeyModifiers.None) Invoke((TreeView)s!, args.Source);
     };
 
     private static readonly EventHandler<RoutedEventArgs> __ExpandedTrampoline = (s, args) =>
@@ -78,7 +79,7 @@ public partial record TreeViewElement(TreeViewItemData[] Items) : Element
     private static partial ControlDescriptor<TreeViewElement, TreeView> Customize(ControlDescriptor<TreeViewElement, TreeView> d)
     {
         d.Children = new Imperative<TreeViewElement, TreeView>(static (ctx, oldElement, newElement, control) =>
-            TreeItemsSync.Sync(ItemsList.Of(control.Items), oldElement?.Items, newElement.Items));
+            TreeItemsSync.Sync(ItemsList.Of(control.Items), newElement.Items));
         return d
             .HandCodedEvent<TreeViewEventPayload, EventHandler<TappedEventArgs>>(
                 subscribe:       static (c, h) => c.AddHandler(InputElement.TappedEvent, h, RoutingStrategies.Bubble, handledEventsToo: true),
@@ -139,41 +140,66 @@ internal static class TreeItemsSync
         return null;
     }
 
-    /// <summary>Makes <paramref name="items"/> show <paramref name="data"/>, each item updated in place.</summary>
-    internal static void Sync(IList<object> items, TreeViewItemData[]? old, TreeViewItemData[]? data)
+    /// <summary>
+    /// Makes <paramref name="items"/> show <paramref name="data"/>. Each node takes the item that showed a node with its
+    /// header (the first one not taken yet), so a node that moves keeps its item, and the user's expansion with it; a
+    /// node with a new header takes an item no node claimed, in order (the same node renamed, as a live count is), and
+    /// one with none left gets a new item.
+    /// </summary>
+    internal static void Sync(IList<object> items, TreeViewItemData[]? data)
     {
         t_writing++;
-        try { SyncLevel(items, old, data ?? []); }
+        try { SyncLevel(items, data ?? []); }
         finally { t_writing--; }
     }
 
-    private static void SyncLevel(IList<object> items, TreeViewItemData[]? old, TreeViewItemData[] data)
+    private static void SyncLevel(IList<object> items, TreeViewItemData[] data)
     {
+        var existing = items.OfType<TreeViewItem>().ToList();
+        var taken = new bool[existing.Count];
+        var target = new TreeViewItem?[data.Length];
+        for (int i = 0; i < data.Length; i++)
+            for (int k = 0; k < existing.Count; k++)
+            {
+                if (taken[k] || DataOf(existing[k])?.Header != data[i].Header) continue;
+                taken[k] = true;
+                target[i] = existing[k];
+                break;
+            }
+        var next = 0;
         for (int i = 0; i < data.Length; i++)
         {
-            if (i < items.Count && items[i] is TreeViewItem existing)
-                Write(existing, old is not null && i < old.Length ? old[i] : null, data[i], sameCount: old?.Length == data.Length);
-            else
+            if (target[i] is not null) continue;
+            while (next < existing.Count && taken[next]) next++;
+            if (next < existing.Count)
             {
-                var created = new TreeViewItem();
-                Write(created, null, data[i], sameCount: false);
-                if (i < items.Count) items[i] = created;
-                else items.Add(created);
+                taken[next] = true;
+                target[i] = existing[next];
             }
+            else target[i] = new TreeViewItem();
         }
-        for (int i = items.Count - 1; i >= data.Length; i--) items.RemoveAt(i);
+
+        // Items no node took go; then the rest are put in the nodes' order, each moved only when out of place.
+        for (int i = items.Count - 1; i >= 0; i--)
+            if (items[i] is not TreeViewItem item || Array.IndexOf(target, item) < 0) items.RemoveAt(i);
+        for (int i = 0; i < data.Length; i++)
+        {
+            var item = target[i]!;
+            if (i < items.Count && ReferenceEquals(items[i], item)) { Write(item, data[i]); continue; }
+            var from = items.IndexOf(item);
+            if (from >= 0) items.RemoveAt(from);
+            items.Insert(i, item);
+            Write(item, data[i]);
+        }
     }
 
-    private static void Write(TreeViewItem item, TreeViewItemData? old, TreeViewItemData data, bool sameCount)
+    private static void Write(TreeViewItem item, TreeViewItemData data)
     {
-        // The data an item last showed, for one updated in place by an engine that has no old element (a remount).
-        old ??= item.GetValue(DataProperty);
+        var old = item.GetValue(DataProperty);
         item.SetValue(DataProperty, data);
         if (!Equals(item.Header, data.Header)) item.Header = data.Header;
-        // Written when the declared value changes, so the user's expansions stay until then. Items are paired by
-        // position: when the level's node count changed, an item whose header changed is another node, so its value
-        // is written; with the same count it is the same node renamed.
-        if (old is null || old.IsExpanded != data.IsExpanded || (old.Header != data.Header && !sameCount)) item.IsExpanded = data.IsExpanded;
-        SyncLevel(ItemsList.Of(item.Items), old?.Items, data.Items ?? []);
+        // Written for a new item and when the node's declared value changes, so the user's expansions stay until then.
+        if (old is null || old.IsExpanded != data.IsExpanded) item.IsExpanded = data.IsExpanded;
+        SyncLevel(ItemsList.Of(item.Items), data.Items ?? []);
     }
 }

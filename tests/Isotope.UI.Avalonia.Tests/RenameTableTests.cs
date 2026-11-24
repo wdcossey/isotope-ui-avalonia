@@ -221,9 +221,13 @@ internal sealed record RenameTable(
     internal string IsotopeName(string reactor) =>
         Types.FirstOrDefault(t => t.Status == "applied" && t.Reactor == reactor && t.Avalonia is not null)?.Avalonia ?? reactor;
 
-    /// <summary>Reactor's name for a library type that an applied type rename gave its Avalonia name, else the same.</summary>
+    /// <summary>
+    /// Reactor's name for a library type: its own when the table lists it, else the one an applied type rename gave its
+    /// Avalonia name.
+    /// </summary>
     internal string ReactorName(string isotope) =>
-        Types.FirstOrDefault(t => t.Status == "applied" && t.Avalonia == isotope)?.Reactor ?? isotope;
+        Records.ContainsKey(isotope) ? isotope // a Reactor record too (ScrollViewerElement), as the analyzer reads it first
+            : Types.FirstOrDefault(t => t.Status == "applied" && t.Avalonia == isotope)?.Reactor ?? isotope;
 
     /// <summary>A rename, or a removal when <see cref="Avalonia"/> is null (then <see cref="Note"/> says what replaces it).</summary>
     internal sealed record Rename(string Reactor, string? Avalonia, string Status, string? Note);
