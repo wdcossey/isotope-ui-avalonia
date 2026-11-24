@@ -152,6 +152,19 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
 
+## More controls (issue #19, 2026-11-24)
+
+- **14 more controls** with records, generated descriptors, factories and headless tests: CheckBox (plus three-state),
+  ToggleSwitch, RadioButton, ComboBox, ListBox, ProgressBar (`Progress`, `ProgressIndeterminate`), Image, Border,
+  ScrollViewer, Expander, Grid, WrapPanel, DatePicker, TimePicker.
+- **ComboBox and ListBox are the first items controls that run;** the items-host fix needed no generator change.
+- **Tests:** 45 new, all proven to fail; 856 library tests in all after merging #20.
+- **Avalonia differences found:**
+  - one event payload per control (a ComboBox lost its selection callback);
+  - DatePicker's year bounds are set in its constructor;
+  - Expander's events arrive late, so its controlled entry listens to `IsExpanded` instead.
+- **Follow-ups:** vendoring upstream's `GridSize`, and a generator fix for interface-typed members (#22).
+
 ## Weekly sync job and the first real sync (issue #5, 2026-11-24)
 
 - **The job:** `.github/workflows/upstream-sync.yml` runs weekly (Monday 05:17 UTC), and on `workflow_dispatch` with a
