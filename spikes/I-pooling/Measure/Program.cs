@@ -31,7 +31,10 @@ if (rows < 64 || runs < 1)
 }
 
 var session = HeadlessUnitTestSession.StartNew(typeof(MeasureApp));
-var failures = await session.Dispatch(() => new Bench(rows, runs).Run(), CancellationToken.None);
+// A first pass of every case, not printed, so the JIT has tiered up the code paths before any case is timed (the first
+// case timed in a fresh process otherwise ran several times slower than the same work later).
+var failures = await session.Dispatch(() => new Bench(rows, 1, quiet: true).Run() + new Bench(rows, runs, quiet: false).Run(),
+    CancellationToken.None);
 // The headless session's dispatcher thread keeps the process alive (disposing the session waits on it), so exit.
 Environment.Exit(failures == 0 ? 0 : 2);
 return 0;
@@ -51,20 +54,25 @@ readonly record struct Stats(double ChangeMs, double TotalMs, double Kb, double 
 /// <summary>A move the engine made: the child at From ends up at To (RemoveAt(From) then Insert(To), as upstream).</summary>
 readonly record struct MoveOp(int From, int To);
 
-sealed class Bench(int n, int runs)
+sealed class Bench(int n, int runs, bool quiet)
 {
     private int _failures;
+
+    private void Out(string line = "")
+    {
+        if (!quiet) Console.WriteLine(line);
+    }
     private static readonly string[] Where = ["detached", "window"];
 
     public int Run()
     {
-        Console.WriteLine($"rows={n} runs={runs}; medians: change ms | change + layout ms | KB allocated | gen0 GCs; then notes");
+        Out($"rows={n} runs={runs}; medians: change ms | change + layout ms | KB allocated | gen0 GCs; then notes");
         EngineSection();
         PoolSection();
         MoveSection();
         // A leak guard: every tree is closed and collected, so the managed heap stays small.
-        Console.WriteLine($"managed heap after the run: {GC.GetTotalMemory(true) / 1024.0 / 1024.0:F1} MB");
-        Console.WriteLine(_failures == 0 ? "all checks passed" : $"{_failures} CHECK(S) FAILED");
+        Out($"managed heap after the run: {GC.GetTotalMemory(true) / 1024.0 / 1024.0:F1} MB");
+        Out(_failures == 0 ? "all checks passed" : $"{_failures} CHECK(S) FAILED");
         return _failures;
     }
 
@@ -120,8 +128,8 @@ sealed class Bench(int n, int runs)
         return xs.Count % 2 == 1 ? xs[xs.Count / 2] : (xs[xs.Count / 2 - 1] + xs[xs.Count / 2]) / 2;
     }
 
-    private static void Print(string name, string where, Stats s, string note = "")
-        => Console.WriteLine($"  {name,-34} {where,-8} {s.ChangeMs,8:F2} | {s.TotalMs,8:F2} | {s.Kb,9:F0} KB | {s.Gen0,3:F0} gen0  {note}");
+    private void Print(string name, string where, Stats s, string note = "")
+        => Out($"  {name,-34} {where,-8} {s.ChangeMs,8:F2} | {s.TotalMs,8:F2} | {s.Kb,9:F0} KB | {s.Gen0,3:F0} gen0  {note}");
 
     private void Check(bool ok, string what)
     {
@@ -195,14 +203,14 @@ sealed class Bench(int n, int runs)
             Check(movesOnly, $"engine {name}: every collection edit is a move (a remove + insert of the same row, or a Move)");
             _engineMoves[name] = moves;
             _finalOrder[name] = host.Keys;
-            Console.WriteLine($"  engine edits for {name,-20} {moves.Count} moves ({events.Count} collection events)");
+            Out($"  engine edits for {name,-20} {moves.Count} moves ({events.Count} collection events)");
         }
     }
 
     private void EngineSection()
     {
-        Console.WriteLine();
-        Console.WriteLine("1. Engine (reconciler + upstream ChildReconciler), memo rows: Border > StackPanel > TextBlock + Button");
+        Out();
+        Out("1. Engine (reconciler + upstream ChildReconciler), memo rows: Border > StackPanel > TextBlock + Button");
         RecordMoves();
         var cases = new List<(string Name, Func<string[], string[]> Change)>
         {
@@ -340,8 +348,8 @@ sealed class Bench(int n, int runs)
 
     private void PoolSection()
     {
-        Console.WriteLine();
-        Console.WriteLine("2. Avalonia: the same row controls created fresh vs. rented from a pool of used, reset controls");
+        Out();
+        Out("2. Avalonia: the same row controls created fresh vs. rented from a pool of used, reset controls");
         Print("construct only (no tree)", "detached", Sample(
             setup: () => new List<Border>(n),
             change: list => { for (int i = 0; i < n; i++) list.Add(RowControls.Create("k" + i, null)); },
@@ -552,8 +560,8 @@ sealed class Bench(int n, int runs)
 
     private void MoveSection()
     {
-        Console.WriteLine();
-        Console.WriteLine("3. Avalonia: the engine's moves for each reorder, replayed on built rows: RemoveAt + Insert vs. Controls.Move");
+        Out();
+        Out("3. Avalonia: the engine's moves for each reorder, replayed on built rows: RemoveAt + Insert vs. Controls.Move");
         foreach (var (name, _) in Reorders())
         {
             var moves = _engineMoves[name];
@@ -625,6 +633,6 @@ sealed class Bench(int n, int runs)
         bool arranged = flex.Children.Select(c => c.Bounds.X).SequenceEqual(Enumerable.Range(0, count).Select(i => i * 10.0));
         window.Close();
         Check(before && order && arranged, "FlexPanel: a reverse by Controls.Move lays the row out in the new order");
-        Console.WriteLine($"  FlexPanel reverse by Controls.Move, {count} children: laid out in the new order {(before && order && arranged ? "yes" : "NO")}");
+        Out($"  FlexPanel reverse by Controls.Move, {count} children: laid out in the new order {(before && order && arranged ? "yes" : "NO")}");
     }
 }
