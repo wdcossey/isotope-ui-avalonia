@@ -234,6 +234,15 @@
       ]
     },
     {
+      "id": "gen-reference-clear-channel-of",
+      "find": "(\\? global::Microsoft\\.UI\\.Reactor\\.Optional<\\{p\\.ValueType\\}>\\.Unset : )e\\.\\{p\\.Name\\}\"",
+      "replace": "$1global::Microsoft.UI.Reactor.Optional<{p.ValueType}>.Of(e.{p.Name})\"",
+      "why": "A reference-typed member on the ClearValue channel (ClearValueOnUnset, descriptor-only mode) is wrapped with Optional<T>.Of: upstream's ternary converts it implicitly, which C# doesn't allow from an interface such as Avalonia's IBrush (CS0173). The same value for a class type (#22).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
       "id": "winui-usings",
       "find": "^using (?:WinUI = )?Microsoft\\.UI\\.(?:Xaml|Composition)(?:\\.[A-Za-z]+)*;\\r?$",
       "flags": "m",

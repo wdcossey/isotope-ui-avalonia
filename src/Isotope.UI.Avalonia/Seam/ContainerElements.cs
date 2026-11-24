@@ -18,7 +18,6 @@ namespace Isotope.UI.Core;
 [GenerateReactorDescriptor(typeof(Border), ClearValueOnUnset = true)]
 [WrapContent("Child")]
 [WrapManual("Background")]
-[WrapManual("BorderBrush")]
 [WrapManual("CornerRadius")]
 [WrapManual("BorderThickness")]
 public partial record BorderElement(Element? Child) : Element
@@ -42,18 +41,12 @@ public partial record BorderElement(Element? Child) : Element
 
     internal Action<Border>[] Setters { get; init; } = [];
 
-    // Background is written by the reconciler with the modifier's (Reconciler.ApplyModifiers). The rest go through the
-    // ClearValue channel, so a member set back to null gives the control its default again:
-    // - BorderBrush: the generated entry for an interface-typed member (IBrush) converts it to Optional<IBrush>
-    //   implicitly, which C# doesn't allow from an interface, so it is the same entry spelled with Optional.Of;
-    // - CornerRadius and BorderThickness: upstream's [WrapConvert] (a scalar written through the struct's constructor)
-    //   skips the write for null instead of clearing.
+    // Background is written by the reconciler with the modifier's (Reconciler.ApplyModifiers). BorderBrush and Padding
+    // are generated, on the ClearValue channel. CornerRadius and BorderThickness are written here, on the same channel,
+    // so a member set back to null gives the control its default again: upstream's [WrapConvert] (a scalar written
+    // through the struct's constructor) skips the write for null instead of clearing.
     private static partial ControlDescriptor<BorderElement, Border> Customize(ControlDescriptor<BorderElement, Border> d)
-        => d.OneWay<IBrush>(
-                get: static e => e.BorderBrush is null ? Optional<IBrush>.Unset : Optional<IBrush>.Of(e.BorderBrush),
-                set: static (c, v) => c.BorderBrush = v,
-                dp:  Border.BorderBrushProperty)
-            .OneWay<CornerRadius>(
+        => d.OneWay<CornerRadius>(
                 get: static e => e.CornerRadius is { } r ? new CornerRadius(r) : Optional<CornerRadius>.Unset,
                 set: static (c, v) => c.CornerRadius = v,
                 dp:  Border.CornerRadiusProperty)

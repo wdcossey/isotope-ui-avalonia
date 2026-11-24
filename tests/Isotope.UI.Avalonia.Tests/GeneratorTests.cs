@@ -112,4 +112,26 @@ public class GeneratorTests
         Assert.Contains("ItemsList.Of(c.Items)", generated);
         Assert.Empty(errors);
     }
+
+    [Fact]
+    public void An_interface_typed_member_on_the_ClearValue_channel_compiles()
+    {
+        // Border.BorderBrush is an IBrush: C# has no implicit conversion from an interface to Optional<IBrush>.
+        var (diagnostics, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border), ClearValueOnUnset = true)]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public Avalonia.Media.IBrush? BorderBrush { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+
+        Assert.DoesNotContain(diagnostics, d => d.Id == "ISOTOPEGEN001");
+        Assert.Contains("Optional<global::Avalonia.Media.IBrush>.Of(e.BorderBrush)", generated);
+        Assert.Contains("global::Avalonia.Controls.Border.BorderBrushProperty", generated);
+        Assert.Empty(errors);
+    }
 }
