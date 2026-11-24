@@ -66,6 +66,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `docs/guide/` | Writing components: the element factories and the hooks, from tested code |
 | `docs/LESSONS.md`, `docs/agent-brief.md` | Traps already hit; the brief for parallel agents |
 | `src/Isotope.UI.Avalonia/` | The library (`Isotope.UI.*`): our Avalonia seam (`Element`, `ElementModifiers`, `Reconciler`, …) plus upstream's engine files, compiled from the vendored `src/Upstream/` (listed in `UpstreamFiles.props`) |
+| `src/Isotope.UI.Avalonia.Desktop/` | The one-line startup, `ReactorApp.Run<TRoot>(title, width, height)`, over a default app builder (platform detection, Fluent theme); desktop only |
 | `src/Isotope.UI.Avalonia.Generators/` | Upstream's wrappers generator built for Avalonia (vendored, `gen-*` rules), referenced by the library as an analyzer |
 | `samples/Isotope.UI.Samples/` | The sample app: a tab per area (counter and todo, buttons, menus, numbers, split view, error boundary), with a real-window checklist in its README (`dotnet run`) |
 | `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the seam and the hooks core |
@@ -97,7 +98,7 @@ git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.l
 dotnet test spikes/D-flex/Reactor.Avalonia.Flex.Tests      # 794 tests: upstream's Yoga tests + FlexPanel
 node spikes/A-engine/run-spike.mjs 3                        # Spike A: groups the engine's compile errors (569 at `1f078436`; 567 at `28a87225`)
 node spikes/A-engine/run-spike.mjs 4                        # Spike A step 4: + Roslyn rules (502 at `1f078436`)
-dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (973 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests                 # the library: seam, hooks, controls, FlexPanel, examples, and 622 of upstream's engine tests (984 tests; needs no upstream/)
 node --test tools/rewrite-upstream.test.mjs                 # Spike A's build-time rewrite tool
 node tools/sync/test/all.mjs                                # the sync harness's own tests (needs dotnet: the Roslyn step)
 node tools/sync/sync.mjs --check --no-fetch                 # vendored files match upstream + transforms
