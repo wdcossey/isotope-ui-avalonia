@@ -3,15 +3,27 @@
 //   "glob": pattern   every vendored file (tier 1 or 2) the glob matches, wherever the rule matches; it must change at
 //                     least one file. For repo-wide renames (the namespace), so tier 1 means "no rule but those".
 //                     Glob rules come after every listed rule (see loadTransforms).
-// and does one of two things:
+// and does one of three things:
 //   "find" (JS regex source, "flags" optional: any of "imsu", added to "g") with "replace" ($1..$9 for groups, $$ for $);
 //   "drop" (JS regex source): deletes the one member whose declaration it matches in code (not in a comment or
 //          string), with its doc comment and attributes and its body; the lines are left blank, so line numbers still
 //          match upstream's. Exactly one match in each listed file. Only with "files".
+//   "roslyn" ({"op", ...}): a syntax-aware transform run by tools/sync/roslyn (lib/roslyn.mjs). Only with "files", and
+//          before every other rule, so it reads upstream's own text. Ops:
+//            {"op": "drop-member", "member", "type"?, "parameters"?}  drops the one member named member in the type
+//              (dotted, innermost last; omitted for a top-level type), "parameters" ("(T1, T2)", the types as written)
+//              picking an overload; blanked like "drop".
+//            {"op": "retarget-type", "from", "to"}  rewrites every reference to the type name from (dotted, as
+//              written, with or without global::) in code to the text to; comments and strings are left alone.
+//            {"op": "drop-attribute", "attribute"}  removes every attribute of that name (with or without the
+//              Attribute suffix; dotted to match only that qualified form).
+//          Each must match in every listed file, and a drop-member exactly once; the files it changes must still
+//          parse with no new syntax error.
 // Fix a rule that stops matching, never the vendored file.
-// rules: {"rules": [{"id", "find"+"replace" | "drop", "flags"?, "why", "files" | "glob"}]}
+// rules: {"rules": [{"id", "find"+"replace" | "drop" | "roslyn", "flags"?, "why", "files" | "glob"}]}
 import { globToRegExp } from './glob.mjs';
 import { dropMember } from './csharp.mjs';
+import { OPS, runRoslyn } from './roslyn.mjs';
 
 export function loadTransforms(json) {
   if (!json || !Array.isArray(json.rules)) throw new Error('transforms: expected {"rules": [...]}');
@@ -21,8 +33,9 @@ export function loadTransforms(json) {
     if (typeof r.id !== 'string' || !r.id) throw new Error('transform #' + (i + 1) + ': needs an "id"');
     if (ids.has(r.id)) throw new Error(where + ': duplicate id');
     ids.add(r.id);
+    if (r.roslyn !== undefined) return loadRoslynRule(r, where);
     const drop = r.drop !== undefined;
-    if (drop === (r.find !== undefined)) throw new Error(where + ': needs exactly one of "find" or "drop"');
+    if (drop === (r.find !== undefined)) throw new Error(where + ': needs exactly one of "find" or "drop" (or "roslyn")');
     const source = drop ? r.drop : r.find;
     if (typeof source !== 'string' || !source) throw new Error(where + ': "' + (drop ? 'drop' : 'find') + '" must be a non-empty regex string');
     if (drop && r.replace !== undefined) throw new Error(where + ': a "drop" rule takes no "replace"');
@@ -50,10 +63,64 @@ export function loadTransforms(json) {
   });
   // The unlisted-file guard (transformFile) sees the text as transformed so far, so a glob rule placed before a listed
   // rule could convert new upstream code first and hide it from the guard. Glob rules therefore run last.
+  // Roslyn rules run first, on upstream's own text, in one batch per sync (applyRoslyn); listing them first keeps the
+  // file's order the order they run in.
+  const firstText = rules.findIndex((r) => r.kind !== 'roslyn');
+  const late = firstText < 0 ? null : rules.find((r, i) => r.kind === 'roslyn' && i > firstText);
+  if (late) throw new Error('transform ' + late.id + ': "roslyn" rules come before every other rule (' + rules[firstText].id + ' precedes it)');
   const lastListed = rules.findLastIndex((r) => r.files);
   const early = rules.find((r, i) => r.glob && i < lastListed);
   if (early) throw new Error('transform ' + early.id + ': glob rules come after every listed rule (' + rules[lastListed].id + ' follows it)');
   return rules;
+}
+
+function loadRoslynRule(r, where) {
+  if (r.find !== undefined || r.drop !== undefined || r.replace !== undefined || r.flags !== undefined)
+    throw new Error(where + ': needs exactly one of "find" or "drop" (or "roslyn")');
+  if (r.glob !== undefined || !Array.isArray(r.files) || !r.files.length) throw new Error(where + ': a "roslyn" rule lists the files it changes');
+  const o = r.roslyn;
+  if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error(where + ': "roslyn" must be an object {"op", ...}');
+  const spec = OPS[o.op];
+  if (!spec) throw new Error(where + ': "roslyn" op must be one of ' + Object.keys(OPS).join(', ') + ', not ' + JSON.stringify(o.op));
+  for (const k of Object.keys(o)) if (k !== 'op' && !spec.required.includes(k) && !spec.optional.includes(k))
+    throw new Error(where + ': ' + o.op + ' takes no "' + k + '"');
+  for (const k of [...spec.required, ...spec.optional]) {
+    if (o[k] === undefined && spec.optional.includes(k)) continue;
+    if (typeof o[k] !== 'string' || (!o[k].trim() && k !== 'to')) throw new Error(where + ': ' + o.op + ' needs "' + k + '" (a non-empty string)');
+  }
+  return { id: r.id, kind: 'roslyn', roslyn: { ...o }, why: r.why ?? '', files: r.files, glob: null, globRe: null };
+}
+
+/**
+ * Runs the Roslyn rules on the files they list, in one batch: items [{p, tier, text}] (each file's text as read from
+ * upstream). Returns Map(p -> {text, hits, applied, errors}) for the files that have Roslyn rules. run: the runner
+ * (lib/roslyn.mjs), replaceable in tests.
+ */
+export function applyRoslyn(rules, items, run = runRoslyn) {
+  const batch = [];
+  for (const it of items) {
+    const mine = rulesFor(rules, it.p, it.tier).filter((r) => r.kind === 'roslyn');
+    if (mine.length) batch.push({ it, mine });
+  }
+  const out = new Map();
+  if (!batch.length) return out;
+  const res = run(batch.map(({ it, mine }) => ({ path: it.p, text: it.text, ops: mine.map((r) => ({ id: r.id, ...r.roslyn })) })));
+  batch.forEach(({ it, mine }, i) => {
+    const f = res[i];
+    const hits = {};
+    const errors = [];
+    for (const r of mine) {
+      const x = f.results.find((y) => y.id === r.id);
+      hits[r.id] = x?.hits ?? 0;
+      if (!x) errors.push('transform ' + r.id + ' (roslyn ' + r.roslyn.op + ') was not run on ' + it.p);
+      else if (x.error) errors.push('transform ' + r.id + ' (roslyn ' + r.roslyn.op + ') ' + x.error + ' in ' + it.p + ': fix the rule in tools/sync/transforms.json, never the vendored file');
+    }
+    for (const e of f.errors) errors.push(it.p + ': ' + e);
+    // Every op that ran without an error changed the text (a drop blanks lines, a retarget or attribute drop rewrites).
+    const applied = mine.filter((r) => hits[r.id] > 0);
+    out.set(it.p, { text: f.text, hits, applied, errors });
+  });
+  return out;
 }
 
 /** Rules that apply to one vendored file of the given tier, in rule order: listed rules (tier 2 only) and glob rules. */
@@ -67,6 +134,7 @@ export function applyTransforms(rules, p, text) {
   const errors = [];
   const hits = {};
   for (const r of rules) {
+    if (r.kind === 'roslyn') throw new Error('transform ' + r.id + ': "roslyn" rules run through applyRoslyn, in one batch');
     if (r.kind === 'drop') {
       const d = dropMember(text, r.re);
       hits[r.id] = d.error ? 0 : 1;
@@ -105,6 +173,7 @@ export function transformFile(rules, p, tier, text) {
   const applied = [];
   const mine = new Set(rulesFor(rules, p, tier));
   for (const r of rules) {
+    if (r.kind === 'roslyn') continue; // applied before, in one batch for every file (applyRoslyn)
     if (mine.has(r)) {
       const x = applyTransforms([r], p, text);
       if (x.text !== text) applied.push(r); // a match whose replacement equals it changes nothing

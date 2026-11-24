@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { lsTree, readBlobs, lastChanged } from './git.mjs';
 import { classifyTree, isVendored } from './tiers.mjs';
-import { rulesFor, transformFile, checkTransformTargets, idleGlobRules } from './transforms.mjs';
+import { rulesFor, transformFile, checkTransformTargets, idleGlobRules, applyRoslyn } from './transforms.mjs';
 import { checkPersonalData } from './personal.mjs';
 
 export const MANIFEST = 'vendored.json';
@@ -21,7 +21,7 @@ export function header({ repoName, path, lastSha, rules }) {
  * Errors (empty includes, transforms that no longer match, undecodable files, personal data in a generated file
  * that the allowlist doesn't name) are collected, never thrown, so one run reports all of them.
  */
-export function generate({ upstreamDir, commit, tierMap, transforms, repoName, repoUrl, allow = [] }) {
+export function generate({ upstreamDir, commit, tierMap, transforms, repoName, repoUrl, allow = [], roslyn }) {
   const modes = lsTree(upstreamDir, commit);
   const tree = [...modes.keys()];
   const classified = classifyTree(tierMap, tree);
@@ -34,6 +34,10 @@ export function generate({ upstreamDir, commit, tierMap, transforms, repoName, r
   }
   const blobs = readBlobs(upstreamDir, commit, vendored);
   const last = lastChanged(upstreamDir, commit, vendored);
+  // Roslyn rules run first, on upstream's text, in one batch for every file they list (a single run of the tool).
+  const tierOf = (p) => classified.byFile.get(p).tier;
+  const roslynFiles = vendored.filter((p) => rulesFor(transforms, p, tierOf(p)).some((r) => r.kind === 'roslyn'));
+  const pre = applyRoslyn(transforms, roslynFiles.map((p) => ({ p, tier: tierOf(p), text: blobs.get(p).toString('utf8') })), roslyn);
   const files = new Map();
   const entries = [];
   const globHits = new Map(); // glob rule id -> files it changed
@@ -47,12 +51,17 @@ export function generate({ upstreamDir, commit, tierMap, transforms, repoName, r
     const isText = Buffer.from(text, 'utf8').equals(out);
     if (!isText && needsText) { errors.push(p + ' is not valid UTF-8, so it cannot be transformed or given a header'); continue; }
     if (isText) {
+      const before = pre.get(p);
+      if (before) {
+        errors.push(...before.errors);
+        text = before.text;
+      }
       // Applies this file's rules, and fails on a rule that now matches the file without listing it.
       const r = transformFile(transforms, p, tier, text);
       errors.push(...r.errors);
       text = r.text;
       // The header and manifest name the rules that changed the file (a glob rule may not match every file).
-      applied = r.applied;
+      applied = [...(before?.applied ?? []), ...r.applied];
       for (const x of applied) if (x.glob) globHits.set(x.id, (globHits.get(x.id) ?? 0) + 1);
     }
     if (needsText) {
