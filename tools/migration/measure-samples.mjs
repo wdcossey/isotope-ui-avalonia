@@ -42,9 +42,13 @@ for (const f of ['Directory.Build.props', 'Directory.Build.targets', 'Directory.
 
 let projects = walk(copy).filter(f => f.endsWith('.csproj')).sort();
 if (args.only) projects = projects.filter(p => path.basename(p, '.csproj') === args.only);
-const converted = projects.map(convert);
+// Referenced sample projects first (Chat.Model and Chat.UI before the chat app), so they are migrated and built
+// before the projects that use them.
+const converted = order(projects.map(convert));
 
 run('dotnet', ['build', path.join(repo, 'tools', 'migration', 'MigrationReport'), '-nologo', '-v:q', '-c', 'Release'], repo, true);
+run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Avalonia.Desktop'), '-nologo', '-v:q'], repo, true);
+run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Migration'), '-nologo', '-v:q'], repo, true);
 const reporter = path.join(repo, 'tools', 'migration', 'MigrationReport', 'bin', 'Release', 'net10.0', 'MigrationReport.dll');
 
 const results = [];
@@ -61,9 +65,8 @@ for (const p of converted) {
     formatRuns++;
     if (hashTree(dir) === hash) break;
   }
-  const build = run('dotnet', ['build', p.file, '-nologo', '-v:q'], dir, false);
   const after = report(p.file);
-  results.push({ project: name, dropped: p.dropped, formatRuns, projectBuilds: build.status === 0, before, after });
+  results.push({ project: name, dropped: p.dropped, formatRuns, projectBuildsBefore: before.builds, projectBuilds: after.builds, before, after });
 }
 
 const summary = summarise(results);
@@ -111,33 +114,48 @@ function convert(file) {
     '',
   ];
   fs.writeFileSync(file, lines.join('\n'));
-  return { file, dropped };
+  return { file, dropped, refs: keptRefs.map(r => path.resolve(dir, r.replace(/\\/g, '/'))) };
+}
+
+function order(list) {
+  const done = new Set();
+  const result = [];
+  const visit = p => {
+    if (done.has(p.file)) return;
+    done.add(p.file);
+    for (const r of p.refs) {
+      const dep = list.find(q => path.resolve(q.file) === r);
+      if (dep) visit(dep);
+    }
+    result.push(p);
+  };
+  list.forEach(visit);
+  return result;
 }
 
 // ── measuring ──────────────────────────────────────────────────────────────────────────────────────
 
 function report(project) {
-  const dir = path.dirname(project);
-  const items = path.join(out, 'items.json');
-  const r = run('dotnet', ['msbuild', project, '-nologo', '-v:q', '-restore', '-t:Build', '-getItem:Compile',
-    '-getItem:ReferencePathWithRefAssemblies', '-getProperty:LangVersion', '-getProperty:Nullable',
-    '-getProperty:OutputType', '-getProperty:DefineConstants', '-getProperty:AllowUnsafeBlocks',
-    '-getProperty:AssemblyName'], dir, false);
-  fs.writeFileSync(items, r.stdout);
-  const rep = run('dotnet', [reporter, items, dir], dir, true);
+  const rep = run('dotnet', [reporter, project, '--json'], path.dirname(project), true);
   return JSON.parse(rep.stdout.trim().split('\n').pop());
 }
 
 function summarise(results) {
-  const total = { projects: results.length, projectsBuild: 0, files: 0, filesBuildBefore: 0, filesBuildAfter: 0,
-    errorsBefore: 0, errorsAfter: 0, migrationLeft: {}, migrationBefore: {} };
+  const total = { projects: results.length, projectsBuildBefore: 0, projectsBuild: 0, files: 0, filesBuildBefore: 0, filesBuildAfter: 0,
+    errorsBefore: 0, errorsAfter: 0, migrationLeft: {}, migrationBefore: {}, migrationMessagesLeft: {}, errorsLeft: {},
+    // Files that compiled before the fixes and don't after: what the migration broke.
+    brokenByMigration: [] };
   for (const r of results) {
     if (r.projectBuilds) total.projectsBuild++;
+    if (r.projectBuildsBefore) total.projectsBuildBefore++;
+    add(total.migrationMessagesLeft, r.after.migrationMessages);
+    add(total.errorsLeft, r.after.errorMessages);
     for (const [file, f] of Object.entries(r.after.files)) {
       total.files++;
       const b = r.before.files[file];
       const errorsBefore = b ? sum(b.errors) : 0;
       if (b && errorsBefore === 0) total.filesBuildBefore++;
+      if (b && errorsBefore === 0 && sum(f.errors) > 0) total.brokenByMigration.push(r.project.replace(/[^/]+$/, '') + file);
       if (sum(f.errors) === 0) total.filesBuildAfter++;
       total.errorsBefore += errorsBefore;
       total.errorsAfter += sum(f.errors);
@@ -157,11 +175,20 @@ function print(results, s) {
   console.log('| Project | Files | Build before | Build after | Errors before | Errors after | Migration diagnostics left | Project builds | Dropped references |');
   console.log('|---|---|---|---|---|---|---|---|---|');
   for (const row of rows) console.log(row);
-  console.log(`\nprojects ${s.projects}, projects that build ${s.projectsBuild}`);
+  console.log(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
   console.log(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
   console.log(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
+  console.log(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
   console.log('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
   console.log('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));
+  console.log('\ncommonest migration diagnostics left:');
+  for (const [m, n] of top(s.migrationMessagesLeft, 40)) console.log(`  ${n} ${m}`);
+  console.log('\ncommonest compile errors left (ID and the name they are about):');
+  for (const [m, n] of top(s.errorsLeft, 40)) console.log(`  ${n} ${m}`);
+}
+
+function top(counts, n) {
+  return Object.entries(counts).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, n);
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────────────────────────
