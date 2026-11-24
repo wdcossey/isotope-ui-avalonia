@@ -14,7 +14,7 @@ Component files import the element factories and the element types:
 `using Isotope.UI;`, `using Isotope.UI.Core;` and `using static Isotope.UI.Factories;`. The names are Avalonia's: a
 factory and its element are named after the Avalonia control (`TabControl(...)` builds a `TabControlElement`), and a
 modifier after the property it sets (`.HorizontalAlignment(...)`). Microsoft.UI.Reactor's names stay where Avalonia has
-no counterpart, and for the stack shortcuts `VStack` and `HStack`. Their parameters and the elements' members have Avalonia's names (`Text`, `Minimum`,
+no counterpart, and for the stack shortcuts `VStack` and `HStack`. Factory parameters and element members have Avalonia's names (`Text`, `Minimum`,
 `IsChecked`, `SelectedDate`; a callback is `On` plus an Avalonia event, `OnClick`, or `On` plus a property and
 `Changed`, `OnTextChanged`), and their value types (`Thickness`, `IBrush`, `Orientation`, …) are Avalonia's.
 

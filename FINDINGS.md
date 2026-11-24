@@ -469,7 +469,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **ToggleButton, RepeatButton, HyperlinkButton.**
 - **Navigation:** TabView as Avalonia's TabControl (the vendored `TabItemsHost`, with a controlled `SelectedIndex`), and
   SplitView.
-- **Menus:** `MenuBar`/`Menu`/`MenuItem` and toggle, radio and sub items; context menus via `.WithContextFlyout(...)`.
+- **Menus:** `MenuBar`/`Menu`/`MenuItem` and toggle, radio and sub items; context menus via `.WithContextFlyout(...)` (`.ContextFlyout(...)` since #46).
 - **Input and decoration:** the ToolTip modifier, NumberBox as NumericUpDown (upstream's `double` values, converted), and
   Separator.
 - **Tests:** 49 new, all proven to fail.

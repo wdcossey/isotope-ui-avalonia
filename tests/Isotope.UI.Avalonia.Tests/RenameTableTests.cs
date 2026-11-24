@@ -198,7 +198,12 @@ public class RenameTableTests
         var problems = new List<string>();
         foreach (var m in table.Modifiers.Where(m => m.Status == "applied" && m.Avalonia is not null))
         {
-            var control = m.Target is { } target ? Control(table.Records[target]) : typeof(global::Avalonia.Controls.Control);
+            if (m.Target is { } target && !table.Records.ContainsKey(target))
+            {
+                problems.Add($"modifiers: {m.Reactor} targets {target}, which is not in the table's records");
+                continue;
+            }
+            var control = m.Target is { } t ? Control(table.Records[t]) : typeof(global::Avalonia.Controls.Control);
             if (control.GetProperty(m.Avalonia!, BindingFlags.Public | BindingFlags.Instance) is null)
                 problems.Add($"modifiers: {m.Reactor} -> {m.Avalonia}, which is not a property of {control.FullName}");
         }

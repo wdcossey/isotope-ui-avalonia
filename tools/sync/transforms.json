@@ -1254,8 +1254,8 @@
     },
     {
       "id": "test-stack-panel-element",
-      "find": "\\bnew StackElement\\(",
-      "replace": "new StackPanelElement(",
+      "find": "\\bStackElement\\b",
+      "replace": "StackPanelElement",
       "why": "Reactor's StackElement is StackPanelElement here, after Avalonia's StackPanel (#46, tools/naming/renames.json).",
       "files": [
         "tests/Reactor.Tests/ChildReconcilerTests.cs"
