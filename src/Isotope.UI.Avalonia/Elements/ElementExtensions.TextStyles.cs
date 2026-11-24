@@ -16,8 +16,9 @@ public static partial class ElementExtensions
     /// </summary>
     /// <remarks>
     /// Unlike upstream's, which applies a style at mount only, a changed name applies on the next render. As upstream's,
-    /// a name that doesn't resolve keeps the default look and warns once (the <c>Isotope-UI</c> event source). Text blocks
-    /// only here: upstream's takes any element.
+    /// a name that doesn't resolve keeps the default look and warns once (the <c>Isotope-UI</c> event source), once the text
+    /// block is in a logical tree. An app style for every TextBlock outranks the theme, as Avalonia's styles do. Text
+    /// blocks only here: upstream's takes any element.
     /// </remarks>
     public static TextBlockElement ApplyStyle(this TextBlockElement el, string styleName)
     {

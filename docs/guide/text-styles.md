@@ -62,8 +62,12 @@ this order:
 
 The key is watched. When the resources change, or the theme variant changes (a key defined in `ThemeDictionaries`),
 the text block takes the new theme without a re-render. A key that resolves to nothing keeps the text block's default
-look and warns once on the `Isotope-UI` event source. A resource of the key that isn't a `ControlTheme` for a
-`TextBlock` is ignored, and warns once too.
+look and warns once on the `Isotope-UI` event source, once the text block is in a logical tree (a window, or an open
+popup). A resource of the key that isn't a `ControlTheme` for a `TextBlock` is ignored, and warns once too.
+
+Avalonia's styles outrank a control theme. An app style for every `TextBlock` (a `Style` with the selector `TextBlock`
+that sets `FontSize`) wins over the type ramp, where WinUI's keyed style would replace an implicit one. To change the
+ramp, define a theme of its key instead.
 
 An app replaces a style by defining a theme of its key:
 
@@ -83,7 +87,8 @@ public static void UseLargerTitles(Application app)
 }
 ```
 
-`AvaloniaTextBlock` is `using AvaloniaTextBlock = Avalonia.Controls.TextBlock;`. With `using static
+The app's theme replaces Isotope's whole, so the wrapping and trimming go too unless it sets them.
+`AvaloniaTextBlock` is `using AvaloniaTextBlock = Avalonia.Controls.TextBlock;`: with `using static
 Isotope.UI.Factories;`, a bare `TextBlock` names the factory.
 
 ## Coming from Reactor

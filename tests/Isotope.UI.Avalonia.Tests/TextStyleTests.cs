@@ -164,12 +164,12 @@ public sealed class TextStyleTests : IDisposable
     [AvaloniaFact]
     public void A_heading_level_that_goes_is_cleared()
     {
-        var (heading, setHeading) = (true, (Action<bool>?)null);
+        Action<bool>? setHeading = null;
         var m = Mount(ctx =>
         {
-            var (h, set) = ctx.UseState(true);
-            (heading, setHeading) = (h, set);
-            return h ? Heading("x") : TextBlock("x");
+            var (heading, set) = ctx.UseState(true);
+            setHeading = set;
+            return heading ? Heading("x") : TextBlock("x");
         });
         var text = m.First<TextBlock>();
         Assert.Equal(1, AutomationProperties.GetHeadingLevel(text));
@@ -230,6 +230,19 @@ public sealed class TextStyleTests : IDisposable
         {
             app.Resources.Remove("IsotopeTestNoteStyle");
         }
+    }
+
+    [AvaloniaFact]
+    public void An_apps_style_for_every_text_block_wins_over_the_type_ramp()
+    {
+        // Avalonia's styles outrank a control theme's setters (WinUI's keyed Style would replace an implicit one).
+        var m = Mount(_ => VStack(Title("a"), TextBlock("b")), setUp: window => window.Styles.Add(new Style(x => x.OfType<AvaloniaTextBlock>())
+        {
+            Setters = { new Setter(AvaloniaTextBlock.FontSizeProperty, 13.0) },
+        }));
+        var texts = m.All<AvaloniaTextBlock>();
+        Assert.Equal((13.0, FontWeight.SemiBold), (texts[0].FontSize, texts[0].FontWeight));
+        Assert.Equal(13, texts[1].FontSize);
     }
 
     [AvaloniaFact]
