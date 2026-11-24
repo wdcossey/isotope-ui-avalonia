@@ -384,6 +384,26 @@ public sealed class LayoutModifierTests
     }
 
     [AvaloniaFact]
+    public void A_padded_stack_s_border_carries_its_key_past_an_absent_sibling()
+    {
+        // An empty element mounts no control, so the keyed diff matches the panel's controls by the key each carries.
+        var withGap = true;
+        Element Row(string k) => VStack(TextBlock(k)).Padding(2).WithKey(k);
+        var host = new TestHost(() => new StackElement(Orientation.Vertical, withGap
+            ? [EmptyElement.Instance.WithKey("gap"), Row("a"), Row("b")]
+            : [Row("b"), Row("a")]));
+        var outer = host.All<StackPanel>()[0];
+        var (a, b) = (outer.Children[0], outer.Children[1]);
+        Assert.Equal(["a", "b"], host.Texts());
+
+        withGap = false;
+        host.Render();
+        Assert.Equal(["b", "a"], host.Texts());
+        Assert.Same(b, outer.Children[0]);
+        Assert.Same(a, outer.Children[1]);
+    }
+
+    [AvaloniaFact]
     public void A_padded_child_s_flex_and_grid_data_go_on_its_border()
     {
         var host = new TestHost(() => VStack(
