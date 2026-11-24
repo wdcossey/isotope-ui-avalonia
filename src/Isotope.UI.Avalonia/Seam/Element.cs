@@ -151,14 +151,13 @@ public abstract record Element
     }
 
     /// <summary>
-    /// Value equality of two modifier records (null equals an empty record). As upstream's, two records holding an
-    /// element tooltip (<see cref="ElementModifiers.RichToolTip"/>, #29) compare equal only when they are the same record,
-    /// so a changed tooltip element is always reconciled. The skip path's checks for state and context changes below a
-    /// control see into its element tooltip (the dirty path and the context check go through its owner).
+    /// Value equality of two modifier records (null equals an empty record). An element tooltip
+    /// (<see cref="ElementModifiers.RichToolTip"/>, #29) compares as an element; unlike upstream's, which never lets one
+    /// compare equal, an equal one may be skipped, because the skip path's checks for state and context changes see into
+    /// it (the dirty path and the context check go through its owner).
     /// </summary>
     internal static bool ModifiersEqual(ElementModifiers? a, ElementModifiers? b)
-        => ReferenceEquals(a, b)
-            || (a?.RichToolTip is null && b?.RichToolTip is null && (a ?? ElementModifiers.Empty).Equals(b ?? ElementModifiers.Empty));
+        => ReferenceEquals(a, b) || (a ?? ElementModifiers.Empty).Equals(b ?? ElementModifiers.Empty);
 
     /// <summary>Whether two sets of provided context values are equal.</summary>
     internal static bool ContextValuesEqual(IReadOnlyDictionary<ContextBase, object?>? a, IReadOnlyDictionary<ContextBase, object?>? b)

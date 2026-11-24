@@ -171,12 +171,16 @@ public sealed class CommandTests : IDisposable
         var withCallback = false;
         var host = new TestHost(() => VStack(
             new ButtonElement("Go", withCallback ? () => log.Add("click") : null) { Command = cmd },
-            ToggleButton("Bold", false, withCallback ? v => log.Add("toggled " + v) : null) with { Command = cmd }));
+            ToggleButton("Bold", false, withCallback ? v => log.Add("toggled " + v) : null) with { Command = cmd },
+            RepeatButton("More", withCallback ? () => log.Add("more") : null) with { Command = cmd },
+            HyperlinkButton("Help", null, withCallback ? () => log.Add("help") : null) with { Command = cmd }));
         withCallback = true;
         host.Render();
         Click(host, host.All<Button>()[0]);
         Click(host, host.All<ToggleButton>()[0]);
-        Assert.Equal(["click", "toggled True"], log);
+        Click(host, host.All<RepeatButton>()[0]);
+        Click(host, host.All<HyperlinkButton>()[0]);
+        Assert.Equal(["click", "toggled True", "more", "help"], log);
     }
 
     [AvaloniaFact]
