@@ -79,7 +79,8 @@ public sealed class FlexPanelAmbientModeTests : IDisposable
     [AvaloniaFact]
     public void AlignSelf_FromFlexStartToStretch_FillsANestedPanel()
     {
-        // The other way round: the fix must not keep a panel at its content height once the outer stretches it.
+        // The other way round. The outer's bridge reports an Exactly slot itself, so the bounds were right before #9,
+        // but the panel's own measure stayed at its content height (DesiredSize 40).
         var nested = Flex1(Nested());
         FlexPanel.SetAlignSelf(nested, FlexAlign.FlexStart);
         Host(new FlexPanel { Children = { nested } });
@@ -88,6 +89,7 @@ public sealed class FlexPanelAmbientModeTests : IDisposable
         FlexPanel.SetAlignSelf(nested, FlexAlign.Stretch);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(300, nested.Bounds.Height);
+        Assert.Equal(300, nested.DesiredSize.Height);
     }
 
     [AvaloniaFact]
@@ -176,20 +178,23 @@ public sealed class FlexPanelAmbientModeTests : IDisposable
         Assert.Equal(44, nested.Bounds.Height);
     }
 
-    [AvaloniaTheory]
-    [InlineData(FlexAlign.Stretch)]   // the middle panel is measured Exactly 300
-    [InlineData(FlexAlign.FlexStart)] // ... or AtMost 300
-    public void MinContentProbe_UnderAnOuterPanel_DoesNotDependOnItsMode(FlexAlign outerAlign)
+    [AvaloniaFact]
+    public void MinContentProbe_UnderAnOuterPanel_DoesNotDependOnItsMode()
     {
         // Issue 1 of #9, a guard: the middle column probes its children's min-content height while the outer's mode is
-        // still set (as upstream's). Our probe (#15) measures at an unbounded height, or at 0 (which Avalonia clamps), so
-        // the mode can't change it. 400 of content in 300: the unwrapping panel keeps its min-content (200), the
-        // wrapping one (min-content 0) takes the shrink.
-        var keeps = new FlexPanel { Direction = FlexDirection.Column, Children = { Box(200) } };
-        var shrinks = new FlexPanel { Direction = FlexDirection.Column, Wrap = FlexWrap.Wrap, Children = { Box(200) } };
-        var middle = new FlexPanel { Direction = FlexDirection.Column, Children = { keeps, shrinks } };
-        FlexPanel.SetGrow(middle, 1);
-        Host(new FlexPanel { AlignItems = outerAlign, Children = { middle } });
-        Assert.Equal((200, 100, 200), (keeps.Bounds.Height, shrinks.Bounds.Height, shrinks.Bounds.Y));
+        // still set (as upstream's): Exactly 300 under a stretching outer, AtMost 300 under a flex-start one. Our probe
+        // (#15) measures at an unbounded height, or at 0 (which Avalonia clamps), so the mode can't change it. 400 of
+        // content in 300: the unwrapping panel keeps its min-content (200), the wrapping one (min-content 0) shrinks.
+        (double, double, double) Layout(FlexAlign outerAlign)
+        {
+            var keeps = new FlexPanel { Direction = FlexDirection.Column, Children = { Box(200) } };
+            var shrinks = new FlexPanel { Direction = FlexDirection.Column, Wrap = FlexWrap.Wrap, Children = { Box(200) } };
+            var middle = new FlexPanel { Direction = FlexDirection.Column, Children = { keeps, shrinks } };
+            FlexPanel.SetGrow(middle, 1);
+            Host(new FlexPanel { AlignItems = outerAlign, Children = { middle } });
+            return (keeps.Bounds.Height, shrinks.Bounds.Height, shrinks.Bounds.Y);
+        }
+        Assert.Equal((200, 100, 200), Layout(FlexAlign.Stretch));
+        Assert.Equal((200, 100, 200), Layout(FlexAlign.FlexStart));
     }
 }
