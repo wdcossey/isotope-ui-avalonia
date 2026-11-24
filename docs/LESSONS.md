@@ -131,6 +131,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A record member named like the control's content property becomes a generated child slot, even with
   `[WrapManual]`** (which does stop an items host); rule `gen-manual-content-slot` handles it. (2026-11-24)
 
+- **csc doesn't run analyzers when a file has declaration errors, but `dotnet format` does:** count migration
+  diagnostics outside the build. (2026-11-24)
+- **Roslyn 4.14 can't read C# 14 extension members,** so tests compiling against `Isotope.UI.Avalonia.Desktop` need the
+  SDK's compiler version. (2026-11-24)
+- **`dotnet build -getItem` without `-t` only evaluates the project;** `dotnet msbuild -t:Build -getItem:…` prints the
+  items even when the build fails. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Actions minutes run out fast on a private repo:** one full CI run bills about 26 minutes (Windows jobs count 2x), and a
