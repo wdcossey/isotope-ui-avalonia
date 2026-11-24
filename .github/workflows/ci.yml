@@ -78,6 +78,16 @@ jobs:
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
 
+      - name: Spike A step 4 (Roslyn rules) error count unchanged
+        shell: bash
+        run: |
+          out="$(node spikes/A-engine/run-spike.mjs 4 2>&1)"
+          head -20 <<<"$out"
+          total="$(sed -n 's/^total //p' <<<"$out")"
+          expected="$(cat spikes/A-engine/expected-total-step4.txt)"
+          echo "total=$total expected=$expected"
+          test "$total" = "$expected"
+
   library:
     # The library compiles the vendored files in src/Upstream, so this job has no upstream/ checkout: it proves the
     # library builds without one.

@@ -20,7 +20,7 @@ Detailed reports:
 | Tier | What | How it syncs | Size today (measured) |
 |---|---|---|---|
 | **1. Verbatim** | Yoga, most of Data, the helper files that compile unmodified (including Navigation and Localization), upstream's Yoga tests | The import script diffs baseline → new upstream commit on these paths, copies them (or keeps linking them), builds, and runs upstream's own tests for them. | 74 files, 12,957 lines compile unmodified (Spike A); 780 upstream Yoga tests pass unmodified (Spike D) |
-| **2. Verbatim + transforms** | Engine files that need aliases, shims, mechanical rewrites, our layer providing upstream's member names, or small edits turned into transforms: KeyedListDiff, most of Validation and Hooks, RenderContext's hooks core, ChildReconciler | The same import, plus deterministic transforms (today 3 regex rules; next a Roslyn-based "drop member / rename type" step). No hand patches. A transform that stops matching fails the import loudly. | 770 lines after the 3 rewrite rules, 7,703 lines verbatim given the seam and shims, and the 18 "needs edits" files (7,746 lines, 89 edit lines, 52 of them in 4 files) as candidates for transforms (Spike A) |
+| **2. Verbatim + transforms** | Engine files that need aliases, shims, mechanical rewrites, our layer providing upstream's member names, or small edits turned into transforms: KeyedListDiff, most of Validation and Hooks, RenderContext's hooks core, ChildReconciler | The same import, plus deterministic transforms (text rules, plus an optional Roslyn step, #4). No hand patches. A transform that stops matching fails the import loudly. | 770 lines after the 3 rewrite rules, 7,703 lines verbatim given the seam and shims, and the 18 "needs edits" files (7,746 lines, 89 edit lines, 52 of them in 4 files) as candidates for transforms (Spike A) |
 | **3. Rewritten, watched** | Element vocabulary, Reconciler, V1Protocol handlers, Hosting, FlexPanel, and RenderContext's ~25 WinUI hooks (window, theme, pickers, tray…) | Written fresh for Avalonia. The weekly sync report lists every upstream PR that touched them, because the compiler can't flag behaviour changes there. | the WinUI-heavy layer stubbed in Spike A: 66 files, 43,428 lines (split table in the Spike A report); 69% of engine PRs also change this layer (Spike B) |
 
 **Why this shape:**
@@ -151,6 +151,18 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Coverage [J]:** 45 of upstream's 69 generated WinUI controls have an Avalonia counterpart. About 17 to 20 of those would be fully generated, and about 25 to 28 generated with a hand-written `Customize`.
 - **The runtime it targets** (6 files, 3,522 lines) was ported in #12; see Spike F below.
 - **Report and decisions:** `docs/spikes/E-wrappers-generator.md`.
+
+## Roslyn transforms (issue #4, 2026-11-24)
+
+- **Decision: Roslyn complements the text-based drops; it doesn't replace them.** All 88 text drops convert to Roslyn drops
+  with byte-identical output, and both forms survive the same 93 upstream commits. Roslyn regeneration is slower
+  (1.39–1.51 s against 0.61–0.67 s).
+- **Spike A step 4 (31 Roslyn rules):** edit lines fall from 89 to 53 (18 files to 15), and errors from 567 to 500. The
+  same changes written as text rules give the same numbers. The 53 lines left need the seam or tier 3, not a better engine.
+- **What does pay is `syntaxCheck`:** every C# file a rule changes must still parse. 15 of the 51 changed tier 2 files are
+  compiled by no project, so this is their only check. It adds about 1.25 s to `--check`.
+- **Element records stay hand-written:** the three Roslyn operations can't project upstream's 166 records.
+- Details: `docs/spikes/A-engine-compile.md`, "Update: Roslyn transforms".
 
 ## Platform hooks (issue #20, 2026-11-24)
 
