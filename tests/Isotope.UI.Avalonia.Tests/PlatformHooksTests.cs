@@ -133,7 +133,15 @@ public sealed class PlatformHooksTests : IDisposable
         public int Adds;
         private EventHandler<PlatformColorValues>? _changed;
 
-        public PlatformColorValues GetColorValues() => Values;
+        /// <summary>Called on each read, before it returns: lets a test change the value with no event.</summary>
+        public Action? OnRead;
+
+        public PlatformColorValues GetColorValues()
+        {
+            var values = Values;
+            OnRead?.Invoke();
+            return values;
+        }
 
         public event EventHandler<PlatformColorValues>? ColorValuesChanged
         {
@@ -171,6 +179,23 @@ public sealed class PlatformHooksTests : IDisposable
 
         m.Host.Dispose();
         Assert.Equal(0, fake.Handlers);
+    }
+
+    [AvaloniaFact]
+    public void A_change_between_the_render_and_the_subscription_is_caught()
+    {
+        var fake = new FakeColorValues();
+        fake.Values = fake.Values with { ContrastPreference = ColorContrastPreference.High };
+        // The first read (the render's) sees high contrast; the preference then flips, with no event, before the
+        // effect subscribes.
+        fake.OnRead = () =>
+        {
+            fake.Values = fake.Values with { ContrastPreference = ColorContrastPreference.NoPreference };
+            fake.OnRead = null;
+        };
+        var m = Mount(ctx => ctx.UseHighContrast() ? "high" : "normal", setUp: h => h.ColorValuesOverride = fake);
+        Assert.Equal("normal", m.Text);
+        Assert.Equal(2, m.Renders);
     }
 
     [AvaloniaFact]

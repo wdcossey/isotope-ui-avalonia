@@ -116,7 +116,7 @@ internal static class Subscriptions
 
 /// <summary>
 /// A hook's subscription, made by its effect: <c>attach</c> subscribes to the platform as seen from the host, again
-/// whenever the host joins or leaves a top level (or its top level closes, which counts as leaving), and each
+/// whenever the host joins or leaves a top level (a closing window detaches its content, so that counts), and each
 /// platform signal (and each such move, and once after subscribing) calls <c>changed</c> with the current view.
 /// Disposed by the effect's cleanup, on unmount.
 /// </summary>
@@ -127,7 +127,6 @@ internal sealed class HostLink : IDisposable
     private readonly Action<PlatformView>? _changed;
     private readonly Action _signal;
     private IDisposable? _inner;
-    private IDisposable? _closed;
     private PlatformView _view;
     private bool _disposed;
 
@@ -159,28 +158,11 @@ internal sealed class HostLink : IDisposable
         Signal();
     }
 
-    // A closed top level is left for good: drop its subscriptions without asking for a render (the window is gone).
-    // (Avalonia detaches a closing window's content first, which already moved the link; this covers a top level
-    // that closes without detaching its content.)
-    private void OnTopLevelClosed(object? sender, EventArgs e)
-    {
-        if (_disposed) return;
-        _inner?.Dispose();
-        _inner = null;
-        _closed?.Dispose();
-        _closed = null;
-        _view = new PlatformView(_host, null);
-    }
-
     private void Attach(PlatformView view)
     {
         _inner?.Dispose();
         _inner = null;
-        _closed?.Dispose();
-        _closed = null;
         _view = view;
-        if (_host is not null && view.TopLevel is { } topLevel)
-            _closed = Subscriptions.Event(() => topLevel.Closed += OnTopLevelClosed, () => topLevel.Closed -= OnTopLevelClosed);
         _inner = _attach(view, _signal);
     }
 
@@ -199,8 +181,6 @@ internal sealed class HostLink : IDisposable
             _host.DetachedFromVisualTree -= OnDetached;
             PlatformHookDiagnostics.Removed();
         }
-        _closed?.Dispose();
-        _closed = null;
         _inner?.Dispose();
         _inner = null;
     }
