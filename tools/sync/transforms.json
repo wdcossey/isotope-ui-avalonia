@@ -850,6 +850,16 @@
       ]
     },
     {
+      "id": "partial-component",
+      "find": "^public abstract class Component(?=\\r?$)",
+      "flags": "m",
+      "replace": "public abstract partial class Component",
+      "why": "Component (the non-generic base) is partial, so class components get our Avalonia versions of the platform hooks, which the drop-Component-* rules remove, from our own part (Hosting/Component.PlatformHooks.cs), with access to its internal Context (#21).",
+      "files": [
+        "src/Reactor/Core/Component.cs"
+      ]
+    },
+    {
       "id": "descriptor-clearvalue-isset",
       "find": "!ReferenceEquals\\(ctrl\\.ReadLocalValue\\(_dp\\), DependencyProperty\\.UnsetValue\\)",
       "replace": "ctrl.IsSet(_dp)",

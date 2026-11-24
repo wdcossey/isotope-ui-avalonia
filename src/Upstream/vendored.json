@@ -475,9 +475,10 @@
         "drop-Component-UseAnnounce",
         "drop-Component-UseHighContrast",
         "drop-Component-UseHighContrastScheme",
+        "partial-component",
         "namespace-isotope"
       ],
-      "sha256": "9a17ff3babc6d4fad1656e5b6ed579a4c9dd9c2c190266980072d44dcd3963a7"
+      "sha256": "089f13ee6c02dd3340f0ab2e7c79e2415f9f2cc344cc66c8fd07ff3a1c25f86e"
     },
     {
       "path": "src/Reactor/Core/ContentOwner.cs",
