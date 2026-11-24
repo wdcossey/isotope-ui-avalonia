@@ -9,6 +9,16 @@
 //     Unloaded → OnDetachedFromVisualTree; no ScrollView (only ScrollViewer).
 //   • Min-content (ComputeMinContent): Avalonia clamps DesiredSize to the size offered, so upstream's measure-at-0
 //     probe reads 0; content that can't get narrower is measured unconstrained instead (#15).
+//   • A nested panel and the outer Yoga height mode (#9, an intended divergence): a nested FlexPanel fills its slot or
+//     fits its content depending on upstream's [ThreadStatic] mode, but Avalonia skips a Measure whose constraint is
+//     unchanged, and re-measures an invalidated panel on its own at its old constraint, with no mode set. As ported, a
+//     panel then kept a size from the other mode (a fill height under a fit-content outer). Here each panel records
+//     the mode its last measure used, which outer panel measured it, and whether the result depended on the mode (its
+//     own height, or that of a panel its final sweep measured under the same mode). Before the outer measures a child
+//     (in its Yoga bridge or final sweep), a nested panel in it whose cached result came from the other mode is
+//     invalidated; a panel re-measured on its own keeps its last mode, for itself and the children it measures. The
+//     modes themselves are upstream's: the probe still runs under the outer's mode (issue 1 of #9), and here its
+//     result can't depend on it (it measures at an unbounded height, or at 0).
 // Avalonia's Measure/DesiredSize/Arrange include the child's Margin exactly as WinUI's do, so the margin
 // arithmetic is unchanged.
 
@@ -154,6 +164,100 @@ public class FlexPanel : Panel
             _rootNode.RemoveChild(node);
         _nodeCache.Clear();
         _attachedCache.Clear();
+        _ambientDependents.Clear();
+        LeaveAmbientPanel();
+        (_ambientPanel, _ambientSlot, _ambientMode) = (null, null, null);
+        (_ambientWantsContent, _ambientSensitive) = (false, false);
+    }
+
+    // ── The outer Yoga height mode and Avalonia's measure cache (#9, not upstream's; see the header) ──
+
+    // The mode this measure runs under, recorded with the outer panel that measures it. Measured with no outer panel
+    // while it still has one (Avalonia's layout manager re-measuring this panel, or a wrapper, on its own at the old
+    // constraint): the mode that outer panel gave last.
+    private YogaMeasureMode? TrackAmbientMode()
+    {
+        if (s_outerPanel is { } outer)
+        {
+            var slot = s_outerSlot;
+            if (_ambientPanel != outer || _ambientSlot != slot) LeaveAmbientPanel();
+            (_ambientPanel, _ambientSlot, _ambientMode) = (outer, slot, _outerYogaHeightMode);
+            if (slot is not null && slot != this && slot.IsVisualAncestorOf(this)) outer.AddAmbientDependent(slot, this);
+            return _outerYogaHeightMode;
+        }
+        return _ambientPanel is not null ? _ambientMode : null;
+    }
+
+    private void LeaveAmbientPanel()
+    {
+        if (_ambientPanel is { } outer && _ambientSlot is { } slot && outer._ambientDependents.TryGetValue(slot, out var set)
+            && set.Remove(this) && set.Count == 0)
+            outer._ambientDependents.Remove(slot);
+    }
+
+    // Upstream's outerFlexWantsContent: a basis or fit-content measure (Undefined, AtMost) reports content, not the cap.
+    private static bool WantsContent(YogaMeasureMode? mode) => mode is YogaMeasureMode.Undefined or YogaMeasureMode.AtMost;
+
+    private void AddAmbientDependent(Control slot, FlexPanel nested)
+    {
+        if (!_ambientDependents.TryGetValue(slot, out var set)) _ambientDependents[slot] = set = new HashSet<FlexPanel>();
+        set.Add(nested);
+    }
+
+    // True when a Measure at an unchanged constraint would return a result computed in the other mode, or skip it.
+    private bool IsStaleFor(bool wantsContent) => !IsMeasureValid || (_ambientSensitive && _ambientWantsContent != wantsContent);
+
+    // Before this panel measures a child (Yoga bridge, final sweep or min-content probe): a nested panel in it (the
+    // child itself, or one inside it that this panel measured last) whose cached result came from the other mode is
+    // invalidated, with the path up to the child, so Avalonia measures it again even at the same constraint.
+    private void DropStaleNestedMeasures(Control slot, bool wantsContent)
+    {
+        if (slot is FlexPanel direct)
+        {
+            if (direct.IsStaleFor(wantsContent)) direct.InvalidateMeasure();
+            return;
+        }
+        if (!_ambientDependents.TryGetValue(slot, out var nested)) return;
+        List<FlexPanel>? gone = null;
+        foreach (var d in nested)
+        {
+            if (d._ambientPanel != this || d._ambientSlot != slot || !slot.IsVisualAncestorOf(d)) { (gone ??= new()).Add(d); continue; }
+            if (!d.IsStaleFor(wantsContent)) continue;
+            for (Visual? v = d; v is not null; v = v.GetVisualParent())
+            {
+                if (v is Layoutable l) l.InvalidateMeasure();
+                if (v == slot) break;
+            }
+        }
+        if (gone is null) return;
+        foreach (var d in gone) nested.Remove(d);
+        if (nested.Count == 0) _ambientDependents.Remove(slot);
+    }
+
+    // A child measured by this panel's own code rather than its Yoga bridge (the final sweep, which measures what Yoga
+    // didn't, such as a child it sized Exactly on both axes; the min-content probe): the mode stays the one this panel
+    // is measured under (upstream's: the outer's), and nested panels record this panel as the one that measured them.
+    // In the sweep a cached result from the other mode is dropped as in the bridge, and a nested panel whose result
+    // depended on the mode makes this panel's result depend on it too. The probe's result can't depend on it.
+    private void MeasureAsSlot(Control child, Size constraint, bool sweep = false)
+    {
+        if (sweep) DropStaleNestedMeasures(child, WantsContent(_outerYogaHeightMode));
+        var (prevPanel, prevSlot) = (s_outerPanel, s_outerSlot);
+        (s_outerPanel, s_outerSlot) = (this, child);
+        try { child.Measure(constraint); }
+        finally { (s_outerPanel, s_outerSlot) = (prevPanel, prevSlot); }
+        if (sweep && DependsOnMode(child)) _sweptSensitive = true;
+    }
+
+    // Whether the last measure of the nested panels in a child (the child itself, or the ones inside it this panel
+    // measured) depended on the mode.
+    private bool DependsOnMode(Control slot)
+    {
+        if (slot is FlexPanel direct) return direct._ambientSensitive;
+        if (_ambientDependents.TryGetValue(slot, out var nested))
+            foreach (var d in nested)
+                if (d._ambientSensitive && d._ambientPanel == this && d._ambientSlot == slot) return true;
+        return false;
     }
 
     private void SyncPointScaleLazy()
@@ -174,10 +278,35 @@ public class FlexPanel : Panel
 
     [ThreadStatic] private static YogaMeasureMode? _outerYogaHeightMode;
 
+    // Not upstream's (#9). Beside the mode: the panel whose measure is running, and which of its children it measures.
+    [ThreadStatic] private static FlexPanel? s_outerPanel;
+    [ThreadStatic] private static Control? s_outerSlot;
+
+    // What this panel's last MeasureOverride used (#9): the outer panel and its child that holds this panel (the panel
+    // itself or a wrapper), the mode, and whether the result depended on the mode (fill or fit-content).
+    private FlexPanel? _ambientPanel;
+    private Control? _ambientSlot;
+    private YogaMeasureMode? _ambientMode;
+    private bool _ambientWantsContent, _ambientSensitive, _sweptSensitive;
+    // Nested panels inside a wrapper child (a component's Border, a card), last measured by this panel, by child (#9).
+    private readonly Dictionary<Control, HashSet<FlexPanel>> _ambientDependents = new();
+
+    // Not upstream's (#9): the mode is resolved first and set for this whole measure, so the children this panel measures
+    // itself (the min-content probe, the final sweep) see the same mode as the panel when it's re-measured on its own.
     protected override Size MeasureOverride(Size availableSize)
+    {
+        var outerMode = TrackAmbientMode();
+        var prevYogaH = _outerYogaHeightMode;
+        _outerYogaHeightMode = outerMode;
+        try { return MeasureWithYoga(availableSize, outerMode); }
+        finally { _outerYogaHeightMode = prevYogaH; }
+    }
+
+    private Size MeasureWithYoga(Size availableSize, YogaMeasureMode? outerMode)
     {
         SyncPointScaleLazy();
         _measuredThisPass.Clear();
+        _sweptSensitive = false;
         SyncYogaTree();
         SetRootConstraints();
 
@@ -198,9 +327,10 @@ public class FlexPanel : Panel
         }
 
         bool hasExplicitHeight = !double.IsNaN(Height);
-        bool outerFlexWantsContent = _outerYogaHeightMode == YogaMeasureMode.Undefined || _outerYogaHeightMode == YogaMeasureMode.AtMost;
+        bool outerFlexWantsContent = WantsContent(outerMode);
         bool fillBlockAxis = !hasExplicitHeight && !outerFlexWantsContent
             && VerticalAlignment == VerticalAlignment.Stretch && hasDefiniteHeight;
+        _ambientWantsContent = outerFlexWantsContent;
         _rootNode.MaxHeight = YogaValue.Undefined;
 
         float rootHeight = hasExplicitHeight ? (float)Height : fillBlockAxis ? (float)availableSize.Height : float.NaN;
@@ -223,11 +353,15 @@ public class FlexPanel : Panel
                 if (!_measuredThisPass.Contains(child))
                 {
                     var m = child.Margin;
-                    child.Measure(new Size(Math.Max(0, layout.Width + m.Left + m.Right), Math.Max(0, layout.Height + m.Top + m.Bottom)));
+                    MeasureAsSlot(child, new Size(Math.Max(0, layout.Width + m.Left + m.Right), Math.Max(0, layout.Height + m.Top + m.Bottom)), sweep: true);
                 }
             }
             else _cachedChildLayouts.Add(default);
         }
+        // #9: whether another mode would have given another result. Not at a height of 0, nor when the content fills
+        // the height offered: there both modes report that height.
+        _ambientSensitive = _sweptSensitive || (!hasExplicitHeight && VerticalAlignment == VerticalAlignment.Stretch
+            && hasDefiniteHeight && availableSize.Height > 0 && (fillBlockAxis || _rootNode.LayoutHeight < availableSize.Height));
         return _cachedDesiredSize;
     }
 
@@ -299,6 +433,7 @@ public class FlexPanel : Panel
             if (_nodeCache.TryGetValue(el, out var node)) _rootNode.RemoveChild(node);
             _nodeCache.Remove(el);
             _attachedCache.Remove(el);
+            _ambientDependents.Remove(el);
         }
 
         for (int i = 0; i < Children.Count; i++)
@@ -325,9 +460,12 @@ public class FlexPanel : Panel
                     var constraintW = wMode == YogaMeasureMode.Undefined ? double.PositiveInfinity : Math.Max(0, w + mH);
                     var constraintH = hMode == YogaMeasureMode.Undefined ? double.PositiveInfinity : Math.Max(0, h + mV);
                     var prevYogaH = _outerYogaHeightMode;
+                    var (prevPanel, prevSlot) = (s_outerPanel, s_outerSlot);
+                    panel.DropStaleNestedMeasures(capturedChild, WantsContent(hMode));
                     _outerYogaHeightMode = hMode;
+                    (s_outerPanel, s_outerSlot) = (panel, capturedChild);
                     try { capturedChild.Measure(new Size(constraintW, constraintH)); }
-                    finally { _outerYogaHeightMode = prevYogaH; }
+                    finally { _outerYogaHeightMode = prevYogaH; (s_outerPanel, s_outerSlot) = (prevPanel, prevSlot); }
                     panel._measuredThisPass.Add(capturedChild);
                     var outW = (float)(capturedChild.DesiredSize.Width - mH);
                     var outH = (float)(capturedChild.DesiredSize.Height - mV);
@@ -418,7 +556,7 @@ public class FlexPanel : Panel
 //     line: the longest word with WrapWithOverflow);
     //   • anything else, and an element with an explicit size on the axis, keeps upstream's probe (0 on Avalonia),
     //     so it still shrinks freely as before.
-    private static double ComputeMinContent(Control el, bool isWidth)
+    private double ComputeMinContent(Control el, bool isWidth)
     {
         var margin = el.Margin;
         double mH = margin.Left + margin.Right, mV = margin.Top + margin.Bottom;
@@ -428,7 +566,7 @@ public class FlexPanel : Panel
             // measure once its templates are applied; after, since the first measure applies them.
             if (!CanShrink(el))
             {
-                el.Measure(Size.Infinity);
+                MeasureAsSlot(el, Size.Infinity);
                 if (!CanShrink(el))
                     return isWidth ? Math.Max(0, el.DesiredSize.Width - mH) : Math.Max(0, el.DesiredSize.Height - mV);
             }
@@ -438,12 +576,12 @@ public class FlexPanel : Panel
             // 1, not 0: at a width of 0 Avalonia's TextBlock lays out nothing (measured: width 0, one line).
             // TextBlock takes its Padding off the width offered, so it's added back.
             var p = tb.Padding;
-            el.Measure(new Size(1 + Math.Max(0, mH) + Math.Max(0, p.Left + p.Right), double.PositiveInfinity));
+            MeasureAsSlot(el, new Size(1 + Math.Max(0, mH) + Math.Max(0, p.Left + p.Right), double.PositiveInfinity));
             var layout = tb.TextLayout;
             return Math.Max(0, Math.Min(tb.MaxWidth, Math.Max(tb.MinWidth, layout.OverhangLeading + layout.WidthIncludingTrailingWhitespace + layout.OverhangTrailing + p.Left + p.Right)));
         }
         var constraint = isWidth ? new Size(Math.Max(0, mH), double.PositiveInfinity) : new Size(double.PositiveInfinity, Math.Max(0, mV));
-        el.Measure(constraint);
+        MeasureAsSlot(el, constraint);
         return isWidth ? Math.Max(0, el.DesiredSize.Width - mH) : Math.Max(0, el.DesiredSize.Height - mV);
     }
 

@@ -1,6 +1,7 @@
 // A small C# lexer for text transforms: which characters are code (not comments, strings or char literals), and
 // the extent of a member declaration. Shared by tools/sync (drop rules) and tools/rewrite-upstream.mjs (Spike A), so
-// there is one implementation. Text-based on purpose until #4 decides on Roslyn.
+// there is one implementation. Text-based by decision (#4): the Roslyn step (lib/roslyn.mjs) complements it for new
+// rules, and re-expressing the existing drops with it gave the same output (tools/measure-roslyn.mjs).
 
 // Marks which characters of C# source are code: not in a comment, string or char literal (interpolation holes count
 // as code). Handles //, /* */, '…', "…", @"…", $"…", $@"…"/@$"…" and raw """…""" strings.

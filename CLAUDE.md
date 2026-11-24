@@ -58,8 +58,9 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
 - **Element factories and modifiers** are our own tier 3 version of upstream's `Dsl.cs`/`ElementExtensions.cs` (#17),
   with upstream's names; add a factory when its control arrives. Doc C# blocks must be `#region`s of the test project
   (`DocSnippetTests`).
-- **Member drops stay text-based** (the lexer in `tools/sync/lib/csharp.mjs`, shared with Spike A's
-  `tools/rewrite-upstream.mjs`) until #4 decides on Roslyn.
+- **Member drops stay text-based** (the lexer in `tools/sync/lib/csharp.mjs`; #4, 2026-11-24). A `roslyn` rule kind
+  (drop-member, retarget-type, drop-attribute; `tools/sync/roslyn`, run before the text rules) complements them for new
+  rules, and `syntaxCheck` makes every C# file a rule changes still parse. `tools/sync` therefore needs dotnet.
 
 ## Environment traps
 

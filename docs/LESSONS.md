@@ -74,6 +74,26 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   later, it failed upstream's `UseResourceThreadingTests`, which count unobserved task exceptions. A test that lets one
   escape forces a collection while it runs alone. (2026-11-23)
 
+- **A deliberate break that doesn't compile proves nothing:** with TreatWarningsAsErrors, `if (false)` fails the build
+  and every test with it. Break with a condition the compiler can't fold. (2026-11-24)
+- **A temp clone of upstream on Windows needs `git -c core.longpaths=true`;** its tests/ paths are too long otherwise.
+  (2026-11-24)
+
+- **A control holds one event payload.** Every hand-coded event and controlled entry on one control must use the same
+  payload type, or they replace each other's (a ComboBox lost its selection callback). (2026-11-24)
+- **Avalonia's DatePicker sets MinYear/MaxYear in its constructor,** so ClearValue doesn't restore them, and it throws
+  when MinYear passes MaxYear: write both, in order. (2026-11-24)
+- **Avalonia raises Expander's Expanded/Collapsed after a posted transition;** a controlled entry listens to
+  IsExpanded's change instead. (2026-11-24)
+- **With `using static Isotope.UI.Factories`, `Grid.GetRow(...)` and `Border.BackgroundProperty` name the factory
+  (CS0119).** Use an alias or the full name. (2026-11-24)
+
+- **Yoga doesn't call a measure function for a child it sizes Exactly on both axes** (a basis of 0 with stretch), so
+  FlexPanel's own final sweep measures that child, and a fix in the Yoga bridge alone misses it. (2026-11-24)
+- **Two parts of a fix that each correct a bug hide each other from break tests.** A test stayed green with one part
+  removed because the other corrected the layout one pass later. Prove it with both removed, and test what each part
+  alone buys. (2026-11-24)
+
 ## Git, GitHub and merging
 
 - **Stage files by name.** `git add -A` has committed a screenshot that should never have left the machine, and would

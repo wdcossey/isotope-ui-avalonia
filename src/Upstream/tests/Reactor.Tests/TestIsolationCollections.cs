@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/TestIsolationCollections.cs, last changed upstream in aa7fd62817e4; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): tests/Reactor.Tests/TestIsolationCollections.cs, last changed upstream in e24d1a498a55; transforms: namespace-isotope. Do not edit: change the tools/sync rules.
 using Xunit;
 
 namespace Isotope.UI.Tests;
@@ -7,7 +7,7 @@ namespace Isotope.UI.Tests;
 /// xUnit collection marker for tests that replace process-wide console or trace
 /// state. These tests must not overlap any other collection because
 /// <see cref="Console.Out"/>, <see cref="Console.Error"/>, and
-/// <see cref="System.Diagnostics.Trace.Listeners"/> are global to the test process.
+/// <see cref="global::System.Diagnostics.Trace.Listeners"/> are global to the test process.
 /// </summary>
 [CollectionDefinition("ConsoleTests", DisableParallelization = true)]
 public sealed class ConsoleTestsCollection { }

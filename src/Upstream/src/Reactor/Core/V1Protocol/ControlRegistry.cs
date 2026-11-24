@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1Protocol/ControlRegistry.cs, last changed upstream in 262488ee5f92; transforms: winui-usings, drop-ControlRegistry-RegisterDecorator, drop-ControlRegistry-RegisterDecoratorForDerivedTypes, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor/Core/V1Protocol/ControlRegistry.cs, last changed upstream in 1f0784368e39; transforms: winui-usings, drop-ControlRegistry-RegisterDecorator, drop-ControlRegistry-RegisterDecoratorForDerivedTypes, namespace-isotope. Do not edit: change the tools/sync rules.
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -153,7 +153,26 @@ public static class ControlRegistry
             s_sourceTargetResolvers.TryRemove(typeof(TElement), out _);
             global::System.Threading.Interlocked.Increment(ref s_registryGeneration);
         }
+        else
+        {
+            s_contested.TryAdd(typeof(TElement), 0);
+        }
     }
+
+    // Element types registered more than once. A built-in registers its element type from the
+    // type's static constructor, which runs before the first instance exists, so an app override
+    // of a built-in always makes one of the two registrations lose here.
+    private static readonly ConcurrentDictionary<Type, byte> s_contested = new();
+
+    /// <summary>
+    /// Whether <paramref name="elementType"/> was registered more than once, so its handler may
+    /// be an app override of a built-in. Spec 066 §7.2 keeps such mounts off the pool's visual lane.
+    /// </summary>
+    internal static bool IsContested(Type elementType) => s_contested.ContainsKey(elementType);
+
+
+
+
 
 
 

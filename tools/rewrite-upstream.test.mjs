@@ -25,7 +25,8 @@ function runTool(source, rules) {
     } catch (e) {
       return { status: e.status, out: String(e.stderr) };
     }
-    return { status: 0, manifest: readFileSync(path.join(dir, 'out', 'manifest.txt'), 'utf8') };
+    const out = path.join(dir, 'out', 'A.cs');
+    return { status: 0, manifest: readFileSync(path.join(dir, 'out', 'manifest.txt'), 'utf8'), text: existsSync(out) ? readFileSync(out, 'utf8') : null };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -100,4 +101,18 @@ test('an unchanged rewrite keeps its file, and a failed import leaves no manifes
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('roslyn rules run first, through tools/sync/roslyn, and one that matches nothing fails the import', () => {
+  const source = 'class A\n{\n    public void WinOnly() {}\n    Microsoft.UI.Xaml.UIElement e;\n}\n';
+  const r = runTool(source, [
+    { roslyn: { op: 'drop-member', type: 'A', member: 'WinOnly' }, files: ['A.cs'], why: 't' },
+    { find: 'Microsoft\\.UI\\.Xaml\\.UIElement', replace: 'UIElement', why: 't' },
+  ]);
+  assert.equal(r.status, 0, r.out);
+  assert.match(r.manifest, /\|2\n$/);
+  assert.equal(r.text.split('\n').slice(2).join('\n'), 'class A\n{\n\n    UIElement e;\n}\n');
+  const miss = runTool(source, [{ roslyn: { op: 'drop-member', type: 'A', member: 'Gone' }, files: ['A.cs'], why: 't' }]);
+  assert.equal(miss.status, 1);
+  assert.match(miss.out, /A\.cs: roslyn rule .*"Gone".*: matched 0 members, expected 1/);
 });

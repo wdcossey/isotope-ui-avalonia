@@ -91,6 +91,19 @@ namespace Isotope.UI.Animation
         internal static CompositionAnimation CreateVector3ImplicitAnimation(Compositor compositor, string target, Curve curve)
             => throw new NotSupportedException("Composition animations are tier 3: not on Avalonia yet.");
     }
+
+    /// <summary>The features that share a visual's implicit animation keys, as upstream names them.</summary>
+    internal enum ImplicitFeature : byte { Move = 0, Transition = 1, Animate = 2, Layout = 3 }
+
+    /// <summary>
+    /// Tier 3: who claims each implicit animation key on a control (upstream's spec 066). Composition
+    /// animations are not wired on Avalonia yet, so nothing reaches a claim.
+    /// </summary>
+    internal static class ImplicitAnimationSlots
+    {
+        internal static void Claim(UIElement element, string key, ImplicitFeature feature, int slot, object value)
+            => throw new NotSupportedException("Composition animations are tier 3: not on Avalonia yet.");
+    }
 }
 
 namespace Isotope.UI.Core.Internal
