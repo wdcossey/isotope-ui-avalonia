@@ -227,14 +227,16 @@ public sealed partial class Reconciler
     /// closures rather than the ones captured when the control was last updated.
     /// </summary>
     internal void RefreshSkippedChildState(FrameworkElement control, Element oldElement, Element newElement)
-        => GetOrCreateReactorState(control).Element = newElement;
+        => SetMountedElement(control, newElement);
 
     internal bool CanUpdate(Element oldEl, Element newEl)
     {
-        oldEl = Unwrap(oldEl, out _);
-        newEl = Unwrap(newEl, out _);
+        oldEl = Unwrap(oldEl, out var oldModifiers);
+        newEl = Unwrap(newEl, out var newModifiers);
         if (oldEl.GetType() != newEl.GetType()) return false;
         if (oldEl.Key != newEl.Key) return false;
+        // #49: a panel mounted inside a chrome border, or no longer, is a different control in the slot.
+        if (NeedsPanelChrome(oldEl, oldModifiers) != NeedsPanelChrome(newEl, newModifiers)) return false;
         if (oldEl is ComponentElement oldComp && newEl is ComponentElement newComp)
             return oldComp.ComponentType == newComp.ComponentType;
         return true;
@@ -385,6 +387,9 @@ public sealed partial class Reconciler
                 _ => throw new NotSupportedException(
                     $"{element.GetType().Name} has no Avalonia control yet (the element vocabulary is tier 3)."),
             };
+            // #49: a panel with padding, a border or rounded corners goes inside a border that has them.
+            if (control is not null && NeedsPanelChrome(element, modifiers))
+                control = WrapInPanelChrome(control);
             if (control is not null)
             {
                 try
@@ -400,7 +405,7 @@ public sealed partial class Reconciler
                     NoteMountCompleted(boundaryRootsStart, control);
                     throw;
                 }
-                GetOrCreateReactorState(control).Element = element;
+                SetMountedElement(control, element);
             }
             NoteMountCompleted(boundaryRootsStart, control);
             return control;
@@ -439,7 +444,7 @@ public sealed partial class Reconciler
                 && !IsOnDirtyAncestorPath(control) && !ShouldDeclineSkip(control))
             {
                 DebugElementsSkipped++;
-                GetOrCreateReactorState(control).Element = newInner;
+                SetMountedElement(control, newInner);
                 return null;
             }
             switch (newInner)
@@ -461,13 +466,17 @@ public sealed partial class Reconciler
                     // when the slot held a control of the wrong type, which it has mounted afresh.
                     if (TryGetV1Handler(newInner.GetType(), out var entry))
                     {
-                        var updated = entry.Update(oldInner, newInner, control, requestRerender, this);
-                        if (!ReferenceEquals(updated, control))
+                        // #49: the handler updates the panel inside a chrome border.
+                        var target = HandlerControl(control);
+                        var updated = entry.Update(oldInner, newInner, target, requestRerender, this);
+                        if (!ReferenceEquals(updated, target))
                         {
+                            if (NeedsPanelChrome(newInner, newModifiers)) updated = WrapInPanelChrome(updated);
                             // The adapter mounted the unwrapped element: give the new control the wrapper's modifiers too.
                             ApplyModifiers(updated, null, null, newInner, newModifiers);
                             ApplyRichToolTip(updated, null, newInner, null, newModifiers, requestRerender);
                             ApplyEnabled(updated, newInner, newModifiers);
+                            if (updated is PanelChrome) SetMountedElement(updated, newInner);
                             return updated;
                         }
                     }
@@ -476,7 +485,7 @@ public sealed partial class Reconciler
             ApplyModifiers(control, oldInner, oldModifiers, newInner, newModifiers);
             ApplyRichToolTip(control, oldInner, newInner, oldModifiers, newModifiers, requestRerender);
             ApplyEnabled(control, newInner, newModifiers);
-            GetOrCreateReactorState(control).Element = newInner;
+            SetMountedElement(control, newInner);
             return null;
         }
         finally
@@ -622,6 +631,8 @@ public sealed partial class Reconciler
             SetRef(control, background, BackgroundOf(oldEl, oldM), BackgroundOf(newEl, newM));
         // #42: the text modifiers, and on a text block its font members, which apply without modifiers too.
         ApplyTextModifiers(control, oldEl, oldM, newEl, newM);
+        // #49: the layout modifiers, and on a Border element its own padding, border and corners.
+        ApplyLayoutModifiers(control, oldEl, oldM, newEl, newM);
         // The text tooltip has two sources too, the modifier and a button's command description (#29): written as one
         // value, the modifier's first. An element tooltip owns the tip while either side has one (ApplyRichToolTip).
         if (oldM?.RichToolTip is null && newM?.RichToolTip is null)
@@ -947,6 +958,12 @@ public sealed partial class Reconciler
             }
         }
         UnmountOwnedToolTip(control);
+        // #49: a panel's chrome border holds the element's modifiers only; the panel inside it is the handler's.
+        if (control is PanelChrome { Child: { } panel })
+        {
+            UnmountChild(panel);
+            return;
+        }
         // A control a handler mounted: the handler tears down what it owns (its children strategy, its unmount
         // hooks) and says whether the generic walk below still visits the children (a panel strategy's). Inside an
         // isolated teardown, a handler that throws is reported and the children it didn't reach are torn down (#28).

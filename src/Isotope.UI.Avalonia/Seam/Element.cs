@@ -283,6 +283,17 @@ public partial record ElementModifiers
         FontSize = other.FontSize ?? FontSize,
         FontWeight = other.FontWeight ?? FontWeight,
         FontFamily = other.FontFamily ?? FontFamily,
+        Padding = other.Padding ?? Padding,
+        BorderBrush = other.BorderBrush ?? BorderBrush,
+        BorderThickness = other.BorderThickness ?? BorderThickness,
+        CornerRadius = other.CornerRadius ?? CornerRadius,
+        MinWidth = other.MinWidth ?? MinWidth,
+        MinHeight = other.MinHeight ?? MinHeight,
+        MaxWidth = other.MaxWidth ?? MaxWidth,
+        MaxHeight = other.MaxHeight ?? MaxHeight,
+        HorizontalContentAlignment = other.HorizontalContentAlignment ?? HorizontalContentAlignment,
+        VerticalContentAlignment = other.VerticalContentAlignment ?? VerticalContentAlignment,
+        IsVisible = other.IsVisible ?? IsVisible,
     };
 }
 

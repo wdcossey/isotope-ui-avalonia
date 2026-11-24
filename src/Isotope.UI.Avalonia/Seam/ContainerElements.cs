@@ -19,9 +19,11 @@ namespace Isotope.UI.Core;
 [WrapManual("Background")]
 [WrapManual("CornerRadius")]
 [WrapManual("BorderThickness")]
+[WrapManual("BorderBrush")]
+[WrapManual("Padding")]
 public partial record BorderElement(Element? Child) : Element
 {
-    /// <summary>The same radius on every corner, in DIPs.</summary>
+    /// <summary>The same radius on every corner, in DIPs; it wins over the <c>.CornerRadius(...)</c> modifier.</summary>
     public double? CornerRadius { get; init; }
 
     /// <summary>
@@ -30,29 +32,25 @@ public partial record BorderElement(Element? Child) : Element
     /// </summary>
     public IBrush? Background { get; init; }
 
+    /// <summary>The border's brush; it wins over the <c>.BorderBrush(...)</c> and <c>.WithBorder(...)</c> modifiers.</summary>
     public IBrush? BorderBrush { get; init; }
 
-    /// <summary>The same border width on every side, in DIPs.</summary>
+    /// <summary>The same border width on every side, in DIPs; it wins over the <c>.BorderThickness(...)</c> modifier.</summary>
     public double? BorderThickness { get; init; }
 
-    /// <summary>Space between the border and the child (Avalonia's <c>Padding</c>; upstream's record has none).</summary>
+    /// <summary>
+    /// Space between the border and the child (Avalonia's <c>Padding</c>; upstream's record has none, and uses the
+    /// <c>.Padding(...)</c> modifier, which this member wins over).
+    /// </summary>
     public Thickness? Padding { get; init; }
 
     internal Action<Border>[] Setters { get; init; } = [];
 
-    // Background is written by the reconciler with the modifier's (Reconciler.ApplyModifiers). BorderBrush and Padding
-    // are generated, on the ClearValue channel. CornerRadius and BorderThickness are written here, on the same channel,
-    // so a member set back to null gives the control its default again: upstream's [WrapConvert] (a scalar written
-    // through the struct's constructor) skips the write for null instead of clearing.
-    private static partial ControlDescriptor<BorderElement, Border> Customize(ControlDescriptor<BorderElement, Border> d)
-        => d.OneWay<CornerRadius>(
-                get: static e => e.CornerRadius is { } r ? new CornerRadius(r) : Optional<CornerRadius>.Unset,
-                set: static (c, v) => c.CornerRadius = v,
-                dp:  Border.CornerRadiusProperty)
-            .OneWay<Thickness>(
-                get: static e => e.BorderThickness is { } t ? new Thickness(t) : Optional<Thickness>.Unset,
-                set: static (c, v) => c.BorderThickness = v,
-                dp:  Border.BorderThicknessProperty);
+    // Background, Padding, BorderBrush, BorderThickness and CornerRadius have a second source, the modifier of the same
+    // name: the reconciler writes each pair as one value, this record's first, so neither overwrites the other
+    // (Reconciler.ApplyModifiers and ApplyLayoutModifiers), and a member set back to null gives the control the
+    // modifier's value or its default again.
+    private static partial ControlDescriptor<BorderElement, Border> Customize(ControlDescriptor<BorderElement, Border> d) => d;
 }
 
 /// <summary>
