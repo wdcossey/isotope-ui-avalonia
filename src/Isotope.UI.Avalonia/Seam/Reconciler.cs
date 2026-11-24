@@ -52,12 +52,8 @@ public sealed partial class Reconciler
     /// Begins a host's root render on <paramref name="ctx"/>, with this reconciler's context scope and owner, as a
     /// component's render begins (the host then calls the root's render function and flushes its effects).
     /// </summary>
-    internal void BeginRootRender(RenderContext ctx, Action requestRerender)
-    {
-        // A pass starts: an exception propagated in an earlier one is an ordinary error again (#28).
-        _propagating = null;
+    internal void BeginRootRender(RenderContext ctx, Action requestRerender) =>
         ctx.BeginRender(requestRerender, _contextScope, Owner);
-    }
 
     // ════════════════════════════════════════════════════════════════════
     //  Root pass
