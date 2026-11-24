@@ -118,15 +118,18 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             var top = nodes[nodes.Count - 1];
             if (top.Parent is BaseNamespaceDeclarationSyntax) return;
             var model = ctx.SemanticModel;
-            if (model.GetSymbolInfo(top, ctx.CancellationToken).Symbol is not null) return;
             var rootSymbol = model.GetSymbolInfo(root, ctx.CancellationToken).Symbol;
             if (rootSymbol is not null and not INamespaceSymbol) return;
-
+            var topSymbol = model.GetSymbolInfo(top, ctx.CancellationToken).Symbol;
             if (segs.Count >= 3 && segs[0] == "Microsoft" && segs[1] == "UI" && segs[2] == "Reactor")
             {
+                // A project's own namespace under Microsoft.UI.Reactor makes the name bind: Microsoft.UI.Reactor itself is
+                // still Reactor's (migrated), but a deeper namespace or a type that binds is the project's own.
+                if (topSymbol is not null && !(topSymbol is INamespaceSymbol && segs.Count == 3)) return;
                 ReactorChain(ctx, nodes, segs);
                 return;
             }
+            if (topSymbol is not null) return;
             var full = string.Join(".", segs);
             if (!_t.WinUI.IsWinUINamespace(full)) return;
             // A plain using of a WinUI namespace is ISOMIG003's.
@@ -298,12 +301,15 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         {
             // `box?.Value`: the receiver is the conditional access's expression.
             var binding = (MemberBindingExpressionSyntax)ctx.Node;
-            if (binding.Name is not IdentifierNameSyntax name || binding.Parent is InvocationExpressionSyntax) return;
+            if (binding.Name is not IdentifierNameSyntax name) return;
             if (binding.FirstAncestorOrSelf<ConditionalAccessExpressionSyntax>() is not { } access || access.WhenNotNull.SpanStart != binding.SpanStart) return;
             var receiver = Constraint(ctx.SemanticModel.GetTypeInfo(access.Expression, ctx.CancellationToken).Type);
             if (receiver is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable) receiver = nullable.TypeArguments[0];
             if (receiver is null or IErrorTypeSymbol) return;
-            MemberUse(ctx, receiver, name, null);
+            if (binding.Parent is InvocationExpressionSyntax inv && inv.Expression == binding)
+                InvokedMember(ctx, binding, receiver, name, isStatic: false);
+            else
+                MemberUse(ctx, receiver, name, null);
         }
 
         public void ObjectCreation(SyntaxNodeAnalysisContext ctx)
@@ -323,8 +329,16 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 var parameter = arg.NameColon.Name.Identifier.ValueText;
                 if (ctors.Any(c => c.Parameters.Any(p => p.Name == parameter))) continue;
                 var entry = FindMember(type, parameter, out var record);
-                if (entry is not { Kind: "rename" } || entry.SingleAvalonia is not { } target || named.Contains(target)) continue;
-                Report(ctx, Rules.MemberRenamed, arg.NameColon.Name.GetLocation(), replace: target, args: [record, parameter, target]);
+                if (entry is null || entry.Kind == "kept") continue;
+                var target = entry.SingleAvalonia;
+                // A target already named here would be named twice: leave it to the compiler's error.
+                if (target is not null && named.Contains(target)) continue;
+                var targetParameter = target is null ? null : ctors.SelectMany(c => c.Parameters).FirstOrDefault(p => p.Name == target);
+                var fits = entry.Kind == "rename" || (targetParameter is not null && Converts(model, arg.Expression, targetParameter.Type));
+                if (target is not null && target != parameter && targetParameter is not null && fits)
+                    Report(ctx, Rules.MemberRenamed, arg.NameColon.Name.GetLocation(), replace: target, args: [record, parameter, target]);
+                else
+                    Report(ctx, Rules.MemberShape, arg.NameColon.Name.GetLocation(), args: [record, parameter, entry.Note ?? ""]);
             }
         }
 
@@ -340,9 +354,22 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             var text = name.Identifier.ValueText;
             if (ma.Parent is InvocationExpressionSyntax inv && inv.Expression == ma)
             {
-                var info = model.GetSymbolInfo(ma, ctx.CancellationToken);
+                InvokedMember(ctx, ma, receiver, name, isStatic: receiverSymbol is INamedTypeSymbol);
+                return;
+            }
+            var value = ma.Parent is AssignmentExpressionSyntax a && a.Left == ma ? a.Right : null;
+            MemberUse(ctx, receiver, name, value);
+        }
+
+        /// <summary>`el.HeaderContent(x)` or `el?.HeaderContent(x)`: a modifier the table renamed, or a member Isotope lacks.</summary>
+        void InvokedMember(SyntaxNodeAnalysisContext ctx, ExpressionSyntax call, ITypeSymbol receiver, IdentifierNameSyntax name, bool isStatic)
+        {
+            var model = ctx.SemanticModel;
+            var text = name.Identifier.ValueText;
+            {
+                var info = model.GetSymbolInfo(call, ctx.CancellationToken);
                 if (info.Symbol is not null || !info.CandidateSymbols.IsEmpty) return;
-                if (receiverSymbol is not INamedTypeSymbol)
+                if (!isStatic)
                 {
                     var modifier = _t.Renames.Modifiers.FirstOrDefault(m => m.Applied && m.Reactor == text && (m.Target is null || IsOrDerivesFrom(receiver, m.Target, _recordAliases)));
                     if (modifier is not null)
@@ -355,10 +382,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 if (receiver.Name is "ReactorApp" && text is "Run" or "OpenWindow") return; // Invocation's
                 if (receiver.Name is "Factories" && IsFactoryEntry(text)) return; // Invocation's
                 if (IsIsotope(receiver)) Report(ctx, Rules.NoIsotopeMember, name.GetLocation(), args: [receiver.Name, text]);
-                return;
             }
-            var value = ma.Parent is AssignmentExpressionSyntax a && a.Left == ma ? a.Right : null;
-            MemberUse(ctx, receiver, name, value);
         }
 
         void MemberUse(SyntaxNodeAnalysisContext ctx, ITypeSymbol type, IdentifierNameSyntax name, ExpressionSyntax? value,

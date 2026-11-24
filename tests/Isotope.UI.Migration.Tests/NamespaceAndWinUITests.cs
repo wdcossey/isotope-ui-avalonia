@@ -158,6 +158,7 @@ public class NamespaceAndWinUITests
                     VirtualKey.GamepadA,
                     Windows.System.VirtualKey.NoSuchKey,
                     Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error,
+                    new Microsoft.UI.Xaml.Input.KeyboardAccelerator(),
                 ];
             }
             """;
@@ -169,7 +170,21 @@ public class NamespaceAndWinUITests
             "ISOMIG005: 'VirtualKey.GamepadA' has no Avalonia counterpart",
             "ISOMIG005: 'Windows.System.VirtualKey.NoSuchKey' has no Avalonia counterpart ('NoSuchKey' isn't a member of Avalonia.Input.Key)",
             "ISOMIG016: 'Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error' is a WinUI name the migration's table doesn't list: find its Avalonia counterpart by hand",
+            "ISOMIG005: 'Microsoft.UI.Xaml.Input.KeyboardAccelerator' has no Avalonia counterpart: Avalonia uses a KeyGesture (new KeyGesture(Key.S, KeyModifiers.Control)) as a button's or menu item's HotKey; its key and modifiers are set in the constructor.",
         ], Migrate.Analyze(reactor).Describe());
+    }
+
+    [Fact]
+    public void A_project_namespace_under_Microsoft_UI_Reactor_is_left_alone_but_Reactor_s_own_is_migrated()
+    {
+        const string own = "namespace Microsoft.UI.Reactor.Demo { public class Thing { } }";
+        const string page = """
+            using Microsoft.UI.Reactor;
+            using Microsoft.UI.Reactor.Demo;
+            class C { Thing? T; }
+            """;
+        Assert.Equal(["ISOMIG001: 'Microsoft.UI.Reactor' is 'Isotope.UI' in Isotope"],
+            Migrate.Analyze(Migrate.Project(own, page)).Describe());
     }
 
     [Fact]

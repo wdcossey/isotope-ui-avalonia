@@ -148,6 +148,41 @@ public class RenameTests
     }
 
     [Fact]
+    public void Record_constructor_arguments_with_a_shape_change_are_renamed_where_they_fit()
+    {
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element[] Render() =>
+                [
+                    new ButtonElement(Label: "Save"),
+                    new GridElement(Definition: null!, RowDefinitions: [], Children: []),
+                ];
+            }
+            """;
+        Assert.Equal([
+            "ISOMIG006: 'ButtonElement.Label' is 'Content' in Isotope",
+            "ISOMIG007: 'GridElement.Definition' changed shape in Isotope: GridDefinition(Columns, Rows) is two GridSize[] members, as Avalonia's ColumnDefinitions and RowDefinitions; GridDefinition is gone (see types).",
+        ], Migrate.Analyze(reactor).Describe());
+        Assert.Contains("new ButtonElement(Content: \"Save\")", Migrate.Fix(reactor));
+    }
+
+    [Fact]
+    public void A_null_conditional_modifier_call_is_renamed()
+    {
+        var tables = Migrate.WithRenames(t =>
+            t.Modifiers.Add(new NameEntry { Reactor = "Margins", Avalonia = "Margin", Status = "applied" }));
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element? Render(TextBlockElement? text) => text?.Margins(4);
+            }
+            """;
+        Assert.Equal(["ISOMIG009: Modifier 'Margins' is 'Margin' in Isotope"], Migrate.Analyze(reactor, tables).Describe());
+        Assert.Empty(Migrate.Errors(Migrate.Fix(reactor, tables)));
+    }
+
+    [Fact]
     public void A_parameter_whose_new_name_is_already_given_is_left_to_the_compiler()
     {
         const string reactor = Usings + """

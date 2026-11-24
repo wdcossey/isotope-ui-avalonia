@@ -79,6 +79,16 @@ public class TableAndFixTests
     }
 
     [Fact]
+    public void Usings_go_after_extern_aliases_and_one_already_there_is_not_added_again()
+    {
+        const string withExtern = "extern alias Old;\nusing Microsoft.UI.Text;\n\nstatic class C\n{\n    static object W => FontWeights.Bold;\n}\n";
+        Assert.StartsWith("extern alias Old;\nusing Avalonia.Media;\n\nstatic class C", Migrate.Fix(withExtern));
+
+        const string withGlobalPrefix = "using global::Avalonia.Media;\nusing Microsoft.UI.Text;\n\nstatic class C\n{\n    static object W => FontWeights.Bold;\n}\n";
+        Assert.Equal("using global::Avalonia.Media;\n\nstatic class C\n{\n    static object W => FontWeight.Bold;\n}\n", Migrate.Fix(withGlobalPrefix));
+    }
+
+    [Fact]
     public async Task The_code_fix_offers_one_action_per_diagnostic_with_the_same_edit_as_fix_all()
     {
         var ct = TestContext.Current.CancellationToken;
