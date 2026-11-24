@@ -460,6 +460,19 @@ public sealed class LayoutModifierTests
     }
 
     [AvaloniaFact]
+    public void Each_of_padding_a_border_brush_a_border_width_and_corners_alone_puts_a_stack_in_a_border()
+    {
+        var host = new TestHost(() => VStack(
+            VStack(TextBlock("p")).Padding(1),
+            VStack(TextBlock("b")).BorderBrush("Red"),
+            VStack(TextBlock("t")).BorderThickness(1),
+            VStack(TextBlock("c")).CornerRadius(1)));
+        var stacks = host.All<StackPanel>().Skip(1).ToList();
+        Assert.Equal(4, stacks.Count);
+        Assert.All(stacks, s => ChromeOf(s));
+    }
+
+    [AvaloniaFact]
     public void A_padded_child_s_flex_and_grid_data_go_on_its_border()
     {
         var host = new TestHost(() => VStack(
