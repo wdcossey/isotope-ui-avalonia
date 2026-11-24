@@ -14,15 +14,15 @@ public static class NumbersPage
     {
         var tips = ctx.UseContext(SampleApp.ShowTips);
         var (value, setValue) = ctx.UseState(Start);
-        // An emptied box reports NaN: the value stays as it was.
+        // A whole number: a dragged slider gives fractions. An emptied box reports NaN: the value stays as it was.
         void Set(double v)
         {
-            if (!double.IsNaN(v)) setValue(v);
+            if (!double.IsNaN(v)) setValue(Math.Round(v));
         }
 
         return VStack(12,
             TextBlock("Type a number (then Tab or Enter), use the spinner or the arrow keys, or drag the slider:"),
-            TextBlock("both show one state, from 0 to 100 in steps of 5."),
+            TextBlock("both show one whole number from 0 to 100, and the spinner and arrow keys step by 5."),
             (NumberBox(value, Set) with { Minimum = 0, Maximum = 100, SmallChange = 5, FormatString = "F0" })
                 .Width(160).HAlign(HorizontalAlignment.Left)
                 .Tip(tips, "Up and down change it by 5"),

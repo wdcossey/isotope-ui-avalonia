@@ -38,7 +38,7 @@ public static class SplitViewPage
         return FlexColumn(
             SampleApp.Row(
                 ToggleButton("Pane", open, setOpen).Tip(tips, "Opens and closes the pane"),
-                ComboBox(ModeNames, mode, setMode).Tip(tips, "The display mode"),
+                ComboBox(ModeNames, mode, i => { if (i >= 0) setMode(i); }).Tip(tips, "The display mode"),
                 TextBlock("Pane " + (open ? "open" : "closed"))),
             (SplitView(pane, content) with
             {

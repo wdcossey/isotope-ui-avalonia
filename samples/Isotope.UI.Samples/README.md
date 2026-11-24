@@ -61,7 +61,7 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 - [ ] The box shows 20 with up and down buttons; the slider's thumb is at 20; "Value: 20".
 - [ ] Click the up button → 25 in the box, the thumb moves, "Value: 25". Up and down arrow keys in the box do the same.
 - [ ] Type 42 in the box and press Enter → the slider follows, "Value: 42".
-- [ ] Drag the slider → the box follows. **Reset** → back to 20.
+- [ ] Drag the slider → the box follows, in whole numbers. **Reset** → back to 20.
 - [ ] Type 150 and press Enter → the box keeps the text 150 but its value doesn't take it: "Value:" and the slider stay
   where they were (Avalonia's NumericUpDown refuses typed text outside its range unless ClipValueToMinMax is on).
 - [ ] Empty the box and press Enter → the box stays empty; "Value:" and the slider keep the last number.

@@ -225,9 +225,9 @@ public sealed class SampleAppTests : IDisposable
         Assert.Equal((25m, 25.0), (box.Value, slider.Value));
         Assert.Contains("Value: 25", Texts(page));
 
-        slider.Value = 70; // as a drag does
+        slider.Value = 69.6; // as a drag does: the page keeps whole numbers
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(70m, box.Value);
+        Assert.Equal((70m, 70.0), (box.Value, slider.Value));
         Assert.Contains("Value: 70", Texts(page));
 
         // Emptied with the keyboard: the box reports no number, and the value stays as it was.
