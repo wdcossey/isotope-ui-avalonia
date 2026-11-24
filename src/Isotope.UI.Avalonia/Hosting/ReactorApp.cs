@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -35,7 +36,8 @@ public static class ReactorApp
 
     /// <summary>
     /// Opens a window titled <paramref name="title"/> whose content is a <see cref="ReactorHostControl"/> rendering
-    /// <paramref name="rootRender"/>. Closing the window disposes the host (its effects are cleaned up).
+    /// <paramref name="rootRender"/>. Closing the window disposes the host (its effects are cleaned up). Call it on
+    /// the UI thread once the app runs.
     /// </summary>
     /// <param name="title">The window's title.</param>
     /// <param name="rootRender">The root component.</param>
@@ -43,21 +45,32 @@ public static class ReactorApp
     /// <param name="height">The window's initial height; <c>null</c> leaves Avalonia's default.</param>
     /// <param name="fullScreen">Opens the window full screen (<see cref="WindowState.FullScreen"/>).</param>
     /// <param name="icon">The window's icon; <c>null</c> leaves Avalonia's default.</param>
-    /// <param name="configure">Called with the host before the root mounts (for example to set its
-    /// <see cref="ReactorHostControl.RenderErrorHandler"/>), as upstream's <c>configure</c>.</param>
+    /// <param name="configure">Called with the host, already the window's content, before the root mounts (for example
+    /// to set its <see cref="ReactorHostControl.RenderErrorHandler"/>), as upstream's <c>configure</c>. If it throws,
+    /// the host is disposed and the window closed, and the exception propagates.</param>
     public static Window OpenWindow(string title, Func<RenderContext, Element> rootRender, double? width = null, double? height = null,
         bool fullScreen = false, WindowIcon? icon = null, Action<ReactorHostControl>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(title);
         ArgumentNullException.ThrowIfNull(rootRender);
         var host = new ReactorHostControl();
-        configure?.Invoke(host);
-        host.Mount(rootRender);
         var window = new Window { Title = title, Content = host };
         if (width is { } w) window.Width = w;
         if (height is { } h) window.Height = h;
         if (fullScreen) window.WindowState = WindowState.FullScreen;
         if (icon is not null) window.Icon = icon;
+        try
+        {
+            // As upstream's OpenWindowCore: configure gets the host of a created window, before the root mounts.
+            configure?.Invoke(host);
+            host.Mount(rootRender);
+        }
+        catch
+        {
+            host.Dispose();
+            window.Close();
+            throw;
+        }
         window.Closed += (_, _) => host.Dispose();
         window.Show();
         return window;
@@ -68,25 +81,31 @@ public static class ReactorApp
     /// and theme) with a classic desktop lifetime, opens the window (<see cref="OpenWindow"/>) and runs until it
     /// closes. Returns the exit code.
     /// </summary>
+    /// <remarks>
+    /// <paramref name="icon"/> is a factory because Avalonia's <see cref="WindowIcon"/> can only be built once the
+    /// platform is set up; it is called on the UI thread when the window opens. As upstream's <c>Run</c>, a caller on an
+    /// MTA thread (top-level statements, an async <c>Main</c>) is moved: on Windows the app runs on a new STA thread,
+    /// which the clipboard and drag-and-drop need, and the call returns when it ends.
+    /// </remarks>
     /// <example><c>ReactorApp.Run(AppBuilder.Configure&lt;App&gt;().UsePlatformDetect(), "Counter", Counter, args)</c></example>
     public static int Run(AppBuilder builder, string title, Func<RenderContext, Element> rootRender, string[]? args = null,
-        double? width = null, double? height = null, bool fullScreen = false, WindowIcon? icon = null,
+        double? width = null, double? height = null, bool fullScreen = false, Func<WindowIcon>? icon = null,
         Action<ReactorHostControl>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(title);
         ArgumentNullException.ThrowIfNull(rootRender);
-        return Start(builder, args ?? [], () => OpenWindow(title, rootRender, width, height, fullScreen, icon, configure));
+        return Start(builder, args ?? [], () => OpenWindow(title, rootRender, width, height, fullScreen, icon?.Invoke(), configure));
     }
 
     /// <summary>
     /// Runs an app with one window around a <see cref="Component"/> class, as
-    /// <see cref="Run(AppBuilder, string, Func{RenderContext, Element}, string[], double?, double?, bool, WindowIcon, Action{ReactorHostControl})"/>.
+    /// <see cref="Run(AppBuilder, string, Func{RenderContext, Element}, string[], double?, double?, bool, Func{WindowIcon}, Action{ReactorHostControl})"/>.
     /// Returns the exit code.
     /// </summary>
     /// <example><c>ReactorApp.Run&lt;CounterApp&gt;(AppBuilder.Configure&lt;App&gt;().UsePlatformDetect(), "Counter", args)</c></example>
     public static int Run<TRoot>(AppBuilder builder, string title, string[]? args = null, double? width = null,
-        double? height = null, bool fullScreen = false, WindowIcon? icon = null, Action<ReactorHostControl>? configure = null)
+        double? height = null, bool fullScreen = false, Func<WindowIcon>? icon = null, Action<ReactorHostControl>? configure = null)
         where TRoot : Component, new()
         => Run(builder, title, static _ => Factories.Component<TRoot>(), args, width, height, fullScreen, icon, configure);
 
@@ -97,8 +116,9 @@ public static class ReactorApp
     /// </summary>
     internal static Func<AppBuilder, string[], Func<Window>, int>? StartForTest { get; set; }
 
-    // The shared tail of every Run: set the platform up, capture the UI thread's queue, open the main window, run.
-    private static int Start(AppBuilder builder, string[] args, Func<Window> openMainWindow)
+    // The shared tail of every Run, on an STA thread: set the platform up, capture the UI thread's queue, open the main
+    // window, run.
+    private static int Start(AppBuilder builder, string[] args, Func<Window> openMainWindow) => RunOnSta(() =>
     {
         if (StartForTest is { } start) return start(builder, args, openMainWindow);
         var lifetime = new ClassicDesktopStyleApplicationLifetime { Args = args, ShutdownMode = ShutdownMode.OnMainWindowClose };
@@ -107,5 +127,24 @@ public static class ReactorApp
         UIDispatcher = DispatcherQueue.ForUIThread;
         lifetime.MainWindow = openMainWindow();
         return lifetime.Start(args);
+    });
+
+    // Upstream's RunOnSta: on Windows, a caller on an MTA thread gets the run on a new STA thread, joined, with its
+    // result or exception. Elsewhere, and on an STA thread, it runs inline.
+    internal static int RunOnSta(Func<int> run)
+    {
+        if (!OperatingSystem.IsWindows() || Thread.CurrentThread.GetApartmentState() == ApartmentState.STA) return run();
+        int result = 0;
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            try { result = run(); }
+            catch (Exception ex) { failure = ExceptionDispatchInfo.Capture(ex); }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+        return result;
     }
 }

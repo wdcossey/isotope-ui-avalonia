@@ -87,7 +87,7 @@ public sealed class AppStartupTests : IDisposable
 
     private static void AssertDefaultBuilder(AppBuilder builder)
     {
-        Assert.Equal(typeof(ReactorApplication), builder.ApplicationType);
+        Assert.Equal(typeof(DefaultApplication), builder.ApplicationType);
         // UsePlatformDetect: this OS's windowing backend (only Win32 names itself; X11 and macOS's leave the name
         // empty), drawn with Skia and shaped with HarfBuzz.
         Assert.NotNull(builder.WindowingSubsystemInitializer);
@@ -167,22 +167,27 @@ public sealed class AppStartupTests : IDisposable
     [AvaloniaFact]
     public void FullScreen_icon_and_configure_reach_the_window_and_its_host_before_the_root_mounts()
     {
+        // Avalonia's WindowIcon needs the platform, so Run takes a factory and calls it only when the window opens.
         var icon = new WindowIcon(new WriteableBitmap(new PixelSize(16, 16), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul));
+        var iconsBuilt = 0;
         var renders = 0;
-        var configured = new List<(ReactorHostControl Host, int Renders, Control? Child)>();
+        var configured = new List<(ReactorHostControl Host, int Renders, Control? Child, object? Parent)>();
         RenderErrorHandler handler = e => TextBlock("handled");
         var started = Capture(() => ReactorApp.Run("Probe", _ => { renders++; return TextBlock("root"); },
-            fullScreen: true, icon: icon, configure: host =>
+            fullScreen: true, icon: () => { iconsBuilt++; return icon; }, configure: host =>
             {
-                configured.Add((host, renders, host.Child));
+                configured.Add((host, renders, host.Child, host.Parent));
                 host.RenderErrorHandler = handler;
             }));
         Assert.Empty(configured); // on the UI thread once the app runs, not inside Run's setup
+        Assert.Equal(0, iconsBuilt);
 
         var window = started.OpenMainWindow();
+        Assert.Equal(1, iconsBuilt);
         var host = Assert.IsType<ReactorHostControl>(window.Content);
-        var (configuredHost, rendersThen, childThen) = Assert.Single(configured);
+        var (configuredHost, rendersThen, childThen, parentThen) = Assert.Single(configured);
         Assert.Same(host, configuredHost);
+        Assert.Same(window, parentThen); // as upstream's: the host of a created window
         Assert.Equal(0, rendersThen);
         Assert.Null(childThen);
         Assert.Same(handler, host.RenderErrorHandler);
@@ -195,6 +200,29 @@ public sealed class AppStartupTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void A_throwing_configure_disposes_the_host_closes_the_window_and_propagates()
+    {
+        ReactorHostControl? configuredHost = null;
+        var closed = 0;
+        var renders = 0;
+        var started = Capture(() => ReactorApp.Run<CounterApp>(AppBuilder.Configure<TestApp>(), "Throws", configure: host =>
+        {
+            configuredHost = host;
+            ((Window)host.Parent!).Closed += (_, _) => closed++;
+            throw new InvalidOperationException("configure failed");
+        }));
+
+        var ex = Assert.Throws<InvalidOperationException>(() => started.OpenMainWindow());
+        Assert.Equal("configure failed", ex.Message);
+        Assert.NotNull(configuredHost);
+        Assert.Throws<ObjectDisposedException>(() => configuredHost.Mount(_ => { renders++; return TextBlock("x"); }));
+        Assert.Equal(1, closed);
+        Pump();
+        Assert.Equal(0, renders);
+        Assert.Null(configuredHost.Child);
+    }
+
+    [AvaloniaFact]
     public void The_builder_overloads_start_the_app_builder_with_its_arguments()
     {
         var builder = AppBuilder.Configure<TestApp>();
@@ -203,6 +231,7 @@ public sealed class AppStartupTests : IDisposable
         Assert.Equal(ExitCode, code);
         Assert.Same(builder, started.Builder);
         Assert.Equal(["--flag"], started.Args);
+        if (OperatingSystem.IsWindows()) Assert.Equal(ApartmentState.STA, started.Apartment);
         var window = started.OpenMainWindow();
         Assert.Equal("Own builder", window.Title);
         Assert.Equal(200, window.Width);
@@ -218,10 +247,10 @@ public sealed class AppStartupTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void The_default_builder_runs_ReactorApplication_on_the_detected_platform_with_the_Fluent_theme()
+    public void The_default_builder_runs_its_application_on_the_detected_platform_with_the_Fluent_theme()
     {
         AssertDefaultBuilder(ReactorApp.CreateDefaultAppBuilder());
-        var app = new ReactorApplication();
+        var app = new DefaultApplication();
         app.Initialize();
         Assert.Single(app.Styles.OfType<FluentTheme>());
     }
@@ -250,7 +279,7 @@ public sealed class AppStartupTests : IDisposable
         {
             int thread = 0;
             var state = ApartmentState.Unknown;
-            var value = ReactorAppDesktop.RunOnSta(() =>
+            var value = ReactorApp.RunOnSta(() =>
             {
                 thread = Environment.CurrentManagedThreadId;
                 state = Thread.CurrentThread.GetApartmentState();
@@ -269,7 +298,7 @@ public sealed class AppStartupTests : IDisposable
             Assert.Equal(callerThread, ranOn); // inline: apartments are a Windows notion
         }
 
-        var ex = OnMtaThread(() => Record.Exception(() => ReactorAppDesktop.RunOnSta(() => throw new InvalidOperationException("startup failed"))));
+        var ex = OnMtaThread(() => Record.Exception(() => ReactorApp.RunOnSta(() => throw new InvalidOperationException("startup failed"))));
         Assert.Equal("startup failed", Assert.IsType<InvalidOperationException>(ex).Message);
     }
 
@@ -281,7 +310,7 @@ public sealed class AppStartupTests : IDisposable
         var thread = new Thread(() =>
         {
             caller = Environment.CurrentManagedThreadId;
-            ReactorAppDesktop.RunOnSta(() => { ranOn = Environment.CurrentManagedThreadId; return 0; });
+            ReactorApp.RunOnSta(() => { ranOn = Environment.CurrentManagedThreadId; return 0; });
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
