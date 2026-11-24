@@ -16,6 +16,18 @@ The generator maps members by these names, so a record that follows the rule nee
 Avalonia counterpart keeps Reactor's name and gets a `kept` entry that says why. Factory parameters are the members'
 names in camel case (`text`, `onTextChanged`).
 
+Types, factories and modifiers follow Avalonia too (#46):
+
+- a record is named after its control, `{Control}Element` (`TabControlElement`), or `{Control}Data` for an item's data
+  (`TabItemData`);
+- a factory that builds a record is named after the record's control (`TabControl`, `TabItem`);
+- a renamed modifier takes the name of the Avalonia property it sets (`HorizontalAlignment`, `ContextFlyout`).
+
+A name that doesn't follow them has a `kept` entry that says why: Avalonia has no counterpart (`ThreeStateCheckBox`,
+`FlexElement`), Avalonia's name would give another Reactor name a new meaning (`MenuBar`, `MenuFlyoutContentElement`),
+or the developer chose to keep it (`VStack` and `HStack`, Reactor's shortcuts for a `StackPanel`).
+`RenameTableTests` checks every record and factory against these rules.
+
 ## Format
 
 `version` is 1. The sections:
@@ -45,13 +57,14 @@ In `members`:
 
 - `applied`: the code has the Avalonia name only;
 - `proposed`: the code still has Reactor's name, and applying it is a rename in the code plus a status change here;
-- `kept`: Avalonia has no counterpart, so the code keeps Reactor's name (`avalonia` equals `reactor`) and `note`
-  says why (the named text styles, `Caption` and `Title`, and `ApplyStyle`, #44). A migration leaves it alone.
+- `kept`: the code keeps Reactor's name (`avalonia` equals `reactor`), and `note` says why: Avalonia has no counterpart
+  (the named text styles, `Caption` and `Title`, and `ApplyStyle`, #44), or a reason of #46's (`VStack`, `MenuBar`). A
+  migration leaves it alone.
 
 An `avalonia` of `null` in `modifiers`, `types` or
 `factories` means Reactor's name is gone with no counterpart (`GridDefinition`); it is applied, and `note` says what
 replaces it. Entries in `members` and `parameters` are applied.
-Type and factory renames (`TabView` → `TabControl` and the like) are proposed until the question on #27 is settled.
+No type, factory or modifier entry is `proposed` since #46.
 
 ## Porting a tier 3 change from upstream
 

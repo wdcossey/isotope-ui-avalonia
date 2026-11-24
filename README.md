@@ -23,8 +23,9 @@ public static Element Counter(RenderContext ctx)
 ```
 
 `ReactorApp.Run("Counter", Counter, width: 400, height: 300)` opens it in a window (`Isotope.UI.Avalonia.Desktop`).
-The factories (`using static Isotope.UI.Factories;`) keep Reactor's names; their parameters and the elements' members take
-Avalonia's names (`Text`, `Minimum`, `IsChecked`), with Avalonia's value types. See
+The factories (`using static Isotope.UI.Factories;`), elements and modifiers take Avalonia's names (`TabControl`,
+`NumericUpDown`, `.HorizontalAlignment(...)`), and so do their parameters and the elements' members (`Text`, `Minimum`,
+`IsChecked`), with Avalonia's value types. `VStack`, `HStack` and names with no Avalonia counterpart keep Reactor's. See
 [Writing components](docs/guide/writing-components.md) for the vocabulary, a todo app and an example of each hook.
 
 This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12.
@@ -41,7 +42,7 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   displays and DPI ([guide](docs/guide/platform-hooks.md)), Reactor's theme tokens (`Theme.*`, [guide](docs/guide/theme-tokens.md)), and its named text styles (`Title`, `Body`,
   `Caption`…, [guide](docs/guide/text-styles.md)).
 - **32 controls:** text and image; button, toggle, repeat and hyperlink buttons; check box, radio button, toggle
-  switch; text box, number box, auto-suggest box, combo box, list box, slider, progress; date and time pickers; tabs,
+  switch; text box, numeric up-down, auto-complete box, combo box, list box, slider, progress; date and time pickers; tabs,
   menus, context menus and tooltips; split view, expander, border, scroll viewer, separator, tree view, viewbox; and
   stack, grid, wrap and flexbox layouts (`FlexPanel`, over Reactor's port of Yoga).
 - **Function and class components**, keyed lists (reorders move controls instead of rebuilding them), and **error
@@ -50,7 +51,7 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   ([`samples/Isotope.UI.Samples`](samples/Isotope.UI.Samples)).
 - **A Reactor → Isotope migration tool:** a Roslyn analyzer with code fixes, run with `dotnet format analyzers`
   ([guide](docs/guide/migrating-from-reactor.md)).
-- **Tests:** 1,183 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,187 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
 Not there yet: more controls (rich text, icons, list views…), tracked from what the migration tool finds missing in
 upstream's samples (#35); animation; and packages.
@@ -111,8 +112,8 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1183 tests; needs no upstream/)
-dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (45 tests)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1187 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (46 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
 dotnet test tools/sync/verify/Upstream.Yoga.Tests        # upstream's Yoga tests on the vendored code
