@@ -210,6 +210,39 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Theme tokens (issue #41, 2026-11-24)
+
+- **Upstream's `Theme` is brush tokens only:** `ThemeRef` and `Theme`'s 36 tokens, `Theme.Ref(key)` and
+  `NotifyResourcesChanged()`. It has no spacing, corner-radius or type-ramp tokens.
+  - The corner radii are `ThemeResource.CornerRadius("ControlCornerRadius")` (57 uses in the samples).
+  - The type ramp is the named-style factories (#44).
+- **Tier 2 for `Theme.cs`:** `ThemeRef` is `partial`, and its WinUI resolution is dropped (7 Roslyn `drop-member` rules, 2
+  text rules). The tokens and the resolution cache compile as upstream's. `ThemeResourceListeners.cs` (tier 1) is
+  compiled, and upstream's `ChildDiffHints` theme-bindings test runs again.
+- **Tier 3 for the resolution, the bindings and `ThemeResource`.** Avalonia's Fluent theme defines none of the 36 keys
+  (Avalonia.Themes.Fluent 12.1.6). So a key resolves from the resources the control sees, else from WinUI's Fluent values:
+  light, dark, Windows' high-contrast colours when the platform asks for high contrast, and accent tokens from the Fluent
+  theme's `SystemAccentColor` shades.
+  - `Element.ThemeBindings` binds at style priority, so a brush the element sets wins.
+  - A bound token follows the theme variant, resource changes and the contrast preference without a re-render.
+  - `Theme.NotifyResourcesChanged()` renders each host's whole tree once, past memoization.
+  - The built-in colours are WinUI's Fluent values from memory, not checked against WinUI's source; app resources win.
+- **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`, 561c5573, after the fixes; before is main at
+  00692f0, before #42 merged):
+
+  | | Before #41 | After #41 |
+  |---|---|---|
+  | Compile errors | 5,544 | 4,202 |
+  | Files that build | 62 of 358 | 64 of 358 |
+  | Projects that build | 2 of 36 | 2 of 36 |
+  | Migration diagnostics left | 2,948 | 2,624 |
+  | ISOMIG002 | 249 | 199 (no `Theme`) |
+  | ISOMIG013 | 1,466 | 1,192 |
+
+  CS0103 `Theme` (830) and `ThemeResource` (47) are gone. Chains that now bind show what follows them, e.g. 61 CS1955
+  `BorderElement.CornerRadius`.
+- **Tests:** 26 new, all proven to fail. Guide: `docs/guide/theme-tokens.md`.
+
 ## Text styling (issue #42, 2026-11-24)
 
 - **Upstream's text members and modifiers, with Avalonia's names and types** (#31):
