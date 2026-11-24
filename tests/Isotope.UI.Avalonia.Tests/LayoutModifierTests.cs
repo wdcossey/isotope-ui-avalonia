@@ -384,23 +384,30 @@ public sealed class LayoutModifierTests
     }
 
     [AvaloniaFact]
-    public void A_padded_stack_s_border_carries_its_key_past_an_absent_sibling()
+    public void The_border_and_the_panel_both_carry_the_element_after_an_update_and_a_skip()
     {
-        // An empty element mounts no control, so the keyed diff matches the panel's controls by the key each carries.
-        var withGap = true;
-        Element Row(string k) => VStack(TextBlock(k)).Padding(2).WithKey(k);
-        var host = new TestHost(() => new StackElement(Orientation.Vertical, withGap
-            ? [EmptyElement.Instance.WithKey("gap"), Row("a"), Row("b")]
-            : [Row("b"), Row("a")]));
-        var outer = host.All<StackPanel>()[0];
-        var (a, b) = (outer.Children[0], outer.Children[1]);
-        Assert.Equal(["a", "b"], host.Texts());
+        // The engine reads the element a slot's control represents (a keyed diff reads its key), and a handler reads its
+        // panel's: both are the latest render's element, also when the update is skipped.
+        var padding = 2.0;
+        StackElement? latest = null;
+        var host = new TestHost(() => VStack(latest = (StackElement)VStack(TextBlock("a")).Padding(padding).WithKey("k")));
+        var panel = host.All<StackPanel>()[1];
+        var chrome = ChromeOf(panel);
+        void AssertTagged()
+        {
+            Assert.Same(latest, Reconciler.GetMountedElement(chrome));
+            Assert.Same(latest, Reconciler.GetMountedElement(panel));
+        }
+        AssertTagged();
 
-        withGap = false;
+        padding = 3;
         host.Render();
-        Assert.Equal(["b", "a"], host.Texts());
-        Assert.Same(b, outer.Children[0]);
-        Assert.Same(a, outer.Children[1]);
+        AssertTagged();
+
+        var skipped = host.Reconciler.DebugElementsSkipped;
+        host.Render();
+        Assert.True(host.Reconciler.DebugElementsSkipped > skipped, "the padded stack was not skipped");
+        AssertTagged();
     }
 
     [AvaloniaFact]
