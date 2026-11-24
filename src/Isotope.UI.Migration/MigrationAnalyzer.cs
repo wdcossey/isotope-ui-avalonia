@@ -445,7 +445,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     var location = simple.Identifier.GetLocation();
                     // A call that names only a type is a factory Isotope lacks under that name: with `using System;`,
                     // Reactor's Progress(0.5) names System.Progress<T> once the project is Isotope's (#46).
-                    if (info.Symbol is null && (info.CandidateSymbols.IsEmpty && Unbound(model, simple) || NamesOnlyTypes(model, simple, info)))
+                    if (info.Symbol is null && (info.CandidateSymbols.IsEmpty && Unbound(model, simple) || NamesOnlyTypes(model, simple, info, ctx.CancellationToken)))
                     {
                         FactoryCall(ctx, name, location, inv);
                         return;
@@ -637,9 +637,9 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         }
 
         /// <summary>Whether an invoked name binds only to types, which can't be called.</summary>
-        static bool NamesOnlyTypes(SemanticModel model, ExpressionSyntax name, SymbolInfo call)
+        static bool NamesOnlyTypes(SemanticModel model, ExpressionSyntax name, SymbolInfo call, System.Threading.CancellationToken ct)
         {
-            var own = model.GetSymbolInfo(name);
+            var own = model.GetSymbolInfo(name, ct);
             var symbols = call.CandidateSymbols.Concat(own.CandidateSymbols).ToList();
             if (own.Symbol is not null) symbols.Add(own.Symbol);
             return symbols.Count > 0 && symbols.All(s => s is ITypeSymbol);

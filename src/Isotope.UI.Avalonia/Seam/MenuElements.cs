@@ -8,7 +8,7 @@ using Isotope.UI.Wrappers;
 namespace Isotope.UI.Core;
 
 // Menus (#26): upstream's menu data records (MenuFlyoutItemBase and its kinds), a menu bar as an Avalonia Menu, and a
-// context menu as an Avalonia MenuFlyout on a control's ContextFlyout (the WithContextFlyout modifier). The records
+// context menu as an Avalonia MenuFlyout on a control's ContextFlyout (the ContextFlyout modifier, Reactor's WithContextFlyout). The records
 // mirror upstream's, with Avalonia's member names (#31: an item's text is its Header); members with no Avalonia
 // counterpart yet (icons, access keys) aren't on them, and KeyboardAccelerators and Description keep Reactor's names. A menu item's keyboard accelerators and description came with #29. Menu items hold no elements, so they are Avalonia MenuItems built from
 // the data and updated in place by position (MenuItemsSync); a click reads the item's current data, so it calls the

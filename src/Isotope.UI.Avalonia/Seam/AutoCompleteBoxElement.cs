@@ -7,7 +7,7 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// The auto-suggest box (#29): upstream's AutoCompleteBoxElement, as an Avalonia AutoCompleteBox. The record mirrors
+// The auto-complete box (#29): upstream's AutoSuggestBoxElement, as an Avalonia AutoCompleteBox (AutoCompleteBoxElement, #46). The record mirrors
 // upstream's, with Avalonia's member names (#31) and value types; members with no Avalonia counterpart (Header,
 // QueryIcon) aren't on it, and OnQuerySubmitted and OnSuggestionChosen keep Reactor's names (no Avalonia event matches
 // them). FilterMode is Avalonia's member, and defaults to none: as on WinUI, the app's suggestions are shown as given, so

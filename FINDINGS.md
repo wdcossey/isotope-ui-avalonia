@@ -246,8 +246,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
     background and theme tokens; the panel keeps its own members and children.
   - When that need comes or goes between renders, the panel is mounted again and components inside lose their state.
   - A flex panel ignores them, as upstream's (`FlexPadding` is Yoga's padding).
-- **Not done:** the BiDi `MarginInlineStart` family, and upstream's `HorizontalAlignment`/`VerticalAlignment` aliases of
-  `HAlign`/`VAlign` (#46).
+- **Not done:** the BiDi `MarginInlineStart` family. (Upstream's `HorizontalAlignment`/`VerticalAlignment` aliases of
+  `HAlign`/`VAlign` are the modifiers' names since #46.)
 - **Measured on upstream's samples** (`tools/migration/measure-samples.mjs`, 561c5573; before is main at e4e290f, after is
   this branch; both from fresh clones):
 
