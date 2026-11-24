@@ -121,5 +121,5 @@ Run `dotnet` from the repo root, not from inside `upstream/`. Upstream's own `gl
 
 ## Licence
 
-To be decided for this project's own code. Upstream code vendored here stays under upstream's MIT licence, and its
-copyright notice has to be kept with it.
+MIT, see [`LICENSE`](LICENSE). Upstream code vendored in `src/Upstream/` stays under upstream's MIT licence and
+notices ([`src/Upstream/LICENSE`](src/Upstream/LICENSE), [`ThirdPartyNoticeText.txt`](src/Upstream/src/Reactor/ThirdPartyNoticeText.txt)).
