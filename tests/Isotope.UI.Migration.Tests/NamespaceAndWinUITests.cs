@@ -190,15 +190,18 @@ public class NamespaceAndWinUITests
     [Fact]
     public void Names_that_bind_are_left_alone()
     {
-        // A user's own Visibility type, an Avalonia type already in scope, and a property named Windows.
+        // A user's own Visibility type, an Avalonia type already in scope, a field named Windows (with a member that
+        // doesn't exist: still the field's), and a project's own shim under a WinUI namespace.
         const string code = """
             using Avalonia.Layout;
             enum Visibility { Shown }
+            namespace Microsoft.UI.Xaml { public enum Mode { On } }
             class C
             {
                 public int[] Windows = [];
-                object[] Values() => [Visibility.Shown, HorizontalAlignment.Center, this.Windows.Length];
+                object[] Values() => [Visibility.Shown, HorizontalAlignment.Center, this.Windows.Length, Microsoft.UI.Xaml.Mode.On];
                 int Count() => Windows.Length;
+                int Missing() => Windows.NoSuchMember;
             }
             """;
         Assert.Empty(Migrate.Analyze(code));
