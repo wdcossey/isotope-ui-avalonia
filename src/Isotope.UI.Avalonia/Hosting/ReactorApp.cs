@@ -2,6 +2,7 @@ using System.Runtime.ExceptionServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Isotope.UI.Core;
 using Isotope.UI.Hosting;
 
@@ -47,7 +48,8 @@ public static class ReactorApp
     /// <param name="icon">The window's icon; <c>null</c> leaves Avalonia's default.</param>
     /// <param name="configure">Called with the host, already the window's content, before the root mounts (for example
     /// to set its <see cref="ReactorHostControl.RenderErrorHandler"/>), as upstream's <c>configure</c>. If it throws,
-    /// the host is disposed and the window closed, and the exception propagates.</param>
+    /// the host is disposed and the window closed, and the exception propagates; if it closes the window, the host is
+    /// disposed and an <see cref="InvalidOperationException"/> is thrown.</param>
     public static Window OpenWindow(string title, Func<RenderContext, Element> rootRender, double? width = null, double? height = null,
         bool fullScreen = false, WindowIcon? icon = null, Action<ReactorHostControl>? configure = null)
     {
@@ -59,19 +61,25 @@ public static class ReactorApp
         if (height is { } h) window.Height = h;
         if (fullScreen) window.WindowState = WindowState.FullScreen;
         if (icon is not null) window.Icon = icon;
+        bool closed = false;
+        window.Closed += (_, _) =>
+        {
+            closed = true;
+            host.Dispose();
+        };
         try
         {
             // As upstream's OpenWindowCore: configure gets the host of a created window, before the root mounts.
             configure?.Invoke(host);
+            if (closed) throw new InvalidOperationException("configure closed the window before its root mounted.");
             host.Mount(rootRender);
         }
         catch
         {
-            host.Dispose();
-            window.Close();
+            // Closing disposes the host (the Closed handler); a window configure closed is closed already.
+            if (!closed) window.Close();
             throw;
         }
-        window.Closed += (_, _) => host.Dispose();
         window.Show();
         return window;
     }
@@ -130,10 +138,13 @@ public static class ReactorApp
     });
 
     // Upstream's RunOnSta: on Windows, a caller on an MTA thread gets the run on a new STA thread, joined, with its
-    // result or exception. Elsewhere, and on an STA thread, it runs inline.
+    // result or exception. Elsewhere, on an STA thread, and on a thread Avalonia's dispatcher already belongs to (the
+    // app touched Avalonia before Run: moving would put the platform on another thread than its objects), it runs inline.
     internal static int RunOnSta(Func<int> run)
     {
-        if (!OperatingSystem.IsWindows() || Thread.CurrentThread.GetApartmentState() == ApartmentState.STA) return run();
+        if (!OperatingSystem.IsWindows() || Thread.CurrentThread.GetApartmentState() == ApartmentState.STA
+            || Dispatcher.FromThread(Thread.CurrentThread) is not null)
+            return run();
         int result = 0;
         ExceptionDispatchInfo? failure = null;
         var thread = new Thread(() =>

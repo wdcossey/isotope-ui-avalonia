@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -34,7 +35,8 @@ public sealed class AppStartupTests : IDisposable
 
     private const int ExitCode = 7;
 
-    // Runs 'run' with the seam set, and returns what Run handed to the platform's start.
+    // Runs 'run' with the seam set, on a fresh MTA thread (as Main is under top-level statements; the test's own thread
+    // already has Avalonia's dispatcher, so Run would stay on it), and returns what Run handed to the platform's start.
     private static Started Capture(Action run)
     {
         Started? started = null;
@@ -44,7 +46,7 @@ public sealed class AppStartupTests : IDisposable
             started = new Started(builder, args, open, Thread.CurrentThread.GetApartmentState());
             return ExitCode;
         };
-        run();
+        OnMtaThread(() => { run(); return 0; });
         return started ?? throw new InvalidOperationException("Run did not start the app");
     }
 
@@ -223,6 +225,23 @@ public sealed class AppStartupTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void A_configure_that_closes_the_window_disposes_the_host_and_throws()
+    {
+        ReactorHostControl? configuredHost = null;
+        var started = Capture(() => ReactorApp.Run<CounterApp>(AppBuilder.Configure<TestApp>(), "Closes", configure: host =>
+        {
+            configuredHost = host;
+            ((Window)host.Parent!).Close();
+        }));
+
+        Assert.Throws<InvalidOperationException>(() => started.OpenMainWindow());
+        Assert.NotNull(configuredHost);
+        Assert.Throws<ObjectDisposedException>(() => configuredHost.Mount(_ => TextBlock("x")));
+        Pump();
+        Assert.Null(configuredHost.Child);
+    }
+
+    [AvaloniaFact]
     public void The_builder_overloads_start_the_app_builder_with_its_arguments()
     {
         var builder = AppBuilder.Configure<TestApp>();
@@ -268,7 +287,7 @@ public sealed class AppStartupTests : IDisposable
         if (OperatingSystem.IsWindows()) thread.SetApartmentState(ApartmentState.MTA);
         thread.Start();
         thread.Join();
-        if (error is not null) throw error;
+        if (error is not null) ExceptionDispatchInfo.Capture(error).Throw();
         return result;
     }
 
@@ -307,14 +326,30 @@ public sealed class AppStartupTests : IDisposable
     {
         if (!OperatingSystem.IsWindows()) return; // STA threads exist on Windows only
         int caller = 0, ranOn = -1;
+        Exception? error = null;
         var thread = new Thread(() =>
         {
             caller = Environment.CurrentManagedThreadId;
-            ReactorApp.RunOnSta(() => { ranOn = Environment.CurrentManagedThreadId; return 0; });
+            try { ReactorApp.RunOnSta(() => { ranOn = Environment.CurrentManagedThreadId; return 0; }); }
+            catch (Exception e) { error = e; }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         thread.Join();
+        Assert.Null(error);
+        Assert.Equal(caller, ranOn);
+    }
+
+    [Fact]
+    public void RunOnSta_stays_inline_on_an_MTA_thread_that_already_has_Avalonias_dispatcher()
+    {
+        var (caller, ranOn) = OnMtaThread(() =>
+        {
+            _ = Dispatcher.CurrentDispatcher; // the app touched Avalonia on this thread before Run
+            int thread = 0;
+            ReactorApp.RunOnSta(() => { thread = Environment.CurrentManagedThreadId; return 0; });
+            return (Environment.CurrentManagedThreadId, thread);
+        });
         Assert.Equal(caller, ranOn);
     }
 }
