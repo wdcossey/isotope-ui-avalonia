@@ -84,7 +84,8 @@ public static class Transforms
         // A transform must never leave broken syntax behind: compare the syntax errors before and after.
         var baseline = file.Original ?? file.Text;
         if (text != baseline)
-            foreach (var options in new[] { Options, ReleaseOptions })
+            // Without DEBUG too, but only where an #if can make that differ.
+            foreach (var options in text.Contains("#if") || baseline.Contains("#if") ? new[] { Options, ReleaseOptions } : [Options])
             {
                 // Compared by error code, not line: text rules may move lines, and an error upstream has stays allowed.
                 var before = SyntaxErrors(baseline, options).GroupBy(d => d.Code).ToDictionary(g => g.Key, g => g.Count());

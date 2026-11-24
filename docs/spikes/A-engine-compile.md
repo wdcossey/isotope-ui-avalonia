@@ -232,7 +232,8 @@ types when the name is overloaded). Then it regenerates the vendored tree.
   - Every C# file a rule changes must parse with no syntax error that upstream's own text lacks.
   - 15 of the 51 tier 2 C# files that rules change beyond the rename are compiled by no project, so this is their only
     check.
-  - It adds about 1.5 s to `--check`: 0.95 to 0.97 s without it and 2.44 to 2.49 s with it, over 3 runs each.
+  - It adds about 1.25 s to `--check`: 0.95 to 0.97 s without it (3 runs) and 2.19 to 2.25 s with it (3 runs), with the
+    tool already built.
 
 ### The Roslyn step
 
@@ -249,5 +250,10 @@ types when the name is overloaded). Then it regenerates the vendored tree.
     chains in code, and must match at least once.
   - **`drop-attribute`** takes `attribute`. It removes the attribute, or its whole list, and must match at least once.
   - A rule that fails stops the sync, and nothing is written. A file a rule changes must still parse.
+  - **`#if`:** files are parsed with a `net10.0` Debug build's symbols, so code under `#if DEBUG` is transformed.
+    - An op whose target also appears in code an `#if` leaves out fails, and says so. A text rule has to handle that
+      code.
+    - The syntax check also parses files that have an `#if` without `DEBUG`.
+    - Upstream's `src/Reactor` has 11 `#if` lines, in 6 files.
 - **Not done:** the "matches a file it does not list" guard that find rules have. A `retarget-type` doesn't yet fail
   when new upstream code in an unlisted file uses the type.
