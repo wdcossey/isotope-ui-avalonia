@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The migration analyzer from its package (#52): tools/packaging/pack.mjs runs dotnet format analyzers on this
+       project, which must find the Reactor namespace in FromReactor.cs and offer its fix. It doesn't compile, as a
+       project mid-migration doesn't, so it is never built. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
+    <PackageReference Include="Isotope.UI.Migration" Version="$(IsotopeVersion)" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

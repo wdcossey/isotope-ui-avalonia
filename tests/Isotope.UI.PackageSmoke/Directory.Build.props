@@ -1,0 +1,13 @@
+<Project>
+  <!-- The package smoke test (#52) is a consumer from outside this repository: it builds against the packed packages
+       only, from a local folder, never against the projects. This file stops the search for the repo's build files
+       (there are none above tests/ today, and src/'s don't reach here); global.json still applies, as it would to any
+       app built with that SDK. tools/packaging/pack.mjs passes IsotopeVersion and the folder. -->
+  <PropertyGroup>
+    <IsotopeVersion Condition="'$(IsotopeVersion)' == ''">0.0.0-run-tools-packaging-pack</IsotopeVersion>
+    <IsPackable>false</IsPackable>
+    <!-- A consumer's warnings are failures here: an analyzer that can't load in a consumer's compiler (CS8032) is only a
+         warning, and would hide a generator that isn't running. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
