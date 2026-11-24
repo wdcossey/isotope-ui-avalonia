@@ -51,7 +51,7 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   ([`samples/Isotope.UI.Samples`](samples/Isotope.UI.Samples)).
 - **A Reactor → Isotope migration tool:** a Roslyn analyzer with code fixes, run with `dotnet format analyzers`
   ([guide](docs/guide/migrating-from-reactor.md)).
-- **Tests:** 1,187 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,190 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
 Not there yet: more controls (rich text, icons, list views…), tracked from what the migration tool finds missing in
 upstream's samples (#35); animation; and published packages (they build and are checked on every push;
@@ -114,7 +114,7 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1187 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1190 tests; needs no upstream/)
 dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (46 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
