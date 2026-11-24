@@ -142,9 +142,14 @@ public abstract record Element
         };
     }
 
-    /// <summary>Value equality of two modifier records (null equals an empty record).</summary>
+    /// <summary>
+    /// Value equality of two modifier records (null equals an empty record). As upstream's, an element tooltip
+    /// (<see cref="ElementModifiers.RichToolTip"/>, #29) never compares equal, so its subtree is always reconciled: it
+    /// isn't under the control, so the skip path's checks for state and context changes below can't see into it.
+    /// </summary>
     internal static bool ModifiersEqual(ElementModifiers? a, ElementModifiers? b)
-        => ReferenceEquals(a, b) || (a ?? ElementModifiers.Empty).Equals(b ?? ElementModifiers.Empty);
+        => ReferenceEquals(a, b)
+            || (a?.RichToolTip is null && b?.RichToolTip is null && (a ?? ElementModifiers.Empty).Equals(b ?? ElementModifiers.Empty));
 
     /// <summary>Whether two sets of provided context values are equal.</summary>
     internal static bool ContextValuesEqual(IReadOnlyDictionary<ContextBase, object?>? a, IReadOnlyDictionary<ContextBase, object?>? b)
@@ -235,6 +240,12 @@ public record ElementModifiers
     /// <summary>The text of the control's tooltip (Avalonia's <c>ToolTip.Tip</c>, #26).</summary>
     public string? ToolTip { get; init; }
 
+    /// <summary>
+    /// An element as the control's tooltip (upstream's member, #29), mounted as a child subtree on Avalonia's
+    /// <c>ToolTip.Tip</c>; it takes precedence over <see cref="ToolTip"/>.
+    /// </summary>
+    public Element? RichToolTip { get; init; }
+
     /// <summary>Which side of the control its tooltip opens on (Avalonia's <c>ToolTip.Placement</c>).</summary>
     public Avalonia.Controls.PlacementMode? ToolTipPlacement { get; init; }
 
@@ -254,6 +265,7 @@ public record ElementModifiers
         Background = other.Background ?? Background,
         AutomationName = other.AutomationName ?? AutomationName,
         ToolTip = other.ToolTip ?? ToolTip,
+        RichToolTip = other.RichToolTip ?? RichToolTip,
         ToolTipPlacement = other.ToolTipPlacement ?? ToolTipPlacement,
         ContextFlyout = other.ContextFlyout ?? ContextFlyout,
     };

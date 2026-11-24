@@ -372,6 +372,7 @@ public sealed partial class Reconciler
                 try
                 {
                     ApplyModifiers(control, null, null, element, modifiers);
+                    ApplyRichToolTip(control, null, modifiers, requestRerender);
                     ApplyEnabled(control, element, modifiers);
                 }
                 catch
@@ -447,6 +448,7 @@ public sealed partial class Reconciler
                         {
                             // The adapter mounted the unwrapped element: give the new control the wrapper's modifiers too.
                             ApplyModifiers(updated, null, null, newInner, newModifiers);
+                            ApplyRichToolTip(updated, null, newModifiers, requestRerender);
                             ApplyEnabled(updated, newInner, newModifiers);
                             return updated;
                         }
@@ -454,6 +456,7 @@ public sealed partial class Reconciler
                     break;
             }
             ApplyModifiers(control, oldInner, oldModifiers, newInner, newModifiers);
+            ApplyRichToolTip(control, oldModifiers, newModifiers, requestRerender);
             ApplyEnabled(control, newInner, newModifiers);
             GetOrCreateReactorState(control).Element = newInner;
             return null;
@@ -607,8 +610,9 @@ public sealed partial class Reconciler
         Set(control, Layoutable.VerticalAlignmentProperty, oldM?.VerticalAlignment, newM?.VerticalAlignment);
         Set(control, Visual.OpacityProperty, oldM?.Opacity, newM?.Opacity);
         SetRef(control, AutomationProperties.NameProperty, oldM?.AutomationName, newM?.AutomationName);
-        // #26: the tooltip and the context menu.
-        SetRef<object?>(control, ToolTip.TipProperty, oldM?.ToolTip, newM?.ToolTip);
+        // #26: the tooltip and the context menu. An element tooltip (#29) owns the tip while either side has one.
+        if (oldM?.RichToolTip is null && newM?.RichToolTip is null)
+            SetRef<object?>(control, ToolTip.TipProperty, oldM?.ToolTip, newM?.ToolTip);
         Set(control, ToolTip.PlacementProperty, oldM?.ToolTipPlacement, newM?.ToolTipPlacement);
         MenuItemsSync.ApplyContextFlyout(control, oldM?.ContextFlyout, newM?.ContextFlyout);
     }
@@ -926,6 +930,7 @@ public sealed partial class Reconciler
                 node.Context?.RunCleanups();
             }
         }
+        UnmountOwnedToolTip(control);
         // A control a handler mounted: the handler tears down what it owns (its children strategy, its unmount
         // hooks) and says whether the generic walk below still visits the children (a panel strategy's).
         if (GetMountedElement(control) is { } mounted && TryGetV1Handler(mounted.GetType(), out var entry)
