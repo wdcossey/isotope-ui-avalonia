@@ -9,8 +9,8 @@ namespace Isotope.UI.Core;
 
 // Menus (#26): upstream's menu data records (MenuFlyoutItemBase and its kinds), a menu bar as an Avalonia Menu, and a
 // context menu as an Avalonia MenuFlyout on a control's ContextFlyout (the WithContextFlyout modifier). The records
-// mirror upstream's (Reactor's member names); members with no Avalonia counterpart (icons, keyboard accelerators,
-// access keys, descriptions) aren't on them yet. Menu items hold no elements, so they are Avalonia MenuItems built from
+// mirror upstream's (Reactor's member names); members with no Avalonia counterpart yet (icons, access keys) aren't on
+// them. A menu item's keyboard accelerators and description came with #29. Menu items hold no elements, so they are Avalonia MenuItems built from
 // the data and updated in place by position (MenuItemsSync); a click reads the item's current data, so it calls the
 // current render's callback.
 
@@ -21,6 +21,16 @@ public abstract record MenuFlyoutItemBase;
 public record MenuFlyoutItemData(string Text, Action? OnClick = null) : MenuFlyoutItemBase
 {
     public bool IsEnabled { get; init; } = true;
+
+    /// <summary>
+    /// Keyboard shortcuts that choose the item (upstream's member, #29). The first is shown beside the item and is
+    /// Avalonia's <c>HotKey</c>, active while the item's menu is in a window: a menu bar's items always are, a context
+    /// menu's only while it is open. Avalonia takes one shortcut per item, so the others aren't bound.
+    /// </summary>
+    public KeyboardAcceleratorData[]? KeyboardAccelerators { get; init; }
+
+    /// <summary>The item's tooltip and help text (upstream's member, #29).</summary>
+    public string? Description { get; init; }
 }
 
 /// <summary>A line between menu items.</summary>
@@ -133,6 +143,7 @@ internal static class MenuItemsSync
             case MenuFlyoutItemData d:
                 SetHeader(item, d.Text);
                 if (item.IsEnabled != d.IsEnabled) item.IsEnabled = d.IsEnabled;
+                WriteShortcutAndDescription(item, old as MenuFlyoutItemData, d);
                 break;
             case ToggleMenuFlyoutItemData t:
                 SetHeader(item, t.Text);
@@ -151,6 +162,36 @@ internal static class MenuItemsSync
                 SetHeader(item, s.Text);
                 Sync(ItemsList.Of(item.Items), s.Items);
                 break;
+        }
+    }
+
+    // Written when they change, so an item updated in place keeps what the last render gave it.
+    private static void WriteShortcutAndDescription(MenuItem item, MenuFlyoutItemData? old, MenuFlyoutItemData d)
+    {
+        var gesture = CommandBindings.Gesture(d.KeyboardAccelerators is { Length: > 0 } keys ? keys[0] : null);
+        if (!Equals(item.InputGesture, gesture))
+        {
+            if (gesture is null)
+            {
+                item.ClearValue(MenuItem.InputGestureProperty);
+                item.ClearValue(MenuItem.HotKeyProperty);
+            }
+            else
+            {
+                item.InputGesture = gesture;
+                item.HotKey = gesture;
+            }
+        }
+        if (old?.Description == d.Description) return;
+        if (d.Description is { } description)
+        {
+            ToolTip.SetTip(item, description);
+            Avalonia.Automation.AutomationProperties.SetHelpText(item, description);
+        }
+        else
+        {
+            item.ClearValue(ToolTip.TipProperty);
+            item.ClearValue(Avalonia.Automation.AutomationProperties.HelpTextProperty);
         }
     }
 

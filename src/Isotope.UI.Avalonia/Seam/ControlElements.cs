@@ -28,6 +28,7 @@ public partial record TextBlockElement(string Content) : Element
 [GenerateReactorDescriptor(typeof(Button))]
 [WrapManual("Label")]
 [WrapManual("IsEnabled")]
+[WrapManual("Command")]
 public partial record ButtonElement(string Label, Action? OnClick = null) : Element
 {
     public bool IsEnabled { get; init; } = true;
@@ -35,15 +36,23 @@ public partial record ButtonElement(string Label, Action? OnClick = null) : Elem
     /// <summary>Declarative content, taking precedence over <see cref="Label"/> (upstream's member).</summary>
     public Element? ContentElement { get; init; }
 
+    /// <summary>
+    /// The command the button runs (upstream's member, #29), from <c>Button(command)</c>, <c>.Command(command)</c> or an
+    /// initializer: it disables the button while <see cref="Core.Command.IsEnabled"/> is false, and a click runs it,
+    /// unless <see cref="OnClick"/> is set, which wins. Mapped to Avalonia's <c>Button.Command</c>.
+    /// </summary>
+    public Command? Command { get; init; }
+
     internal Action<Button>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnClick is not null;
+    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
 
     // IsEnabled has a second source, the IsEnabled modifier: the reconciler writes the two as one value
     // (Reconciler.ApplyEnabled), so neither overwrites the other, and the descriptor leaves it alone. As upstream's,
     // the content is a child subtree when ContentElement is set, else the label (WithContent, #26).
     private static partial ControlDescriptor<ButtonElement, Button> Customize(ControlDescriptor<ButtonElement, Button> d)
-        => d.WithContent(static e => e.ContentElement, static e => e.Label);
+        => d.WithContent(static e => e.ContentElement, static e => e.Label)
+            .OneWayCommand(static e => e.Command, static e => e.OnClick is not null);
 }
 
 /// <summary>Children stacked in one direction, as an Avalonia <see cref="Avalonia.Controls.StackPanel"/>.</summary>

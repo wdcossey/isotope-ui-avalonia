@@ -84,8 +84,11 @@ public abstract record Element
         {
             (EmptyElement, EmptyElement) => true,
             (TextBlockElement x, TextBlockElement y) => x.Content == y.Content && ReferenceEquals(x.Setters, y.Setters),
+            // #29: with a command, HasCallbacks is true with or without the button's own callback, which is subscribed
+            // when it first appears: its coming declines the skip, as ComboBox's callbacks do.
             (ButtonElement x, ButtonElement y) => x.Label == y.Label && x.IsEnabled == y.IsEnabled
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
             (StackElement x, StackElement y) => x.Orientation == y.Orientation && x.Spacing == y.Spacing
                 && ReferenceEquals(x.Children, y.Children) && ReferenceEquals(x.Setters, y.Setters),
             (FlexElement x, FlexElement y) => x.Direction == y.Direction && x.JustifyContent == y.JustifyContent
@@ -130,11 +133,16 @@ public abstract record Element
             // upstream's, ToggleButton's compares the three-state members too, so a changed CheckedState is written.
             (ToggleButtonElement x, ToggleButtonElement y) => x.Label == y.Label && x.IsChecked == y.IsChecked
                 && x.IsThreeState == y.IsThreeState && x.CheckedState == y.CheckedState
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command)
+                && (x.OnIsCheckedChanged is null) == (y.OnIsCheckedChanged is null)
+                && (x.OnCheckedStateChanged is null) == (y.OnCheckedStateChanged is null),
             (RepeatButtonElement x, RepeatButtonElement y) => x.Label == y.Label && x.Delay == y.Delay && x.Interval == y.Interval
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
             (HyperlinkButtonElement x, HyperlinkButtonElement y) => x.Content == y.Content && x.NavigateUri == y.NavigateUri
-                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters),
+                && x.ContentElement is null && y.ContentElement is null && ReferenceEquals(x.Setters, y.Setters)
+                && CommandBindings.CommandsEqual(x.Command, y.Command) && (x.OnClick is null) == (y.OnClick is null),
             (NumberBoxElement x, NumberBoxElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && x.SmallChange == y.SmallChange && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
                 && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
@@ -142,7 +150,12 @@ public abstract record Element
         };
     }
 
-    /// <summary>Value equality of two modifier records (null equals an empty record).</summary>
+    /// <summary>
+    /// Value equality of two modifier records (null equals an empty record). An element tooltip
+    /// (<see cref="ElementModifiers.RichToolTip"/>, #29) compares as an element; unlike upstream's, which never lets one
+    /// compare equal, an equal one may be skipped, because the skip path's checks for state and context changes see into
+    /// it (the dirty path and the context check go through its owner).
+    /// </summary>
     internal static bool ModifiersEqual(ElementModifiers? a, ElementModifiers? b)
         => ReferenceEquals(a, b) || (a ?? ElementModifiers.Empty).Equals(b ?? ElementModifiers.Empty);
 
@@ -235,6 +248,12 @@ public record ElementModifiers
     /// <summary>The text of the control's tooltip (Avalonia's <c>ToolTip.Tip</c>, #26).</summary>
     public string? ToolTip { get; init; }
 
+    /// <summary>
+    /// An element as the control's tooltip (upstream's member, #29), mounted as a child subtree on Avalonia's
+    /// <c>ToolTip.Tip</c>; it takes precedence over <see cref="ToolTip"/>.
+    /// </summary>
+    public Element? RichToolTip { get; init; }
+
     /// <summary>Which side of the control its tooltip opens on (Avalonia's <c>ToolTip.Placement</c>).</summary>
     public Avalonia.Controls.PlacementMode? ToolTipPlacement { get; init; }
 
@@ -254,6 +273,7 @@ public record ElementModifiers
         Background = other.Background ?? Background,
         AutomationName = other.AutomationName ?? AutomationName,
         ToolTip = other.ToolTip ?? ToolTip,
+        RichToolTip = other.RichToolTip ?? RichToolTip,
         ToolTipPlacement = other.ToolTipPlacement ?? ToolTipPlacement,
         ContextFlyout = other.ContextFlyout ?? ContextFlyout,
     };

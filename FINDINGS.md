@@ -209,6 +209,20 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
 
+## Controls batch 2 leftovers (issue #29, 2026-11-24)
+
+- **What landed:**
+  - AutoSuggestBox, as Avalonia's `AutoCompleteBox`;
+  - element tooltips (`.WithToolTip(element)`);
+  - upstream's `Command` on the four buttons and on menu items, as Avalonia's `ICommand`;
+  - menu item shortcuts and descriptions.
+- **Measured** (headless probe, Avalonia 12.1.6):
+  - a `Text` write raises `TextChanged` inside the write in a window, and none outside one;
+  - showing a box with text raises one;
+  - suggestions set after a keystroke don't open the list until `PopulateComplete()`.
+- **Tests:** 47 new, all proven to fail.
+- **Not done:** menu icons, access keys, the `MenuFlyout(target, items)` decorator.
+
 ## Component errors outside every boundary (issue #28, 2026-11-24)
 
 - **In-slot fallback, as upstream's:** when a component's render or effects throw outside every boundary, that component's
