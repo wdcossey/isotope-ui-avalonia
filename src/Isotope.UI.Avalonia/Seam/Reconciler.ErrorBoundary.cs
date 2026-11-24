@@ -95,7 +95,7 @@ public sealed partial class Reconciler
             wrapper.Child = Mount(boundary.Child, requestRerender);
             settled = true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
             _logger?.LogWarning(ex, "ErrorBoundary caught render error");
             caught = ex;
@@ -122,12 +122,15 @@ public sealed partial class Reconciler
         return wrapper;
     }
 
-    // Every update retries the child (upstream: "Always retry the child on re-render"), against whatever the wrapper
-    // holds: the child, or the fallback of an earlier failure.
+    // Every update retries the child (upstream: "Always retry the child on re-render").
     private void UpdateErrorBoundary(ErrorBoundaryElement boundary, Border wrapper, Action requestRerender)
     {
         var node = _errorBoundaryNodes[wrapper];
         var existing = wrapper.Child;
+        // The wrapper shows the fallback of an earlier failure. Unlike upstream, the child is then mounted afresh rather
+        // than diffed against the fallback, which would render it on the fallback's components and their hook state;
+        // and if it fails again, the fallback is updated in place, so its own state survives the retry.
+        bool showingFallback = node.CaughtException is not null;
         Element rendered;
         Exception? caught = null;
         var record = BeginBoundaryMount();
@@ -135,20 +138,45 @@ public sealed partial class Reconciler
         try
         {
             rendered = boundary.Child;
-            var next = ReconcileSlot(node.RenderedElement, boundary.Child, existing, requestRerender);
-            if (!ReferenceEquals(next, existing)) wrapper.Child = next;
+            if (showingFallback)
+            {
+                var fresh = Mount(boundary.Child, requestRerender);
+                wrapper.Child = fresh;
+                // The child rendered: the fallback goes (a cleanup of its that throws is logged, not the child's failure).
+                if (existing is not null) UnmountIsolated(existing);
+            }
+            else
+            {
+                var next = ReconcileSlot(node.RenderedElement, boundary.Child, existing, requestRerender);
+                if (!ReferenceEquals(next, existing)) wrapper.Child = next;
+            }
             settled = true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
             _logger?.LogWarning(ex, "ErrorBoundary caught render error during update");
             caught = ex;
-            // The retried child is torn down (its cleanups run), and so is what the failed retry mounted but never
-            // attached under it.
-            if (existing is not null) UnmountIsolated(existing);
-            RollBackBoundaryMount(record, existing);
-            rendered = boundary.Fallback(ex);
-            wrapper.Child = Mount(rendered, requestRerender);
+            if (showingFallback)
+            {
+                // What the failed retry mounted is discarded, and the fallback still shown is updated in place.
+                RollBackBoundaryMount(record, existing);
+                rendered = boundary.Fallback(ex);
+                var next = ReconcileSlot(node.RenderedElement, rendered, existing, requestRerender);
+                if (!ReferenceEquals(next, existing)) wrapper.Child = next;
+            }
+            else
+            {
+                // The retried child is torn down (its cleanups run) and detached, so nothing unmounts it again if the
+                // fallback throws too; so is what the failed retry mounted but never attached under it.
+                if (existing is not null)
+                {
+                    UnmountIsolated(existing);
+                    wrapper.Child = null;
+                }
+                RollBackBoundaryMount(record, existing);
+                rendered = boundary.Fallback(ex);
+                wrapper.Child = Mount(rendered, requestRerender);
+            }
             settled = true;
         }
         finally

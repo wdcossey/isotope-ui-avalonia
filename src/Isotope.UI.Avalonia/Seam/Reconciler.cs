@@ -749,7 +749,8 @@ public sealed partial class Reconciler
         }
         // Registered once the subtree mounted: a render that throws leaves no node behind. Inside an error boundary,
         // the boundary discards what a failed subtree left (the nodes of siblings mounted before it, its own
-        // cleanups); outside one, the host releases the tree.
+        // cleanups). Outside one, nothing reaches this node's cleanups, nor the completed subtrees under it: the host
+        // releases only the tree it had.
         _componentNodes[wrapper] = node;
         return wrapper;
     }

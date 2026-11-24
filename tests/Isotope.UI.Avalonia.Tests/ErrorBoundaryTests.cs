@@ -76,7 +76,7 @@ public sealed class ErrorBoundaryTests : IDisposable
     public void A_child_that_throws_on_mount_shows_the_fallback_and_the_rest_of_the_tree_works()
     {
         var errors = new List<RenderError>();
-        var host = new ReactorHostControl(_ => VStack(
+        using var host = new ReactorHostControl(_ => VStack(
             ErrorBoundary(Throws("boom"), ex => TextBlock("fallback: " + ex.Message)),
             Component(Examples.Counter)))
         {
@@ -95,7 +95,7 @@ public sealed class ErrorBoundaryTests : IDisposable
     public void A_child_whose_own_state_change_throws_is_replaced_and_its_sibling_keeps_its_state_and_controls()
     {
         var errors = new List<RenderError>();
-        var host = new ReactorHostControl(_ => VStack(
+        using var host = new ReactorHostControl(_ => VStack(
             Component(Examples.Counter),
             ErrorBoundary(
                 Component(c =>
@@ -191,6 +191,72 @@ public sealed class ErrorBoundaryTests : IDisposable
         host.Render(); // a working child is updated in place, not remounted
         Assert.Same(button, Assert.Single(host.All<Button>()));
         Assert.Equal("n=1", button.Content);
+    }
+
+    [AvaloniaFact]
+    public void A_child_that_recovers_is_mounted_afresh_not_on_the_fallbacks_state()
+    {
+        bool fail = true;
+        var host = new TestHost(() => ErrorBoundary(
+            Component(c =>
+            {
+                if (fail) throw new InvalidOperationException("not yet");
+                var (n, _) = c.UseState(42);
+                return TextBlock($"child {n}");
+            }),
+            // A fallback of the same shape: a function component with one UseState of the same type.
+            _ => Component(c =>
+            {
+                var (n, _) = c.UseState(7);
+                return TextBlock($"fallback {n}");
+            })));
+        Assert.Equal(["fallback 7"], host.Texts());
+
+        fail = false;
+        host.Render();
+
+        Assert.Equal(["child 42"], host.Texts());
+    }
+
+    [AvaloniaFact]
+    public void A_fallback_shown_again_after_a_failed_retry_keeps_its_state()
+    {
+        var host = new TestHost(() => ErrorBoundary(
+            Throws("still failing"),
+            ex => Component(c =>
+            {
+                var (details, setDetails) = c.UseState(false);
+                return VStack(
+                    TextBlock(details ? "details: " + ex.Message : "failed"),
+                    Button("Details", () => setDetails(true)));
+            })));
+        var button = host.All<Button>().Single();
+        TestHost.Click(button);
+        host.Flush(); // a root pass: the child is retried, fails again, and the fallback updates in place
+
+        Assert.Equal(["details: still failing"], host.Texts());
+        Assert.Same(button, host.All<Button>().Single());
+
+        host.Render();
+        Assert.Equal(["details: still failing"], host.Texts());
+    }
+
+    [AvaloniaFact]
+    public void A_failed_retry_detaches_the_child_it_discarded()
+    {
+        bool fail = false;
+        var host = new TestHost(() => ErrorBoundary(
+            ErrorBoundary(
+                fail ? Throws("retry") : Component(_ => TextBlock("child")),
+                _ => throw new InvalidOperationException("inner fallback")),
+            ex => TextBlock("outer fallback: " + ex.Message)));
+        var childWrapper = (Control)host.All<TextBlock>().Single().Parent!; // the function component's wrapper
+
+        fail = true;
+        host.Render();
+
+        Assert.Equal(["outer fallback: inner fallback"], host.Texts());
+        Assert.Null(childWrapper.Parent); // unmounted once, by the inner boundary, and out of the discarded tree
     }
 
     [AvaloniaFact]
@@ -291,7 +357,7 @@ public sealed class ErrorBoundaryTests : IDisposable
     public void An_error_outside_every_boundary_still_reaches_the_host()
     {
         var errors = new List<RenderError>();
-        var host = new ReactorHostControl(_ => VStack(
+        using var host = new ReactorHostControl(_ => VStack(
             ErrorBoundary(TextBlock("guarded"), TextBlock("fallback")),
             Throws("outside")))
         {
@@ -310,7 +376,7 @@ public sealed class ErrorBoundaryTests : IDisposable
         var original = ErrorBoundaryExamples.Forecast;
         try
         {
-            var host = new ReactorHostControl(ErrorBoundaryExamples.Dashboard);
+            using var host = new ReactorHostControl(ErrorBoundaryExamples.Dashboard);
             Pump();
             Assert.Equal(["The weather panel failed: no forecast yet", "Clicked 0 times"], Texts(host));
             Click(ButtonLabelled(host, "Click"));
@@ -321,7 +387,6 @@ public sealed class ErrorBoundaryTests : IDisposable
             Pump();
 
             Assert.Equal(["Today: sunny", "Clicked 1 times"], Texts(host));
-            host.Dispose();
         }
         finally
         {
