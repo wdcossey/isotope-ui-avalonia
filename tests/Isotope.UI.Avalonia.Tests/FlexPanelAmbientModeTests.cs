@@ -106,6 +106,29 @@ public sealed class FlexPanelAmbientModeTests : IDisposable
         Assert.Equal(40, nested.Bounds.Height);
     }
 
+    private sealed class CountingFlexPanel : FlexPanel
+    {
+        public int Measures;
+        protected override Size MeasureOverride(Size availableSize) { Measures++; return base.MeasureOverride(availableSize); }
+    }
+
+    [AvaloniaFact]
+    public void NestedPanel_ChangedOnItsOwn_IsNotReMeasuredThroughTheOuter()
+    {
+        // Re-measured alone, the nested panel keeps the fit-content mode the outer gave it, so its size doesn't change
+        // and the outer isn't re-measured. Measured with no mode it would fill (300), and the outer would have to
+        // measure it again to undo that.
+        var nested = Flex1(Nested());
+        var outer = new CountingFlexPanel { AlignItems = FlexAlign.FlexStart, Children = { nested } };
+        Host(outer);
+        outer.Measures = 0;
+
+        nested.RowGap = 1;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(0, outer.Measures);
+        Assert.Equal(40, nested.Bounds.Height);
+    }
+
     [AvaloniaFact]
     public void PanelInsideAWrapper_ChangedOnItsOwn_KeepsFittingItsContent()
     {
