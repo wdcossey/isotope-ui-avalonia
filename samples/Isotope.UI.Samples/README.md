@@ -10,6 +10,9 @@ The headless tests (`SampleAppTests`) mount every page, click through its main i
 window still has to show what they can't: hover tooltips appearing, menus opened with the mouse, right-click menus,
 keyboard input, and how the tabs and the split view look and animate. The checklist below is that run.
 
+**Last run:** 2026-11-24, Windows, at `3678918` (#34): every line passed. Linux and macOS haven't been run in a real
+window yet. Before a new run, clear the ticks.
+
 ## Checklist
 
 Tick each line in a real window. "Shows" means on screen; the line after each arrow is what should happen.
