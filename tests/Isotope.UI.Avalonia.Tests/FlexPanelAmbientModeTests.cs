@@ -168,6 +168,22 @@ public sealed class FlexPanelAmbientModeTests : IDisposable
         Assert.Equal(100, nested.Bounds.Height);
     }
 
+    [AvaloniaFact]
+    public void PanelNotDependingOnTheMode_StillGivesItToTheChildrenItMeasures()
+    {
+        // Review pass 2: the middle panel is top-aligned, so its own height doesn't depend on the outer's mode, but the
+        // nested panel its final sweep measures does: it must follow the outer from stretch (fill) to flex-start.
+        var nested = Nested();
+        var middle = Flex1(new FlexPanel { VerticalAlignment = VerticalAlignment.Top, Children = { new Border { Width = 100, Height = 100, Child = nested } } });
+        var outer = new FlexPanel { Children = { middle } };
+        Host(outer);
+        Assert.Equal(100, nested.DesiredSize.Height);
+
+        outer.AlignItems = FlexAlign.FlexStart;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(40, nested.DesiredSize.Height);
+    }
+
     private static Action<double>? s_setGap;
 
     private static Element Card(RenderContext ctx)
