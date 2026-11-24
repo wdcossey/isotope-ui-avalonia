@@ -150,6 +150,24 @@ public sealed class FlexPanelAmbientModeTests : IDisposable
         Assert.Equal(40, filler.Bounds.Y);
     }
 
+    [AvaloniaFact]
+    public void PanelReMeasuredOnItsOwn_GivesTheChildrenItMeasuresItsMode()
+    {
+        // Review pass 1: the middle panel is re-measured alone after its own change, and keeps the outer's fit-content
+        // mode; the children it measures itself (here a fixed-size box Yoga doesn't measure, in its final sweep) must
+        // get that mode too, not none (fill). The bounds come from the box either way; the nested panel's measure didn't.
+        var nested = Nested();
+        var fixedBox = new Border { Width = 100, Height = 100, Child = nested };
+        var middle = Flex1(new FlexPanel { Children = { fixedBox } });
+        Host(new FlexPanel { AlignItems = FlexAlign.FlexStart, Children = { middle } });
+        Assert.Equal(40, nested.DesiredSize.Height);
+
+        middle.RowGap = 1;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(40, nested.DesiredSize.Height);
+        Assert.Equal(100, nested.Bounds.Height);
+    }
+
     private static Action<double>? s_setGap;
 
     private static Element Card(RenderContext ctx)
