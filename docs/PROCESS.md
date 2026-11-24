@@ -50,6 +50,8 @@ Never without the developer's go-ahead in the conversation:
 - **Changes inside `upstream/`:** none, beyond keeping the cache current. Read-only git (log, show, diff, grep,
   rev-parse), `git fetch`, and checking out the commit in `UPSTREAM.lock` (setup, or `tools/sync`) are fine. No other
   checkouts, no resets, no edits, no builds there.
+- **Repo and Actions settings:** branch rules, visibility, Actions permissions, secrets, variables, runners,
+  collaborators, a third-party action, and approving a fork PR's workflow run (never an agent's; see `CLAUDE.md`).
 - **Decisions that aren't Claude's:** those under "Decisions already made (don't reopen)" in `CLAUDE.md` are not reopened.
 
 ## 3. Build
