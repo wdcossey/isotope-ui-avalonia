@@ -198,17 +198,36 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
 - **The job:** `.github/workflows/upstream-sync.yml` runs weekly (Monday 05:17 UTC), and on `workflow_dispatch` with a
   `dry_run` input. A push touching the workflow or `tools/sync/**` gets a dry run.
-  - **Runner:** `vars.SYNC_RUNNER || 'ubuntu-latest'`. CI's Linux jobs use `vars.LINUX_RUNNER || 'ubuntu-latest'` the same way;
-    Windows jobs stay GitHub-hosted.
+  - **Runner:** GitHub-hosted. The `vars.SYNC_RUNNER` option was removed in #36 (public repo: no self-hosted runners).
+    CI's Linux jobs keep a `vars.LINUX_RUNNER || 'ubuntu-latest'` fallback, which must stay unset.
   - **When upstream changed:** it pushes `sync/<old>-<new>` with the regenerated files, starts CI on it, and opens an issue
     with the report (upstream references are put in code spans, so nobody upstream is pinged). Duplicate ranges are skipped.
-  - **The glue:** `tools/sync/ci/upstream-sync.mjs`, with 22 tests.
+  - **The glue:** `tools/sync/ci/upstream-sync.mjs`, with 63 tests (#36).
 - **The first sync that changed vendored files** (`14172dce` → `1f078436`): 7 upstream commits, 5 vendored files changed, no
   transform broke.
   - The library build broke on one new tier 3 type (2 errors), fixed with a placeholder.
   - 3 tier 3 PRs were read; none needs porting.
   - Spike A moved 567 → 569 and step 4 500 → 502, both because of that type.
   - About 4.5 minutes of agent time. It's a first data point for #5's cost question, not the developer's time.
+
+## Upstream sync hardening (issue #36, 2026-11-24)
+
+- **Upstream's code runs only in a read-only job.** `upstream-sync.yml` has four jobs:
+  - `plan` (contents and issues: read) reads upstream main with `git ls-remote` and decides what to do;
+  - `prepare` (contents: read) syncs to that commit and uploads a git bundle and its metadata;
+  - `publish` (holds the write grants; real runs only; runs no upstream code and no dotnet) checks the bundle, then pushes,
+    dispatches ci and opens the issue;
+  - `publish-dry-run` (read-only) runs the same check on dry runs.
+- **The check:**
+  - one commit on the checkout's HEAD, by the Actions bot, with the sync's message;
+  - only `src/Upstream/`, `UPSTREAM.lock` (exactly as tools/sync writes it) and the range's report change, all as regular
+    files;
+  - fsck on the fetch, and no `.git`, `.` or `..` path parts;
+  - no personal data in the report.
+
+  ci's `--check` on the branch checks the vendored bytes themselves.
+- **The glue:** 63 tests (was 22); 41 deliberate breaks each turned their tests red. A full dry run on a probe branch:
+  plan 18 s, prepare 47 s, publish-dry-run 11 s.
 
 ## Migration tool (issue #33, 2026-11-24)
 
