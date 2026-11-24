@@ -25,12 +25,21 @@ public sealed class PlatformHooksTests : IDisposable
 {
     private readonly DispatcherQueue? _previousDispatcher = ReactorApp.UIDispatcher;
     private readonly List<Window> _windows = new();
+    private readonly List<ReactorHostControl> _hosts = new();
 
     public void Dispose()
     {
+        // Hosts first (a closing guard may hold its window open), so nothing outlives the test.
+        foreach (var h in _hosts) h.Dispose();
         foreach (var w in _windows) w.Close();
         Pump();
         ReactorApp.UIDispatcher = _previousDispatcher;
+    }
+
+    private ReactorHostControl Track(ReactorHostControl host)
+    {
+        _hosts.Add(host);
+        return host;
     }
 
     private static void Pump() => Dispatcher.UIThread.RunJobs();
@@ -64,11 +73,11 @@ public sealed class PlatformHooksTests : IDisposable
     {
         window ??= NewWindow();
         Mounted? m = null;
-        var host = new ReactorHostControl(ctx =>
+        var host = Track(new ReactorHostControl(ctx =>
         {
             m!.Renders++;
             return TextBlock(render(ctx));
-        });
+        }));
         setUp?.Invoke(host);
         m = new Mounted { Window = window, Host = host };
         window.Content = host;
@@ -287,11 +296,84 @@ public sealed class PlatformHooksTests : IDisposable
     // ── Window state, activation, position, DPI ──
 
     [AvaloniaFact]
-    public void UseWindow_returns_the_hosts_window()
+    public void UseWindow_returns_the_hosts_window_and_follows_a_move()
     {
         Window? seen = null;
         var m = Mount(ctx => { seen = ctx.UseWindow(); return "x"; });
         Assert.Same(m.Window, seen);
+
+        var second = NewWindow();
+        second.Show();
+        m.Window.Content = null;
+        Pump();
+        Assert.Null(seen);
+        second.Content = m.Host;
+        Pump();
+        Assert.Same(second, seen);
+    }
+
+    [AvaloniaFact]
+    public void A_host_in_an_overlay_popup_sees_its_window()
+    {
+        // Headless puts popups in the window's overlay layer. (Desktop platforms give a popup its own PopupRoot, which
+        // the hooks walk out of to the window that opened it; headless can't create one, so that path isn't covered.)
+        var window = NewWindow(400, 300);
+        Window? seen = null;
+        string? size = null;
+        var host = Track(new ReactorHostControl(ctx =>
+        {
+            seen = ctx.UseWindow();
+            var (w, h) = ctx.UseWindowSize();
+            size = $"{w}x{h}";
+            return TextBlock("in a popup");
+        }));
+        var anchor = new Border { Width = 10, Height = 10 };
+        var popup = new global::Avalonia.Controls.Primitives.Popup { Child = host, PlacementTarget = anchor };
+        window.Content = new StackPanel { Children = { anchor, popup } };
+        window.Show();
+        popup.IsOpen = true;
+        Pump();
+        Assert.Same(window, seen);
+        Assert.Equal("400x300", size);
+        popup.IsOpen = false;
+    }
+
+    [AvaloniaFact]
+    public void A_detached_host_watches_nothing_app_wide_until_it_joins_a_window()
+    {
+        var fake = new FakeColorValues();
+        var before = PlatformHookDiagnostics.LiveSubscriptions;
+        var m = Mount(ctx => $"{ctx.UseColorScheme()} {ctx.UseHighContrast()}", setUp: h => h.ColorValuesOverride = fake);
+        Assert.Equal(1, fake.Handlers);
+
+        m.Window.Content = null;
+        Pump();
+        // Left: each hook's watch of its own host (two hooks), nothing on the app or the window.
+        Assert.Equal(0, fake.Handlers);
+        Assert.Equal(before + 2, PlatformHookDiagnostics.LiveSubscriptions);
+
+        var other = NewWindow();
+        other.RequestedThemeVariant = ThemeVariant.Dark;
+        other.Content = m.Host;
+        other.Show();
+        Pump();
+        Assert.Equal(1, fake.Handlers);
+        Assert.Equal("Dark False", m.Text);
+    }
+
+    [AvaloniaFact]
+    public void A_window_closed_without_disposing_its_host_releases_the_hooks_subscriptions()
+    {
+        var fake = new FakeColorValues();
+        var before = PlatformHookDiagnostics.LiveSubscriptions;
+        var m = Mount(ctx => { var (w, _) = ctx.UseWindowSize(); return $"{w} {ctx.UseHighContrast()}"; },
+            setUp: h => h.ColorValuesOverride = fake);
+        Assert.Equal(1, fake.Handlers);
+
+        m.Window.Close();
+        Pump();
+        Assert.Equal(0, fake.Handlers);
+        Assert.Equal(before + 2, PlatformHookDiagnostics.LiveSubscriptions);
     }
 
     [AvaloniaFact]
@@ -503,17 +585,17 @@ public sealed class PlatformHooksTests : IDisposable
             ctx.UseClosingGuard(() => guardAsked = true);
             seen = string.Join("|",
                 ctx.UseWindow() is null, $"{w}x{h}", $"{x},{y}", ctx.UseDpi(), ctx.UseWindowState(), ctx.UseIsActive(),
-                ctx.UseBreakpoint(1), ctx.UseDisplays().Count, ctx.UseHighContrast());
+                ctx.UseBreakpoint(1), ctx.UseBreakpoint(0), ctx.UseDisplays().Count, ctx.UseHighContrast());
             return TextBlock(seen);
         }));
-        Assert.Equal("True|0x0|0,0|96|Normal|True|False|0|False", seen);
+        Assert.Equal("True|0x0|0,0|96|Normal|True|False|False|0|False", seen);
         Assert.False(guardAsked);
         host.Unmount();
     }
 
     public static TheoryData<string> ValueHooks() =>
     [
-        "UseColorScheme", "UseHighContrast", "UseWindowSize", "UseBreakpoint", "UseWindowState", "UseIsActive",
+        "UseColorScheme", "UseHighContrast", "UseWindow", "UseWindowSize", "UseBreakpoint", "UseWindowState", "UseIsActive",
         "UseWindowPosition", "UseDpi", "UseDisplays",
     ];
 
@@ -523,6 +605,7 @@ public sealed class PlatformHooksTests : IDisposable
         {
             case "UseColorScheme": ctx.UseColorScheme(); break;
             case "UseHighContrast": ctx.UseHighContrast(); break;
+            case "UseWindow": ctx.UseWindow(); break;
             case "UseWindowSize": ctx.UseWindowSize(); break;
             case "UseBreakpoint": ctx.UseBreakpoint(100); break;
             case "UseWindowState": ctx.UseWindowState(); break;
@@ -578,12 +661,12 @@ public sealed class PlatformHooksTests : IDisposable
         var before = PlatformHookDiagnostics.LiveSubscriptions;
         Action<bool>? setShow = null;
         var window = NewWindow();
-        var host = new ReactorHostControl(ctx =>
+        var host = Track(new ReactorHostControl(ctx =>
         {
             var (show, set) = ctx.UseState(true);
             setShow = set;
             return VStack(show ? Component(c => TextBlock(c.UseWindowState().ToString())) : null);
-        });
+        }));
         window.Content = host;
         window.Show();
         Pump();
@@ -601,7 +684,7 @@ public sealed class PlatformHooksTests : IDisposable
     [AvaloniaFact]
     public void The_host_reports_whether_its_content_has_a_window()
     {
-        var host = new ReactorHostControl(_ => TextBlock("x"));
+        var host = Track(new ReactorHostControl(_ => TextBlock("x")));
         IContentOwner owner = host;
         Assert.Equal(ContentOwnerStatus.Detached, owner.TryGetWindowId(out _));
 
@@ -622,7 +705,7 @@ public sealed class PlatformHooksTests : IDisposable
     public void Guide_adaptive_example_follows_the_width_and_the_theme()
     {
         var window = NewWindow(500, 300);
-        var host = new ReactorHostControl(PlatformHookExamples.Adaptive);
+        var host = Track(new ReactorHostControl(PlatformHookExamples.Adaptive));
         window.Content = host;
         window.Show();
         Pump();
@@ -643,7 +726,7 @@ public sealed class PlatformHooksTests : IDisposable
     public void Guide_editor_example_keeps_the_window_open_with_unsaved_changes()
     {
         var window = NewWindow();
-        var host = new ReactorHostControl(PlatformHookExamples.Editor);
+        var host = Track(new ReactorHostControl(PlatformHookExamples.Editor));
         window.Content = host;
         window.Show();
         Pump();

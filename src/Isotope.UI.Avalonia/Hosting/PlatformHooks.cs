@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Platform;
 using Avalonia.Styling;
 using Isotope.UI.Core;
@@ -12,13 +13,28 @@ namespace Isotope.UI.Hosting;
 
 /// <summary>
 /// What a component sees of its platform: the host control that renders it (null for content rendered by a bare
-/// reconciler), the host's top level (null while the host isn't in one) and, through them, the window and the app.
+/// reconciler), the host's top level (null while the host isn't in one; for a host in a popup, the top level the
+/// popup belongs to) and, through them, the window and the app.
 /// </summary>
 internal readonly record struct PlatformView(ReactorHostControl? Host, TopLevel? TopLevel)
 {
     /// <summary>The view of <paramref name="host"/> right now.</summary>
-    public static PlatformView Of(ReactorHostControl? host) =>
-        new(host, host is null ? null : TopLevel.GetTopLevel(host));
+    public static PlatformView Of(ReactorHostControl? host) => new(host, OwningTopLevel(host));
+
+    // A popup (flyout, tooltip, menu) is a top level of its own; its content belongs to the window that opened it.
+    private static TopLevel? OwningTopLevel(Visual? host)
+    {
+        var topLevel = host is null ? null : TopLevel.GetTopLevel(host);
+        while (topLevel is PopupRoot popup && !ReferenceEquals(popup.ParentTopLevel, popup)) topLevel = popup.ParentTopLevel;
+        return topLevel;
+    }
+
+    /// <summary>Whether app-wide sources may be subscribed: with no host, or a host in a top level.</summary>
+    /// <remarks>
+    /// A detached host subscribes to nothing app-wide (it subscribes again when it joins a top level), so a host
+    /// dropped without being disposed isn't kept alive by the application's events.
+    /// </remarks>
+    public bool MayWatchApp => Host is null || TopLevel is not null;
 
     /// <summary>The top level, when it is a window.</summary>
     public Window? Window => TopLevel as Window;
@@ -96,8 +112,9 @@ internal static class Subscriptions
 
 /// <summary>
 /// A hook's subscription, made by its effect: <c>attach</c> subscribes to the platform as seen from the host, again
-/// whenever the host joins or leaves a top level, and each platform signal (and each such move, and once after
-/// subscribing) calls <c>changed</c> with the current view. Disposed by the effect's cleanup, on unmount.
+/// whenever the host joins or leaves a top level (or its top level closes, which counts as leaving), and each
+/// platform signal (and each such move, and once after subscribing) calls <c>changed</c> with the current view.
+/// Disposed by the effect's cleanup, on unmount.
 /// </summary>
 internal sealed class HostLink : IDisposable
 {
@@ -106,6 +123,7 @@ internal sealed class HostLink : IDisposable
     private readonly Action<PlatformView>? _changed;
     private readonly Action _signal;
     private IDisposable? _inner;
+    private IDisposable? _closed;
     private PlatformView _view;
     private bool _disposed;
 
@@ -137,11 +155,17 @@ internal sealed class HostLink : IDisposable
         Signal();
     }
 
+    private void OnTopLevelClosed(object? sender, EventArgs e) => Move(new PlatformView(_host, null));
+
     private void Attach(PlatformView view)
     {
         _inner?.Dispose();
         _inner = null;
+        _closed?.Dispose();
+        _closed = null;
         _view = view;
+        if (_host is not null && view.TopLevel is { } topLevel)
+            _closed = Subscriptions.Event(() => topLevel.Closed += OnTopLevelClosed, () => topLevel.Closed -= OnTopLevelClosed);
         _inner = _attach(view, _signal);
     }
 
@@ -160,6 +184,8 @@ internal sealed class HostLink : IDisposable
             _host.DetachedFromVisualTree -= OnDetached;
             PlatformHookDiagnostics.Removed();
         }
+        _closed?.Dispose();
+        _closed = null;
         _inner?.Dispose();
         _inner = null;
     }
@@ -232,9 +258,13 @@ internal static class PlatformReads
     public static IDisposable? SubscribeTheme(PlatformView v, Action changed)
     {
         void Handler(object? sender, EventArgs e) => changed();
-        return Subscriptions.All(
-            v.Host is { } host ? Subscriptions.Event(() => host.ActualThemeVariantChanged += Handler, () => host.ActualThemeVariantChanged -= Handler) : null,
-            PlatformView.App is { } app ? Subscriptions.Event(() => app.ActualThemeVariantChanged += Handler, () => app.ActualThemeVariantChanged -= Handler) : null);
+        // A host in a top level inherits the window's and the app's theme, so its own event covers both; a detached
+        // host watches nothing (it re-reads when it joins a top level); with no host, the app's.
+        if (v.Host is { } host)
+            return v.TopLevel is null ? null : Subscriptions.Event(() => host.ActualThemeVariantChanged += Handler, () => host.ActualThemeVariantChanged -= Handler);
+        return PlatformView.App is { } app
+            ? Subscriptions.Event(() => app.ActualThemeVariantChanged += Handler, () => app.ActualThemeVariantChanged -= Handler)
+            : null;
     }
 
     public static bool HighContrast(PlatformView v) =>
@@ -246,6 +276,8 @@ internal static class PlatformReads
     public static IDisposable? SubscribeColorValues(PlatformView v, Action changed)
     {
         void Handler(object? sender, PlatformColorValues e) => changed();
+        // App-wide (the fake stands in for the app's settings): not watched by a detached host.
+        if (!v.MayWatchApp) return null;
         if (v.Host?.ColorValuesOverride is { } fake)
             return Subscriptions.Event(() => fake.ColorValuesChanged += Handler, () => fake.ColorValuesChanged -= Handler);
         if (PlatformView.App?.PlatformSettings is { } settings)
@@ -311,7 +343,7 @@ internal static class PlatformReads
         if (v.TopLevel?.Screens is not { } screens) return [];
         return screens.All.Select((s, i) => new DisplayInfo
         {
-            Id = s.DisplayName ?? s.TryGetPlatformHandle()?.Handle.ToString() ?? i.ToString(),
+            Id = string.IsNullOrEmpty(s.DisplayName) ? s.TryGetPlatformHandle()?.Handle.ToString() ?? i.ToString() : s.DisplayName,
             IsPrimary = s.IsPrimary,
             BoundsDip = s.Bounds.ToRect(s.Scaling),
             WorkAreaDip = s.WorkingArea.ToRect(s.Scaling),

@@ -13,6 +13,8 @@ Every code block on this page is a region of the test project, run by `PlatformH
   platform signals it reads the value again: the component re-renders only if it differs from what it rendered.
   `UseBreakpoint` re-renders only when the width crosses the breakpoint, not on every resize.
 - **They unsubscribe on unmount**, and follow the host: a `ReactorHostControl` moved to another window re-subscribes there.
+  A host taken out of its window (or whose window closed) without being disposed watches nothing app-wide until it
+  joins a window again, so the application's events don't keep it alive.
 - **They work outside a window too.** With no window (a test host, or a host not yet in a window) each returns
   upstream's fallback, and it takes the same hook slots, so a component can move between the two.
 
@@ -23,7 +25,7 @@ Every code block on this page is a region of the test project, run by `PlatformH
 | `UseColorScheme()` | `ColorScheme.Light` or `Dark`: the host's theme variant (it inherits the window's and the app's) | the theme variant changes | the app's theme |
 | `UseIsDarkTheme()` | `UseColorScheme() == ColorScheme.Dark` | as above | as above |
 | `UseHighContrast()` | `true` when the platform asks for high contrast (`PlatformColorValues.ContrastPreference`) | the preference changes | the app's platform settings |
-| `UseWindow()` | the Avalonia `Window` the host is in | never (a read, as upstream's) | `null` |
+| `UseWindow()` | the Avalonia `Window` the host is in | the host moves to another window, or out of one | `null` |
 | `UseWindowSize()`, `UseWindowSize(topLevel)` | the top level's client size in DIPs, `(Width, Height)` | it resizes | `(0, 0)` |
 | `UseBreakpoint(minWidth)`, `UseBreakpoint(topLevel, minWidth)` | `true` when the width is at least `minWidth` | the width crosses `minWidth` | `false` |
 | `UseWindowState()` | Avalonia's `WindowState` | the state changes | `Normal` |
@@ -33,7 +35,8 @@ Every code block on this page is a region of the test project, run by `PlatformH
 | `UseDisplays()` | the top level's screens, as `DisplayInfo` snapshots (`Id`, `IsPrimary`, `BoundsDip`, `WorkAreaDip`, `Dpi`) | a display changes | empty |
 | `UseClosingGuard(canClose)` | nothing: while mounted, a `canClose` that returns `false` (or throws) cancels the window's close | | no-op |
 
-The "window" is the host's top level, so on mobile and in the browser, where the top level is a single view and not a
+The "window" is the host's top level; for a host in a popup (a flyout, a tooltip), the window that opened the popup.
+On mobile and in the browser, where the top level is a single view and not a
 `Window`, the size, breakpoint and DPI hooks still work, `UseWindow` returns `null`, and the state, activation,
 position and closing hooks return their fallbacks.
 
@@ -85,7 +88,9 @@ What differs from upstream's hooks:
   a window's own; here a window's `RequestedThemeVariant` counts too.
 - **Outside a window**, `UseDpi` returns 96 (upstream: the system DPI) and `UseDisplays` is empty (upstream lists the
   displays without a window): Avalonia reaches screens and scaling through a top level.
-- **`UseBreakpoint`** re-renders only when the width crosses the breakpoint (upstream: on every resize).
+- **`UseBreakpoint`** re-renders only when the width crosses the breakpoint (upstream: on every resize), and is
+  `false` outside a window for any `minWidth` (upstream: `true` for a `minWidth` of 0 or less).
+- **`UseWindow`** follows the host, so it takes hook slots like the others (upstream's is a plain read, with no slot).
 - **`UseClosingGuard`** keeps one registration while mounted and asks the latest render's predicate (upstream
   re-registers when the predicate changes).
 - **Class components** (`Component`) don't have these hooks as methods yet; function components do.

@@ -44,10 +44,10 @@ public sealed partial class RenderContext
 
     /// <summary>
     /// The window the host that renders this component is in, or <c>null</c> (outside a host, a host not in a
-    /// window, or a top level that isn't a window). As upstream's: a read during render, with no subscription and no
-    /// hook slot.
+    /// window, or a top level that isn't a window), and re-renders when the host moves to another window or none.
     /// </summary>
-    public Window? UseWindow() => PlatformView.Of(PlatformHost).Window;
+    public Window? UseWindow() =>
+        UsePlatformValue(static v => v.Window, static (_, _) => null);
 
     /// <summary>
     /// The client size, in DIPs, of the top level the host is in (a window, or the single view on mobile and in the
@@ -68,7 +68,7 @@ public sealed partial class RenderContext
     /// only when the width crosses it. <c>false</c> outside a top level.
     /// </summary>
     public bool UseBreakpoint(double minWidth) =>
-        UsePlatformValue(v => PlatformReads.Size(v.TopLevel).Width >= minWidth, static (v, changed) => PlatformReads.SubscribeSize(v.TopLevel, changed));
+        UsePlatformValue(v => v.TopLevel is { } t && t.ClientSize.Width >= minWidth, static (v, changed) => PlatformReads.SubscribeSize(v.TopLevel, changed));
 
     /// <summary>
     /// <c>true</c> when the width of <paramref name="topLevel"/> is at least <paramref name="minWidth"/>; re-renders
