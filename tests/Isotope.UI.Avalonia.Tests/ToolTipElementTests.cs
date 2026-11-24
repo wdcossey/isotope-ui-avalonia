@@ -142,6 +142,28 @@ public sealed class ToolTipElementTests
     }
 
     [AvaloniaFact]
+    public void A_text_tooltip_that_goes_is_cleared_while_the_element_tooltip_renders_nothing()
+    {
+        var stage = 0;
+        var host = new TestHost(() => stage switch
+        {
+            0 => TextBlock("owner").ToolTip("plain").WithToolTip(Empty()),
+            1 => TextBlock("owner").WithToolTip(Empty()),
+            _ => TextBlock("owner"),
+        });
+        var text = host.All<TextBlock>()[0];
+        stage = 1;
+        host.Render();
+        Assert.Null(AvToolTip.GetTip(text));
+
+        stage = 0;
+        host.Render();
+        stage = 2; // both go at once
+        host.Render();
+        Assert.Null(AvToolTip.GetTip(text));
+    }
+
+    [AvaloniaFact]
     public void Removing_the_tooltip_unmounts_it_and_gives_the_slot_to_the_text_tooltip()
     {
         var log = new List<string>();

@@ -25,9 +25,9 @@ namespace Isotope.UI.Core;
 /// </summary>
 /// <remarks>
 /// As upstream's, <see cref="OnTextChanged"/> reports what the user types; a suggestion the user picks (arrow keys or a
-/// click) reaches <see cref="OnSuggestionChosen"/> instead, and <see cref="OnQuerySubmitted"/> runs on Enter with the
-/// box's text. Unlike WinUI's, Avalonia selects a suggestion the user types out exactly, so that reaches
-/// <see cref="OnSuggestionChosen"/> too, and a click on a suggestion doesn't submit the query.
+/// click), which puts its text in the box, reaches <see cref="OnSuggestionChosen"/> instead, and
+/// <see cref="OnQuerySubmitted"/> runs on Enter with the box's text. Unlike WinUI's, a click on a suggestion doesn't
+/// submit the query.
 /// </remarks>
 [GenerateReactorDescriptor(typeof(AutoCompleteBox), ClearValueOnUnset = true, Exclude = new[] { "TextChanged", "SelectionChanged" })]
 [WrapManual("Text")]
@@ -60,9 +60,9 @@ public partial record AutoSuggestBoxElement(
 
     // Dropped: the controlled text's echo (the value-diff arm, as upstream's), a change that leaves the text as it was
     // (the echo Avalonia raises when it fills a template's text box, which the mount write's lack of an arm would let
-    // through), and the selection's text, which OnSuggestionChosen reports (upstream reports only the user's typing). A
-    // text that equals the selected suggestion's is the selection's: a keystroke always changes the text, and the box
-    // selects a suggestion only after the text it matches is in place.
+    // through), and a pick's text, which OnSuggestionChosen reports (upstream reports only the user's typing). A text
+    // that equals the selected suggestion's is a pick's: a pick puts its text in the box after it is selected, while
+    // the box selects a suggestion the user types out, or the engine writes, only after the text is in place.
     private static readonly EventHandler<TextChangedEventArgs> __TextChangedTrampoline = (s, _) =>
     {
         var box = (AutoCompleteBox)s!;
@@ -71,19 +71,24 @@ public partial record AutoSuggestBoxElement(
         var payload = Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(box);
         var changed = !string.Equals(payload.LastText, text, StringComparison.Ordinal);
         payload.LastText = text;
+        var picked = box.SelectedItem is { } selected && string.Equals(selected.ToString(), text, StringComparison.Ordinal);
+        payload.PickedText = picked ? text : null;
         if (ChangeEchoSuppressor.ShouldSuppressEcho(state, text)) return;
-        if (!changed) return;
-        if (box.SelectedItem is { } selected && string.Equals(selected.ToString(), text, StringComparison.Ordinal)) return;
+        if (!changed || picked) return;
         (state.Element as AutoSuggestBoxElement)?.OnTextChanged?.Invoke(text);
     };
 
-    // A selection the engine's own write made (a written text that matches a suggestion) isn't the user's.
+    // A pick raises SelectionChanged right after the text change that put its text in the box. A selection with no
+    // such change is Avalonia matching the text in the box (typed out, or the engine's write), not a pick, as on WinUI.
     private static readonly EventHandler<SelectionChangedEventArgs> __SelectionChangedTrampoline = (s, args) =>
     {
         var box = (AutoCompleteBox)s!;
         if (!ReferenceEquals(args.Source, box) || box.SelectedItem is not { } selected) return;
-        if (Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(box).EngineWriteDepth > 0) return;
-        (Reconciler.GetElementTag(box) as AutoSuggestBoxElement)?.OnSuggestionChosen?.Invoke(selected.ToString() ?? string.Empty);
+        var payload = Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(box);
+        var text = selected.ToString() ?? string.Empty;
+        if (!string.Equals(payload.PickedText, text, StringComparison.Ordinal)) return;
+        payload.PickedText = null;
+        (Reconciler.GetElementTag(box) as AutoSuggestBoxElement)?.OnSuggestionChosen?.Invoke(text);
     };
 
     private static readonly EventHandler<KeyEventArgs> __KeyDownTrampoline = (s, args) =>
@@ -105,15 +110,15 @@ public partial record AutoSuggestBoxElement(
                 set: static (c, v) => c.FilterMode = v)
             .OneWay(
                 get: static e => e.Suggestions,
-                set: static (c, v) => EngineWrite(c, () =>
+                set: static (c, v) =>
                 {
                     c.ItemsSource = v.Length > 0 ? v : null;
                     if (c.IsKeyboardFocusWithin) c.PopulateComplete();
-                }),
+                },
                 comparer: SameStrings.Instance)
             .HandCodedControlled<AutoSuggestBoxEventPayload, string, EventHandler<TextChangedEventArgs>>(
                 get:         static e => e.Text,
-                set:         static (c, v) => EngineWrite(c, () => c.Text = v),
+                set:         static (c, v) => c.Text = v,
                 readBack:    static c => c.Text ?? string.Empty,
                 subscribe:   static (c, h) =>
                 {
@@ -137,14 +142,6 @@ public partial record AutoSuggestBoxElement(
                 trampoline:      __KeyDownTrampoline,
                 slotIsNull:      static p => p.KeyDownTrampoline is null,
                 setSlot:         static (p, h) => p.KeyDownTrampoline = h);
-
-    private static void EngineWrite(AutoCompleteBox box, Action write)
-    {
-        var payload = Reconciler.GetOrCreateControlEventPayload<AutoSuggestBoxEventPayload>(box);
-        payload.EngineWriteDepth++;
-        try { write(); }
-        finally { payload.EngineWriteDepth--; }
-    }
 
     private sealed class SameStrings : IEqualityComparer<string[]>
     {

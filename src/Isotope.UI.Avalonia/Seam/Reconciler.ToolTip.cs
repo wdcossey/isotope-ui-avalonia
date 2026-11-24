@@ -47,7 +47,8 @@ public sealed partial class Reconciler
     /// Writes the element tooltip: mounts it, reconciles it with the last one, or unmounts it and gives the slot back to
     /// the text tooltip.
     /// </summary>
-    private void ApplyRichToolTip(UIElement control, Element newEl, ElementModifiers? oldM, ElementModifiers? newM, Action requestRerender)
+    private void ApplyRichToolTip(UIElement control, Element? oldEl, Element newEl, ElementModifiers? oldM, ElementModifiers? newM,
+        Action requestRerender)
     {
         var oldTip = oldM?.RichToolTip;
         var newTip = newM?.RichToolTip;
@@ -57,7 +58,7 @@ public sealed partial class Reconciler
             // Its tip is cleared only if it is still the one it mounted; the text tooltip is written after the setters, as
             // the other modifiers are.
             UnmountOwnedToolTip(control);
-            if (TextToolTipOf(newEl, newM) is { } text) control.SetValue(ToolTip.TipProperty, text);
+            WriteTextToolTip(control, oldEl, oldM, newEl, newM);
             return;
         }
         var owned = control.GetValue(OwnedToolTipProperty);
@@ -72,8 +73,12 @@ public sealed partial class Reconciler
         {
             // The tooltip rendered nothing (ReconcileSlot unmounted what it had): the text tooltip, if any, takes the slot.
             control.ClearValue(OwnedToolTipProperty);
-            if (TextToolTipOf(newEl, newM) is { } text) control.SetValue(ToolTip.TipProperty, text);
-            else if (owned is not null && ReferenceEquals(ToolTip.GetTip(control), owned)) control.ClearValue(ToolTip.TipProperty);
+            if (owned is not null)
+            {
+                owned.ClearValue(ToolTipOwnerProperty);
+                if (ReferenceEquals(ToolTip.GetTip(control), owned)) control.ClearValue(ToolTip.TipProperty);
+            }
+            WriteTextToolTip(control, oldEl, oldM, newEl, newM);
             return;
         }
         if (!ReferenceEquals(owned, next))
@@ -83,6 +88,15 @@ public sealed partial class Reconciler
             next.SetValue(ToolTipOwnerProperty, (Control)control);
         }
         if (!ReferenceEquals(ToolTip.GetTip(control), next)) control.SetValue(ToolTip.TipProperty, next);
+    }
+
+    // The text tooltip, when the element tooltip leaves it the slot: written when there is one (after the setters, as the
+    // other modifiers are), else the last one cleared if it is still there (an element tooltip that rendered nothing
+    // left it in place).
+    private static void WriteTextToolTip(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
+    {
+        if (TextToolTipOf(newEl, newM) is { } text) control.SetValue(ToolTip.TipProperty, text);
+        else if (TextToolTipOf(oldEl, oldM) is { } oldText && Equals(ToolTip.GetTip(control), oldText)) control.ClearValue(ToolTip.TipProperty);
     }
 
     /// <summary>Unmounts the element tooltip this reconciler mounted on <paramref name="control"/>, if any.</summary>

@@ -13,6 +13,6 @@ internal sealed class AutoSuggestBoxEventPayload
     /// <summary>The text the box had at the last change event (or when it was subscribed): an event that leaves it as it was is no change.</summary>
     public string? LastText;
 
-    /// <summary>Above 0 while the engine writes the text or the suggestions: a selection they make isn't the user's.</summary>
-    public int EngineWriteDepth;
+    /// <summary>The text a pick put in the box, until the selection change that follows it reports the pick.</summary>
+    public string? PickedText;
 }

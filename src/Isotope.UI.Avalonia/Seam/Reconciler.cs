@@ -376,7 +376,7 @@ public sealed partial class Reconciler
                 try
                 {
                     ApplyModifiers(control, null, null, element, modifiers);
-                    ApplyRichToolTip(control, element, null, modifiers, requestRerender);
+                    ApplyRichToolTip(control, null, element, null, modifiers, requestRerender);
                     ApplyEnabled(control, element, modifiers);
                 }
                 catch
@@ -452,7 +452,7 @@ public sealed partial class Reconciler
                         {
                             // The adapter mounted the unwrapped element: give the new control the wrapper's modifiers too.
                             ApplyModifiers(updated, null, null, newInner, newModifiers);
-                            ApplyRichToolTip(updated, newInner, null, newModifiers, requestRerender);
+                            ApplyRichToolTip(updated, null, newInner, null, newModifiers, requestRerender);
                             ApplyEnabled(updated, newInner, newModifiers);
                             return updated;
                         }
@@ -460,7 +460,7 @@ public sealed partial class Reconciler
                     break;
             }
             ApplyModifiers(control, oldInner, oldModifiers, newInner, newModifiers);
-            ApplyRichToolTip(control, newInner, oldModifiers, newModifiers, requestRerender);
+            ApplyRichToolTip(control, oldInner, newInner, oldModifiers, newModifiers, requestRerender);
             ApplyEnabled(control, newInner, newModifiers);
             GetOrCreateReactorState(control).Element = newInner;
             return null;

@@ -166,6 +166,20 @@ public sealed class AutoSuggestBoxTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void Typing_a_suggestion_out_is_typing_not_a_choice()
+    {
+        // Avalonia selects the suggestion the typed text equals; as on WinUI, only a pick is a choice.
+        var typed = new List<string>();
+        var chosen = new List<string>();
+        var host = new TestHost(() => AutoSuggestBox(onTextChanged: t => typed.Add(t)).SuggestionChosen(s => chosen.Add(s))
+            with { Suggestions = ["apple", "avocado"] });
+        Type(host, "avocado");
+        Assert.Equal("avocado", Box(host).SelectedItem);
+        Assert.Equal(["avocado"], typed);
+        Assert.Empty(chosen);
+    }
+
+    [AvaloniaFact]
     public void An_engine_write_that_matches_a_suggestion_is_not_a_choice()
     {
         // Avalonia selects the suggestion a written text equals; that selection is the engine's, not the user's.

@@ -117,9 +117,8 @@ A menu item's `KeyboardAccelerators` and `Description` are its shortcut and tool
 `MenuItem("Save", save) with { KeyboardAccelerators = [new(Key.S, KeyModifiers.Control)] }`.
 
 > **Coming from Reactor?** `AutoSuggestBox` has no `Header` or `QueryIcon` here, a command's `AccessKey` isn't written
-> (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet. Avalonia selects a
-> suggestion the user types out exactly, so that reaches `OnSuggestionChosen` too, and a click on a suggestion doesn't
-> submit the query.
+> (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet. A click on a
+> suggestion doesn't submit the query.
 
 More factories arrive with their controls. An app host that opens a window on a component is #16; the tests mount
 components with a test host.

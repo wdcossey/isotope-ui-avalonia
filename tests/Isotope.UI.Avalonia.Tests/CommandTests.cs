@@ -162,6 +162,24 @@ public sealed class CommandTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void A_callback_that_comes_later_takes_the_click_from_the_command()
+    {
+        // With a command, the element has callbacks before and after: the new callback alone must decline the skip, or it
+        // is never subscribed and the click runs nothing.
+        var log = new List<string>();
+        var cmd = new Command { Label = "Go", Execute = () => log.Add("command") };
+        var withCallback = false;
+        var host = new TestHost(() => VStack(
+            new ButtonElement("Go", withCallback ? () => log.Add("click") : null) { Command = cmd },
+            ToggleButton("Bold", false, withCallback ? v => log.Add("toggled " + v) : null) with { Command = cmd }));
+        withCallback = true;
+        host.Render();
+        Click(host, host.All<Button>()[0]);
+        Click(host, host.All<ToggleButton>()[0]);
+        Assert.Equal(["click", "toggled True"], log);
+    }
+
+    [AvaloniaFact]
     public void Command_modifier_binds_a_content_button_and_clears_its_callback()
     {
         var log = new List<string>();
