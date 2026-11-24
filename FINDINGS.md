@@ -384,7 +384,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 5. **Control layer (from Spike E):**
    - Descriptors are **generated** by a vendored copy of upstream's wrappers generator, and our changes to it are carried as **transform rules**.
    - Element records are **hand-written** for now; projecting them from upstream's `Element.cs` is decided with #4.
-   - Records that mirror upstream's use **Reactor's member names** (mapped with `[WrapAlias]`), and Avalonia-only controls use Avalonia's. Avalonia's names everywhere, with a migration tool from Reactor, may come later (#13).
+   - Records that mirror upstream's use **Reactor's member names** (mapped with `[WrapAlias]`), and Avalonia-only controls use Avalonia's. Avalonia's names everywhere, with a migration tool from Reactor, may come later (#13). *Superseded 2026-11-24 (#27 answer 1, #31): Avalonia's member names.*
 
 ## Seam (issue #1, 2026-11-23)
 

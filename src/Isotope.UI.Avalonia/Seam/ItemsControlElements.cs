@@ -5,7 +5,7 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// The items controls (#19): ComboBox and ListBox. Records mirror upstream's (Reactor's member names, Avalonia's value
+// The items controls (#19): ComboBox and ListBox. Records mirror upstream's (Avalonia's member names, #31, and value
 // types). Their string items go through the generated items host: Avalonia's ItemCollection is a non-generic IList,
 // which ItemsList.Of adapts (#12). The items are written before the other members (DescriptorHandler), so a first
 // SelectedIndex lands in a populated list. Avalonia raises SelectionChanged synchronously inside a SelectedIndex

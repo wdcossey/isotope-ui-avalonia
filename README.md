@@ -22,7 +22,8 @@ public static Element Counter(RenderContext ctx)
 }
 ```
 
-The factories (`using static Isotope.UI.Factories;`) keep Reactor's names, with Avalonia's value types. See
+The factories (`using static Isotope.UI.Factories;`) keep Reactor's names; their parameters and the elements' members take
+Avalonia's names (`Text`, `Minimum`, `IsChecked`), with Avalonia's value types. See
 [Writing components](docs/guide/writing-components.md) for the vocabulary, a todo app and an example of each hook.
 
 This is the premise of Microsoft.UI.Reactor, which offers it on WinUI 3, and it is the premise of Isotope on Avalonia 12:

@@ -7,8 +7,8 @@ namespace Isotope.UI.Core
 {
     /// <summary>
     /// A CSS flexbox container, as our Avalonia <see cref="Layout.FlexPanel"/> over upstream's Yoga. Mirrors upstream's
-    /// <c>FlexElement</c> (Reactor's member names); the per-child flex data is attached with
-    /// <see cref="FlexExtensions.Flex{T}"/>.
+    /// <c>FlexElement</c>, with its panel's member names (upstream's, since the panel is a port of upstream's); the
+    /// per-child flex data is attached with <see cref="FlexExtensions.Flex{T}"/>.
     /// </summary>
     [GenerateReactorDescriptor(typeof(FlexPanel))]
     [WrapPanelChildren(PerChild = "ApplyFlexChildAttached")]

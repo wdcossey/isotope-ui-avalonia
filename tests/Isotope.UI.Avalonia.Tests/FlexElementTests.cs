@@ -10,7 +10,7 @@ using static Isotope.UI.Factories;
 
 namespace Isotope.UI.Avalonia.Tests;
 
-/// <summary>FlexElement (upstream's record, Reactor's member names) mounted through its generated descriptor (#2).</summary>
+/// <summary>FlexElement (upstream's record, with its FlexPanel's member names) mounted through its generated descriptor (#2).</summary>
 public sealed class FlexElementTests : IDisposable
 {
     private readonly List<Window> _windows = new();

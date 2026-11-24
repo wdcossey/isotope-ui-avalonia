@@ -8,7 +8,7 @@ using Isotope.UI.Wrappers;
 
 namespace Isotope.UI.Core;
 
-// Progress and images (#19). Records mirror upstream's (Reactor's member names, Avalonia's value types).
+// Progress and images (#19). Records mirror upstream's, with Avalonia's member names (#31) and value types.
 
 /// <summary>
 /// A progress bar, as an Avalonia <see cref="Avalonia.Controls.ProgressBar"/> (upstream's name: Progress). A null
