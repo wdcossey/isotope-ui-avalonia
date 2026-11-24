@@ -89,7 +89,10 @@ if (gitStatus() !== statusBefore) fail('git status of the repo changed during th
 
 function convert(file) {
   const xml = fs.readFileSync(file, 'utf8');
-  const prop = name => xml.match(new RegExp(`<${name}>([^<]*)</${name}>`))?.[1];
+  // Properties from unconditional property groups only: a conditional one (ReactorGallery's REACTOR_SOURCEMAP, set
+  // only with the source-map generator, which is dropped) can't be evaluated here.
+  const unconditional = xml.replace(/<PropertyGroup\s+Condition=[\s\S]*?<\/PropertyGroup>/g, '');
+  const prop = name => unconditional.match(new RegExp(`<${name}>([^<]*)</${name}>`))?.[1];
   const dir = path.dirname(file);
   const dropped = [];
   const keptRefs = [];

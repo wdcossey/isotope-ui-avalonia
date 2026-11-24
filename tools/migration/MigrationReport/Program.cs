@@ -69,6 +69,12 @@ foreach (var path in Paths("Analyzer").Where(File.Exists).Where(p => !Path.GetFi
 }
 CSharpGeneratorDriver.Create(generators, parseOptions: parse).RunGeneratorsAndUpdateCompilation(compilation, out compilation, out _);
 var sourceTrees = new HashSet<SyntaxTree>(trees);
+// The analyzer reports nothing without Isotope among the references (an unbuilt reference has no output to read).
+if (!references.Any(r => Path.GetFileName(r.Display ?? "") == "Isotope.UI.Avalonia.dll"))
+{
+    Console.Error.WriteLine("Isotope.UI.Avalonia.dll isn't among the project's built references: build the project (dotnet build) first.");
+    return 3;
+}
 var errors = compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 var migration = await compilation.WithAnalyzers([new MigrationAnalyzer()]).GetAnalyzerDiagnosticsAsync();
 
