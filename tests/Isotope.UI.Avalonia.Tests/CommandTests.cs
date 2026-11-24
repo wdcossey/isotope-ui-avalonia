@@ -355,7 +355,7 @@ public sealed class CommandTests : IDisposable
         });
         Assert.Equal("Open", item.Text);
         Assert.False(item.IsEnabled);
-        Assert.Equal([new KeyboardAcceleratorData(Key.O, KeyModifiers.Control)], item.KeyboardAccelerators);
+        Assert.Equal([new KeyboardAcceleratorData(Key.O, KeyModifiers.Control)], item.KeyboardAccelerators!);
         Assert.Equal("Open a file", item.Description);
         item.OnClick!();
         Assert.Equal(["open"], log);
