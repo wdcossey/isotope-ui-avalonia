@@ -387,10 +387,11 @@ public sealed class LayoutModifierTests
     public void The_border_and_the_panel_both_carry_the_element_after_an_update_and_a_skip()
     {
         // The engine reads the element a slot's control represents (a keyed diff reads its key), and a handler reads its
-        // panel's: both are the latest render's element, also when the update is skipped.
+        // panel's: both are the render's element, and a skip leaves them as they were.
         var padding = 2.0;
         StackElement? latest = null;
-        var host = new TestHost(() => VStack(latest = (StackElement)VStack(TextBlock("a")).Padding(padding).WithKey("k")));
+        Element[] children = [TextBlock("a")]; // one array, so an unchanged stack compares equal and is skipped
+        var host = new TestHost(() => VStack(latest = new StackElement(Orientation.Vertical, children).Padding(padding).WithKey("k")));
         var panel = host.All<StackPanel>()[1];
         var chrome = ChromeOf(panel);
         void AssertTagged()
@@ -398,6 +399,7 @@ public sealed class LayoutModifierTests
             Assert.Same(latest, Reconciler.GetMountedElement(chrome));
             Assert.Same(latest, Reconciler.GetMountedElement(panel));
         }
+        Assert.Equal("k", Reconciler.GetMountedElement(chrome)?.Key);
         AssertTagged();
 
         padding = 3;
@@ -406,8 +408,8 @@ public sealed class LayoutModifierTests
 
         var skipped = host.Reconciler.DebugElementsSkipped;
         host.Render();
-        Assert.True(host.Reconciler.DebugElementsSkipped > skipped, "the padded stack was not skipped");
-        AssertTagged();
+        Assert.Equal(skipped + 1, host.Reconciler.DebugElementsSkipped); // the padded stack, not its text block
+        Assert.Same(Reconciler.GetMountedElement(panel), Reconciler.GetMountedElement(chrome));
     }
 
     [AvaloniaFact]
@@ -425,10 +427,14 @@ public sealed class LayoutModifierTests
     [AvaloniaFact]
     public void An_unchanged_padded_stack_is_skipped()
     {
-        var host = new TestHost(() => VStack(VStack(TextBlock("a")).Padding(4).WithBorder("Red").CornerRadius(2)));
+        Element[] children = [TextBlock("a")]; // one array, so the stack compares equal
+        var host = new TestHost(() => VStack(new StackElement(Orientation.Vertical, children).Padding(4).WithBorder("Red").CornerRadius(2)));
+        var chrome = ChromeOf(host.All<StackPanel>()[1]);
         var before = host.Reconciler.DebugElementsSkipped;
         host.Render();
-        Assert.True(host.Reconciler.DebugElementsSkipped > before, "the padded stack was not skipped");
+        // Only the padded stack is skipped: its text block, under it, is never reached.
+        Assert.Equal(before + 1, host.Reconciler.DebugElementsSkipped);
+        Assert.Same(chrome, ChromeOf(host.All<StackPanel>()[1]));
     }
 
     [AvaloniaFact]

@@ -227,7 +227,7 @@ public sealed partial class Reconciler
     /// closures rather than the ones captured when the control was last updated.
     /// </summary>
     internal void RefreshSkippedChildState(FrameworkElement control, Element oldElement, Element newElement)
-        => SetMountedElement(control, newElement);
+        => GetOrCreateReactorState(control).Element = newElement;
 
     internal bool CanUpdate(Element oldEl, Element newEl)
     {
@@ -405,7 +405,7 @@ public sealed partial class Reconciler
                     NoteMountCompleted(boundaryRootsStart, control);
                     throw;
                 }
-                SetMountedElement(control, element);
+                GetOrCreateReactorState(control).Element = element;
             }
             NoteMountCompleted(boundaryRootsStart, control);
             return control;
@@ -444,7 +444,7 @@ public sealed partial class Reconciler
                 && !IsOnDirtyAncestorPath(control) && !ShouldDeclineSkip(control))
             {
                 DebugElementsSkipped++;
-                SetMountedElement(control, newInner);
+                GetOrCreateReactorState(control).Element = newInner;
                 return null;
             }
             switch (newInner)
@@ -476,7 +476,8 @@ public sealed partial class Reconciler
                             ApplyModifiers(updated, null, null, newInner, newModifiers);
                             ApplyRichToolTip(updated, null, newInner, null, newModifiers, requestRerender);
                             ApplyEnabled(updated, newInner, newModifiers);
-                            if (updated is PanelChrome) SetMountedElement(updated, newInner);
+                            // A chrome border records the element as a mounted control does (the handler tagged the panel).
+                            if (updated is PanelChrome) GetOrCreateReactorState(updated).Element = newInner;
                             return updated;
                         }
                     }
@@ -485,7 +486,7 @@ public sealed partial class Reconciler
             ApplyModifiers(control, oldInner, oldModifiers, newInner, newModifiers);
             ApplyRichToolTip(control, oldInner, newInner, oldModifiers, newModifiers, requestRerender);
             ApplyEnabled(control, newInner, newModifiers);
-            SetMountedElement(control, newInner);
+            GetOrCreateReactorState(control).Element = newInner;
             return null;
         }
         finally

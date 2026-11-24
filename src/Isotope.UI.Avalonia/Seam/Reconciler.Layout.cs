@@ -20,14 +20,6 @@ public sealed partial class Reconciler
 
     private static PanelChrome WrapInPanelChrome(UIElement panel) => new() { Child = panel };
 
-    // The element a slot's control represents is recorded on the control, and on the panel inside a chrome border too
-    // (the handler's unmount and its event trampolines read the panel's).
-    private static void SetMountedElement(UIElement control, Element element)
-    {
-        GetOrCreateReactorState(control).Element = element;
-        if (control is PanelChrome { Child: { } panel }) GetOrCreateReactorState(panel).Element = element;
-    }
-
     private static void ApplyLayoutModifiers(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
     {
         // A Border element's own Padding, BorderBrush, BorderThickness and CornerRadius and the modifiers of the same
