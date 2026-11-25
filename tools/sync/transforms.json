@@ -325,7 +325,7 @@
       "id": "gen-missing-counterpart-report",
       "find": "MetadataRegistrationDiagnostic = metadataDiagnostic \\};",
       "replace": "MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart, MoreDiagnostics = callbackCheck.Diagnostics };",
-      "why": "Our rule: the descriptor-only output reports the missing-counterpart diagnostic with its source.",
+      "why": "Our rule: the descriptor-only output reports the missing-counterpart diagnostic with its source, and (#78) the callback diagnostics as MoreDiagnostics (gen-more-diagnostics-member), from the callbackCheck variable gen-callback-check declares, so it depends on that rule.",
       "files": [
         "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
       ]
@@ -378,7 +378,7 @@
     {
       "id": "gen-setters-if-declared",
       "find": "(\\r?\\n)(        var hint = descriptorOnly \\? )",
-      "replace": "$1        if (descriptorOnly) source = WithSettersIfDeclared(element, source); // Isotope (#78)$1$2",
+      "replace": "$1        if (descriptorOnly) source = WithSettersIfDeclared(element, control, compilation, source); // Isotope (#78)$1$2",
       "why": "Our rule (#78), descriptor-only mode: the descriptor reads e.Setters only when the record declares it, as upstream's polymorphic path already checks; a record without it gave CS1061 inside the generated file. GetSetters is optional on the descriptor (WrapperGenerator.Avalonia.cs). Applied after gen-skip-members, so it follows that line.",
       "files": [
         "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"

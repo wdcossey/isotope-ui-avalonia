@@ -171,7 +171,7 @@
         "gen-manual-content-slot",
         "namespace-isotope"
       ],
-      "sha256": "c2a9a2644d919efe411224e308fdca252f4a349f5a67b73e8d1eac8094c73319"
+      "sha256": "f1733e25735e099a89d9366a07591117626670505597cebf8edc9867ad71b912"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",

@@ -545,7 +545,7 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
                 factoryParameters.ToImmutableArray());
 
         if (descriptorOnly) source += SkipMembers(element, compilation); // Isotope (#77): a library's record skips like a built-in
-        if (descriptorOnly) source = WithSettersIfDeclared(element, source); // Isotope (#78)
+        if (descriptorOnly) source = WithSettersIfDeclared(element, control, compilation, source); // Isotope (#78)
         var hint = descriptorOnly ? $"{elementName}.Descriptor.g.cs" : $"{elementName}.Wrapper.g.cs";
 
         return WrapperModel.Ok(hint, source) with { Factory = factory, MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart, MoreDiagnostics = callbackCheck.Diagnostics };

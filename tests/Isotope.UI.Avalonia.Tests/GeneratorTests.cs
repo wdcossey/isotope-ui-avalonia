@@ -281,9 +281,9 @@ public class GeneratorTests
             """, "ProbeSlotElement");
         Assert.DoesNotContain("ShallowEqualsCore", slot);
 
-        // SliderElement declares HasCallbacks, and its Setters is internal to the library. (The descriptor itself reads
-        // e.Setters, which a record outside the library can't reach: CS1061, as before #77.)
-        var (_, derived, _) = Compile("""
+        // SliderElement declares HasCallbacks, and its Setters is internal to the library, so the descriptor doesn't read
+        // it (#78: before, CS1061 inside the generated file).
+        var (_, derived, derivedErrors) = Compile("""
             using Isotope.UI.Core;
             using Isotope.UI.Wrappers;
             namespace Probe;
@@ -294,6 +294,8 @@ public class GeneratorTests
             }
             """, "ProbeSliderElement");
         Assert.NotNull(derived);
+        Assert.Empty(derivedErrors);
+        Assert.DoesNotContain("GetSetters", derived);
         Assert.DoesNotContain("HasCallbacks", derived);
         Assert.DoesNotContain("ShallowEqualsCore", derived);
     }
@@ -352,6 +354,7 @@ public class GeneratorTests
         Assert.Equal(DiagnosticSeverity.Error, unwired.Severity);
         Assert.Contains("'OnClosed'", unwired.GetMessage());
         Assert.Contains("[WrapEvent(\"Closed\")]", unwired.GetMessage());
+        Assert.Contains("'Chip.Closed' passes EventArgs, not RoutedEventArgs", unwired.GetMessage());
         Assert.Equal(source.Split('\n').ToList().FindIndex(l => l.Contains("OnClosed { get;")), unwired.Location.GetLineSpan().StartLinePosition.Line);
         Assert.DoesNotContain(diagnostics, d => d.Id is "ISOTOPEGEN001" or "ISOTOPEGEN003");
         Assert.NotNull(generated);
@@ -480,5 +483,63 @@ public class GeneratorTests
         Assert.Equal(source.Split('\n').ToList().FindIndex(l => l.Contains(name)), unsupported.Location.GetLineSpan().StartLinePosition.Line);
         Assert.DoesNotContain(files, f => f.StartsWith("HandMadeElement", StringComparison.Ordinal));
         Assert.Empty(errors);
+    }
+
+    [Theory]
+    // The generator's event filter matches a member of any accessibility, a property or a field (#78).
+    [InlineData("", "ISOTOPEGEN002")]
+    [InlineData("[WrapEvent(\"Closed\")]", "ISOTOPEGEN003")]
+    public void A_callback_field_is_checked_as_a_property_is(string attrs, string id)
+    {
+        var source = Chip(attrs, "System.Action?").Replace("public System.Action? OnClosed { get; init; }", "internal System.Action? OnClosed;");
+        var (diagnostics, _, errors) = Compile(source, "ChipElement");
+
+        Assert.Equal(source.Split('\n').ToList().FindIndex(l => l.Contains("OnClosed;")),
+            Assert.Single(diagnostics, d => d.Id == id).Location.GetLineSpan().StartLinePosition.Line);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void A_callback_on_a_base_record_or_with_no_event_is_reported()
+    {
+        var (diagnostics, _, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public record ProbeBaseElement : Element
+            {
+                public System.Action? OnInherited { get; init; }
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Button))]
+            public partial record ProbeButtonElement : ProbeBaseElement
+            {
+                public System.Action? OnVanished { get; init; }
+                internal System.Action<Avalonia.Controls.Button>[] Setters { get; init; } = [];
+            }
+            """, "ProbeButtonElement");
+
+        var reported = diagnostics.Where(d => d.Id == "ISOTOPEGEN002").Select(d => d.GetMessage()).ToList();
+        Assert.Equal(2, reported.Count);
+        Assert.Contains(reported, m => m.Contains("'OnInherited'") && m.Contains("the base record 'ProbeBaseElement'"));
+        Assert.Contains(reported, m => m.Contains("'OnVanished'") && m.Contains("'Button' has no routed event"));
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void A_Setters_of_another_type_is_not_read()
+    {
+        var (_, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.TextBox))]
+            public partial record OddTextBoxElement(string? PlaceholderText = null) : Element
+            {
+                internal string[] Setters { get; init; } = [];
+            }
+            """, "OddTextBoxElement");
+
+        Assert.Empty(errors);
+        Assert.DoesNotContain("GetSetters", generated);
     }
 }
