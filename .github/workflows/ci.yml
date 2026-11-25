@@ -246,16 +246,13 @@ jobs:
     # The migration on upstream's samples (#71): tools/migration/measure-samples.mjs migrates and builds each sample, and
     # --check fails when a count differs from tools/migration/samples-baseline.json (docs/guide/migrating-from-reactor.md
     # says how to update it). It builds upstream's sample code, so it holds a read-only token and neither checkout keeps
-    # credentials (CLAUDE.md). GitHub-hosted only.
-    name: samples migration (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    # credentials (CLAUDE.md). Ubuntu only: Windows gave the same counts, on a runner and locally, and took 22 minutes to
+    # Ubuntu's 16 (measured on #71's branch). Meant as a required check, so it runs on every push, with no path filter.
+    name: samples migration
+    runs-on: ubuntu-latest # GitHub-hosted only (public repo; CLAUDE.md)
     permissions:
       contents: read
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:

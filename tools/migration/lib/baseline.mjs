@@ -33,6 +33,8 @@ export function countsOf(summary) {
     errorsBefore: summary.errorsBefore,
     errorsAfter: summary.errorsAfter,
     brokenByMigration: summary.brokenByMigration.length,
+    // Named as well as counted, so a change that fixes one file and breaks another is still worse.
+    brokenFiles: [...summary.brokenByMigration].sort(),
     formatFailures: summary.formatFailures ?? 0,
     migrationLeftTotal: Object.values(migrationLeft).reduce((a, b) => a + b, 0),
     migrationLeft,
@@ -57,6 +59,9 @@ export function compare(baseline, counts, upstream) {
     else worse.push(line);
   };
   for (const [key, what, direction] of COUNTS) one(what, direction, was[key], counts[key]);
+  const wasBroken = new Set(was.brokenFiles ?? []), nowBroken = new Set(counts.brokenFiles);
+  for (const f of nowBroken) if (!wasBroken.has(f)) worse.push('built before the fixes and not after: ' + f);
+  for (const f of wasBroken) if (!nowBroken.has(f)) better.push('builds after the fixes again: ' + f);
   const ids = [...new Set([...Object.keys(was.migrationLeft ?? {}), ...Object.keys(counts.migrationLeft)])].sort();
   for (const id of ids) one(id + ' left', 'down', was.migrationLeft?.[id] ?? 0, counts.migrationLeft[id] ?? 0);
   return { worse, better, changed };

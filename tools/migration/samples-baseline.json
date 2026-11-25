@@ -11,6 +11,7 @@
     "errorsBefore": 13699,
     "errorsAfter": 2936,
     "brokenByMigration": 0,
+    "brokenFiles": [],
     "formatFailures": 0,
     "migrationLeftTotal": 1122,
     "migrationLeft": {

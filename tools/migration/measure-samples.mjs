@@ -30,17 +30,29 @@ import { baselineOf, compare, countsOf, withGuideTable } from './lib/baseline.mj
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const args = parseArgs(process.argv.slice(2));
-const baselineFile = path.join(repo, 'tools', 'migration', 'samples-baseline.json');
-const guideFile = path.join(repo, 'docs', 'guide', 'migrating-from-reactor.md');
+// The baseline and the guide; the tests point these at copies (SAMPLES_BASELINE_FILE, SAMPLES_GUIDE_FILE).
+const baselineFile = path.resolve(process.env.SAMPLES_BASELINE_FILE ?? path.join(repo, 'tools', 'migration', 'samples-baseline.json'));
+const guideFile = path.resolve(process.env.SAMPLES_GUIDE_FILE ?? path.join(repo, 'docs', 'guide', 'migrating-from-reactor.md'));
+const lockCommit = fs.readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8').match(/^baseline=([0-9a-f]{40})\s*$/m)?.[1];
+const gating = args.check || args['write-baseline'];
 if (args.check && args['write-baseline']) fail('give --check or --write-baseline, not both');
-if (args.only && (args.check || args['write-baseline'])) fail('--only measures part of the samples, so it cannot be compared with the baseline');
+if (gating && !lockCommit) fail("UPSTREAM.lock has no valid 'baseline=<40 hex>' line");
 if (args.summary) {
-  if (!args.check && !args['write-baseline']) fail('--summary needs --check or --write-baseline');
-  process.exit(gate(JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8')).summary));
+  if (!gating) fail('--summary needs --check or --write-baseline');
+  for (const o of ['out', 'samples', 'passes', 'only']) if (args[o] !== undefined) fail(`--summary measures nothing, so --${o} does nothing`);
+  const earlier = JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8'));
+  const problem = notComparable(earlier.measured);
+  if (problem) fail('that summary.json ' + problem);
+  // gate() writes synchronously, so exiting straight after loses no output.
+  process.exit(gate(earlier.summary));
 }
 const samples = path.resolve(args.samples ?? path.join(repo, 'upstream', 'samples'));
 const out = args.out ? path.resolve(args.out) : fail('--out <folder> is required');
 const passes = Number(args.passes ?? 4);
+// How this run measures, saved in summary.json: the baseline is of the whole upstream sample set, at UPSTREAM.lock's
+// commit, with the default passes, so a run measured otherwise is refused before it starts (and --summary refuses its file).
+const measured = { upstream: upstreamCommit(), samples: args.samples === undefined ? 'upstream' : 'other', passes, only: args.only ?? null };
+if (gating && notComparable(measured)) fail('this run ' + notComparable(measured));
 const fixable = ['ISOMIG001', 'ISOMIG003', 'ISOMIG004', 'ISOMIG006', 'ISOMIG008', 'ISOMIG009', 'ISOMIG014'];
 
 for (const forbidden of [repo, samples])
@@ -99,17 +111,36 @@ for (const p of converted) {
 }
 
 const summary = summarise(results);
-fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ results, summary }, null, 2));
+fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ measured, results, summary }, null, 2));
 print(results, summary);
 if (gitStatus() !== statusBefore) fail('git status of the repo changed during the run');
-if (args.check || args['write-baseline']) process.exitCode = gate(summary);
+if (gating) process.exitCode = gate(summary);
 
 // ── the baseline (#71) ──────────────────────────────────────────────────────────────────────────────
 
+// Why a run measured this way can't be compared with the baseline, or undefined when it can.
+function notComparable(m) {
+  if (!m) return 'does not say how it was measured (it predates #71): measure again';
+  if (m.only) return 'measures only ' + m.only + ', not the whole sample set';
+  if (m.samples !== 'upstream') return 'measures another samples folder than upstream/samples';
+  if (m.passes !== 4) return 'runs the fixes ' + m.passes + ' times, not 4';
+  if (m.upstream !== lockCommit) return 'measures upstream at ' + String(m.upstream).slice(0, 8) + ', and UPSTREAM.lock is ' + lockCommit.slice(0, 8) + ': check out the lock commit in upstream/';
+  return undefined;
+}
+
+// The commit the upstream cache is at (read-only git), or null when it isn't a git checkout.
+function upstreamCommit() {
+  const r = spawnSync('git', ['-C', path.join(repo, 'upstream'), 'rev-parse', 'HEAD'], { encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.trim() : null;
+}
+
+// Output that is written before the process exits (console's writes to a pipe can be asynchronous).
+function say(text) { fs.writeSync(1, text + '\n'); }
+function warn(text) { fs.writeSync(2, text + '\n'); }
+
 // Checks or writes the baseline; returns the exit code.
 function gate(summary) {
-  const upstream = fs.readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8').match(/^baseline=([0-9a-f]{40})\s*$/m)?.[1];
-  if (!upstream) fail("UPSTREAM.lock has no valid 'baseline=<40 hex>' line");
+  const upstream = lockCommit;
   const counts = countsOf(summary);
   const update = 'To update it, run node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline, review the diff of ' +
     'tools/migration/samples-baseline.json and the guide, and commit both in this PR (docs/guide/migrating-from-reactor.md).';
@@ -119,33 +150,33 @@ function gate(summary) {
     const guide = fs.readFileSync(guideFile, 'utf8');
     const newGuide = withGuideTable(guide, counts);
     if (old === text && newGuide === guide) {
-      console.log('baseline: tools/migration/samples-baseline.json and the guide are up to date');
+      say('baseline: tools/migration/samples-baseline.json and the guide are up to date');
       return 0;
     }
     if (old !== text) fs.writeFileSync(baselineFile, text);
     if (newGuide !== guide) fs.writeFileSync(guideFile, newGuide);
     if (old) printDiff(compare(JSON.parse(old), counts, upstream));
-    console.error('baseline: wrote tools/migration/samples-baseline.json and the guide\'s counts: review the diff and commit both (this run fails so the update is deliberate; --check passes on the same counts)');
+    warn('baseline: wrote tools/migration/samples-baseline.json and the guide\'s counts: review the diff and commit both (this run fails so the update is deliberate; --check passes on the same counts)');
     return 1;
   }
   const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
   const diff = compare(baseline, counts, upstream);
   if (!printDiff(diff)) {
-    console.log('baseline: the counts match tools/migration/samples-baseline.json');
+    say('baseline: the counts match tools/migration/samples-baseline.json');
     return 0;
   }
-  if (diff.worse.length) console.error('baseline: the migration on the samples got worse (' + diff.worse.length + ' count(s) above). Fix it, or if the change is intended, update the baseline and say why in the PR.');
-  if (diff.better.length) console.error('baseline: ' + diff.better.length + ' count(s) got better: update the baseline in this PR, so the next change is measured against them.');
-  if (diff.changed.length) console.error('baseline: the sample set or the upstream commit changed: update the baseline in this PR.');
-  console.error('baseline: ' + update);
+  if (diff.worse.length) warn('baseline: the migration on the samples got worse (' + diff.worse.length + ' count(s) above). Fix it, or if the change is intended, update the baseline and say why in the PR.');
+  if (diff.better.length) warn('baseline: ' + diff.better.length + ' count(s) got better: update the baseline in this PR, so the next change is measured against them.');
+  if (diff.changed.length) warn('baseline: the sample set or the upstream commit changed: update the baseline in this PR.');
+  warn('baseline: ' + update);
   return 1;
 }
 
 // Prints the differences; returns whether there were any.
 function printDiff({ worse, better, changed }) {
-  for (const line of worse) console.error('worse: ' + line);
-  for (const line of better) console.error('better: ' + line);
-  for (const line of changed) console.error('changed: ' + line);
+  for (const line of worse) warn('worse: ' + line);
+  for (const line of better) warn('better: ' + line);
+  for (const line of changed) warn('changed: ' + line);
   return worse.length + better.length + changed.length > 0;
 }
 
@@ -251,20 +282,20 @@ function print(results, s) {
     const before = Object.values(r.before.files);
     return `| ${r.project} | ${files.length} | ${before.filter(f => sum(f.errors) === 0).length} | ${files.filter(f => sum(f.errors) === 0).length} | ${sumAll(before, 'errors')} | ${sumAll(files, 'errors')} | ${sumAll(files, 'migration')} | ${r.projectBuilds ? 'yes' : 'no'} | ${r.dropped.join(', ')} |`;
   });
-  console.log('| Project | Files | Build before | Build after | Errors before | Errors after | Migration diagnostics left | Project builds | Dropped references |');
-  console.log('|---|---|---|---|---|---|---|---|---|');
-  for (const row of rows) console.log(row);
-  console.log(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
-  console.log(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
-  console.log(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
-  console.log(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
-  console.log(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
-  console.log('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
-  console.log('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));
-  console.log('\ncommonest migration diagnostics left:');
-  for (const [m, n] of top(s.migrationMessagesLeft, 40)) console.log(`  ${n} ${m}`);
-  console.log('\ncommonest compile errors left (ID and the name they are about):');
-  for (const [m, n] of top(s.errorsLeft, 40)) console.log(`  ${n} ${m}`);
+  say('| Project | Files | Build before | Build after | Errors before | Errors after | Migration diagnostics left | Project builds | Dropped references |');
+  say('|---|---|---|---|---|---|---|---|---|');
+  for (const row of rows) say(row);
+  say(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
+  say(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
+  say(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
+  say(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
+  say(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
+  say('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
+  say('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));
+  say('\ncommonest migration diagnostics left:');
+  for (const [m, n] of top(s.migrationMessagesLeft, 40)) say(`  ${n} ${m}`);
+  say('\ncommonest compile errors left (ID and the name they are about):');
+  for (const [m, n] of top(s.errorsLeft, 40)) say(`  ${n} ${m}`);
 }
 
 function top(counts, n) {
@@ -316,13 +347,13 @@ function parseArgs(argv) {
     const m = argv[i].match(/^--([\w-]+)$/);
     if (!m) fail(`unexpected argument ${argv[i]}`);
     if (m[1] === 'check' || m[1] === 'write-baseline') o[m[1]] = true;
-    else if (i + 1 < argv.length) o[m[1]] = argv[++i];
+    else if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) o[m[1]] = argv[++i];
     else fail(`--${m[1]} needs a value`);
   }
   return o;
 }
 
 function fail(message) {
-  console.error(message);
+  warn(message);
   process.exit(1);
 }

@@ -27,6 +27,7 @@ const baseline = (over) => baselineOf(countsOf(summary(over)), UPSTREAM);
 test('the counts: the summary totals, broken files counted, migration diagnostics per ID without zeros, sorted', () => {
   const c = countsOf(summary({ brokenByMigration: ['apps/a/A.cs', 'apps/b/B.cs'], formatFailures: undefined }));
   assert.equal(c.brokenByMigration, 2);
+  assert.deepEqual(c.brokenFiles, ['apps/a/A.cs', 'apps/b/B.cs']);
   assert.equal(c.formatFailures, 0);
   assert.deepEqual(Object.entries(c.migrationLeft), [['ISOMIG002', 199], ['ISOMIG013', 401]]);
   assert.equal(c.migrationLeftTotal, 600);
@@ -52,10 +53,17 @@ test('worse: fewer files or projects that build, more errors, broken files, fail
     'files that built before the fixes and not after: 0 -> 1 (+1)',
     'dotnet format runs that failed: 0 -> 1 (+1)',
     'migration diagnostics left: 600 -> 601 (+1)',
+    'built before the fixes and not after: apps/a/A.cs',
     'ISOMIG013 left: 401 -> 402 (+1)',
   ]);
   assert.deepEqual(better, []);
   assert.deepEqual(changed, []);
+});
+
+test('a file broken by the migration in place of another is worse, though the count is the same', () => {
+  const { worse, better } = compare(baseline({ brokenByMigration: ['apps/a/A.cs'] }), countsOf(summary({ brokenByMigration: ['apps/b/B.cs'] })), UPSTREAM);
+  assert.deepEqual(worse, ['built before the fixes and not after: apps/b/B.cs']);
+  assert.deepEqual(better, ['builds after the fixes again: apps/a/A.cs']);
 });
 
 test('an ID that was not left before is worse, and one no longer left is better', () => {
@@ -128,15 +136,21 @@ test('the baseline file is what --write-baseline writes for its counts', () => {
   assert.equal(read('tools', 'migration', 'samples-baseline.json').replace(/\r\n/g, '\n'), JSON.stringify(baselineOf(committed.counts, committed.upstream), null, 2) + '\n');
 });
 
-// ── the command line, on a summary file (no measuring) ──
+// ── the command line, on a summary file (no measuring), against copies of the baseline and the guide ──
 
-function cli(counts, ...flags) {
+const measured = { upstream: lock, samples: 'upstream', passes: 4, only: null };
+
+function cli(counts, flags, { measuredAs = measured, files } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'isotope-baseline-'));
   try {
     const file = path.join(dir, 'summary.json');
-    const s = { ...counts, brokenByMigration: Array.from({ length: counts.brokenByMigration }, (_, i) => 'f' + i + '.cs') };
-    fs.writeFileSync(file, JSON.stringify({ results: [], summary: s }));
-    const r = spawnSync(process.execPath, [path.join(repo, 'tools', 'migration', 'measure-samples.mjs'), '--summary', file, ...flags], { encoding: 'utf8' });
+    const baselineFile = path.join(dir, 'samples-baseline.json'), guideFile = path.join(dir, 'guide.md');
+    fs.writeFileSync(baselineFile, read('tools', 'migration', 'samples-baseline.json'));
+    fs.writeFileSync(guideFile, read('docs', 'guide', 'migrating-from-reactor.md'));
+    fs.writeFileSync(file, JSON.stringify({ measured: measuredAs, results: [], summary: { ...counts, brokenByMigration: counts.brokenFiles } }));
+    const r = spawnSync(process.execPath, [path.join(repo, 'tools', 'migration', 'measure-samples.mjs'), '--summary', file, ...flags],
+      { encoding: 'utf8', env: { ...process.env, SAMPLES_BASELINE_FILE: baselineFile, SAMPLES_GUIDE_FILE: guideFile } });
+    if (files) files.push(fs.readFileSync(baselineFile, 'utf8'), fs.readFileSync(guideFile, 'utf8'));
     return { status: r.status, out: r.stdout + r.stderr };
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -144,25 +158,65 @@ function cli(counts, ...flags) {
 }
 
 test('--check on a summary with the baseline counts passes', () => {
-  const r = cli(committed.counts, '--check');
+  const r = cli(committed.counts, ['--check']);
   assert.equal(r.status, 0, r.out);
-  assert.match(r.out, /match/);
+  assert.match(r.out, /the counts match/);
 });
 
 test('--check fails naming a count that got worse, and asks for an update when one got better', () => {
-  let r = cli({ ...committed.counts, errorsAfter: committed.counts.errorsAfter + 5 }, '--check');
+  let r = cli({ ...committed.counts, errorsAfter: committed.counts.errorsAfter + 5 }, ['--check']);
   assert.equal(r.status, 1, r.out);
   assert.match(r.out, /worse: compile errors after the fixes: [\d,]+ -> [\d,]+ \(\+5\)/);
-  r = cli({ ...committed.counts, filesBuildAfter: committed.counts.filesBuildAfter + 1 }, '--check');
+  assert.match(r.out, /got worse/);
+  r = cli({ ...committed.counts, filesBuildAfter: committed.counts.filesBuildAfter + 1 }, ['--check']);
   assert.equal(r.status, 1, r.out);
   assert.match(r.out, /better: files that build after the fixes/);
+  assert.match(r.out, /update the baseline in this PR/);
   assert.match(r.out, /--write-baseline/);
 });
 
+test('--write-baseline writes the baseline and the guide, and fails; --check then passes on the same counts', () => {
+  const counts = { ...committed.counts, filesBuildAfter: committed.counts.filesBuildAfter + 1 };
+  const files = [];
+  const r = cli(counts, ['--write-baseline'], { files });
+  assert.equal(r.status, 1, r.out);
+  assert.match(r.out, /wrote/);
+  const [baselineText, guideText] = files;
+  assert.equal(JSON.parse(baselineText).counts.filesBuildAfter, counts.filesBuildAfter);
+  assert.ok(guideText.includes('| Files that build | ' + committed.counts.filesBuildBefore + ' of ' + committed.counts.files + ' | ' + counts.filesBuildAfter + ' of '));
+});
+
 test('--write-baseline with the baseline counts writes nothing and passes', () => {
-  const before = [read('tools', 'migration', 'samples-baseline.json'), read('docs', 'guide', 'migrating-from-reactor.md')];
-  const r = cli(committed.counts, '--write-baseline');
+  const files = [];
+  const r = cli(committed.counts, ['--write-baseline'], { files });
   assert.equal(r.status, 0, r.out);
   assert.match(r.out, /up to date/);
-  assert.deepEqual([read('tools', 'migration', 'samples-baseline.json'), read('docs', 'guide', 'migrating-from-reactor.md')], before);
+  assert.equal(files[0].replace(/\r\n/g, '\n'), read('tools', 'migration', 'samples-baseline.json').replace(/\r\n/g, '\n'));
+});
+
+test('a summary measured otherwise than the baseline is refused', () => {
+  for (const [as, message] of [
+    [null, /does not say how it was measured/],
+    [{ ...measured, upstream: 'b'.repeat(40) }, /measures upstream at bbbbbbbb/],
+    [{ ...measured, only: 'HelloWorld' }, /measures only HelloWorld/],
+    [{ ...measured, samples: 'other' }, /another samples folder/],
+    [{ ...measured, passes: 1 }, /runs the fixes 1 times/],
+  ]) {
+    const r = cli(committed.counts, ['--write-baseline'], { measuredAs: as });
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, message);
+  }
+});
+
+test('a flag where a value belongs is refused, and --summary with measuring options too', () => {
+  const script = path.join(repo, 'tools', 'migration', 'measure-samples.mjs');
+  let r = spawnSync(process.execPath, [script, '--out', '--check'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /--out needs a value/);
+  r = spawnSync(process.execPath, [script, '--summary', 'x.json', '--check', '--passes', '2'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /--summary measures nothing, so --passes does nothing/);
+  r = spawnSync(process.execPath, [script, '--check', '--write-baseline'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /not both/);
 });

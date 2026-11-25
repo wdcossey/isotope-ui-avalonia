@@ -148,21 +148,9 @@ node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline
 | All | 1,122 |
 <!-- end samples-baseline -->
 
-- The files that build before the fixes use no Reactor or WinUI names, such as the chat sample's model.
-- The projects that build after are the hello-world app and the chat sample's model.
-- The diagnostics left:
-  - ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` on `Element`, and `Resources`
-    and `SubtleButton` on `ButtonElement`.
-  - ISOMIG012: controls not ported yet. The commonest are `Icon`, `ListView` and `FontIcon`.
-  - ISOMIG002: Charting most of all, then Advanced, Docking and smaller upstream namespaces.
-  - ISOMIG011 and ISOMIG005: WinUI-only controls and types.
-  - ISOMIG016: WinUI names the table doesn't list.
-  - ISOMIG015: startup.
-  - ISOMIG010: Reactor names with no counterpart, each with what to do instead: `IsTextSelectionEnabled` (#65), and
-    NumberBox's `Range`, `SpinButtons` and header argument (#68).
-  - ISOMIG007: shapes left for a hand fix, each with a note: rich text's `IsBold` and `IsItalic`, and a ScrollView's
-    `ContentOrientation`.
-- Most compile errors left are names Isotope doesn't have: the largest groups are CS0234 (`UI`), and CS0103 for
-  `Palette`, `Brush` and `D3Charts` (from Charting).
+- The files that build before the fixes use no Reactor or WinUI names (the chat sample's model, for one).
+- What is left is mostly what Isotope doesn't have yet: members and modifiers (ISOMIG013), controls (ISOMIG012), and
+  upstream's other libraries, Charting most of all (ISOMIG002). Then come WinUI-only controls and types (ISOMIG011,
+  ISOMIG005). The run prints the commonest names for each, and most compile errors left are the same names, unresolved.
 - The samples' other upstream projects (Charting, Advanced, Devtools…) and their NuGet packages are dropped, and the
   script lists them.
