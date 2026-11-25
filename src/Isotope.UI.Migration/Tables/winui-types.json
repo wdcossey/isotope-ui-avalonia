@@ -26,7 +26,6 @@
   "types": [
     {"winui": "Microsoft.UI.Xaml.HorizontalAlignment", "avalonia": "Avalonia.Layout.HorizontalAlignment"},
     {"winui": "Microsoft.UI.Xaml.VerticalAlignment", "avalonia": "Avalonia.Layout.VerticalAlignment"},
-    {"winui": "Microsoft.UI.Xaml.Thickness", "avalonia": "Avalonia.Thickness"},
     {"winui": "Microsoft.UI.Xaml.CornerRadius", "avalonia": "Avalonia.CornerRadius"},
     {"winui": "Microsoft.UI.Xaml.TextWrapping", "avalonia": "Avalonia.Media.TextWrapping"},
     {"winui": "Microsoft.UI.Xaml.TextAlignment", "avalonia": "Avalonia.Media.TextAlignment", "members": {"Start": "Start", "End": "End", "Justify": "Justify", "DetectFromContent": null}},
