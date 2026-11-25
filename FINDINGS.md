@@ -129,7 +129,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
    - Every gap is ours to absorb: transforms on import, the tier 3 rewrite, or fixes in our own port.
    - The two inherited FlexPanel ambient-mode bugs get fixed in our port (tier 3) if we hit them, and are noted as a divergence from upstream.
    - The earlier list of upstream-change candidates is withdrawn.
-6. **Targets stay `net10.0` (LTS);** the .NET 11 SDK is installed for the C# 15 compiler only.
+6. **Targets stay `net10.0` (LTS);** the .NET 11 SDK is installed for the C# 15 compiler only. *(Since #67, 2026-11-25:
+   the packages target `net9.0`, `net10.0` and `net11.0`.)*
 7. **Upstream model: vendor and regenerate.** There is no private fork and no submodule.
    - `upstream/` is a git-ignored cache.
    - Tier 1 and tier 2 files are vendored into our repo after transforms, and never edited by hand. CI regenerates them from the pinned commit and fails on any difference.
@@ -143,6 +144,50 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Everything is merged into `main` (this file included); no other branches or worktrees were left. The clean run above is of `7f5670f`, the commit before this file.
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
+
+## Target frameworks (issue #67, 2026-11-25)
+
+- **The library and desktop packages ship for `net9.0`, `net10.0` and `net11.0`** (developer, 2026-11-25: 10 is the
+  LTS, 11 the STS, and 9 stays for a few months). .NET 9 itself went out of support on 2026-11-10, as .NET 8 did:
+  `net9.0` is kept for apps still moving off it, not because it is supported. So do their tests and the package smoke app. The generator and the
+  migration stay `netstandard2.0`, and the MCP tool stays a `net10.0` tool with `RollForward=Major`. The sample app and
+  the other projects stay `net10.0`.
+- **Measured** (spike: `TargetFrameworks` `net8.0` to `net11.0`, the 11.0.100 SDK, Windows, every runtime installed):
+
+  | | Library build errors | Library tests | Smoke app at the framework's default C# |
+  |---|---|---|---|
+  | `net11.0` | 0 | 1,192 of 1,192 | builds, 4 of 4 checks |
+  | `net10.0` | 0 | 1,192 of 1,192 | builds, 4 of 4 checks |
+  | `net9.0` | 0 | 1,192 of 1,192 (after the `Reverse` fix below) | 2 errors at C# 13; 4 of 4 at C# 14 |
+  | `net8.0` | 32; 14 with a `Lock` polyfill | not run | not run |
+
+  - `net8.0`: 18 uses of `System.Threading.Lock` (.NET 9 and later), and 14 CS9244 in three vendored descriptor-runtime
+    files, which pass ref-struct contexts to `Action<…>` (`allows ref struct` came in .NET 9). Both went out of support
+    on 2026-11-10. `net8.0` was left out, since those gaps need edits to vendored files.
+- **On `net9.0`:**
+  - The desktop startup's `ReactorApp.Run` and `CreateDefaultAppBuilder` are C# 14 extension members, which an app's
+    default C# 13 can't call (CS9260). The app sets `LangVersion 14`, which needs the .NET 10 SDK or later (the desktop
+    README says so). The Desktop project itself now sets `LangVersion 15`, as the library does.
+  - **The .NET 10 SDK is enough** (measured): the smoke app, built outside the repo with SDK 10.0.402 (`rollForward`
+    disabled) against the packed packages, builds and passes 4 of 4 checks on `net10.0` (C# 14, its default) and on
+    `net9.0` (`LangVersion 14`). SDK 10 can't target `net11.0`.
+  - C# 14 binds `array.Reverse()` to `MemoryExtensions.Reverse(Span<T>)`, which returns `void` (.NET 10 added an
+    `Enumerable.Reverse(T[])` overload that wins). The sample's todo list now uses `Enumerable.Reverse(items)`, and the
+    library README warns about it.
+  - `Microsoft.Extensions.Logging.Abstractions` 11.0 supports `net10.0` and later only, so `net9.0` takes 10.0.14.
+- **Packages and CI:** `tools/packaging` checks `lib/<framework>/` and a dependency group for each framework (4 new
+  test cases), and runs the smoke app on each. The generator goes into `analyzers/` from one framework only (each gave
+  NU5118 otherwise). CI's library job and the package jobs install the .NET 9 and 10 runtimes (11 comes with the SDK),
+  and the library tests' count is checked on each framework.
+- **Dropping `net9.0` later:**
+  - `TargetFrameworks` in the library, desktop, library tests and smoke app, and the smoke app's `net9.0` `LangVersion 14`;
+  - the library's 10.0 `Microsoft.Extensions.Logging.Abstractions` reference;
+  - (if `net10.0` ever goes) the framework the library packs its generator from (`_IsotopePackGenerator`);
+  - `FRAMEWORKS` in `tools/packaging/lib/checks.mjs`;
+  - in `ci.yml`, the library test count check (`-eq 3` and "each of 3 frameworks"), and the `9.0.x` runtime there and in
+    `release.yml`;
+  - CLAUDE.md's toolchain line, `docs/releasing.md`'s `lib/net9.0`, and the `net9.0` notes in the READMEs (library,
+    desktop, migration) and the migration guide.
 
 ## MCP server, phase 1 (#60, 2026-11-25)
 

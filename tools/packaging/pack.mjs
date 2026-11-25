@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { homedir, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PACKAGES, checkPackages, parseNuspec } from './lib/checks.mjs';
+import { FRAMEWORKS, PACKAGES, checkPackages, parseNuspec } from './lib/checks.mjs';
 import { readZip } from './lib/zip.mjs';
 import { initialize, startMcp } from './lib/mcp.mjs';
 
@@ -121,9 +121,12 @@ if (opts.smoke) {
     let r = run('dotnet', ['build', app, '-c', 'Release', '-nologo', '-v:q', '--no-incremental', '--disable-build-servers'], { env });
     timings.push(['smoke build', r.ms]);
     check(r.status === 0, 'the smoke app did not build against the packages (exit ' + r.status + ')');
-    r = run('dotnet', ['run', '--project', app, '-c', 'Release', '--no-build'], { env });
-    timings.push(['smoke run', r.ms]);
-    check(r.status === 0, 'the smoke app failed (exit ' + r.status + ')');
+    // The app targets each framework the library ships for (#67), and runs on each.
+    for (const framework of FRAMEWORKS) {
+      r = run('dotnet', ['run', '--project', app, '-c', 'Release', '--no-build', '-f', framework], { env });
+      timings.push(['smoke run ' + framework, r.ms]);
+      check(r.status === 0, 'the smoke app failed on ' + framework + ' (exit ' + r.status + ')');
+    }
 
     const migration = path.join('tests', 'Isotope.UI.PackageSmoke', 'Migration', 'Isotope.UI.PackageSmoke.Migration.csproj');
     r = run('dotnet', ['restore', migration, '-nologo', '-v:q', '--disable-build-servers'], { env });

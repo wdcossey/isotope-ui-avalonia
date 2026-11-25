@@ -36,7 +36,7 @@ The analyzer binds to Isotope's types, so it runs in the project *after* its ref
 ## Steps
 
 1. **The project file.**
-   - Set the target framework to `net10.0`.
+   - Set the target framework to `net10.0` or `net11.0` (`net9.0` works too, with `<LangVersion>14</LangVersion>`).
    - Remove `UseWinUI`, `WindowsPackageType`, `Platforms`, `TargetPlatformMinVersion` and
      `SupportedOSPlatformVersion`, and the WinUI packages (`Microsoft.WindowsAppSDK`, `CommunityToolkit.WinUI.*`).
    - Remove `App.xaml` and any XAML pages.

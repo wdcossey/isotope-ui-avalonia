@@ -7,8 +7,8 @@ nothing is published except by pushing a `v*` tag, and agents never push tags.
 
 | Package | What | Holds |
 |---|---|---|
-| `Isotope.UI.Avalonia` | The library | `lib/net10.0` (DLL and XML docs), and the wrappers generator in `analyzers/dotnet/cs`, so a consumer's own `[GenerateReactorDescriptor]` records get descriptors as the library's do |
-| `Isotope.UI.Avalonia.Desktop` | The one-line desktop startup | `lib/net10.0`; depends on the library at the same version, declaring every asset (`include="All"`, the generator included) |
+| `Isotope.UI.Avalonia` | The library | `lib/net9.0`, `lib/net10.0` and `lib/net11.0` (DLL and XML docs each), and the wrappers generator in `analyzers/dotnet/cs`, so a consumer's own `[GenerateReactorDescriptor]` records get descriptors as the library's do |
+| `Isotope.UI.Avalonia.Desktop` | The one-line desktop startup | `lib/net9.0`, `lib/net10.0` and `lib/net11.0`; depends on the library at the same version, declaring every asset (`include="All"`, the generator included) |
 | `Isotope.UI.Migration` | The Reactor → Isotope migration analyzer and code fixes | `analyzers/dotnet/cs` only; a development dependency with no dependencies |
 | `Isotope.UI.Mcp` | The MCP server for coding agents (#60), a `dotnet tool` with the command `isotope-mcp` | `tools/net10.0/any`: the tool and everything it runs, the library's and desktop startup's DLLs and XML docs (which it reads) and the migration among them; no dependencies, and no native libraries (it never runs Avalonia) |
 
@@ -34,7 +34,7 @@ Only tagged versions are published. CI packs the in-between versions to check th
 ## Building the packages locally
 
 ```sh
-node tools/packaging/pack.mjs                 # packs into bin/packages, checks, runs the smoke test
+node tools/packaging/pack.mjs                 # packs into bin/packages, checks, runs the smoke test (each framework: needs the .NET 9 and 10 runtimes)
 node tools/packaging/pack.mjs --no-smoke      # packs and checks only
 node tools/packaging/pack.mjs --out <empty dir> --expect-version 0.1.0-preview.1
 node --test tools/packaging/test/*.test.mjs   # the checks' own tests (no dotnet needed)

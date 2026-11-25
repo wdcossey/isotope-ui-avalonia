@@ -32,7 +32,8 @@ With `using Isotope.UI.Core;` and `using static Isotope.UI.Factories;`. Host a c
 - **The wrappers generator**, as an analyzer: mark your own `partial record` with `[GenerateReactorDescriptor(typeof(SomeControl))]`
   (namespace `Isotope.UI.Wrappers`) and it is wired to that Avalonia control like the built-in ones.
 
-Targets `net10.0`. The project's source repository (linked on this page) has the guide, the samples and the licences.
+Targets `net9.0`, `net10.0` and `net11.0`. On `net9.0`, C# 14 binds `array.Reverse()` to the span overload, which
+returns nothing: write `Enumerable.Reverse(array)`. The project's source repository (linked on this page) has the guide, the samples and the licences.
 
 ## Licence
 

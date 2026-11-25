@@ -38,7 +38,7 @@ internal static class Examples
         TodoAction.Add => s with { Items = [.. s.Items, new Todo(s.NextId, c.Title, false)], NextId = s.NextId + 1 },
         TodoAction.Toggle => s with { Items = s.Items.Select(t => t.Id == c.Id ? t with { Done = !t.Done } : t).ToArray() },
         TodoAction.Remove => s with { Items = s.Items.Where(t => t.Id != c.Id).ToArray() },
-        TodoAction.Reverse => s with { Items = s.Items.Reverse().ToArray() },
+        TodoAction.Reverse => s with { Items = Enumerable.Reverse(s.Items).ToArray() },
         _ => s,
     };
 

@@ -2,7 +2,8 @@
   <!-- Tests for the engine seam: our Avalonia Element/Reconciler driving upstream's ChildReconciler,
        KeyedListDiff and RenderContext, headless. -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Every framework the library ships for (#67): CI checks the count on each. -->
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <LangVersion>15</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>

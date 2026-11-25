@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          # The SDK from global.json (C# 15 compiler) and the .NET 10 runtime every project targets.
+          # The SDK from global.json (C# 15 compiler) and the .NET 10 runtime these projects target.
           global-json-file: global.json
           dotnet-version: 10.0.x
 
@@ -103,8 +103,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
+          # The SDK from global.json (C# 15 compiler, and the .NET 11 runtime), and the .NET 9 and 10 runtimes: the
+          # library's tests run on each framework it ships for (#67).
           global-json-file: global.json
-          dotnet-version: 10.0.x
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: No upstream/ checkout
         shell: bash
@@ -114,14 +118,16 @@ jobs:
         shell: bash
         run: dotnet build samples/Isotope.UI.Samples -nologo -v:q
 
-      - name: Library tests (seam, hooks, controls, upstream engine tests), count unchanged
+      - name: Library tests (seam, hooks, controls, upstream engine tests) on each framework, count unchanged
         shell: bash
         run: |
           dotnet test tests/Isotope.UI.Avalonia.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee lib.log
-          total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' lib.log | tail -1)"
+          # One total per framework (net9.0, net10.0, net11.0; #67), each the expected count.
+          totals="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' lib.log)"
           expected="$(cat tests/Isotope.UI.Avalonia.Tests/expected-total.txt)"
-          echo "total=$total expected=$expected"
-          test "$total" = "$expected"
+          echo "totals=$(echo $totals) expected=$expected on each of 3 frameworks"
+          test "$(wc -l <<<"$totals")" -eq 3
+          ! grep -qvx "$expected" <<<"$totals"
 
       - name: Migration analyzer tests, count unchanged
         shell: bash
@@ -217,8 +223,12 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
+          # The SDK (with the .NET 11 runtime) and the .NET 9 and 10 runtimes: the smoke app runs on each framework the
+          # packages ship for (#67).
           global-json-file: global.json
-          dotnet-version: 10.0.x
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - uses: actions/setup-node@v7
         with:
