@@ -145,6 +145,56 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Rich text (issue #65, 2026-11-25)
+
+- **What landed** (the rich text family, the top of ISOMIG012 after #43), with Avalonia's names (#46):
+  - Avalonia's inlines as element records: `RunElement`, `SpanElement`, `BoldElement`, `ItalicElement`,
+    `UnderlineElement`, `LineBreakElement` and `InlineUIContainerElement`, under `InlineElement` (Reactor's
+    `RichTextInline`, `RichTextRun`, `RichTextLineBreak`, `RichTextInlineUIContainer`). Factories `Run`, `Span`, `Bold`,
+    `Italic`, `Underline`, `LineBreak` and `InlineUIContainer` (Reactor's `InlineUI`); a string is a run.
+  - `TextBlockElement.Inlines` (Avalonia's member) and `TextBlock(inlines)`.
+  - Reactor's `RichTextBlock` is `SelectableTextBlockElement` and `SelectableTextBlock(...)`, with `Inlines`, Reactor's
+    `Paragraphs` (kept) and `SelectionBrush` (Reactor's `SelectionHighlightColor`).
+  - `Paragraph(...)` keeps Reactor's name (`RichTextParagraph`): Avalonia's text has no blocks, so a paragraph is a
+    `Span`, and `Paragraphs` puts a `LineBreak` between them.
+- **Unlike upstream's:**
+  - Inlines are elements: they take a key and the text modifiers (`.FontSize`, `.Foreground`, `.Bold()`, `.Italic()`,
+    `.Underline()`, `.Strikethrough()`, `.LetterSpacing`, theme tokens, which follow the text block's theme). Upstream's
+    are plain records with `IsBold`, `IsItalic` and `IsStrikethrough`; a modifier an inline doesn't take is reported once
+    per inline type on the Isotope-UI event source.
+  - Each inline list is diffed as a panel's children: by key, else by position among the unkeyed; a matched inline is
+    updated in place (only changed values are written), a keyed one moved. Upstream rebuilds a RichTextBlock's blocks
+    unless their shape is unchanged, and keeps only inline UI across renders.
+  - An inline UI container's child is a child slot. The dirty path, the context check, unmount and the error boundary's
+    attachment check go through inlines to their text block.
+- **Avalonia, measured headless (12.1.6):**
+  - Writing `TextBlock.Text`, even `""`, clears its inlines; adding an inline to a text block with text turns the text
+    into a run. The reconciler writes one or the other.
+  - Any change to a text block's inlines (a run's text, a brush, a move) lays the text out again and takes each inline
+    UI child out of the visual tree and back: the control and its state survive, its keyboard focus doesn't. Upstream's
+    demo of a slider dragged inside text whose numbers change may lose the drag on Avalonia (real-window check: #73).
+  - `TextDecorations.Underline` and `.Strikethrough` are shared static collections; the `Underline` span is underlined
+    by default.
+- **Not done:** `Hyperlink` (no hyperlink inline in Avalonia; the migration points to `InlineUIContainer(HyperlinkButton(...))`),
+  `InlineUI(Func<FrameworkElement>)`, a paragraph's `Margin`, `TextIndent`, `TextAlignment` and `LineHeight`,
+  `IsTextSelectionEnabled`, `LineStackingStrategy`, and `CharacterSpacing` (reported with the conversion to `LetterSpacing`).
+- **Measured on upstream's samples** (`node tools/migration/measure-samples.mjs --out <empty temp folder>`: 36 projects,
+  358 files, upstream 561c5573; after the fixes, on main at a2dd42d and on this branch):
+
+  | | main | #65 |
+  |---|---|---|
+  | Files that build | 107 | 108 |
+  | Compile errors | 3,001 | 2,936 |
+  | Projects that build | 2 | 2 |
+  | Migration diagnostics left | 1,176 | 1,122 |
+  | ISOMIG012 (controls not ported) | 206 | 136 |
+
+  - ISOMIG012 lost 70: `Run` 39, `Paragraph` 14, `RichTextBlock` 9, `InlineUI` 8.
+  - Rich text left: `IsBold` 9 and `IsItalic` 2 (ISOMIG007, a hand fix with a note), `Hyperlink` 2 (ISOMIG012), and
+    `IsTextSelectionEnabled` 3 and `LineStackingStrategy` 2 on a selectable text block (ISOMIG013).
+  - No file that built before the fixes fails after them, and no `dotnet format` run failed.
+- **Tests:** 35 library tests and 3 migration tests, each proven to fail (30 deliberate breaks).
+
 ## MCP tool ready to publish (issue #68, 2026-11-25)
 
 - **The tool ships in the first release** (developer, 2026-11-25). `release.yml` now publishes all four packages.

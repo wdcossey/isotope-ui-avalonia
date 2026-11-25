@@ -100,30 +100,29 @@ projects (358 C# files), at the commit in `UPSTREAM.lock`.
 - A file counts as building when the compiler reports no error in it.
 - It also prints the commonest diagnostics and errors left.
 
-Measured on 2026-11-25, on main after #68. The build counts are those of #41–#44 and #49 (theme tokens, text and
-layout modifiers, named text styles, the next controls), unchanged since:
+Measured on 2026-11-25, with rich text (#65):
 
 | | Before the fixes | After |
 |---|---|---|
-| Files that build | 51 of 358 | 107 of 358 |
-| Compile errors | 13,699 | 3,001 |
+| Files that build | 51 of 358 | 108 of 358 |
+| Compile errors | 13,699 | 2,936 |
 | Projects that build | 1 of 36 | 2 of 36 |
 
 - No file that built before the fixes fails after them, and no `dotnet format` run failed.
 - The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
 - The two projects that build after are the hello-world app and the chat sample's model.
-- Diagnostics left: 1,176.
-  - 405 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
+- Diagnostics left: 1,122.
+  - 410 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
     `Resources` (14) and `SubtleButton` (14) on `ButtonElement`.
-  - 206 ISOMIG012: controls not ported yet. The commonest are `Run` (39), `Icon` (14), `Paragraph` (14) and
-    `ListView` (12).
+  - 136 ISOMIG012: controls not ported yet. The commonest are `Icon` (14), `ListView` (12) and `FontIcon` (10).
   - 199 ISOMIG002: Charting (159), Advanced (11), Docking (8), and smaller upstream namespaces.
   - 171 ISOMIG011 and 116 ISOMIG005: WinUI-only controls and types.
   - 57 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.
   - 6 ISOMIG010: Reactor names with no counterpart, each with what to do instead: NumberBox's `Range`,
     `SpinButtons` and header argument (#68).
-  - 3 ISOMIG007: a ScrollView's `ContentOrientation`, left for a hand fix.
+  - 14 ISOMIG007: shapes left for a hand fix, each with a note: rich text's `IsBold` (9) and `IsItalic` (2), and a
+    ScrollView's `ContentOrientation` (3).
 - Most compile errors left are names Isotope doesn't have: the largest groups are 264 CS0234 (`UI`), 128 CS0103
   (`Palette`), 91 CS0103 (`Brush`) and 90 CS0103 (`D3Charts`, from Charting).
 - The samples' other upstream projects (Charting, Advanced, Devtools…) and their NuGet packages are dropped, and the
