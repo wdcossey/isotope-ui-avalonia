@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- [WrapEvent] on a plain EventHandler event with an Action callback: the error is reported inside the generated file. Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <!-- [WrapEvent] on a plain EventHandler event with an Action callback: since #78, ISOTOPEGEN003 at the member and the event isn't wired (before, CS1501 inside the generated file). Built by run.mjs, which checks the outcome in Probes/probes.json. -->
   <ItemGroup>
     <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
   </ItemGroup>

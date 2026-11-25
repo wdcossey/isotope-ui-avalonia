@@ -155,7 +155,9 @@ public class GeneratorTests
             """, "ProbeBorderElement");
 
         Assert.Empty(errors);
-        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        // Tapped's args aren't RoutedEventArgs, so the descriptor doesn't wire OnTapped (#78 reports it); the skip
+        // members still count it.
+        Assert.Equal("ISOTOPEGEN002", Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error).Id);
         Assert.Contains("protected override bool HasCallbacks => this.@OnTapped is not null;", generated);
         Assert.Contains("protected override bool ShallowEqualsCore(global::Isotope.UI.Core.Element other)", generated);
         Assert.Contains("GetType() == typeof(ProbeBorderElement)", generated);
@@ -294,5 +296,169 @@ public class GeneratorTests
         Assert.NotNull(derived);
         Assert.DoesNotContain("HasCallbacks", derived);
         Assert.DoesNotContain("ShallowEqualsCore", derived);
+    }
+
+    // Runs the generator over source; returns its diagnostics, the hint names of the files it generated, and the
+    // compiler's errors in any generated file.
+    private static (IReadOnlyList<Diagnostic> Diagnostics, IReadOnlyList<string> Files, IReadOnlyList<Diagnostic> GeneratedErrors) CompileAll(string source)
+    {
+        var refs = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
+            .Concat([typeof(Element).Assembly.Location, typeof(global::Avalonia.Controls.TextBox).Assembly.Location,
+                typeof(global::Avalonia.AvaloniaObject).Assembly.Location])
+            .Distinct()
+            .Select(p => MetadataReference.CreateFromFile(p));
+        var parse = new CSharpParseOptions(LanguageVersion.Preview);
+        var compilation = CSharpCompilation.Create("Probe", [CSharpSyntaxTree.ParseText(source, parse)],
+            refs, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var driver = CSharpGeneratorDriver.Create([new WrapperGenerator().AsSourceGenerator()], parseOptions: parse)
+            .RunGeneratorsAndUpdateCompilation(compilation, out var output, out _);
+        var result = driver.GetRunResult();
+        var generated = result.GeneratedTrees.ToHashSet();
+        var errors = output.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error && d.Location.SourceTree is { } t && generated.Contains(t))
+            .ToList();
+        return (result.Diagnostics, result.GeneratedTrees.Select(t => Path.GetFileName(t.FilePath)).ToList(), errors);
+    }
+
+    // A control whose event is a plain EventHandler (not routed), as spike J's Chip; ATTRS and CALLBACK vary.
+    private const string ChipRecord = """
+        using Isotope.UI.Core;
+        using Isotope.UI.Wrappers;
+        namespace Probe;
+        public class Chip : Avalonia.Controls.ContentControl
+        {
+            public event System.EventHandler? Closed;
+            public void Close() => Closed?.Invoke(this, System.EventArgs.Empty);
+        }
+        [GenerateReactorDescriptor(typeof(Chip))]
+        ATTRS
+        public partial record ChipElement(Element Content) : Element
+        {
+            public CALLBACK OnClosed { get; init; }
+            internal System.Action<Chip>[] Setters { get; init; } = [];
+        }
+        """;
+
+    private static string Chip(string attrs, string callback) => ChipRecord.Replace("ATTRS", attrs).Replace("CALLBACK", callback);
+
+    [Fact]
+    public void A_callback_the_descriptor_never_wires_is_reported_at_the_member()
+    {
+        // #78, gap 2: a plain EventHandler event is neither routed nor [WrapEvent], so upstream dropped OnClosed silently.
+        var source = Chip("", "System.Action?");
+        var (diagnostics, generated, errors) = Compile(source, "ChipElement");
+
+        var unwired = Assert.Single(diagnostics, d => d.Id == "ISOTOPEGEN002");
+        Assert.Equal(DiagnosticSeverity.Error, unwired.Severity);
+        Assert.Contains("'OnClosed'", unwired.GetMessage());
+        Assert.Contains("[WrapEvent(\"Closed\")]", unwired.GetMessage());
+        Assert.Equal(source.Split('\n').ToList().FindIndex(l => l.Contains("OnClosed { get;")), unwired.Location.GetLineSpan().StartLinePosition.Line);
+        Assert.DoesNotContain(diagnostics, d => d.Id is "ISOTOPEGEN001" or "ISOTOPEGEN003");
+        Assert.NotNull(generated);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void A_WrapEvent_callback_that_cant_take_the_args_is_reported_at_the_member_not_in_the_generated_file()
+    {
+        // #78, gap 3: [WrapEvent] passes the whole args, so an Action callback gave CS1501 inside the descriptor.
+        var source = Chip("[WrapEvent(\"Closed\")]", "System.Action?");
+        var (diagnostics, generated, errors) = Compile(source, "ChipElement");
+
+        var mismatch = Assert.Single(diagnostics, d => d.Id == "ISOTOPEGEN003");
+        Assert.Equal(DiagnosticSeverity.Error, mismatch.Severity);
+        Assert.Contains("'Action<EventArgs>'", mismatch.GetMessage());
+        Assert.Equal(source.Split('\n').ToList().FindIndex(l => l.Contains("OnClosed { get;")), mismatch.Location.GetLineSpan().StartLinePosition.Line);
+        Assert.DoesNotContain(diagnostics, d => d.Id == "ISOTOPEGEN002");
+        Assert.Empty(errors);
+        Assert.DoesNotContain("live.OnClosed", generated);
+    }
+
+    [Theory]
+    [InlineData("[WrapEvent(\"Closed\")]", "System.Action<System.EventArgs>?", "live.OnClosed?.Invoke(args)")]
+    [InlineData("[WrapEvent(\"Closed\")]", "System.Action<object>?", "live.OnClosed?.Invoke(args)")]
+    [InlineData("[WrapManual(\"OnClosed\")]", "System.Action?", null)]
+    public void A_callback_that_is_wired_or_taken_over_is_not_reported(string attrs, string callback, string? wiring)
+    {
+        var source = Chip(attrs, callback);
+        if (attrs.Contains("WrapManual"))
+            source += "\npartial record ChipElement { private static partial Isotope.UI.Core.V1Protocol.Descriptor.ControlDescriptor<ChipElement, Chip> Customize(Isotope.UI.Core.V1Protocol.Descriptor.ControlDescriptor<ChipElement, Chip> d) => d; }";
+        var (diagnostics, generated, _) = Compile(source, "ChipElement");
+
+        Assert.DoesNotContain(diagnostics, d => d.Id is "ISOTOPEGEN002" or "ISOTOPEGEN003");
+        if (wiring is not null) Assert.Contains(wiring, generated);
+    }
+
+    [Fact]
+    public void A_routed_callback_and_a_controlled_value_callback_are_not_reported()
+    {
+        var (diagnostics, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Button))]
+            public partial record ProbeButtonElement : Element
+            {
+                public System.Action? OnClick { get; init; }
+                internal System.Action<Avalonia.Controls.Button>[] Setters { get; init; } = [];
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Slider))]
+            public partial record ProbeSliderElement(double Value = 0) : Element
+            {
+                public System.Action<double>? OnValueChanged { get; init; }
+                internal System.Action<Avalonia.Controls.Slider>[] Setters { get; init; } = [];
+            }
+            """, "ProbeButtonElement");
+
+        Assert.DoesNotContain(diagnostics, d => d.Id is "ISOTOPEGEN002" or "ISOTOPEGEN003");
+        Assert.Contains("OnClick", generated);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void A_record_without_Setters_gets_a_descriptor_that_doesnt_read_them()
+    {
+        // #78, gap 3: the descriptor read e.Setters unconditionally (CS1061 inside the generated file).
+        var (diagnostics, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.TextBox))]
+            public partial record PlainTextBoxElement(string? PlaceholderText = null) : Element;
+            """, "PlainTextBoxElement");
+
+        Assert.Empty(errors);
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("c.PlaceholderText = v", generated);
+        Assert.DoesNotContain("GetSetters", generated);
+        // A record with Setters still has them read.
+        Assert.Contains("GetSetters = static e => e.Setters", Run("").Generated);
+    }
+
+    [Theory]
+    [InlineData("WrapDecorator", "[WrapDecorator(nameof(Create))]")]
+    [InlineData("WrapPolymorphic", "[WrapPolymorphic(nameof(Create))]")]
+    public void A_decorator_record_is_reported_at_the_record_and_nothing_is_generated(string name, string attribute)
+    {
+        // #78, gap 3: the handler these generate calls engine members Isotope doesn't have (CS0117 inside it).
+        var source = $$"""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.TextBox))]
+            {{attribute}}
+            public partial record HandMadeElement(string? Text = null) : Element
+            {
+                static Avalonia.Controls.TextBox Create(HandMadeElement e) => new() { Text = e.Text };
+            }
+            """;
+        var (diagnostics, files, errors) = CompileAll(source);
+
+        var unsupported = Assert.Single(diagnostics, d => d.Id == "ISOTOPEGEN004");
+        Assert.Equal(DiagnosticSeverity.Error, unsupported.Severity);
+        Assert.Contains("[" + name + "]", unsupported.GetMessage());
+        Assert.Equal(source.Split('\n').ToList().FindIndex(l => l.Contains(name)), unsupported.Location.GetLineSpan().StartLinePosition.Line);
+        Assert.DoesNotContain(files, f => f.StartsWith("HandMadeElement", StringComparison.Ordinal));
+        Assert.Empty(errors);
     }
 }

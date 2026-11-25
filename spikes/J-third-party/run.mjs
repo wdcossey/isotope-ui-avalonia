@@ -90,7 +90,9 @@ try {
         continue;
       }
       const missing = probe.diagnostics.filter((id) => !here.some((d) => d.id === id && d.severity === 'error' && (!probe.inGenerated || d.file.endsWith('.g.cs'))));
+      const inGenerated = probe.atRecord ? here.filter((d) => d.severity === 'error' && d.file.endsWith('.g.cs')).map((d) => d.id) : [];
       if (r.status === 0 || missing.length) problems.push('probe ' + probe.name + ' ' + framework + ': expected ' + probe.diagnostics.join(', ') + (probe.inGenerated ? ' in a generated file' : '') + ', missing ' + (missing.join(', ') || 'a failing exit'));
+      else if (inGenerated.length) problems.push('probe ' + probe.name + ' ' + framework + ': expected errors at the record only, got ' + inGenerated.join(', ') + ' in a generated file');
       else ok.push(framework);
     }
     const ids = [...new Set(found.map((d) => d.id))].join(', ') || 'none';
