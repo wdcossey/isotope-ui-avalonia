@@ -294,6 +294,31 @@ public sealed class SampleAppTests : IDisposable
         Assert.Contains("Pane closed", Texts(page));
     }
 
+    // A text block's text, from its inlines when it has some (#65).
+    private static string TextOf(TextBlock block) => block.Inlines is { Count: > 0 } inlines ? inlines.Text ?? "" : block.Text ?? "";
+
+    [AvaloniaFact]
+    public void Rich_text_page_likes_from_a_button_in_the_text_and_rotates_its_keyed_runs()
+    {
+        var (host, window) = Open();
+        var page = Page(host, "Rich text");
+        var blocks = All<TextBlock>(page);
+        Assert.Contains(blocks, b => TextOf(b) == "Rich text is bold, italic, underlined, struck through and coloured, in one text block.");
+
+        Click(Labelled<Button>(page, "Like")); // a button in the flow of the text, clicked where it is laid out
+        Assert.Contains(All<TextBlock>(page), b => TextOf(b).EndsWith(" liked 1 times.", StringComparison.Ordinal));
+
+        var colours = All<TextBlock>(page).Single(b => TextOf(b) == "Red Green Blue ");
+        var runs = colours.Inlines!.ToArray();
+        Click(Labelled<Button>(page, "Rotate the colours"));
+        Assert.Equal("Green Blue Red ", TextOf(colours));
+        Assert.Equal([runs[1], runs[2], runs[0]], colours.Inlines!.ToArray());
+
+        var selectable = All<SelectableTextBlock>(page).Single();
+        Assert.StartsWith("Selectable text. Drag over", TextOf(selectable));
+        Save(window, "sample-rich-text.png");
+    }
+
     [AvaloniaFact]
     public void Errors_page_throw_shows_the_fallback_retry_recovers_and_the_outside_counter_keeps_its_state()
     {

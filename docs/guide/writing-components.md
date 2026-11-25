@@ -43,7 +43,9 @@ no counterpart, and for the stack shortcuts `VStack` and `HStack`. Factory param
 
 | Factory | Element | Avalonia control |
 |---|---|---|
-| `TextBlock(text)` | `TextBlockElement` | `TextBlock` |
+| `TextBlock(text)`, `TextBlock(inlines)` | `TextBlockElement` | `TextBlock` (text, or `Inlines`: see rich text below) |
+| `SelectableTextBlock(text)`, `SelectableTextBlock(inlines)`, `SelectableTextBlock(paragraphs)` | `SelectableTextBlockElement` | `SelectableTextBlock` (Reactor's `RichTextBlock`) |
+| `Run(text)`, `Span(...)`, `Bold(...)`, `Italic(...)`, `Underline(...)`, `LineBreak()`, `InlineUIContainer(child)`, `Paragraph(...)` | `RunElement`, `SpanElement`, …, `RichTextParagraph` | Avalonia's inlines (`Run`, `Span`, …); a paragraph is a `Span` |
 | `Button(content, onClick)`, `Button(command)` | `ButtonElement` | `Button` (`content` is a string or any element) |
 | `ToggleButton(content, isChecked, onIsCheckedChanged)`, `ThreeStateToggleButton(content, isChecked, onIsCheckedChanged)`, `ToggleButton(command, isChecked)` | `ToggleButtonElement` | `ToggleButton` |
 | `RepeatButton(content, onClick)`, `RepeatButton(command)` | `RepeatButtonElement` | `RepeatButton` |
@@ -178,6 +180,34 @@ public static Element Notice(string title, string body, bool urgent, Action dism
 > **Coming from Reactor?** `TextBlockElement.Weight` is `FontWeight`, and its `HorizontalAlignment` member is the
 > `.HorizontalAlignment(...)` modifier. A text block has no `IsTextSelectionEnabled` (Avalonia's `SelectableTextBlock` is another
 > control), and no `CharacterSpacing` or `TextDecorations` yet.
+
+Rich text is a text block made of inlines: `TextBlock("Hello, ", Bold("world"))`, where a string is a run. The inlines
+are Avalonia's: `Run`, `Span`, `Bold`, `Italic`, `Underline`, `LineBreak`, and `InlineUIContainer(element)`, which puts an
+element in the flow of the text. They take the text modifiers (`.FontSize`, `.Foreground`, `.Bold()`, `.Italic()`,
+`.Underline()`, `.Strikethrough()`, `.LetterSpacing`, …) and a key, as children do: a render updates each inline in place,
+and a keyed one moves with its key. An element in an inline keeps its state. `SelectableTextBlock(...)` is text the user
+can select and copy, made of inlines, or of Reactor's paragraphs, each on a line of its own:
+
+<!-- snippet: rich-text -->
+```csharp
+public static Element ReleaseNote(RenderContext ctx)
+{
+    var (likes, setLikes) = ctx.UseState(0);
+    return VStack(
+        TextBlock("Version 2 is ", Bold("out"), ". Liked ", Run($"{likes}").Foreground("SeaGreen"), " times ",
+            InlineUIContainer(Button("Like", () => setLikes(likes + 1)))),
+        SelectableTextBlock(
+            Paragraph(Italic("New: "), "rich text, as runs, spans and line breaks."),
+            Paragraph("Select this text to copy it.").FontSize(12)));
+}
+```
+
+> **Coming from Reactor?** `RichTextBlock` is `SelectableTextBlock`, which is always selectable, and `InlineUI` is
+> `InlineUIContainer`. A run's `IsBold`, `IsItalic` and `IsStrikethrough` are `.Bold()`, `.Italic()` and `.Strikethrough()`
+> (Avalonia's `FontWeight`, `FontStyle` and `TextDecorations`). Avalonia's text has no blocks, so a paragraph is a span on a
+> line of its own, with no `Margin`, `TextIndent`, `TextAlignment` or `LineHeight`. There is no `Hyperlink` inline: put a
+> `HyperlinkButton` in an `InlineUIContainer`. Avalonia lays the text out again whenever one of its inlines changes, and
+> an element inside keeps its state but loses focus.
 
 Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:
 `.Padding(top: 8)`), `.WithBorder("Gray", 2)`, `.BorderBrush(...)`, `.BorderThickness(...)`, `.CornerRadius(...)`,

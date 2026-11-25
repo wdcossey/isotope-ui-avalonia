@@ -11,7 +11,8 @@ window still has to show what they can't: hover tooltips appearing, menus opened
 keyboard input, and how the tabs and the split view look and animate. The checklist below is that run.
 
 **Last run:** 2026-11-24, Windows, at `3678918` (#34): every line passed. Linux and macOS haven't been run in a real
-window yet. Before a new run, clear the ticks.
+window yet. The Rich text page (#65) came later: its lines, and the two that list the pages, haven't been run. Before a
+new run, clear the ticks.
 
 ## Checklist
 
@@ -19,9 +20,9 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### The window and its menus
 
-- [x] The window opens titled "Isotope samples", with a menu bar (Go, View) above six tabs: Basics, Buttons, Menus,
-  Numbers, Split view, Errors. Basics is selected.
-- [x] Click **Go** with the mouse → its menu drops down, listing the six pages with a radio mark on Basics.
+- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above seven tabs on one line: Basics,
+  Buttons, Menus, Numbers, Split view, Rich text, Errors. Basics is selected.
+- [ ] Click **Go** with the mouse → its menu drops down, listing the seven pages with a radio mark on Basics.
 - [x] Choose **Go > Numbers** → the Numbers tab is selected. Click the **Buttons** tab, then open **Go** again → the
   radio mark is on Buttons.
 - [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
@@ -77,6 +78,18 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 - [x] Pick **Overlay** in the drop-down → the open pane now lies over the content. Click the content → the pane closes
   by itself (a light dismiss) and **Pane** is released: the state followed the control.
 - [x] **Compact inline** and **Compact overlay** → a closed pane leaves a narrow strip.
+
+### Rich text
+
+- [ ] The first line reads "Rich text is **bold**, *italic*, underlined, struck through and coloured, in one text block.",
+  each word styled as it says (underlined underlined, struck through crossed out, coloured green).
+- [ ] The **Like** button sits in the second line of text, on its baseline; a click → "liked 1 times", and the button is
+  still in place.
+- [ ] Tab to **Like** and press Space → the count goes up. (Avalonia lays the text out again when it changes, so the
+  button loses keyboard focus after each press: note what happens.)
+- [ ] "Red Green Blue", each in its colour and bold. **Rotate the colours** → "Green Blue Red", then "Blue Red Green".
+- [ ] Drag over the two lines under the button → the text is selected across both lines; Ctrl+C copies it (paste it
+  somewhere: two lines). The second line is smaller.
 
 ### Errors
 
