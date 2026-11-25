@@ -86,7 +86,7 @@ public partial record ExpanderElement(
 
     internal Action<Expander>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsExpandedChanged is not null;
+    protected internal override bool HasCallbacks => OnIsExpandedChanged is not null;
 
     // As upstream's: Content is the single content slot, an element header a secondary slot, and IsExpanded controlled. Unlike upstream's,
     // the controlled entry listens to IsExpanded's own change: Avalonia raises Expanding and Collapsing before the

@@ -349,6 +349,15 @@
       ]
     },
     {
+      "id": "gen-skip-members",
+      "find": "(\\r?\\n)(        var hint = descriptorOnly \\? )",
+      "replace": "$1        if (descriptorOnly) source += SkipMembers(element, compilation); // Isotope (#77): a library's record skips like a built-in$1$2",
+      "why": "Our rule (#77): in descriptor-only mode a record outside the library that declares Element gets ShallowEqualsCore and HasCallbacks (WrapperGenerator.Avalonia.cs), so it is skipped when it equals the last render's, as a built-in record is (upstream's rule). The library's own records get nothing: their Element.ShallowEquals arms decide.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
       "id": "gen-manual-content-slot",
       "find": "(\\r?\\n)(            if \\(contentProp is not null\\)\\r?\\n            \\{\\r?\\n                if \\(authorDeclared\\.Contains\\(contentProp\\)\\))",
       "replace": "$1            if (contentProp is not null && manual.Contains(contentProp)) contentProp = null; // Isotope: [WrapManual] content$1$2",

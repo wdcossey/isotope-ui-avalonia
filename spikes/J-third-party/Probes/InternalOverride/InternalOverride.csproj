@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- What the built-in records declare that a library's cannot: Element.HasCallbacks is internal (CS0115). Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <!-- A library's record deciding its own skip (#77): it overrides the protected HasCallbacks and ShallowEqualsCore, and the generator writes neither (CS0115 before #77, when HasCallbacks was internal). Built by run.mjs, which checks the outcome in Probes/probes.json. -->
   <ItemGroup>
     <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
     <ProjectReference Include="..\..\Vendor.Controls\Vendor.Controls.csproj" />

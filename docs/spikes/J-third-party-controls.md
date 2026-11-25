@@ -5,6 +5,12 @@ the Fluent theme, and Isotope's packages packed from this branch (`0.1.0-preview
 `bfa57e1`). Code: `spikes/J-third-party/` (its README says how to run it). Measured numbers say how they were measured;
 judgements are marked [J].
 
+**Since the spike:** gaps 1 and 6 are closed by #77 (2026-11-25). A library's element is skipped as a built-in one is,
+through `Element.ShallowEqualsCore` and `HasCallbacks`, which the bundled generator writes (gap 1). A token is resolved
+for a library's control with no new API (gap 6). The spike's two `Gap_vendor_...` tests became
+`Vendor_a_rejected_edit_stays_...` and `Vendor_an_unchanged_element_is_skipped`, and the `InternalOverride` and
+`InternalEquality` probes were updated. The measurements below are the spike's own, from before #77, except where marked.
+
 ## Answer
 
 - **Yes: a third party can wrap its own controls using only Isotope's published packages,** and they behave like
@@ -94,11 +100,11 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 |---|---|---|
 | `Gen001` | A record member with no counterpart on the control | **ISOTOPEGEN001**, an error at the record, as inside the repo |
 | `NoSetters` | A record with no `Setters` member | CS1061 **inside the generated file**: the descriptor reads `e.Setters` unconditionally |
-| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never mentions `OnClosed`: the callback is silently dropped |
+| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never wires `OnClosed`: the callback is silently dropped (since #77 the generated skip members name it, so the probe looks for the descriptor's wiring, `el.OnClosed`) |
 | `WrapEventMismatch` | The same with `[WrapEvent("Closed")]` | CS1501 inside the generated file: `[WrapEvent]` passes the args, so the callback must be `Action<EventArgs>` |
 | `Decorator` | `[WrapDecorator]` (a control made and changed by the author's own methods) | CS0117 inside the generated file: `Reconciler.SetElementTag`, `DetachReactorState` and `ControlRegistry.RegisterDecorator` don't exist (decorators were left out in Spike F, tier 3) |
-| `InternalOverride` | `override HasCallbacks`, as built-in records do | CS0115: internal |
-| `InternalEquality` | Calling `Element.ShallowEquals` | CS0117: internal |
+| `InternalOverride` | `override HasCallbacks`, as built-in records do | CS0115: internal. **Since #77:** the record overrides the protected `HasCallbacks` and `ShallowEqualsCore` and builds clean, and the generator writes neither |
+| `InternalEquality` | Calling `Element.ShallowEquals` | CS0117: internal. **Since #77:** still CS0117, and CS0122 for a call to the protected `ShallowEqualsCore` from outside the record |
 | `NameClash` | A second `Card(Element)` factory beside Isotope's, and `RatingBar.ValueProperty` with the factory imported | CS0121 (ambiguous call) and CS0119 (the factory hides the control type) |
 
 `InternalOverride` and `InternalEquality` are two probes because Roslyn binds no method body once a declaration has an
@@ -106,7 +112,7 @@ error: in one project only CS0115 was reported.
 
 ## Gaps, each with the change it needs
 
-1. **No skip for a third party's element (behaviour).** `Element.ShallowEquals` ends in `_ => false`, and its arms are
+1. **Closed by #77.** **No skip for a third party's element (behaviour).** `Element.ShallowEquals` ends in `_ => false`, and its arms are
    internal, one per built-in record. Measured: a rating whose handler rejects the user's 4 is back at 2 after an
    unrelated render, where a built-in slider in the same tree keeps the rejected 30; an unchanged rating element is
    updated on all 11 of 11 renders. Counted by its `.Set`, made once outside the render, so each render's element is a
@@ -142,10 +148,16 @@ error: in one project only CS0115 was reported.
    - **Change:** docs: check a library's factory names against Isotope's, and alias the control type
      (`using RatingBarControl = Vendor.Controls.RatingBar;`). The spike names its factory class `VendorFactories`, not
      `Factories`, so a file importing both namespaces can still name each class [J: CS0104 not probed].
-6. **Resolving a token for one control is internal.** `ThemeRef.Resolve(string, Control)` is internal; the public
+6. **Closed by #77, with no new API.** **Resolving a token for one control is internal.** `ThemeRef.Resolve(string, Control)` is internal; the public
    overload resolves for the app's light or dark theme only. Binding a token to a brush property needs neither (gap-free,
    above); a library resolving a token itself, in a setter, does.
    - **Change:** make that overload public [J: small]. Not needed for anything the spike's controls do.
+   - **#77:** no new API. A library binds a token to its control's own brush property (`.Accent(Theme.Accent)`, through
+     the public `Element.ThemeBindings`), which follows a theme switch with no render. A setter runs only on a render, so a
+     token resolved there would keep the old theme's brush after a switch. To read a token's brush once, the public
+     `ThemeRef.Resolve(key, isDark)` takes the control's variant: `A_token_resolves_for_a_controls_theme_...` checks that it
+     gives the bound brush. It doesn't see the resources of the control's subtree or a host's stand-in colour values,
+     which the internal overload does. That case waits until a library needs it.
 
 Not gaps, but traps for the guide: reference members are written only when set unless the record sets
 `ClearValueOnUnset = true` (the break above shows the difference); and the generated descriptor writes the one-way

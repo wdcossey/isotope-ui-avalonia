@@ -59,9 +59,22 @@ public abstract record Element
     /// <summary>
     /// True when the element carries an event-handler delegate. A skipped update still refreshes the
     /// control's mounted element so its handlers dispatch to the current render's closures, and a change
-    /// in callback presence declines the skip.
+    /// in callback presence declines the skip. Protected (#77) so a library's record can say so: the wrappers generator
+    /// writes it for a <c>[GenerateReactorDescriptor]</c> record outside this library.
     /// </summary>
-    internal virtual bool HasCallbacks => false;
+    protected internal virtual bool HasCallbacks => false;
+
+    /// <summary>
+    /// Whether this element and <paramref name="other"/>, an element of the same type, are identical for rendering in
+    /// the members this type declares, so an update can be skipped (#77). <see cref="ShallowEquals"/> calls it for a type
+    /// it has no arm for, after the shared checks (type, key, modifiers, transition, resource overrides, theme bindings,
+    /// context values, attached data). False by default: such an element is updated on every render.
+    /// <para>The rule is the built-in records': compare callbacks by presence (and say whether any is present in
+    /// <see cref="HasCallbacks"/>), child elements, arrays and collections by reference, other values by value. The
+    /// wrappers generator writes it for a <c>[GenerateReactorDescriptor]</c> record outside this library, over every member
+    /// the record declares, unless the record declares it itself.</para>
+    /// </summary>
+    protected virtual bool ShallowEqualsCore(Element other) => false;
 
     /// <summary>
     /// True when the child can be skipped entirely: structurally identical, not theme-sensitive, and with
@@ -157,7 +170,8 @@ public abstract record Element
             (NumericUpDownElement x, NumericUpDownElement y) => x.Value.Equals(y.Value) && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && x.Increment == y.Increment && x.PlaceholderText == y.PlaceholderText && x.FormatString == y.FormatString
                 && x.ShowButtonSpinner == y.ShowButtonSpinner && ReferenceEquals(x.Setters, y.Setters),
-            _ => false,
+            // #77: a type with no arm here (a library's own record) decides for itself; false unless it overrides.
+            _ => a.ShallowEqualsCore(b),
         };
     }
 

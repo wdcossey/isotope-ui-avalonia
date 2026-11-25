@@ -136,4 +136,163 @@ public class GeneratorTests
         Assert.Contains("Optional<global::Avalonia.Media.IBrush>.Of(e.BorderBrush)", generated);
         Assert.Contains("global::Avalonia.Controls.Border.BorderBrushProperty", generated);
     }
+
+    // #77: a record outside the library gets the skip members, over each member it declares, as the built-in arms compare.
+    [Fact]
+    public void A_record_outside_the_library_gets_ShallowEqualsCore_and_HasCallbacks()
+    {
+        var (diagnostics, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public Avalonia.Media.IBrush? Background { get; init; }
+                public System.Action? OnTapped { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+
+        Assert.Empty(errors);
+        Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("protected override bool HasCallbacks => this.@OnTapped is not null;", generated);
+        Assert.Contains("protected override bool ShallowEqualsCore(global::Isotope.UI.Core.Element other)", generated);
+        Assert.Contains("GetType() == typeof(ProbeBorderElement)", generated);
+        Assert.Contains("global::System.Object.ReferenceEquals(this.@Child, o.@Child)", generated);
+        Assert.Contains("global::System.Object.ReferenceEquals(this.@Setters, o.@Setters)", generated);
+        Assert.Contains("(this.@OnTapped is null) == (o.@OnTapped is null)", generated);
+        Assert.Contains("EqualityComparer<global::Avalonia.Media.IBrush>.Default.Equals(this.@Background, o.@Background)", generated);
+    }
+
+    [Fact]
+    public void A_record_that_declares_its_own_skip_members_gets_none()
+    {
+        var (_, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public System.Action? OnTapped { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+                protected override bool HasCallbacks => OnTapped is not null;
+                protected override bool ShallowEqualsCore(Element other) => false;
+            }
+            """, "ProbeBorderElement");
+
+        Assert.Empty(errors);
+        Assert.NotNull(generated);
+        Assert.DoesNotContain("ShallowEqualsCore", generated);
+        Assert.DoesNotContain("HasCallbacks", generated);
+    }
+
+    // #77, what can't be compared safely: another delegate by reference, a computed property not at all, and nothing
+    // generated for a struct holding an element, a base's member out of reach, or a HasCallbacks a base declares.
+    [Fact]
+    public void The_skip_members_compare_only_what_they_safely_can()
+    {
+        var (_, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public System.Func<double, string>? Format { get; init; }
+                public int Computed => Child is null ? 0 : 1;
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(errors);
+        Assert.Contains("global::System.Object.ReferenceEquals(this.@Format, o.@Format)", generated);
+        Assert.DoesNotContain("Computed", generated);
+
+        var (_, withOptional, optionalErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public Isotope.UI.Optional<Element> Header { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(optionalErrors);
+        Assert.DoesNotContain("ShallowEqualsCore", withOptional);
+
+        // A base in the same assembly declares HasCallbacks; a member hides the base's; a record member holds an element.
+        var (_, overBase, overBaseErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public abstract record BaseElement : Element
+            {
+                public System.Action? OnTapped { get; init; }
+                protected override bool HasCallbacks => OnTapped is not null;
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : BaseElement
+            {
+                public System.Action? OnOther { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(overBaseErrors);
+        Assert.DoesNotContain("ShallowEqualsCore", overBase);
+        Assert.DoesNotContain("HasCallbacks", overBase);
+
+        var (_, holder, holderErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public record HeaderData(string Title, Element Icon);
+            public struct Slot { public Element E; }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public HeaderData? Header { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeSlotElement(Element? Child) : Element
+            {
+                public Slot Slot { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(holderErrors);
+        Assert.Contains("global::System.Object.ReferenceEquals(this.@Header, o.@Header)", holder);
+        var (_, slot, _) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public struct Slot { public Element E; }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeSlotElement(Element? Child) : Element
+            {
+                public Slot Slot { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeSlotElement");
+        Assert.DoesNotContain("ShallowEqualsCore", slot);
+
+        // SliderElement declares HasCallbacks, and its Setters is internal to the library. (The descriptor itself reads
+        // e.Setters, which a record outside the library can't reach: CS1061, as before #77.)
+        var (_, derived, _) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Slider))]
+            public partial record ProbeSliderElement : SliderElement
+            {
+                public System.Action<double>? OnOther { get; init; }
+            }
+            """, "ProbeSliderElement");
+        Assert.NotNull(derived);
+        Assert.DoesNotContain("HasCallbacks", derived);
+        Assert.DoesNotContain("ShallowEqualsCore", derived);
+    }
 }

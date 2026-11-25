@@ -56,7 +56,7 @@ public partial record AutoCompleteBoxElement(
 
     internal Action<AutoCompleteBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnTextChanged is not null || OnQuerySubmitted is not null || OnSuggestionChosen is not null;
+    protected internal override bool HasCallbacks => OnTextChanged is not null || OnQuerySubmitted is not null || OnSuggestionChosen is not null;
 
     // Dropped: the controlled text's echo (the value-diff arm, as upstream's), a change that leaves the text as it was
     // (the echo Avalonia raises when it fills a template's text box, which the mount write's lack of an arm would let

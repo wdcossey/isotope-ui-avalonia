@@ -33,7 +33,7 @@ public partial record TabControlElement(TabItemData[] Items) : Element
 
     internal Action<TabControl>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnSelectedIndexChanged is not null;
+    protected internal override bool HasCallbacks => OnSelectedIndexChanged is not null;
 
     // SelectionChanged is a bubbling routed event on Avalonia: a ComboBox or ListBox inside a tab raises it on the
     // TabControl too, so only the TabControl's own selection is reported.
@@ -145,7 +145,7 @@ public partial record SplitViewElement(Element? Pane = null, Element? Content = 
 
     internal Action<SplitView>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsPaneOpenChanged is not null;
+    protected internal override bool HasCallbacks => OnIsPaneOpenChanged is not null;
 
     // PaneOpening and PaneClosing are bubbling routed events on Avalonia: a SplitView in the pane raises them on this one
     // too, so only this control's own are reported. Avalonia raises them inside an IsPaneOpen write, which the engine

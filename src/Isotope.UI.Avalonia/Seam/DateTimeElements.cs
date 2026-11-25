@@ -41,7 +41,7 @@ public partial record DatePickerElement(
 
     internal Action<DatePicker>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnSelectedDateChanged is not null;
+    protected internal override bool HasCallbacks => OnSelectedDateChanged is not null;
 
     // The year bounds are written before the date, so a first date lands in its range, and together, in the order that
     // keeps MinYear at or before MaxYear (Avalonia throws otherwise). The control's value is nullable and the record's
@@ -111,7 +111,7 @@ public partial record TimePickerElement(
 
     internal Action<TimePicker>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnSelectedTimeChanged is not null;
+    protected internal override bool HasCallbacks => OnSelectedTimeChanged is not null;
 
     // ClockIdentifier is an int on the record and a string on Avalonia's control (upstream leaves it unmapped, because
     // WinUI's is a string too; here it is converted rather than dropped). The time is nullable on the control.
