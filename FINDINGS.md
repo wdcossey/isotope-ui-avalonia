@@ -145,7 +145,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
-## Generator diagnostics for library records (issue #78, 2026-11-26)
+## Generator diagnostics for library records (issue #78, 2026-11-25)
 
 Spike J's gaps 2 and 3 are closed in our generator partial (`WrapperGenerator.Avalonia.cs`, five `gen-*` transform rules).
 In descriptor-only mode:
