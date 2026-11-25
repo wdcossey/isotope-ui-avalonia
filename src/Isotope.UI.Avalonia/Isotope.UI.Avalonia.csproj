@@ -59,7 +59,8 @@
   <Target Name="_IsotopePackGenerator" DependsOnTargets="ResolveProjectReferences">
     <ItemGroup>
       <_IsotopeGenerator Include="@(Analyzer)" Condition="'%(Filename)%(Extension)' == 'Isotope.UI.Avalonia.Generators.dll'" />
-      <!-- analyzers/ is shared by every framework, so it is added from one of them (#67; each would give NU5118). -->
+      <!-- analyzers/ is shared by every framework, so it is added from one of them (#67; each would give NU5118). If
+           net10.0 ever leaves TargetFrameworks, name another here: tools/packaging reports a package without it. -->
       <TfmSpecificPackageFile Include="@(_IsotopeGenerator)" PackagePath="analyzers/dotnet/cs" Condition="'$(TargetFramework)' == 'net10.0'" />
     </ItemGroup>
     <Error Condition="'@(_IsotopeGenerator)' == ''" Text="The wrappers generator (Isotope.UI.Avalonia.Generators.dll) was not found among the analyzers: the package would ship without it." />

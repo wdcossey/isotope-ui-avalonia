@@ -62,7 +62,8 @@ upstream's samples (#35); animation; and published packages (they build and are 
 
 ## Try it
 
-You need the **.NET 11 SDK** (11.0.100 or later, pinned in `global.json`; the packages target `net9.0`, `net10.0` and `net11.0`; the samples and tools `net10.0`, the LTS) and git.
+You need the **.NET 11 SDK** (11.0.100 or later, pinned in `global.json`; the packages target `net9.0`, `net10.0` and `net11.0`; the samples and tools `net10.0`, the LTS) and git. The library's tests run on each of the three frameworks, so they
+also need the .NET 9 and 10 runtimes; with the SDK alone, add `-f net11.0`.
 
 ```sh
 git clone <this repository> isotope && cd isotope
@@ -131,7 +132,7 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1192 tests; needs no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1192 tests on each of net9.0, net10.0, net11.0; no upstream/)
 dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (46 tests)
 dotnet test tests/Isotope.UI.Mcp.Tests                   # the MCP server (47 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms

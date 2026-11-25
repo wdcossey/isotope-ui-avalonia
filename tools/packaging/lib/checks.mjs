@@ -82,7 +82,8 @@ export function parseNuspec(text) {
     repository: repoTag ? attrs(repoTag) : undefined,
     dependencies: [...meta.matchAll(/<dependency\s[^>]*\/?>/g)].map((m) => attrs(m[0])),
     // One per target framework (an empty one is self-closing): the framework and the ids it depends on.
-    dependencyGroups: [...meta.matchAll(/<group\s([^>]*?)(?:\/>|>([\s\S]*?)<\/group>)/g)].map((g) => ({
+    // Only <dependencies>' groups: frameworkReferences and contentFiles have groups of their own.
+    dependencyGroups: [...(meta.match(/<dependencies>([\s\S]*?)<\/dependencies>/)?.[1] ?? '').matchAll(/<group\s([^>]*?)(?:\/>|>([\s\S]*?)<\/group>)/g)].map((g) => ({
       targetFramework: attrs(g[1]).targetFramework,
       ids: [...(g[2] ?? '').matchAll(/<dependency\s[^>]*\/?>/g)].map((d) => attrs(d[0]).id),
     })),

@@ -148,7 +148,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 ## Target frameworks (issue #67, 2026-11-25)
 
 - **The library and desktop packages ship for `net9.0`, `net10.0` and `net11.0`** (developer, 2026-11-25: 10 is the
-  LTS, 11 the STS, and 9 stays for a few months). So do their tests and the package smoke app. The generator and the
+  LTS, 11 the STS, and 9 stays for a few months). .NET 9 itself went out of support on 2026-11-10, as .NET 8 did:
+  `net9.0` is kept for apps still moving off it, not because it is supported. So do their tests and the package smoke app. The generator and the
   migration stay `netstandard2.0`, and the MCP tool stays a `net10.0` tool with `RollForward=Major`. The sample app and
   the other projects stay `net10.0`.
 - **Measured** (spike: `TargetFrameworks` `net8.0` to `net11.0`, the 11.0.100 SDK, Windows, every runtime installed):
@@ -162,7 +163,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
   - `net8.0`: 18 uses of `System.Threading.Lock` (.NET 9 and later), and 14 CS9244 in three vendored descriptor-runtime
     files, which pass ref-struct contexts to `Action<…>` (`allows ref struct` came in .NET 9). Both went out of support
-    on 2026-11-10, so `net8.0` was left out.
+    on 2026-11-10. `net8.0` was left out, since those gaps need edits to vendored files.
 - **On `net9.0`:**
   - The desktop startup's `ReactorApp.Run` and `CreateDefaultAppBuilder` are C# 14 extension members, which an app's
     default C# 13 can't call (CS9260). The app sets `LangVersion 14`, which needs the .NET 10 SDK or later (the desktop
@@ -181,6 +182,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Dropping `net9.0` later:**
   - `TargetFrameworks` in the library, desktop, library tests and smoke app, and the smoke app's `net9.0` `LangVersion 14`;
   - the library's 10.0 `Microsoft.Extensions.Logging.Abstractions` reference;
+  - (if `net10.0` ever goes) the framework the library packs its generator from (`_IsotopePackGenerator`);
   - `FRAMEWORKS` in `tools/packaging/lib/checks.mjs`;
   - in `ci.yml`, the library test count check (`-eq 3` and "each of 3 frameworks"), and the `9.0.x` runtime there and in
     `release.yml`;

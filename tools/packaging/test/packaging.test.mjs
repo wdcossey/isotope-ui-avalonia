@@ -249,6 +249,9 @@ test('each library package ships every framework, with a dependency group for ea
   has(problems({ nuspecOver: { 'Isotope.UI.Avalonia': { frameworks: ['net8.0', ...FRAMEWORKS] } } }), /dependency groups for frameworks it does not ship for: net8\.0/);
   has(problems({ nuspecOver: { 'Isotope.UI.Avalonia.Desktop': { noDepsIn: ['net11.0'] } } }), /Desktop.*no dependency on Isotope\.UI\.Avalonia for net11\.0/);
   // A wrong dependency, repeated in every group, is one problem.
+  // Groups outside <dependencies> (frameworkReferences) are not dependency groups.
+  const withRefs = nuspec(PACKAGES[1], { extra: '    <frameworkReferences>\n      <group targetFramework="net9.0">\n        <frameworkReference name="Microsoft.WindowsDesktop.App" />\n      </group>\n    </frameworkReferences>\n' });
+  assert.deepEqual(parseNuspec(withRefs).dependencyGroups.map((g) => g.targetFramework), FRAMEWORKS);
   const excluded = problems({ nuspecOver: { 'Isotope.UI.Avalonia.Desktop': { depExclude: 'Build,Analyzers' } } }).filter((p) => /excludes Build,Analyzers/.test(p));
   assert.equal(excluded.length, 1);
   const m = parseNuspec(nuspec(PACKAGES[1]));

@@ -168,6 +168,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   bin/ (MSB3027 on the next build): give stdio tests `[Fact(Timeout = ...)]`. (2026-11-25)
 - **A ProjectReference to an Exe copies its runtimeconfig.json and deps.json next to the referencing tests,** so the
   tests can start it with `dotnet <tool>.dll` from their own folder. (2026-11-25)
+- **C# 14 on net9.0 binds `array.Reverse()` to the span overload,** `MemoryExtensions.Reverse(Span<T>)`, which returns
+  `void` (CS0023 on `.ToArray()`). .NET 10 added `Enumerable.Reverse(T[])`, so only net9.0 breaks. Write
+  `Enumerable.Reverse(array)`. (2026-11-25)
+- **C# 14 extension members can't be called at a framework's default C# version below 14.** A net9.0 app (C# 13) gets
+  CS9260 on `ReactorApp.Run`. Measure a consumer at each target's default `LangVersion`, not the library's. (2026-11-25)
+- **A package built in a clone of a local folder has no SourceLink.** Its `origin` is a path, so pack.mjs reports
+  every package (no repository URL, no SourceLink). Set `origin` to the GitHub URL in a scratch clone first. (2026-11-25)
 
 ## Git, GitHub and merging
 

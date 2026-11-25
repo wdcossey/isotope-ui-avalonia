@@ -34,7 +34,7 @@ Only tagged versions are published. CI packs the in-between versions to check th
 ## Building the packages locally
 
 ```sh
-node tools/packaging/pack.mjs                 # packs into bin/packages, checks, runs the smoke test
+node tools/packaging/pack.mjs                 # packs into bin/packages, checks, runs the smoke test (each framework: needs the .NET 9 and 10 runtimes)
 node tools/packaging/pack.mjs --no-smoke      # packs and checks only
 node tools/packaging/pack.mjs --out <empty dir> --expect-version 0.1.0-preview.1
 node --test tools/packaging/test/*.test.mjs   # the checks' own tests (no dotnet needed)
