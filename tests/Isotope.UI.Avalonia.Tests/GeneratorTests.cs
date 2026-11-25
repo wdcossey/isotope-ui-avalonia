@@ -541,5 +541,21 @@ public class GeneratorTests
 
         Assert.Empty(errors);
         Assert.DoesNotContain("GetSetters", generated);
+
+        // A base record's Setters the record can't reach isn't read either (before: CS0122 inside the generated file).
+        // A library's internal one isn't imported from metadata at all, so this one is private, in source.
+        var (_, hidden, hiddenErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public record HiddenBaseElement : Element
+            {
+                private System.Action<Avalonia.Controls.TextBox>[] Setters { get; init; } = [];
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.TextBox))]
+            public partial record HiddenTextBoxElement(string? PlaceholderText = null) : HiddenBaseElement;
+            """, "HiddenTextBoxElement");
+        Assert.Empty(hiddenErrors);
+        Assert.DoesNotContain("GetSetters", hidden);
     }
 }
