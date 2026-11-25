@@ -21,11 +21,16 @@ public static partial class ElementExtensions
     /// <summary>Italic (<see cref="Avalonia.Media.FontStyle.Italic"/>; upstream's <c>IsItalic</c>).</summary>
     public static T Italic<T>(this T el) where T : InlineElement => el with { FontStyle = Avalonia.Media.FontStyle.Italic };
 
-    /// <summary>Underlined (Avalonia's <see cref="Avalonia.Media.TextDecorations.Underline"/>).</summary>
-    public static T Underline<T>(this T el) where T : InlineElement => el with { TextDecorations = Avalonia.Media.TextDecorations.Underline };
+    /// <summary>Underlined (Avalonia's <see cref="Avalonia.Media.TextDecorations.Underline"/>), with any decoration it has already.</summary>
+    public static T Underline<T>(this T el) where T : InlineElement =>
+        el with { TextDecorations = WithDecorations(el.TextDecorations, Avalonia.Media.TextDecorations.Underline) };
 
-    /// <summary>Struck through (Avalonia's <see cref="Avalonia.Media.TextDecorations.Strikethrough"/>; upstream's <c>IsStrikethrough</c>).</summary>
-    public static T Strikethrough<T>(this T el) where T : InlineElement => el with { TextDecorations = Avalonia.Media.TextDecorations.Strikethrough };
+    /// <summary>
+    /// Struck through (Avalonia's <see cref="Avalonia.Media.TextDecorations.Strikethrough"/>; upstream's <c>IsStrikethrough</c>), with
+    /// any decoration it has already: <c>.Underline().Strikethrough()</c> is both.
+    /// </summary>
+    public static T Strikethrough<T>(this T el) where T : InlineElement =>
+        el with { TextDecorations = WithDecorations(el.TextDecorations, Avalonia.Media.TextDecorations.Strikethrough) };
 
     public static T FontStyle<T>(this T el, FontStyle style) where T : InlineElement => el with { FontStyle = style };
 
@@ -34,7 +39,17 @@ public static partial class ElementExtensions
     /// <summary>Extra space between characters, in DIPs (upstream's <c>CharacterSpacing</c> is in 1/1000 em).</summary>
     public static T LetterSpacing<T>(this T el, double spacing) where T : InlineElement => el with { LetterSpacing = spacing };
 
-    /// <summary>Decorations: <c>.TextDecorations(Avalonia.Media.TextDecorations.Overline)</c>.</summary>
+    // The decorations an inline has, and those of the added collection whose places it has none at yet.
+    private static TextDecorationCollection WithDecorations(TextDecorationCollection? existing, TextDecorationCollection added)
+    {
+        if (existing is not { Count: > 0 }) return added;
+        var merged = new TextDecorationCollection(existing);
+        foreach (var decoration in added)
+            if (!merged.Any(d => d.Location == decoration.Location)) merged.Add(decoration);
+        return merged;
+    }
+
+    /// <summary>Decorations, replacing any it has: <c>.TextDecorations(Avalonia.Media.TextDecorations.Overline)</c>.</summary>
     public static T TextDecorations<T>(this T el, TextDecorationCollection decorations) where T : InlineElement =>
         el with { TextDecorations = decorations };
 

@@ -204,7 +204,9 @@ public static Element ReleaseNote(RenderContext ctx)
 
 > **Coming from Reactor?** `RichTextBlock` is `SelectableTextBlock`, which is always selectable, and `InlineUI` is
 > `InlineUIContainer`. A run's `IsBold`, `IsItalic` and `IsStrikethrough` are `.Bold()`, `.Italic()` and `.Strikethrough()`
-> (Avalonia's `FontWeight`, `FontStyle` and `TextDecorations`). Avalonia's text has no blocks, so a paragraph is a span on a
+> (Avalonia's `FontWeight`, `FontStyle` and `TextDecorations`), and `CharacterSpacing` (1/1000 em) is `.LetterSpacing(...)`, in DIPs.
+> On an inline, only the text modifiers apply: a margin or a tooltip does nothing, and is reported once on the `Isotope-UI`
+> event source. Avalonia's text has no blocks, so a paragraph is a span on a
 > line of its own, with no `Margin`, `TextIndent`, `TextAlignment` or `LineHeight`. There is no `Hyperlink` inline: put a
 > `HyperlinkButton` in an `InlineUIContainer`. Avalonia lays the text out again whenever one of its inlines changes, and
 > an element inside keeps its state but loses focus.

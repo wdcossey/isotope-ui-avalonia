@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Isotope.UI.Core.V1Protocol.Descriptor;
@@ -69,24 +68,22 @@ public partial record SelectableTextBlockElement(string Text) : Element
     internal Action<SelectableTextBlock>[] Setters { get; init; } = [];
 
     // The inlines the control shows: the paragraphs with a line break between each two, else the inlines, else none (the
-    // text). The same paragraphs array always gives the same inlines array.
+    // text). Built on each call, from the paragraphs as they are (the inline diff compares element by element).
     internal InlineElement[]? ContentInlines => Paragraphs is { } paragraphs ? Interleave(paragraphs) : Inlines;
 
     private static readonly LineBreakElement s_paragraphBreak = new();
-    private static readonly ConditionalWeakTable<RichTextParagraph[], InlineElement[]> s_interleaved = new();
 
-    private static InlineElement[] Interleave(RichTextParagraph[] paragraphs) =>
-        s_interleaved.GetValue(paragraphs, static ps =>
+    private static InlineElement[] Interleave(RichTextParagraph[] paragraphs)
+    {
+        var inlines = new List<InlineElement>(Math.Max(0, paragraphs.Length * 2 - 1));
+        foreach (var p in paragraphs)
         {
-            var inlines = new List<InlineElement>(Math.Max(0, ps.Length * 2 - 1));
-            foreach (var p in ps)
-            {
-                if (p is null) continue;
-                if (inlines.Count > 0) inlines.Add(s_paragraphBreak);
-                inlines.Add(p);
-            }
-            return inlines.ToArray();
-        });
+            if (p is null) continue;
+            if (inlines.Count > 0) inlines.Add(s_paragraphBreak);
+            inlines.Add(p);
+        }
+        return inlines.ToArray();
+    }
 
     // The text, inlines or paragraphs, through the reconciler's inline diff (Reconciler.Inlines.cs). FontSize, FontWeight and
     // FontFamily have a second source, the element-wide modifier of the same name: the reconciler writes the two as one

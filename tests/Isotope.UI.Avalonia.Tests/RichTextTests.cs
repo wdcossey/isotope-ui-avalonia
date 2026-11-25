@@ -2,8 +2,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Headless.XUnit;
+using System.Diagnostics.Tracing;
 using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using Isotope.UI.Core;
+using Isotope.UI.Hosting;
 using Xunit;
 using static Isotope.UI.Factories;
 using AvTextBlock = Avalonia.Controls.TextBlock;
@@ -385,6 +389,27 @@ public sealed class RichTextTests
     }
 
     [AvaloniaFact]
+    public void Underline_and_Strikethrough_add_to_each_other()
+    {
+        var run = (Run)InlinesOf(new TestHost(() => TextBlock(Run("a").Underline().Strikethrough())))[0];
+        Assert.Equal([TextDecorationLocation.Underline, TextDecorationLocation.Strikethrough], run.TextDecorations!.Select(d => d.Location));
+        run = (Run)InlinesOf(new TestHost(() => TextBlock(Run("a").Strikethrough().Strikethrough())))[0];
+        Assert.Equal([TextDecorationLocation.Strikethrough], run.TextDecorations!.Select(d => d.Location));
+    }
+
+    [AvaloniaFact]
+    public void Equal_decorations_built_afresh_are_not_written_again()
+    {
+        // Avalonia lays the text out again on any inline change, so a write of the same decorations isn't free.
+        var host = new TestHost(() => TextBlock(Run("a").Underline().Strikethrough()));
+        var run = (Run)InlinesOf(host)[0];
+        var writes = 0;
+        run.PropertyChanged += (_, e) => { if (e.Property == Inline.TextDecorationsProperty) writes++; };
+        host.Render();
+        Assert.Equal(0, writes);
+    }
+
+    [AvaloniaFact]
     public void An_inline_takes_the_element_wide_modifiers_where_its_members_are_unset()
     {
         AssertRunStyled(r => r.WithModifiers(m => m with { FontSize = 18, Foreground = Brushes.Red }),
@@ -403,6 +428,56 @@ public sealed class RichTextTests
         Assert.Equal(20, span.FontSize);
         Assert.Equal((20.0, 30.0), (span.Inlines[0].FontSize, span.Inlines[1].FontSize));
         Assert.Equal(Colors.Red, ColorOf(span.Inlines[0].Foreground));
+    }
+
+    private sealed record MarginRun(string Words) : RunElement(Words);
+
+    [AvaloniaFact]
+    public void A_modifier_an_inline_doesn_t_take_is_reported_once_per_inline_type()
+    {
+        using var listener = new WarningListener();
+        var host = new TestHost(() => TextBlock(new MarginRun("a").Margin(4), new MarginRun("b").ToolTip("tip"), Run("c").FontSize(20)));
+        host.Render();
+        Assert.Single(listener.Of(nameof(MarginRun)));
+        Assert.Empty(listener.Of(nameof(RunElement) + " has"));
+    }
+
+    internal sealed class WarningListener : EventListener
+    {
+        private readonly List<string> _messages = new();
+
+        protected override void OnEventSourceCreated(EventSource source)
+        {
+            if (source.Name == "Isotope-UI") EnableEvents(source, EventLevel.Warning, (EventKeywords)0x20);
+        }
+
+        protected override void OnEventWritten(EventWrittenEventArgs e)
+        {
+            if (e.EventName == "Warning" && e.Payload is { } payload)
+                lock (_messages) _messages.Add(string.Join(" | ", payload));
+        }
+
+        public List<string> Of(string text)
+        {
+            lock (_messages) return _messages.Where(s => s.Contains(text, StringComparison.Ordinal)).ToList();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Inlines_a_setter_replaced_are_rebuilt_not_cast()
+    {
+        // A setter that swaps the bold span for a run leaves a collection the elements can't be matched to.
+        var word = "a";
+        var host = new TestHost(() => new TextBlockElement("")
+        {
+            Inlines = [Bold(word)],
+            Setters = [tb => { if (tb.Inlines![0] is Bold) tb.Inlines[0] = new Run("swapped"); }],
+        });
+        Assert.Equal("swapped", Describe(InlinesOf(host)));
+
+        word = "b";
+        host.Render(); // rebuilt from the elements (then the setter swaps it again)
+        Assert.Equal("swapped", Describe(InlinesOf(host)));
     }
 
     // ── selectable text block and paragraphs ────────────────────────
@@ -483,5 +558,64 @@ public sealed class RichTextTests
 
         var selectable = host.All<AvSelectableTextBlock>()[0];
         Assert.Equal("Span(Italic(New: ) rich text, as runs, spans and line breaks.) / Span(Select this text to copy it.)", Describe(selectable.Inlines!));
+    }
+}
+
+/// <summary>
+/// Theme tokens on inlines (#65): <c>.Foreground(Theme.X)</c> on a run resolves for its text block and follows a theme switch
+/// with no re-render, as a control's does (#41). Hosts set the process-wide UI dispatcher, so these run alone.
+/// </summary>
+[Collection(ReactorAppGlobals.Name)]
+public sealed class RichTextThemeTests : IDisposable
+{
+    private readonly DispatcherQueue? _previousDispatcher = ReactorApp.UIDispatcher;
+    private readonly List<Window> _windows = new();
+    private readonly List<ReactorHostControl> _hosts = new();
+
+    public void Dispose()
+    {
+        foreach (var h in _hosts) h.Dispose();
+        foreach (var w in _windows) w.Close();
+        Dispatcher.UIThread.RunJobs();
+        ReactorApp.UIDispatcher = _previousDispatcher;
+    }
+
+    private (Window Window, AvTextBlock Text) Show(Func<RenderContext, Element> render)
+    {
+        var host = new ReactorHostControl(render);
+        _hosts.Add(host);
+        var window = new Window { Width = 400, Height = 300, RequestedThemeVariant = ThemeVariant.Light, Content = host };
+        _windows.Add(window);
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        return (window, Assert.IsAssignableFrom<AvTextBlock>(host.Child));
+    }
+
+    private static Color ColorOf(IBrush? brush) => Assert.IsAssignableFrom<ISolidColorBrush>(brush).Color;
+
+    [AvaloniaFact]
+    public void A_theme_token_on_an_inline_follows_a_theme_switch_and_goes_when_the_inline_does()
+    {
+        Action<bool>? setThemed = null;
+        var (window, text) = Show(ctx =>
+        {
+            var (themed, set) = ctx.UseState(true);
+            setThemed = set;
+            return TextBlock("a ", themed ? Run("b").Foreground(Theme.PrimaryText).Background(Theme.SolidBackground) : Run("c"));
+        });
+        var run = (Run)text.Inlines![1];
+        Assert.Equal(Color.FromUInt32(0xE4000000u), ColorOf(run.Foreground));
+        Assert.Equal(Color.FromUInt32(0xFFF3F3F3u), ColorOf(run.Background));
+
+        window.RequestedThemeVariant = ThemeVariant.Dark; // no render
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(Color.FromUInt32(0xFFFFFFFFu), ColorOf(run.Foreground));
+        Assert.Equal(Color.FromUInt32(0xFF202020u), ColorOf(run.Background));
+
+        setThemed!(false); // the token goes: the run inherits the text block's foreground again
+        Dispatcher.UIThread.RunJobs();
+        Assert.Same(run, text.Inlines[1]);
+        Assert.False(run.IsSet(TextElement.ForegroundProperty));
+        Assert.Empty(Reconciler.BoundThemeProperties(run));
     }
 }

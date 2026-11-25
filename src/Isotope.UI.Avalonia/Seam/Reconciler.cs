@@ -1021,6 +1021,11 @@ public sealed partial class Reconciler
             case ContentControl { Content: Control content }:
                 UnmountChild(content);
                 break;
+            // #65: the controls in a text block's inlines. Its handler's unmount hook tears them down; this walk reaches
+            // them when that hook failed in an isolated teardown (RunIsolatedTeardown's recovery).
+            case TextBlock text:
+                VisitInlineUI(text, UnmountChild);
+                break;
         }
     }
 }

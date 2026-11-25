@@ -55,7 +55,7 @@ public class RichTextMigrationTests
     }
 
     [Fact]
-    public void IsBold_IsItalic_and_IsStrikethrough_are_left_for_a_hand_fix_with_the_table_s_note()
+    public void IsBold_IsItalic_IsStrikethrough_and_CharacterSpacing_are_left_for_a_hand_fix_with_the_table_s_note()
     {
         const string reactor = Usings + """
             static class C
@@ -63,7 +63,7 @@ public class RichTextMigrationTests
                 public static Element Render(bool isNew) => RichTextBlock(new[]
                 {
                     Paragraph(Run("Bold") with { IsBold = true }, Run("italic") with { IsItalic = isNew }),
-                    Paragraph(new RichTextRun("gone") { IsStrikethrough = true }),
+                    Paragraph(new RichTextRun("gone") { IsStrikethrough = true }, Run("wide").CharacterSpacing(50)),
                 });
             }
             """;
@@ -71,6 +71,8 @@ public class RichTextMigrationTests
         Assert.Contains(left, d => d.StartsWith("ISOMIG007: 'RichTextRun.IsBold'", StringComparison.Ordinal) && d.Contains(".Bold()", StringComparison.Ordinal));
         Assert.Contains(left, d => d.StartsWith("ISOMIG007: 'RichTextRun.IsItalic'", StringComparison.Ordinal) && d.Contains(".Italic()", StringComparison.Ordinal));
         Assert.Contains(left, d => d.StartsWith("ISOMIG007: 'RichTextRun.IsStrikethrough'", StringComparison.Ordinal) && d.Contains(".Strikethrough()", StringComparison.Ordinal));
+        // CharacterSpacing's unit isn't LetterSpacing's, so it is reported with the conversion, not renamed.
+        Assert.Contains(left, d => d.StartsWith("ISOMIG010: Modifier 'CharacterSpacing'", StringComparison.Ordinal) && d.Contains(".LetterSpacing(", StringComparison.Ordinal));
     }
 
     [Fact]
