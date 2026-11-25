@@ -94,7 +94,10 @@ public sealed class ThemeTokenTests
     {
         // RatingBar is a plain Control: no Background. As on Isotope's own controls, the binding is skipped.
         using var m = new Mounted(_ => RatingBar(3).Background(Theme.CardBackground));
-        Assert.Equal(3, m.One<RatingBarControl>().Value);
+        var bar = m.One<RatingBarControl>(); // mounted, not replaced by the host's error text
+        Assert.Equal(3, bar.Value);
+        Assert.Null(AvaloniaPropertyRegistry.Instance.FindRegistered(bar, "Background"));
+        Assert.Same(Brushes.Goldenrod, bar.Fill); // the token didn't land on its brush property either
     }
 
     [AvaloniaFact]

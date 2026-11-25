@@ -21,8 +21,8 @@ node spikes/J-third-party/run.mjs                        # packs this branch int
 node spikes/J-third-party/run.mjs --packages <folder>    # or uses packages already packed by tools/packaging/pack.mjs --out
 ```
 
-It needs what `tools/packaging/pack.mjs` needs (the .NET 11 SDK, and the .NET 9 and 10 runtimes to run the tests on those
-frameworks) and nuget.org. Restores go to a fresh temporary `NUGET_PACKAGES`, deleted afterwards. It prints a line per
+It needs what `tools/packaging/pack.mjs` needs (the .NET 11 SDK, the .NET 9 and 10 runtimes to run the tests on those
+frameworks, and an `https://github.com/...` `origin` remote when it packs) and nuget.org. Restores go to a fresh temporary `NUGET_PACKAGES`, deleted afterwards. It prints a line per
 framework and per probe, and exits 0 when every test passed on every framework and every probe did what
 `probes.json` says.
 

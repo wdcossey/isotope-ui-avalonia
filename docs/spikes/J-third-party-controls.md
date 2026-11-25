@@ -9,7 +9,8 @@ judgements are marked [J].
 
 - **Yes: a third party can wrap its own controls using only Isotope's published packages,** and they behave like
   built-in ones in nearly every check. The bundled generator runs in the consumer's build on net9.0, net10.0 and net11.0
-  (it is packed from net10.0 but loads into the compiler, whatever the target), and everything it emitted for a plain
+  (a `netstandard2.0` assembly, added to `analyzers/` from the library's net10.0 build; the compiler loads it whatever
+  the target), and everything it emitted for a plain
   control, a templated control and a panel uses only public API. Nothing needed `InternalsVisibleTo`.
 - **One behaviour differs:** a third party's element is never skipped when it equals the last render's, because the
   skip test (`Element.ShallowEquals`) is internal and has an arm only for each built-in record. So a value the handler
@@ -82,9 +83,7 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 | The keyed ratings lose their keys | 1: `A_keyed_reverse_moves_...` |
 | The card's content keyed by its header (so it remounts when the header changes) | 2: `A_component_in_the_content_slot_...`, `A_state_change_updates_...` |
 | `SpreadPanel(...)` flattens a group itself | 1: `Gap_a_group_element_...` |
-
-`Gap_vendor_an_unchanged_element_is_updated_on_every_render` pins the engine's behaviour, which can't be broken from
-outside the library; it wasn't proven.
+| The render returns the same rating instance each time (so it is skipped) | 1: `Gap_vendor_an_unchanged_element_...` (1 update, not 11) |
 
 ### Probes (each framework)
 
@@ -107,7 +106,9 @@ error: in one project only CS0115 was reported.
 1. **No skip for a third party's element (behaviour).** `Element.ShallowEquals` ends in `_ => false`, and its arms are
    internal, one per built-in record. Measured: a rating whose handler rejects the user's 4 is back at 2 after an
    unrelated render, where a built-in slider in the same tree keeps the rejected 30; an unchanged rating element is
-   updated on all 11 of 11 renders (counted by its `.Set`). Upstream's rule (FINDINGS, decisions after Spike F, 3)
+   updated on all 11 of 11 renders. Counted by its `.Set`, made once outside the render, so each render's element is a
+   new instance equal to the last, with the same `Setters` array, as a built-in arm compares it; returning the very same
+   instance is skipped (1 of 11), since `ShallowEquals` checks reference equality first. Upstream's rule (FINDINGS, decisions after Spike F, 3)
    holds for built-ins only.
    - **Change:** a public way for a record to take part: for example a `protected virtual bool ShallowEqualsCore(Element
      other)` on `Element` that `ShallowEquals` calls for a type it has no arm for, and `HasCallbacks` made protected,

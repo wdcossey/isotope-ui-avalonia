@@ -45,9 +45,9 @@ try {
     const r = run('node', [path.join('tools', 'packaging', 'pack.mjs'), '--out', packages, '--clean', '--no-smoke'], { cwd: REPO });
     if (r.status !== 0) throw new Error('pack.mjs failed (exit ' + r.status + ')');
   }
-  const lib = readdirSync(packages).map((n) => /^Isotope\.UI\.Avalonia\.(\d.*)\.nupkg$/i.exec(n)).find(Boolean);
-  if (!lib) throw new Error('no Isotope.UI.Avalonia package in ' + packages);
-  const version = lib[1];
+  const versions = readdirSync(packages).map((n) => /^Isotope\.UI\.Avalonia\.(\d.*)\.nupkg$/i.exec(n)?.[1]).filter(Boolean);
+  if (versions.length !== 1) throw new Error((versions.length ? 'more than one' : 'no') + ' Isotope.UI.Avalonia package in ' + packages + ': pack into an empty folder');
+  const version = versions[0];
   const env = { IsotopeVersion: version, ISOTOPE_PACKAGES: packages, NUGET_PACKAGES: temp('isotope-spike-j-nuget-') };
   console.log('spike J: Isotope ' + version);
 
@@ -68,6 +68,8 @@ try {
   const spec = JSON.parse(readFileSync(path.join(HERE, 'Probes', 'probes.json'), 'utf8'));
   for (const probe of spec.probes) {
     const dir = path.join(HERE, 'Probes', probe.name);
+    // An earlier build's generated sources would stand in for this one's.
+    for (const framework of FRAMEWORKS) rmSync(path.join(dir, 'obj', 'Debug', framework, 'generated'), { recursive: true, force: true });
     r = run('dotnet', ['build', dir, '--no-incremental', '--disable-build-servers', '-nologo', '-v:q', '-p:EmitCompilerGeneratedFiles=true'], { env, quiet: true });
     // "<file>(l,c): error ID: message [<project>::TargetFramework=<tf>]"
     const found = [...r.out.matchAll(/^(.*?)\(\d+,\d+\): (error|warning) ([A-Z]+\d+):.*::TargetFramework=(net[\d.]+)\]\s*$/gm)]
@@ -76,10 +78,13 @@ try {
     for (const framework of FRAMEWORKS) {
       const here = found.filter((d) => d.framework === framework);
       if (probe.expect === 'pass') {
-        if (r.status !== 0 || here.length) problems.push('probe ' + probe.name + ' ' + framework + ': expected a clean build, got ' + (here.map((d) => d.id).join(', ') || 'exit ' + r.status));
+        if (r.status !== 0 || here.length) {
+          problems.push('probe ' + probe.name + ' ' + framework + ': expected a clean build, got ' + (here.map((d) => d.id).join(', ') || 'exit ' + r.status));
+          continue;
+        }
         const gen = path.join(dir, 'obj', 'Debug', framework, 'generated');
         const text = existsSync(gen) ? walk(gen).map((f) => readFileSync(f, 'utf8')).join('\n') : '';
-        if (!text) problems.push('probe ' + probe.name + ' ' + framework + ': no generated sources');
+        if (!text.includes('partial record ' + probe.record) || !text.includes('Descriptor')) problems.push('probe ' + probe.name + ' ' + framework + ': no generated descriptor for ' + probe.record);
         else if (probe.generatedLacks && text.includes(probe.generatedLacks)) problems.push('probe ' + probe.name + ' ' + framework + ': the generated sources hold ' + probe.generatedLacks);
         else ok.push(framework);
         continue;

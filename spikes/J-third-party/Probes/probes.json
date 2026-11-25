@@ -1,5 +1,5 @@
 {
-  "$comment": "Spike J's probes (#75): what each must do when run.mjs builds it, on each framework. 'fail': the build must report each of 'diagnostics' (as errors; 'inGenerated': in a generated file). 'pass': it must build with no warning or error, and the generated sources must not hold 'generatedLacks'.",
+  "$comment": "Spike J's probes (#75): what each must do when run.mjs builds it, on each framework. 'fail': the build must report each of 'diagnostics' (as errors; 'inGenerated': in a generated file). 'pass': it must build with no warning or error, the generated sources must hold the descriptor of 'record', and must not hold 'generatedLacks'.",
   "probes": [
     {
       "name": "Gen001",
@@ -19,7 +19,8 @@
     {
       "name": "UnwiredCallback",
       "expect": "pass",
-      "generatedLacks": "OnClosed"
+      "generatedLacks": "OnClosed",
+      "record": "ChipElement"
     },
     {
       "name": "WrapEventMismatch",

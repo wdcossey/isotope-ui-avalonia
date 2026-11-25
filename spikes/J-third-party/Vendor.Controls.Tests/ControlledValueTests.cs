@@ -92,6 +92,8 @@ public sealed class ControlledValueTests
         });
         var bar = m.One<RatingBarControl>();
         bar.Value = 4; // rejected
+        Mounted.Pump();
+        Assert.Equal(4, bar.Value);
         set!(3);
         Mounted.Pump();
         Assert.Equal(3, bar.Value);
@@ -120,13 +122,16 @@ public sealed class ControlledValueTests
     public void Gap_vendor_an_unchanged_element_is_updated_on_every_render()
     {
         // How often an unchanged element reaches its control: the escape hatch (.Set) runs after every mount and update.
+        // One escape hatch made once, so each render's element is a new instance equal to the last one (the same Setters
+        // array): what a skip comparing Setters by reference, as the built-in arms do, would skip.
         int vendor = 0;
         Action? bump = null;
+        var unchanged = RatingBar(2).Set(_ => vendor++);
         using var m = new Mounted(ctx =>
         {
             var (n, setN) = ctx.UseState(0);
             bump = () => setN(n + 1);
-            return VStack(TextBlock("render " + n), RatingBar(2).Set(_ => vendor++));
+            return VStack(TextBlock("render " + n), unchanged with { });
         });
         for (int i = 0; i < 10; i++) { bump!(); Mounted.Pump(); }
         Assert.Equal(11, m.Renders);
