@@ -145,6 +145,22 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Groups in a vendor's panel (issue #79, 2026-11-26)
+
+- **A `Group` in a library's panel now mounts its children,** as in Isotope's own panels (spike J's gap 4). The generated
+  `Panel` children strategy reads its children through `PanelChildren.Of` (public, beside `ItemsList` in
+  `Isotope.UI.Core.V1Protocol`), which flattens with the internal `Reconciler.Flatten`, child slots included, so a group
+  that grows or shrinks keeps its siblings' controls. One transform rule (`gen-panel-children-flatten`); the generator
+  partial is unchanged and `Reconciler.Flatten` stays internal.
+- **Isotope's own panels are unchanged:** their records already flatten, so `Of` returns the same array. The library suite
+  passes 1234 of 1234 on net9.0, net10.0 and net11.0 (1227 before; 7 new in `GeneratedPanelTests`, which run the
+  generator on a test record as a library's build does).
+- **Spike J:** `run.mjs`, 34 of 34 tests and 8 of 8 probes on each framework (packed `0.1.0-preview.0.78`, 63 s); its
+  group test now asserts the children mount, keyed and unkeyed.
+- **Proven to fail** (net10.0): with the strategy not flattening, 5 of the 6 mount and flatten tests and spike J's group
+  test on each framework; with a flatten that drops child slots, or one that copies the array, the nested-group, resize
+  and pass-through tests (3 each); with the list branch unflattened, the list test.
+
 ## Spike J: third-party controls (issue #75, 2026-11-25)
 
 - **A third party can wrap its own controls using only Isotope's packages.** A library built outside the repo against the
@@ -157,7 +173,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **One difference:** its element is never skipped (`Element.ShallowEquals` and `HasCallbacks` are internal), so a value
   the handler rejects is written back on the next render, and an unchanged element updates on every render (11 of 11).
 - **Traps:** an `On{Event}` for a plain `EventHandler` is silently never wired; a missing `Setters`, a `[WrapEvent]`
-  type mismatch and `[WrapDecorator]` fail inside generated files; a `Group` in a library's panel throws; factory names
+  type mismatch and `[WrapDecorator]` fail inside generated files; a `Group` in a library's panel threw (closed by #79); factory names
   can clash (CS0121, CS0119). 8 probes pin them (`Probes/probes.json`).
 - **Recommendation:** public-surface and generator changes first, then a "Writing controls for Isotope" guide. The
   migration tool takes no library rename table; that can wait.

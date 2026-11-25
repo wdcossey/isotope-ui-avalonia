@@ -8,7 +8,7 @@ are in `docs/spikes/J-third-party-controls.md`.
 |---|---|
 | `Vendor.Controls` | An Avalonia library that knows nothing of Isotope: `RatingBar` (a plain, custom-drawn control) and `SpreadPanel` (a panel). |
 | `Vendor.Controls.Isotope` | What the vendor ships for Isotope: `CalloutCard` (a templated control, declared here), an element record per control with `[GenerateReactorDescriptor]`, factories (`VendorFactories`) and modifiers (`VendorElementExtensions`). |
-| `Vendor.Controls.Tests` | Headless checks on net9.0, net10.0 and net11.0, next to Isotope's built-ins. Tests named `Gap_...` pin a difference from the built-ins as it is now, so they fail when it closes. |
+| `Vendor.Controls.Tests` | Headless checks on net9.0, net10.0 and net11.0, next to Isotope's built-ins. Tests named `Gap_...` pin a difference from the built-ins as it is now, so they fail when it closes; gap 4 (a `Group` in the vendor's panel) is closed (#79), and its test asserts the group's children mount. |
 | `Probes/` | Small projects that must fail (or pass) in a given way: `Probes/probes.json` says how. |
 
 The folder has its own `Directory.Build.props` and `.targets`, so nothing of the repository's build is imported, and its
