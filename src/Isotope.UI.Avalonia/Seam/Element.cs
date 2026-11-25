@@ -95,7 +95,7 @@ public abstract record Element
         {
             (EmptyElement, EmptyElement) => true,
             (TextBlockElement x, TextBlockElement y) => x.Text == y.Text && TextBlockElement.TextStylingEquals(x, y)
-                && ReferenceEquals(x.Setters, y.Setters),
+                && ReferenceEquals(x.Inlines, y.Inlines) && ReferenceEquals(x.Setters, y.Setters),
             // #29: with a command, HasCallbacks is true with or without the button's own callback, which is subscribed
             // when it first appears: its coming declines the skip, as ComboBox's callbacks do.
             (ButtonElement x, ButtonElement y) => SameTextContent(x.Content, y.Content) && x.IsEnabled == y.IsEnabled

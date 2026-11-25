@@ -54,9 +54,9 @@ public static partial class ElementExtensions
     /// <summary>A background from a colour string Avalonia parses (<c>"#FF0000"</c>, <c>"Red"</c>).</summary>
     public static T Background<T>(this T el, string color) where T : Element => el.Background(Brush.Parse(color));
 
-    /// <summary>A background brush; <see langword="null"/> leaves the control's own.</summary>
+    /// <summary>A background brush; <see langword="null"/> leaves the control's own. On an inline (#65), it sets its member.</summary>
     public static T Background<T>(this T el, IBrush? brush) where T : Element =>
-        el.WithModifiers(m => m with { Background = brush });
+        el is InlineElement inline ? (T)(Element)(inline with { Background = brush }) : el.WithModifiers(m => m with { Background = brush });
 
     /// <summary>The name assistive technology reads for this control.</summary>
     public static T AutomationName<T>(this T el, string name) where T : Element =>

@@ -17,27 +17,43 @@ public static partial class ElementExtensions
     /// <summary>The text colour from a colour string Avalonia parses (<c>"#FF0000"</c>, <c>"Red"</c>).</summary>
     public static T Foreground<T>(this T el, string color) where T : Element => el.Foreground(Brush.Parse(color));
 
-    /// <summary>The text colour of a text block or a templated control; a null brush leaves the control's own.</summary>
+    /// <summary>The text colour of a text block, an inline or a templated control; a null brush leaves the control's own.</summary>
+    /// <remarks>On an inline (#65), it sets the inline's member.</remarks>
     public static T Foreground<T>(this T el, IBrush? brush) where T : Element =>
-        el.WithModifiers(m => m with { Foreground = brush });
+        el is InlineElement inline ? (T)(Element)(inline with { Foreground = brush }) : el.WithModifiers(m => m with { Foreground = brush });
 
     // On a text block (typed as Element, or a record derived from TextBlockElement), FontSize, FontWeight and FontFamily
     // set its member, as the TextBlockElement overloads do: the member wins over the modifier, so the last call must
-    // set the member for it to take effect.
+    // set the member for it to take effect. The same on a selectable text block and an inline (#65).
 
-    /// <summary>The font size of a text block or a templated control, in DIPs.</summary>
-    public static T FontSize<T>(this T el, double size) where T : Element =>
-        el is TextBlockElement text ? (T)(Element)(text with { FontSize = size }) : el.WithModifiers(m => m with { FontSize = size });
+    /// <summary>The font size of a text block, an inline or a templated control, in DIPs.</summary>
+    public static T FontSize<T>(this T el, double size) where T : Element => el switch
+    {
+        TextBlockElement text => (T)(Element)(text with { FontSize = size }),
+        SelectableTextBlockElement text => (T)(Element)(text with { FontSize = size }),
+        InlineElement inline => (T)(Element)(inline with { FontSize = size }),
+        _ => el.WithModifiers(m => m with { FontSize = size }),
+    };
 
-    /// <summary>The font weight of a text block or a templated control: <c>.FontWeight(FontWeight.SemiBold)</c>.</summary>
-    public static T FontWeight<T>(this T el, FontWeight weight) where T : Element =>
-        el is TextBlockElement text ? (T)(Element)(text with { FontWeight = weight }) : el.WithModifiers(m => m with { FontWeight = weight });
+    /// <summary>The font weight of a text block, an inline or a templated control: <c>.FontWeight(FontWeight.SemiBold)</c>.</summary>
+    public static T FontWeight<T>(this T el, FontWeight weight) where T : Element => el switch
+    {
+        TextBlockElement text => (T)(Element)(text with { FontWeight = weight }),
+        SelectableTextBlockElement text => (T)(Element)(text with { FontWeight = weight }),
+        InlineElement inline => (T)(Element)(inline with { FontWeight = weight }),
+        _ => el.WithModifiers(m => m with { FontWeight = weight }),
+    };
 
     /// <summary>The font family of a text block or a templated control, by name: <c>.FontFamily("Consolas")</c>.</summary>
     public static T FontFamily<T>(this T el, string family) where T : Element => el.FontFamily(Avalonia.Media.FontFamily.Parse(family));
 
-    public static T FontFamily<T>(this T el, FontFamily family) where T : Element =>
-        el is TextBlockElement text ? (T)(Element)(text with { FontFamily = family }) : el.WithModifiers(m => m with { FontFamily = family });
+    public static T FontFamily<T>(this T el, FontFamily family) where T : Element => el switch
+    {
+        TextBlockElement text => (T)(Element)(text with { FontFamily = family }),
+        SelectableTextBlockElement text => (T)(Element)(text with { FontFamily = family }),
+        InlineElement inline => (T)(Element)(inline with { FontFamily = family }),
+        _ => el.WithModifiers(m => m with { FontFamily = family }),
+    };
 
     // ── TextBlockElement ────────────────────────────────────────────
 

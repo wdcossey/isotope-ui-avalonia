@@ -12,15 +12,15 @@ public sealed partial class Reconciler
     // value, the element's first, so neither overwrites the other (as Background is on a Border).
     private static void ApplyTextModifiers(UIElement control, Element? oldEl, ElementModifiers? oldM, Element newEl, ElementModifiers? newM)
     {
-        var oldText = oldEl as TextBlockElement;
-        var newText = newEl as TextBlockElement;
+        var oldText = FontMembers(oldEl);
+        var newText = FontMembers(newEl);
         switch (control)
         {
             case TextBlock:
                 SetRef(control, TextBlock.ForegroundProperty, oldM?.Foreground, newM?.Foreground);
-                Set(control, TextBlock.FontSizeProperty, oldText?.FontSize ?? oldM?.FontSize, newText?.FontSize ?? newM?.FontSize);
-                Set(control, TextBlock.FontWeightProperty, oldText?.FontWeight ?? oldM?.FontWeight, newText?.FontWeight ?? newM?.FontWeight);
-                SetRef(control, TextBlock.FontFamilyProperty, oldText?.FontFamily ?? oldM?.FontFamily, newText?.FontFamily ?? newM?.FontFamily);
+                Set(control, TextBlock.FontSizeProperty, oldText.Size ?? oldM?.FontSize, newText.Size ?? newM?.FontSize);
+                Set(control, TextBlock.FontWeightProperty, oldText.Weight ?? oldM?.FontWeight, newText.Weight ?? newM?.FontWeight);
+                SetRef(control, TextBlock.FontFamilyProperty, oldText.Family ?? oldM?.FontFamily, newText.Family ?? newM?.FontFamily);
                 break;
             case TemplatedControl when oldM is not null || newM is not null:
                 SetRef(control, TemplatedControl.ForegroundProperty, oldM?.Foreground, newM?.Foreground);
@@ -30,4 +30,13 @@ public sealed partial class Reconciler
                 break;
         }
     }
+
+    // The font members of a text block's element: a text block's, or a selectable text block's (#65).
+    private static (double? Size, Avalonia.Media.FontWeight? Weight, Avalonia.Media.FontFamily? Family) FontMembers(Element? element)
+        => element switch
+        {
+            TextBlockElement t => (t.FontSize, t.FontWeight, t.FontFamily),
+            SelectableTextBlockElement s => (s.FontSize, s.FontWeight, s.FontFamily),
+            _ => default,
+        };
 }
