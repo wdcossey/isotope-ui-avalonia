@@ -182,6 +182,15 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   descriptor's unmount hook, and add the walk only for the isolated-teardown recovery. (2026-11-25)
 - **A `using static Factories` method shadows an Avalonia type of the same name in a constant pattern.** `LineBreak =>`
   bound to the `LineBreak()` factory (CS0428); write a declaration pattern, `LineBreak _ =>`. (2026-11-25)
+- **Roslyn binds no method body once a declaration has an error.** A probe expecting two errors, one in a declaration and
+  one in a body, reports only the first: give each its own project (Spike J). (2026-11-25)
+- **Avalonia's build telemetry can hold a DLL in a temporary NUGET_PACKAGES after a build.** Deleting the folder hit
+  EPERM in 2 of 10 runs, after every test had passed: retry the delete and warn, as pack.mjs does, and set
+  `AVALONIA_TELEMETRY_OPTOUT`. Set `process.exitCode`, not `process.exit()`, or piped output can be lost. (2026-11-25)
+- **`dotnet test --no-build` exits 0 and prints nothing once the restore's NUGET_PACKAGES is gone.** The test SDK's
+  props and targets aren't imported. Check for a result per framework, never only the exit code. (2026-11-25)
+- **In a break-it loop, check the build's exit before reading the tests.** A break that also fails the build (CS0067
+  under warnings-as-errors) leaves the previous binaries to pass. (2026-11-25)
 
 ## Git, GitHub and merging
 

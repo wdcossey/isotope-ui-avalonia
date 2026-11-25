@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A library factory with the same name and parameters as one of Isotope's, and a factory named after its control. Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
+    <ProjectReference Include="..\..\Vendor.Controls.Isotope\Vendor.Controls.Isotope.csproj" />
+  </ItemGroup>
+</Project>

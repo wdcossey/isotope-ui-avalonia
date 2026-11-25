@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- What a third party ships for Isotope (#75): an element record per control, its factories and modifiers, in its own
+       namespace. One control is declared here (CalloutCard, templated), one in a library that knows nothing of Isotope
+       (Vendor.Controls' RatingBar). Isotope comes from its package only; its bundled generator writes the descriptors. -->
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
+    <ProjectReference Include="..\Vendor.Controls\Vendor.Controls.csproj" />
+  </ItemGroup>
+</Project>

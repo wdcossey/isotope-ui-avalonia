@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- What the built-in records declare that a library's cannot: Element.HasCallbacks is internal (CS0115). Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
+    <ProjectReference Include="..\..\Vendor.Controls\Vendor.Controls.csproj" />
+  </ItemGroup>
+</Project>

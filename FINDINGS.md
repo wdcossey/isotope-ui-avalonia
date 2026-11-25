@@ -145,6 +145,26 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Spike J: third-party controls (issue #75, 2026-11-25)
+
+- **A third party can wrap its own controls using only Isotope's packages.** A library built outside the repo against the
+  packed packages (a plain control, a templated one and a panel; `spikes/J-third-party`) passes 34 of 34 headless tests
+  on each of net9.0, net10.0 and net11.0 (`run.mjs`, 3 invocations, 55 to 56 s each). The bundled generator runs in its
+  build on every framework, and the generated code uses only public API: no `InternalsVisibleTo`.
+- **Like a built-in:** mount and update in place, controlled values with no echo, routed-event callbacks, keyed moves
+  (0 detaches, focus kept) in Isotope's panels and its own, a component in a content slot keeping its state, error
+  boundaries (the control's own throw too), and theme tokens, on its own brush properties too.
+- **One difference:** its element is never skipped (`Element.ShallowEquals` and `HasCallbacks` are internal), so a value
+  the handler rejects is written back on the next render, and an unchanged element updates on every render (11 of 11).
+- **Traps:** an `On{Event}` for a plain `EventHandler` is silently never wired; a missing `Setters`, a `[WrapEvent]`
+  type mismatch and `[WrapDecorator]` fail inside generated files; a `Group` in a library's panel throws; factory names
+  can clash (CS0121, CS0119). 8 probes pin them (`Probes/probes.json`).
+- **Recommendation:** public-surface and generator changes first, then a "Writing controls for Isotope" guide. The
+  migration tool takes no library rename table; that can wait.
+- **In CI:** the `packages` job runs it on the packages it just packed, on Ubuntu and Windows. Follow-ups: #77 (skip
+  parity, the developer's choice, and a single control's token), #78 (generator diagnostics), #79 (groups in a vendor's panel), then the guide (#80).
+- Report: `docs/spikes/J-third-party-controls.md`.
+
 ## Rich text (issue #65, 2026-11-25)
 
 - **What landed** (the rich text family, the top of ISOMIG012 after #43), with Avalonia's names (#46):
