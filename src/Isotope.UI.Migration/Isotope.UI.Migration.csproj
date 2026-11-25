@@ -46,5 +46,8 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Isotope.UI.Migration.Tests" />
+    <!-- The MCP server (#60) runs the analyzer and its fixes, and reads these tables, as the tests do. -->
+    <InternalsVisibleTo Include="Isotope.UI.Mcp" />
+    <InternalsVisibleTo Include="Isotope.UI.Mcp.Tests" />
   </ItemGroup>
 </Project>

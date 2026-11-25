@@ -132,6 +132,15 @@ jobs:
           echo "total=$total expected=$expected"
           test "$total" = "$expected"
 
+      - name: MCP server tests (each tool in process, and the built tool over stdio), count unchanged
+        shell: bash
+        run: |
+          dotnet test tests/Isotope.UI.Mcp.Tests -nologo -v:q --logger "console;verbosity=minimal" | tee mcp.log
+          total="$(sed -n 's/.*Total: *\([0-9]*\).*/\1/p' mcp.log | tail -1)"
+          expected="$(cat tests/Isotope.UI.Mcp.Tests/expected-total.txt)"
+          echo "total=$total expected=$expected"
+          test "$total" = "$expected"
+
   sync:
     name: sync check (${{ matrix.os }})
     strategy:
@@ -188,7 +197,8 @@ jobs:
           test "$total" = "$expected"
 
   packages:
-    # Packs the three packages, checks them, and builds and runs a tiny consumer app against the packed packages alone
+    # Packs the four packages (the MCP tool included, #60), checks them, builds and runs a tiny consumer app against the
+    # packed packages alone, and installs the tool into a temporary folder and lists its tools over stdio
     # (#52; tools/packaging/pack.mjs), so packaging can't silently break. Publishing is release.yml's, on a v* tag only.
     # Like the library job, it needs no upstream/ checkout. GitHub-hosted runners only.
     name: packages (${{ matrix.os }})

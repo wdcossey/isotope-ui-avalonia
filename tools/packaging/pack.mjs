@@ -1,14 +1,15 @@
 #!/usr/bin/env node
-// Packs the three packages and proves them (#52): node tools/packaging/pack.mjs [--out <dir>] [--expect-version <v>]
+// Packs the four packages and proves them (#52, #60): node tools/packaging/pack.mjs [--out <dir>] [--expect-version <v>]
 // [--no-smoke]. CI runs it on every push, and the release workflow before it publishes; docs/releasing.md has the rest.
 //
 // 1. dotnet pack of each package (Release, ContinuousIntegrationBuild so no local path reaches a DLL or PDB), into
-//    --out (default bin/packages under the repo root, which git ignores). Old builds of these three packages there are
+//    --out (default bin/packages under the repo root, which git ignores). Old builds of these packages there are
 //    deleted first; a folder holding anything else is refused.
 // 2. The checks in lib/checks.mjs: layout, metadata, dependencies, symbols and SourceLink, personal data, local paths.
 // 3. The smoke test (tests/Isotope.UI.PackageSmoke): an app built against the packed packages alone, from a fresh
-//    packages folder, run headless; and the migration analyzer, from its package, run by dotnet format. Its nuget.config
-//    maps Isotope.* to the packed folder alone, so nuget.org's copy of a version is never used instead.
+//    packages folder, run headless; the migration analyzer, from its package, run by dotnet format; and the MCP server,
+//    installed from its package into a temporary tool folder, asked for its tools over stdio. Its nuget.config maps
+//    Isotope.* to the packed folder alone, so nuget.org's copy of a version is never used instead.
 // The version comes from MinVer (git tags); --expect-version fails the run if it is another.
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, realpathSync } from 'node:fs';
@@ -17,6 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PACKAGES, checkPackages, parseNuspec } from './lib/checks.mjs';
 import { readZip } from './lib/zip.mjs';
+import { initialize, startMcp } from './lib/mcp.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SMOKE = path.join(REPO, 'tests', 'Isotope.UI.PackageSmoke');
@@ -110,7 +112,7 @@ if (opts.smoke) {
   const nugetPackages = mkdtempSync(path.join(tmpdir(), 'isotope-smoke-'));
   // ISOTOPE_PACKAGES is the smoke nuget.config's only source for Isotope.*.
   const env = { IsotopeVersion: version, NUGET_PACKAGES: nugetPackages, ISOTOPE_PACKAGES: opts.out };
-  let failure;
+  let failure, toolPath;
   // A failing step throws, so the packages folder is deleted before the run fails.
   const check = (ok, message) => { if (!ok) throw new Error(message); };
   try {
@@ -131,11 +133,39 @@ if (opts.smoke) {
     timings.push(['smoke migration', r.ms]);
     check(r.status !== 0 && r.out.includes('ISOMIG001'), 'the migration analyzer from its package reported no ISOMIG001 (exit ' + r.status + ')');
     console.log('smoke: the migration analyzer from its package reported ISOMIG001 and offered its fix');
+
+    // The MCP server: installed from its package into a temporary tool folder (never globally), started as an MCP
+    // client starts it, and asked for its tools and the docs of a hook, which come from the library and XML docs it carries.
+    toolPath = mkdtempSync(path.join(tmpdir(), 'isotope-tool-'));
+    r = run('dotnet', ['tool', 'install', 'Isotope.UI.Mcp', '--version', version, '--tool-path', toolPath, '--configfile', path.join(SMOKE, 'nuget.config')], { env });
+    timings.push(['smoke tool install', r.ms]);
+    check(r.status === 0, 'the MCP tool did not install from its package (exit ' + r.status + ')');
+    const started = Date.now();
+    const server = startMcp(path.join(toolPath, process.platform === 'win32' ? 'isotope-mcp.exe' : 'isotope-mcp'), [], { env });
+    try {
+      const info = await initialize(server);
+      check(info?.serverInfo?.name === 'isotope-mcp', 'the MCP server named itself ' + info?.serverInfo?.name);
+      check(info.serverInfo.version === version, 'the MCP server says version ' + info.serverInfo.version + ', not ' + version);
+      const tools = (await server.request('tools/list')).tools.map((t) => t.name).sort();
+      const expected = ['get_api', 'get_guide', 'list_guides', 'map_reactor_name', 'migrate_code', 'search_api'];
+      check(JSON.stringify(tools) === JSON.stringify(expected), 'the MCP server lists ' + tools.join(', ') + ', not ' + expected.join(', '));
+      const doc = (await server.request('tools/call', { name: 'get_api', arguments: { name: 'UseState' } })).content.map((c) => c.text).join('\n');
+      check(doc.includes('RenderContext.UseState') && doc.includes('Declares a piece of state'), 'get_api UseState did not give the hook and its doc comment:\n' + doc.slice(0, 500));
+      const resources = (await server.request('resources/list')).resources;
+      check(resources.length > 0 && resources.every((x) => x.uri.startsWith('isotope://guides/')), 'the MCP server lists no guides as resources');
+    } finally {
+      await server.close();
+    }
+    timings.push(['smoke tool run', Date.now() - started]);
+    console.log('smoke: the MCP tool from its package listed its 6 tools, gave the docs of UseState and ' + 'listed the guides');
   } catch (e) {
     failure = e;
   } finally {
-    try { rmSync(nugetPackages, { recursive: true, force: true }); }
-    catch (e) { console.warn('pack: could not delete the smoke packages folder (' + e.code + '); the OS temp folder keeps it'); }
+    for (const [dir, what] of [[nugetPackages, 'packages'], [toolPath, 'tool']]) {
+      if (!dir) continue;
+      try { rmSync(dir, { recursive: true, force: true }); }
+      catch (e) { console.warn('pack: could not delete the smoke ' + what + ' folder (' + e.code + '); the OS temp folder keeps it'); }
+    }
   }
   if (failure) fail(failure.message);
 }

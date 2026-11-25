@@ -11,8 +11,11 @@ export const COMMON_FILES = ['README.md', 'LICENSE', 'licenses/microsoft-ui-reac
 
 /**
  * The packages, in pack order. files: what the package must hold besides COMMON_FILES. symbols: the PDBs its .snupkg
- * must hold (null: the PDB is embedded in its DLL). dependsOn: the Isotope packages it depends on, at its own version
- * and with every asset (the library's generator included, for an app that references only the desktop package).
+ * must hold (null: no symbols package). embedded: with symbols null, the DLLs whose PDB is embedded (default: every DLL
+ * in files). pdbs: PDBs shipped in the package itself, next to their DLLs. Every PDB carries SourceLink at the package's
+ * commit. dependsOn: the Isotope packages it depends on, at its own version and with every asset (the library's
+ * generator included, for an app that references only the desktop package). tool: a dotnet tool's command and entry
+ * point; a tool carries its dependencies itself, so it has none, and it carries no native library.
  */
 export const PACKAGES = [
   {
@@ -36,6 +39,18 @@ export const PACKAGES = [
     symbols: null,
     dependsOn: [],
     analyzerOnly: true,
+  },
+  {
+    id: 'Isotope.UI.Mcp',
+    project: 'src/Isotope.UI.Mcp/Isotope.UI.Mcp.csproj',
+    // The tool and what it reads: the library's and the desktop startup's DLLs and XML docs, and the migration.
+    files: ['tools/net10.0/any/Isotope.UI.Mcp.dll', 'tools/net10.0/any/DotnetToolSettings.xml', 'tools/net10.0/any/Isotope.UI.Avalonia.dll', 'tools/net10.0/any/Isotope.UI.Avalonia.xml',
+      'tools/net10.0/any/Isotope.UI.Avalonia.Desktop.dll', 'tools/net10.0/any/Isotope.UI.Avalonia.Desktop.xml', 'tools/net10.0/any/Isotope.UI.Migration.dll'],
+    symbols: null,
+    embedded: ['tools/net10.0/any/Isotope.UI.Mcp.dll', 'tools/net10.0/any/Isotope.UI.Migration.dll'],
+    pdbs: ['tools/net10.0/any/Isotope.UI.Avalonia.pdb', 'tools/net10.0/any/Isotope.UI.Avalonia.Desktop.pdb'],
+    dependsOn: [],
+    tool: { command: 'isotope-mcp', entryPoint: 'Isotope.UI.Mcp.dll', settings: 'tools/net10.0/any/DotnetToolSettings.xml' },
   },
 ];
 
@@ -62,6 +77,7 @@ export function parseNuspec(text) {
     developmentDependency: el('developmentDependency') === 'true',
     repository: repoTag ? attrs(repoTag) : undefined,
     dependencies: [...meta.matchAll(/<dependency\s[^>]*\/?>/g)].map((m) => attrs(m[0])),
+    packageTypes: [...meta.matchAll(/<packageType\s[^>]*\/?>/g)].map((m) => attrs(m[0]).name),
   };
 }
 
@@ -170,6 +186,25 @@ function checkIdentities(text, identities, where) {
   return identities.filter((s) => s && s.length >= 3 && word(s).test(scrubbed)).map(() => where + ': contains this machine\'s user or git identity');
 }
 
+// A dotnet tool: the DotnetTool package type, its command, everything it runs inside it (no dependencies, no lib/), and
+// no native library (the desktop startup brings Skia, HarfBuzz and ANGLE for every platform, which the tool never loads).
+function checkTool(spec, pkg, m, names, where) {
+  const problems = [];
+  if (!m.packageTypes.includes('DotnetTool')) problems.push(where + ': a tool package must have the DotnetTool package type');
+  if (m.dependencies.length) problems.push(where + ': a tool package must have no dependencies (it carries them)');
+  if (m.developmentDependency) problems.push(where + ': a tool package must not be a developmentDependency');
+  if (names.some((n) => /^(lib|ref)\//.test(n))) problems.push(where + ': a tool package must have no lib/ or ref/');
+  const natives = names.filter((n) => /(^|\/)native\//.test(n) || /\.(so|dylib)$/i.test(n));
+  if (natives.length) problems.push(where + ': ' + natives.length + ' native libraries in the tool, e.g. ' + natives[0]);
+  const settings = pkg.entries.get(spec.tool.settings)?.toString('utf8') ?? '';
+  const command = settings.match(/<Command\s[^>]*\/?>/)?.[0];
+  const a = command ? attrs(command) : {};
+  if (a.Name !== spec.tool.command) problems.push(where + ': the tool command must be ' + spec.tool.command + ', not ' + a.Name);
+  if (a.EntryPoint !== spec.tool.entryPoint) problems.push(where + ': the tool entry point must be ' + spec.tool.entryPoint + ', not ' + a.EntryPoint);
+  if (a.Runner !== 'dotnet') problems.push(where + ': the tool runner must be dotnet, not ' + a.Runner);
+  return problems;
+}
+
 const isDll = (name) => /\.(dll|pdb)$/i.test(name);
 
 /**
@@ -203,6 +238,8 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
       if (m.dependencies.length) problems.push(where + ': an analyzer package must have no dependencies');
     }
     for (const n of names) if (n.startsWith('analyzers/') && !n.startsWith('analyzers/dotnet/cs/')) problems.push(where + ': analyzer outside analyzers/dotnet/cs: ' + n);
+    if (spec.tool) problems.push(...checkTool(spec, pkg, m, names, where));
+    else if (m.packageTypes.includes('DotnetTool')) problems.push(where + ': only ' + PACKAGES.filter((s) => s.tool).map((s) => s.id).join(', ') + ' is a dotnet tool');
 
     // Metadata.
     if (m.authors !== AUTHORS) problems.push(where + ': authors must be "' + AUTHORS + '", not "' + m.authors + '"');
@@ -246,11 +283,15 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
         else problems.push(...checkSourceLink(sym.entries.get(pdb), repo?.commit, sym.file + ' ' + pdb), ...checkDocuments(sym.entries.get(pdb), sym.file + ' ' + pdb));
       }
     } else {
-      for (const dll of spec.files.filter((f) => f.endsWith('.dll') && pkg.entries.has(f))) {
+      for (const dll of (spec.embedded ?? spec.files.filter((f) => f.endsWith('.dll'))).filter((f) => pkg.entries.has(f))) {
         const pdb = embeddedPdb(pkg.entries.get(dll));
         if (!pdb) problems.push(where + ' ' + dll + ': no embedded PDB');
         else problems.push(...checkSourceLink(pdb, repo?.commit, where + ' ' + dll + ' (embedded PDB)'), ...checkDocuments(pdb, where + ' ' + dll + ' (embedded PDB)'));
       }
+    }
+    for (const p of spec.pdbs ?? []) {
+      if (!pkg.entries.has(p)) problems.push(where + ': missing ' + p);
+      else problems.push(...checkSourceLink(pkg.entries.get(p), repo?.commit, where + ' ' + p), ...checkDocuments(pkg.entries.get(p), where + ' ' + p));
     }
   }
 

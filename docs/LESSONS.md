@@ -161,6 +161,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   a RepeatButton repeats, and a hover tooltip opens over the next control and takes its click. Mouse-click helpers that
   can reach a RepeatButton call `TestHost.HoldOffRepeat`, and the test app gives tooltips a one-minute `ShowDelay`. Reproduce with a
   `Thread.Sleep` between press and release (#55). (2026-11-24)
+- **A project that references Isotope.UI.Avalonia.Desktop gets Avalonia's native libraries for every platform** (592 MB
+  of Debug output for the MCP tool); a project that only reflects over the library drops them with a target after
+  ResolvePackageAssets (src/Isotope.UI.Mcp). (2026-11-25)
+- **An MCP stdio test that the server breaks can hang rather than fail,** leaving testhost and server processes that lock
+  bin/ (MSB3027 on the next build): give stdio tests `[Fact(Timeout = ...)]`. (2026-11-25)
+- **A ProjectReference to an Exe copies its runtimeconfig.json and deps.json next to the referencing tests,** so the
+  tests can start it with `dotnet <tool>.dll` from their own folder. (2026-11-25)
 
 ## Git, GitHub and merging
 

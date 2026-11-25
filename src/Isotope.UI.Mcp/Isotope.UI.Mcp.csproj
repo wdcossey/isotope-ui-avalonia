@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Isotope.UI.Mcp (#60): an MCP server for coding agents that write or migrate Isotope apps, shipped as a dotnet tool
+       (command isotope-mcp) over stdio. Phase 1 is authoring help with no running app: the public API (reflection over
+       the library and desktop startup it references, and their XML docs), Reactor's names (the migration's own embedded
+       tables), the migration itself (its analyzer and code fixes in memory), and the guides (docs/guide, embedded). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Isotope.UI.Mcp</RootNamespace>
+    <AssemblyName>Isotope.UI.Mcp</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- A tool built for .NET 10 also runs where only a newer runtime is installed (the .NET 11 SDK's). -->
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+  <!-- The package (shared metadata in src/Directory.Build.props): a dotnet tool, which carries its dependencies itself,
+       so it has none. Its PDB is embedded, so there is no symbols package. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>isotope-mcp</ToolCommandName>
+    <PackageId>Isotope.UI.Mcp</PackageId>
+    <Description>An MCP server for coding agents that write Isotope.UI.Avalonia apps or migrate Microsoft.UI.Reactor ones: search and read the API with its docs, map Reactor names to Isotope's, run the migration on a snippet, and read the guides. A dotnet tool (isotope-mcp), over stdio.</Description>
+    <PackageTags>$(PackageTags);mcp;ai;agents</PackageTags>
+    <IncludeSymbols>false</IncludeSymbols>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+    <!-- The pinned SDK's compiler version, as the migration's tests: the desktop startup's ReactorApp.Run<TRoot> is a
+         C# 14 extension member, which Roslyn 4.14 (the analyzer's build version) can't read. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.12.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- What the API tools reflect over: the tool carries these DLLs and their XML docs, the ones the packages ship. -->
+    <ProjectReference Include="..\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
+    <ProjectReference Include="..\Isotope.UI.Avalonia.Desktop\Isotope.UI.Avalonia.Desktop.csproj" />
+    <!-- The migration analyzer and code fixes as a plain assembly, with its embedded tables (its internals). -->
+    <ProjectReference Include="..\Isotope.UI.Migration\Isotope.UI.Migration.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\docs\guide\*.md" LogicalName="Isotope.UI.Mcp.guides.%(Filename)%(Extension)" Link="Guides\%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Isotope.UI.Mcp.Tests" />
+  </ItemGroup>
+  <!-- The tool reads the library's types and never runs Avalonia, so the native libraries the desktop startup brings
+       (Skia, HarfBuzz, ANGLE for every platform) stay out of its output and its package; with them the package would
+       be hundreds of MB. Roslyn's and the SDK's satellite resources stay out too: the tool speaks English. -->
+  <PropertyGroup>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <Target Name="_IsotopeDropNativeAssets" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(RuntimeTargetsCopyLocalItems.AssetType)' == 'native'" />
+    </ItemGroup>
+  </Target>
+</Project>

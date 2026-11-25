@@ -1,6 +1,6 @@
 name: release
 
-# Publishes the three packages to nuget.org when a v* tag is pushed (#52), with NuGet trusted publishing: GitHub's OIDC
+# Publishes the three library packages to nuget.org (the MCP tool, #60, is left out until the developer decides) when a v* tag is pushed (#52), with NuGet trusted publishing: GitHub's OIDC
 # token is exchanged for a short-lived nuget.org key, so no API key is stored anywhere. Publishing is the developer's
 # call (CLAUDE.md, ask first): only pushing a tag starts this workflow. docs/releasing.md has the one-time setup on
 # nuget.org and how to cut a release.
@@ -102,7 +102,8 @@ jobs:
         run: |
           [ -n "$NUGET_USER" ] || { echo "the NUGET_USER secret is not set (docs/releasing.md)"; exit 1; }
           shopt -s nullglob
-          packages=(packages/*."$VERSION".nupkg)
+          packages=()
+          for p in packages/*."$VERSION".nupkg; do [[ "$(basename "$p")" == Isotope.UI.Mcp.* ]] || packages+=("$p"); done
           [ "${#packages[@]}" -eq 3 ] || { echo "expected 3 packages of version $VERSION, found ${#packages[@]}"; exit 1; }
 
           # GitHub's OIDC token for nuget.org, then nuget.org's short-lived key for it (what NuGet's login action does).
