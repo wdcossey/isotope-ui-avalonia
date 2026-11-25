@@ -225,7 +225,7 @@ public sealed partial class WrapperGenerator
     private static readonly DiagnosticDescriptor CallbackMismatch = new(
         id: "ISOTOPEGEN003",
         title: "Record callback doesn't take what its event passes",
-        messageFormat: "'{0}' declares '{1}' as '{2}', but the descriptor calls it with {3} when '{4}' fires. Declare it as '{5}', or give [WrapEvent] the Arg or Args to pass.",
+        messageFormat: "'{0}' declares '{1}' as '{2}', but the descriptor calls it with {3} when '{4}' fires. Declare it as '{5}'{6}.",
         category: "Isotope.Wrappers",
         defaultSeverity: DiagnosticSeverity.Error, // the generated call wouldn't compile
         isEnabledByDefault: true);
@@ -280,7 +280,8 @@ public sealed partial class WrapperGenerator
         {
             var name = "On" + e.Name;
             handled.Add(name);
-            if (!callbacks.TryGetValue(name, out var member) || exclude.Contains(name)
+            // Checked even when the author takes the callback over: the generated trampoline still calls it.
+            if (!callbacks.TryGetValue(name, out var member)
                 || PassedTypes(control, e) is not { } passed || Accepts(member.Type, passed, compilation))
             {
                 wired.Add(e);
@@ -294,7 +295,7 @@ public sealed partial class WrapperGenerator
                 : "Action<" + string.Join(", ", passed.Select(t => t.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat))) + ">";
             diagnostics.Add(Diagnostic.Create(CallbackMismatch, member.Locations.FirstOrDefault(),
                 element.Name, name, member.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), args,
-                control.Name + "." + e.Name, expected));
+                control.Name + "." + e.Name, expected, e.Typed ? ", or give [WrapEvent] the Arg or Args to pass" : ""));
         }
 
         foreach (var member in callbacks.Values.OrderBy(m => m.Name, System.StringComparer.Ordinal))
@@ -351,13 +352,13 @@ public sealed partial class WrapperGenerator
 
     /// <summary>
     /// Our rule (#78), descriptor-only mode: the descriptor reads &lt;c&gt;e.Setters&lt;/c&gt; only when the record (or a base
-    /// record) declares it, as upstream's polymorphic path already checks. A record without it built with an error
+    /// record) declares it (a property, as upstream's polymorphic path checks, or a field). A record without it built with an error
     /// inside the generated file; &lt;c&gt;GetSetters&lt;/c&gt; is optional on the descriptor.
     /// </summary>
     private static string WithSettersIfDeclared(INamedTypeSymbol element, string source)
     {
         for (INamedTypeSymbol? t = element; t is not null && t.SpecialType != SpecialType.System_Object; t = t.BaseType)
-            if (t.GetMembers("Setters").Any(m => m is IPropertySymbol { IsStatic: false }))
+            if (t.GetMembers("Setters").Any(m => !m.IsStatic && m is IPropertySymbol or IFieldSymbol))
                 return source;
         return source.Replace("            GetSetters = static e => e.Setters," + System.Environment.NewLine, "");
     }

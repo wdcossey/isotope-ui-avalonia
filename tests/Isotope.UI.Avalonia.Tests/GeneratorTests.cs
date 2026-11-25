@@ -71,7 +71,7 @@ public class GeneratorTests
     }
 
     [Fact]
-    public void Members_that_map_and_callbacks_are_not_reported()
+    public void Members_that_map_and_callbacks_are_not_reported_as_missing_counterparts()
     {
         var (diagnostics, generated) = Run("""
             public bool? IsReadOnly { get; init; }
@@ -372,6 +372,13 @@ public class GeneratorTests
         Assert.DoesNotContain(diagnostics, d => d.Id == "ISOTOPEGEN002");
         Assert.Empty(errors);
         Assert.DoesNotContain("live.OnClosed", generated);
+
+        // Taken over with [WrapManual], it is still called by the generated trampoline, so still checked.
+        var manual = Chip("[WrapEvent(\"Closed\")][WrapManual(\"OnClosed\")]", "System.Action?")
+            + "\npartial record ChipElement { private static partial Isotope.UI.Core.V1Protocol.Descriptor.ControlDescriptor<ChipElement, Chip> Customize(Isotope.UI.Core.V1Protocol.Descriptor.ControlDescriptor<ChipElement, Chip> d) => d; }";
+        var (manualDiagnostics, _, manualErrors) = Compile(manual, "ChipElement");
+        Assert.Single(manualDiagnostics, d => d.Id == "ISOTOPEGEN003");
+        Assert.Empty(manualErrors);
     }
 
     [Theory]
@@ -383,9 +390,10 @@ public class GeneratorTests
         var source = Chip(attrs, callback);
         if (attrs.Contains("WrapManual"))
             source += "\npartial record ChipElement { private static partial Isotope.UI.Core.V1Protocol.Descriptor.ControlDescriptor<ChipElement, Chip> Customize(Isotope.UI.Core.V1Protocol.Descriptor.ControlDescriptor<ChipElement, Chip> d) => d; }";
-        var (diagnostics, generated, _) = Compile(source, "ChipElement");
+        var (diagnostics, generated, errors) = Compile(source, "ChipElement");
 
         Assert.DoesNotContain(diagnostics, d => d.Id is "ISOTOPEGEN002" or "ISOTOPEGEN003");
+        Assert.Empty(errors);
         if (wiring is not null) Assert.Contains(wiring, generated);
     }
 
@@ -431,8 +439,20 @@ public class GeneratorTests
         Assert.DoesNotContain(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         Assert.Contains("c.PlaceholderText = v", generated);
         Assert.DoesNotContain("GetSetters", generated);
-        // A record with Setters still has them read.
+        // A record with Setters still has them read, as a property or a field.
         Assert.Contains("GetSetters = static e => e.Setters", Run("").Generated);
+        var (_, withField, fieldErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.TextBox))]
+            public partial record FieldTextBoxElement(string? PlaceholderText = null) : Element
+            {
+                internal System.Action<Avalonia.Controls.TextBox>[] Setters = [];
+            }
+            """, "FieldTextBoxElement");
+        Assert.Empty(fieldErrors);
+        Assert.Contains("GetSetters = static e => e.Setters", withField);
     }
 
     [Theory]

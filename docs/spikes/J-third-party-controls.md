@@ -9,7 +9,7 @@ judgements are marked [J].
 through `Element.ShallowEqualsCore` and `HasCallbacks`, which the bundled generator writes (gap 1). A token is resolved
 for a library's control with no new API (gap 6). The spike's two `Gap_vendor_...` tests became
 `Vendor_a_rejected_edit_stays_...` and `Vendor_an_unchanged_element_is_skipped`, and the `InternalOverride` and
-`InternalEquality` probes were updated. Gaps 2 and 3 are closed by #78 (2026-11-26): the bundled generator reports a
+`InternalEquality` probes were updated. Gaps 2 and 3 are closed by #78 (2026-11-25): the bundled generator reports a
 callback it never wires (`ISOTOPEGEN002`), a callback that can't take what its event passes (`ISOTOPEGEN003`) and
 `[WrapDecorator]` / `[WrapPolymorphic]` (`ISOTOPEGEN004`) at the record, with nothing wrong left in a generated file, and
 a record without `Setters` builds. The `NoSetters`, `UnwiredCallback`, `WrapEventMismatch` and `Decorator` probes were
