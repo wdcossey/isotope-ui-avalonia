@@ -72,6 +72,8 @@ public class ReactorNameTests
         Assert.Contains("Element record: `NumberBoxElement` is `NumericUpDownElement` in Isotope.", minimum);
         Assert.Contains("member `double NumericUpDownElement.Minimum", minimum);
         Assert.Contains("has no `Header`", IsotopeTools.MapReactorName("global::Microsoft.UI.Reactor.NumberBoxElement.Header"));
+        // Map reads the name as Lookup does: OnClick(), not a member named "OnClick()".
+        Assert.Contains("and has no `OnClick`", IsotopeTools.MapReactorName("SliderElement.OnClick()"));
         // A member Isotope's renamed record has under Reactor's name is found on it.
         Assert.Contains("member `double NumericUpDownElement.Minimum", IsotopeTools.MapReactorName("NumericUpDownElement.Minimum"));
         // The last part alone still answers a factory or a type: Factories.Button is Button.
