@@ -132,8 +132,8 @@ error: in one project only CS0115 was reported.
    public helper beside `ItemsList`; `Reconciler.Flatten` stays internal), and the test now asserts the children mount.
    As found: **a `Group` inside a third party's panel throws** `NotSupportedException` ("A GroupElement is flattened into its
    container's children"), caught by a boundary in the test. Isotope's own panel records flatten their children with
-   `Reconciler.Flatten`, which is internal; `VStack(..., Group(...))` mounts 3 ratings. Workaround, measured (the
-   break above): the library flattens `GroupElement.Children` itself, since the record is public.
+   `Reconciler.Flatten`, which is internal; `VStack(..., Group(...))` mounts 3 ratings. The workaround then, measured (the
+   break above), is no longer needed since #79: the library flattened `GroupElement.Children` itself.
    - **Change:** flatten in the generated `Panel` children strategy, so no record needs to, or make `Reconciler.Flatten`
      public. [J: the first, since a library can't forget it.]
 5. **Name clashes** (`NameClash`): a library factory with the name and parameters of one of Isotope's is ambiguous
