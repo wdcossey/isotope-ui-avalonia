@@ -170,7 +170,8 @@ porting to Isotope would need its own record, member and factory renames applied
 2. Then the guide, "Writing controls for Isotope", with the spike's library as its worked example: the record rules
    (`Setters`, member names, `ClearValueOnUnset`, routed events), factory and modifier naming, theme tokens on a
    library's own brushes, and Gap 5.
-3. Run the spike in CI meanwhile, so the outside view is checked on every push (**Proposed for shared files**).
+3. Run the spike in CI meanwhile, so the outside view is checked on every push. Done: the `packages` job runs it on
+   Ubuntu and Windows (2026-11-25, after #75; the step took about 2 minutes on Ubuntu).
 
 Why not (b) now [J]: the generator, where every diagnostic above belongs, already ships in the library package, so a
 second package would add a dependency for consumers with nothing in it yet but a `dotnet new` template. A template can
@@ -182,7 +183,8 @@ come with the guide if a library asks for one.
   test had passed (the two folders it left behind confirm the count): deleting the temporary `NUGET_PACKAGES` hit EPERM on
   `Avalonia.BuildServices.Collector.dll`, which Avalonia's build telemetry still held. It now sets
   `AVALONIA_TELEMETRY_OPTOUT`, retries the delete, and warns instead of failing, as `pack.mjs` does.
-- **Headless, Windows only.** Ubuntu wasn't run; `run.mjs` uses only Node built-ins and paths from `path.join`.
+- **Headless.** Measured on Windows for this report; CI's `packages` job now runs it on Ubuntu and Windows too, with
+  the same results.
 - **Not covered:** an items control (`Items`), secondary element slots (`[WrapElementSlot]`), more than one controlled
   property on a control, a hand-written handler registered with `ControlRegistry.Register`, and the migration tool on a
   library's code.
