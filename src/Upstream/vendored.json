@@ -161,10 +161,11 @@
         "gen-missing-counterpart-report",
         "gen-drop-try-register-assembly",
         "gen-reference-clear-channel-of",
+        "gen-skip-members",
         "gen-manual-content-slot",
         "namespace-isotope"
       ],
-      "sha256": "563a185b01d6f74c4284176bb52da7897c8cd3abbb529582ff3afb3e5b736fe8"
+      "sha256": "f9d7435826b3cfbd0c8c8dfd40231b81ea093f0bd44b73fea05c331adbf2ad72"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",

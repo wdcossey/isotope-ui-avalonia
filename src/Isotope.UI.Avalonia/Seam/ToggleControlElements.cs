@@ -31,7 +31,7 @@ public partial record CheckBoxElement(
 
     internal Action<CheckBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsCheckedChanged is not null;
+    protected internal override bool HasCallbacks => OnIsCheckedChanged is not null;
 
     // As upstream's: IsChecked is the controlled value, and the callback receives the control's value (null:
     // indeterminate; Factories.CheckBox's two-state callback is called only for a checked or unchecked value).
@@ -67,7 +67,7 @@ public partial record ToggleSwitchElement(
 
     internal Action<ToggleSwitch>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsCheckedChanged is not null;
+    protected internal override bool HasCallbacks => OnIsCheckedChanged is not null;
 
     // The record's value is a bool, the control's a bool? (null never arises: the switch isn't three-state). The
     // content is a value, not a child slot, as Reactor's Header was (WithContent writes a string as it is).
@@ -98,7 +98,7 @@ public partial record RadioButtonElement(
 {
     internal Action<RadioButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnIsCheckedChanged is not null;
+    protected internal override bool HasCallbacks => OnIsCheckedChanged is not null;
 
     // As upstream's: the record's value is a bool, the control's a bool?, so the read-back maps null to false. The write
     // of a button doesn't echo to it; the uncheck it causes in another button of the group reaches that button's

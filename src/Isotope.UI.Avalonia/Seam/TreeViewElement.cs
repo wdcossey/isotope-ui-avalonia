@@ -53,7 +53,7 @@ public partial record TreeViewElement(TreeViewItemData[] Items) : Element
 
     internal Action<TreeView>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnItemInvoked is not null || OnExpanding is not null;
+    protected internal override bool HasCallbacks => OnItemInvoked is not null || OnExpanding is not null;
 
     private static void Invoke(TreeView tree, object? source)
     {

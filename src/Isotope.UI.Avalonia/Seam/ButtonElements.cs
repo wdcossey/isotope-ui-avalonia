@@ -34,7 +34,7 @@ public partial record ToggleButtonElement(object? Content, bool? IsChecked = fal
 
     internal Action<ToggleButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnIsCheckedChanged, Command) is not null;
+    protected internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnIsCheckedChanged, Command) is not null;
 
     // As upstream's: the click reads the toggled value back and calls the callback. Avalonia's ToggleButton toggles in
     // OnClick before it raises Click, as WinUI's does. Listening to Click, not IsCheckedChanged, means the engine's own
@@ -85,7 +85,7 @@ public partial record RepeatButtonElement(object? Content, Action? OnClick = nul
 
     internal Action<RepeatButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
+    protected internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
 
     private static partial ControlDescriptor<RepeatButtonElement, RepeatButton> Customize(ControlDescriptor<RepeatButtonElement, RepeatButton> d)
         => d.WithContent(static e => e.Content)
@@ -106,7 +106,7 @@ public partial record HyperlinkButtonElement(object? Content, Uri? NavigateUri =
 
     internal Action<HyperlinkButton>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
+    protected internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
 
     private static partial ControlDescriptor<HyperlinkButtonElement, HyperlinkButton> Customize(ControlDescriptor<HyperlinkButtonElement, HyperlinkButton> d)
         => d.WithContent(static e => e.Content)

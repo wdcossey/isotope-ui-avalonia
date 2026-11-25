@@ -39,7 +39,7 @@ public partial record ComboBoxElement(
 
     internal Action<ComboBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks =>
+    protected internal override bool HasCallbacks =>
         OnSelectedIndexChanged is not null || OnDropDownOpened is not null || OnDropDownClosed is not null;
 
     private static readonly EventHandler<SelectionChangedEventArgs> __SelectionChangedTrampoline = (s, _) =>
@@ -113,7 +113,7 @@ public partial record ListBoxElement(string[] Items) : Element
 
     internal Action<ListBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnSelectedIndexChanged is not null || OnSelectionChanged is not null;
+    protected internal override bool HasCallbacks => OnSelectedIndexChanged is not null || OnSelectionChanged is not null;
 
     // As upstream's: one trampoline on SelectionChanged reports the selected index and, when asked for, every selected
     // index.

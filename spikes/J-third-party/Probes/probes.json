@@ -40,16 +40,16 @@
     },
     {
       "name": "InternalOverride",
-      "expect": "fail",
-      "diagnostics": [
-        "CS0115"
-      ]
+      "expect": "pass",
+      "generatedLacks": "ShallowEqualsCore",
+      "record": "OwnRatingElement"
     },
     {
       "name": "InternalEquality",
       "expect": "fail",
       "diagnostics": [
-        "CS0117"
+        "CS0117",
+        "CS0122"
       ]
     },
     {

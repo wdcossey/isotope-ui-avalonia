@@ -101,9 +101,15 @@ public sealed class ThemeTokenTests
     }
 
     [AvaloniaFact]
-    public void A_token_resolves_for_a_theme_from_outside_the_library()
+    public void A_token_resolves_for_a_controls_theme_from_outside_the_library()
     {
-        // The public overload resolves for the app's light or dark theme; the one for a given control is internal.
+        // Gap 6 (#77: no new API): a library binds a token to its own brush (.Accent(Theme.Accent), through
+        // Element.ThemeBindings), which follows a theme switch with no render. To read a token's brush once, the public
+        // overload takes the control's variant; the one taking a control stays internal.
+        using var m = new Mounted(_ => CalloutCard("h", TextBlock("c")).Accent(Theme.Accent), ThemeVariant.Dark);
+        var card = m.One<CalloutCardControl>();
+        Assert.Equal(ColorOf(ThemeRef.Resolve(Theme.Accent.ResourceKey, isDark: card.ActualThemeVariant == ThemeVariant.Dark)),
+            ColorOf(card.Accent));
         Assert.NotEqual(ColorOf(ThemeRef.Resolve(Theme.Accent.ResourceKey, isDark: false)),
             ColorOf(ThemeRef.Resolve(Theme.Accent.ResourceKey, isDark: true)));
     }
