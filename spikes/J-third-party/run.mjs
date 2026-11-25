@@ -30,7 +30,7 @@ const temps = [];
 const temp = (prefix) => { const d = mkdtempSync(path.join(tmpdir(), prefix)); temps.push(d); return d; };
 function run(cmd, argv, { cwd = HERE, env = {}, quiet = false } = {}) {
   const started = Date.now();
-  const r = spawnSync(cmd, argv, { cwd, env: { ...process.env, ...env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' }, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync(cmd, argv, { cwd, env: { ...process.env, ...env, DOTNET_CLI_TELEMETRY_OPTOUT: '1', AVALONIA_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' }, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   if (r.error) throw r.error;
   const out = (r.stdout ?? '') + (r.stderr ?? '');
   if (!quiet) process.stdout.write(out);
@@ -94,7 +94,12 @@ try {
 } catch (e) {
   problems.push(e.message);
 } finally {
-  for (const d of temps.reverse()) rmSync(d, { recursive: true, force: true });
+  // Avalonia's build telemetry (Avalonia.BuildServices) can still hold a DLL in the packages folder for a moment after a
+  // build, so retry, and keep the folder (as pack.mjs does) rather than fail a run that passed.
+  for (const d of temps.reverse()) {
+    try { rmSync(d, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 }); }
+    catch (e) { console.warn('spike J: could not delete ' + path.basename(d) + ' (' + e.code + '); the OS temp folder keeps it'); }
+  }
 }
 
 function walk(dir) {
@@ -103,8 +108,8 @@ function walk(dir) {
 
 console.log('');
 for (const l of lines) console.log(l);
+// exitCode, not exit(): exit() can drop output still queued for a pipe.
 if (problems.length) {
   for (const p of problems) console.error('problem: ' + p);
-  process.exit(1);
-}
-console.log('spike J: all as expected');
+  process.exitCode = 1;
+} else console.log('spike J: all as expected');
