@@ -81,7 +81,7 @@ function nuspec(spec, over = {}) {
     '    <description>A package.</description>\n    <tags>' + m.tags + '</tags>\n    ' + m.repository + '\n' + m.extra +
     // A library package has a group per framework (over.frameworks), as the SDK writes them; a tool or analyzer none.
     (!spec.tool && !spec.analyzerOnly
-      ? '    <dependencies>\n' + (over.frameworks ?? FRAMEWORKS).map((f) => deps ? '      <group targetFramework="' + f + '">\n' + deps + '\n      </group>\n' : '      <group targetFramework="' + f + '" />\n').join('') + '    </dependencies>\n'
+      ? '    <dependencies>\n' + (over.frameworks ?? FRAMEWORKS).map((f) => deps && !(over.noDepsIn ?? []).includes(f) ? '      <group targetFramework="' + f + '">\n' + deps + '\n      </group>\n' : '      <group targetFramework="' + f + '" />\n').join('') + '    </dependencies>\n'
       : deps ? '    <dependencies>\n      <group targetFramework="net10.0">\n' + deps + '\n      </group>\n    </dependencies>\n' : '') +
     '  </metadata>\n</package>';
 }
@@ -247,6 +247,10 @@ test('each library package ships every framework, with a dependency group for ea
   has(problems({ change: (id, e, s) => id === 'Isotope.UI.Avalonia.Desktop' && s.delete('lib/net11.0/Isotope.UI.Avalonia.Desktop.pdb') }), /snupkg: missing lib\/net11\.0\/Isotope\.UI\.Avalonia\.Desktop\.pdb/);
   has(problems({ nuspecOver: { 'Isotope.UI.Avalonia.Desktop': { frameworks: ['net10.0', 'net11.0'] } } }), /Desktop.*no dependency group for net9\.0/);
   has(problems({ nuspecOver: { 'Isotope.UI.Avalonia': { frameworks: ['net8.0', ...FRAMEWORKS] } } }), /dependency groups for frameworks it does not ship for: net8\.0/);
+  has(problems({ nuspecOver: { 'Isotope.UI.Avalonia.Desktop': { noDepsIn: ['net11.0'] } } }), /Desktop.*no dependency on Isotope\.UI\.Avalonia for net11\.0/);
+  // A wrong dependency, repeated in every group, is one problem.
+  const excluded = problems({ nuspecOver: { 'Isotope.UI.Avalonia.Desktop': { depExclude: 'Build,Analyzers' } } }).filter((p) => /excludes Build,Analyzers/.test(p));
+  assert.equal(excluded.length, 1);
   const m = parseNuspec(nuspec(PACKAGES[1]));
   assert.deepEqual(m.dependencyGroups.map((g) => g.targetFramework), FRAMEWORKS);
   assert.ok(m.dependencyGroups.every((g) => g.ids.includes('Isotope.UI.Avalonia')));

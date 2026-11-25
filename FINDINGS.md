@@ -167,6 +167,9 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   - The desktop startup's `ReactorApp.Run` and `CreateDefaultAppBuilder` are C# 14 extension members, which an app's
     default C# 13 can't call (CS9260). The app sets `LangVersion 14`, which needs the .NET 10 SDK or later (the desktop
     README says so). The Desktop project itself now sets `LangVersion 15`, as the library does.
+  - **The .NET 10 SDK is enough** (measured): the smoke app, built outside the repo with SDK 10.0.402 (`rollForward`
+    disabled) against the packed packages, builds and passes 4 of 4 checks on `net10.0` (C# 14, its default) and on
+    `net9.0` (`LangVersion 14`). SDK 10 can't target `net11.0`.
   - C# 14 binds `array.Reverse()` to `MemoryExtensions.Reverse(Span<T>)`, which returns `void` (.NET 10 added an
     `Enumerable.Reverse(T[])` overload that wins). The sample's todo list now uses `Enumerable.Reverse(items)`, and the
     library README warns about it.
@@ -175,9 +178,14 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   test cases), and runs the smoke app on each. The generator goes into `analyzers/` from one framework only (each gave
   NU5118 otherwise). CI's library job and the package jobs install the .NET 9 and 10 runtimes (11 comes with the SDK),
   and the library tests' count is checked on each framework.
-- **Dropping `net9.0` later:** remove it from `TargetFrameworks` in the library, desktop, library tests and smoke app,
-  from `FRAMEWORKS` in `tools/packaging/lib/checks.mjs` and the count check in `ci.yml`, along with the 10.0 logging reference, the `9.0.x` runtime
-  in `ci.yml` and `release.yml`, and the `net9.0` notes in the READMEs and the migration guide.
+- **Dropping `net9.0` later:**
+  - `TargetFrameworks` in the library, desktop, library tests and smoke app, and the smoke app's `net9.0` `LangVersion 14`;
+  - the library's 10.0 `Microsoft.Extensions.Logging.Abstractions` reference;
+  - `FRAMEWORKS` in `tools/packaging/lib/checks.mjs`;
+  - in `ci.yml`, the library test count check (`-eq 3` and "each of 3 frameworks"), and the `9.0.x` runtime there and in
+    `release.yml`;
+  - CLAUDE.md's toolchain line, `docs/releasing.md`'s `lib/net9.0`, and the `net9.0` notes in the READMEs (library,
+    desktop, migration) and the migration guide.
 
 ## MCP server, phase 1 (#60, 2026-11-25)
 

@@ -9,7 +9,8 @@
     <AssemblyName>Isotope.UI.Avalonia.Desktop</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- ReactorApp.Run is a C# 14 extension member; net9.0's default is C# 13 (#67). -->
+    <!-- ReactorApp.Run is a C# 14 extension member, and net9.0's default is C# 13 (#67): 15, as the library, for every
+         framework. No ClosedTypeAttributes polyfill: this project has no closed hierarchies. -->
     <LangVersion>15</LangVersion>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>

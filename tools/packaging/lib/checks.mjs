@@ -267,14 +267,17 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
     }
 
     // Dependencies on Isotope packages: exactly dependsOn, at this version, every asset.
+    // Each framework's group repeats the dependencies, so a problem is reported once, not once per group (#67).
     const isotopeDeps = m.dependencies.filter((d) => /^Isotope\./i.test(d.id));
+    const depProblems = new Set();
     for (const d of isotopeDeps) {
-      if (!spec.dependsOn.includes(d.id)) problems.push(where + ': unexpected dependency on ' + d.id);
+      if (!spec.dependsOn.includes(d.id)) depProblems.add(where + ': unexpected dependency on ' + d.id);
       else {
-        if (d.version !== m.version) problems.push(where + ': depends on ' + d.id + ' ' + d.version + ', not its own version ' + m.version);
-        if (d.exclude) problems.push(where + ': its dependency on ' + d.id + ' excludes ' + d.exclude + ' (it must flow every asset, the generator included)');
+        if (d.version !== m.version) depProblems.add(where + ': depends on ' + d.id + ' ' + d.version + ', not its own version ' + m.version);
+        if (d.exclude) depProblems.add(where + ': its dependency on ' + d.id + ' excludes ' + d.exclude + ' (it must flow every asset, the generator included)');
       }
     }
+    problems.push(...depProblems);
     for (const id of spec.dependsOn) if (!isotopeDeps.some((d) => d.id === id)) problems.push(where + ': no dependency on ' + id);
     // A library package: a dependency group for each framework, each with the Isotope dependencies (#67).
     if (!spec.tool && !spec.analyzerOnly) {

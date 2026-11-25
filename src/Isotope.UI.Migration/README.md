@@ -5,7 +5,7 @@ Moves a [Microsoft.UI.Reactor](https://github.com/microsoft/microsoft-ui-reactor
 what has a counterpart (namespaces, WinUI types, renamed members and factory parameters) and reports what has none,
 saying what to use instead.
 
-1. Switch the project to `net10.0` or `net11.0` and to the Isotope packages, and add this one for the migration:
+1. Switch the project to `net10.0` or `net11.0` (`net9.0` works too, with `<LangVersion>14</LangVersion>`) and to the Isotope packages, and add this one for the migration:
 
    ```xml
    <PackageReference Include="Isotope.UI.Migration" Version="..." PrivateAssets="all" />
