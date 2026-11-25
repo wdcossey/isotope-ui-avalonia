@@ -2,7 +2,7 @@
 // Measures the Reactor -> Isotope migration (#33) on upstream's samples, read-only input from the upstream cache.
 //
 //   node tools/migration/measure-samples.mjs --out <empty folder outside the repo> [--samples <dir>] [--passes 4] [--only <name>]
-//       [--check | --write-baseline]
+//       [--jobs <n>] [--check | --write-baseline]
 //   node tools/migration/measure-samples.mjs --summary <summary.json of an earlier run> (--check | --write-baseline)
 //
 // For each sample project it:
@@ -12,6 +12,8 @@
 //   2. compiles it as it is ("before"), then runs `dotnet format analyzers` with the fixable migration rules until no
 //      file changes, then compiles it again ("after");
 //   3. counts, per file, compile errors and the migration diagnostics left (tools/migration/MigrationReport).
+// Up to --jobs projects (default: the processor count) are measured at once, each after the projects it references; the
+// output doesn't depend on it, and <out>/timings.json says where the time went.
 // A file "builds" when the compiler reports no error in it. Prints a summary (no local paths) and writes
 // <out>/summary.json. The repo and the upstream cache are only read; the script checks git status is unchanged.
 //
@@ -22,15 +24,20 @@
 // samples). --summary <file> does either on an earlier run's summary.json without measuring again. Both refuse a run
 // measured otherwise than the baseline: another upstream commit, a changed upstream/, another samples folder, --only or
 // --passes (summary.json records how it was measured).
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { baselineOf, compare, countsOf, withGuideTable } from './lib/baseline.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const args = parseArgs(process.argv.slice(2));
+// MSBuild node reuse is off for every child: concurrent builds then share no long-lived MSBuild node, and none is left
+// running after the script.
+const childEnv = { ...process.env, MSBUILDDISABLENODEREUSE: '1', DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' };
+
 // The baseline and the guide; the tests point these at copies (SAMPLES_BASELINE_FILE, SAMPLES_GUIDE_FILE).
 const baselineFile = path.resolve(process.env.SAMPLES_BASELINE_FILE ?? path.join(repo, 'tools', 'migration', 'samples-baseline.json'));
 const guideFile = path.resolve(process.env.SAMPLES_GUIDE_FILE ?? path.join(repo, 'docs', 'guide', 'migrating-from-reactor.md'));
@@ -40,7 +47,7 @@ if (args.check && args['write-baseline']) fail('give --check or --write-baseline
 if (gating && !lockCommit) fail("UPSTREAM.lock has no valid 'baseline=<40 hex>' line");
 if (args.summary) {
   if (!gating) fail('--summary needs --check or --write-baseline');
-  for (const o of ['out', 'samples', 'passes', 'only']) if (args[o] !== undefined) fail(`--summary measures nothing, so --${o} does nothing`);
+  for (const o of ['out', 'samples', 'passes', 'only', 'jobs']) if (args[o] !== undefined) fail(`--summary measures nothing, so --${o} does nothing`);
   const earlier = JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8'));
   const problem = notComparable(earlier.measured);
   if (problem) fail('that summary.json ' + problem);
@@ -50,6 +57,8 @@ if (args.summary) {
 const samples = path.resolve(args.samples ?? path.join(repo, 'upstream', 'samples'));
 const out = args.out ? path.resolve(args.out) : fail('--out <folder> is required');
 const passes = Number(args.passes ?? 4);
+// Projects measured at once. The counts don't depend on it: a project starts only after the projects it references.
+const jobs = Math.max(1, Math.floor(Number(args.jobs ?? os.availableParallelism())) || 1);
 // How this run measures, saved in summary.json: the baseline is of the whole upstream sample set, at UPSTREAM.lock's
 // commit, with the default passes, so a run measured otherwise is refused before it starts (and --summary refuses its file).
 const measured = { upstream: upstreamCommit(), samples: samples === path.resolve(repo, 'upstream', 'samples') ? 'upstream' : 'other', passes, only: args.only ?? null };
@@ -82,34 +91,55 @@ run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Avalonia.Desktop'), '
 run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Migration'), '-nologo', '-v:q'], repo, true);
 const reporter = path.join(repo, 'tools', 'migration', 'MigrationReport', 'bin', 'Release', 'net10.0', 'MigrationReport.dll');
 
-// Every project's "before" first, so a sample that uses another is measured against the other's unmigrated code.
+// Every project's "before" first, so a sample that uses another is measured against the other's unmigrated code. Each
+// phase runs up to --jobs projects at once, a project only after those it references (its build reads their output)
+// and those nested in its folder; results stay in the order above, so the output doesn't depend on the timing.
+const timings = new Map(converted.map(p => [p.file, { project: rel(p.file), beforeMs: 0, formatMs: [], afterMs: 0 }]));
+const phaseMs = {};
+let started = Date.now();
 const befores = new Map();
-for (const p of converted) {
+await inOrder(converted, async p => {
   process.stderr.write(`before: ${rel(p.file)}\n`);
-  befores.set(p.file, report(p.file));
-}
-const results = [];
-for (const p of converted) {
+  const t = Date.now();
+  befores.set(p.file, await report(p.file));
+  timings.get(p.file).beforeMs = Date.now() - t;
+});
+phaseMs.before = Date.now() - started;
+started = Date.now();
+const results = await inOrder(converted, async p => {
   const dir = path.dirname(p.file);
   const name = rel(p.file);
+  const time = timings.get(p.file);
   process.stderr.write(`migrate: ${name}\n`);
   let formatRuns = 0;
   let formatFailures = 0;
   for (let i = 0; i < passes; i++) {
     const hash = hashTree(dir);
     // dotnet format skips referenced projects, so only this project's files change.
-    const f = run('dotnet', ['format', 'analyzers', p.file, '--no-restore', '--severity', 'warn', '--diagnostics', ...fixable], dir, false);
+    let t = Date.now();
+    const f = await runAsync('dotnet', ['format', 'analyzers', p.file, '--no-restore', '--severity', 'warn', '--diagnostics', ...fixable], dir, false);
+    time.formatMs.push(Date.now() - t);
     formatRuns++;
     if (f.status !== 0) {
       formatFailures++;
-      process.stderr.write(`  dotnet format exited ${f.status}\n`);
+      process.stderr.write(`  ${name}: dotnet format exited ${f.status}\n`);
     }
     if (hashTree(dir) === hash) break;
   }
   const before = befores.get(p.file);
-  const after = report(p.file);
-  results.push({ project: name, dropped: p.dropped, formatRuns, formatFailures, projectBuildsBefore: before.builds, projectBuilds: after.builds, before, after });
-}
+  const t = Date.now();
+  const after = await report(p.file);
+  time.afterMs = Date.now() - t;
+  return { project: name, dropped: p.dropped, formatRuns, formatFailures, projectBuildsBefore: before.builds, projectBuilds: after.builds, before, after };
+});
+phaseMs.migrate = Date.now() - started;
+// Where the time went (timings.json, not summary.json, which holds only what is measured about the migration).
+const projectTimings = [...timings.values()];
+fs.writeFileSync(path.join(out, 'timings.json'), JSON.stringify({ jobs, phaseMs, projects: projectTimings }, null, 2));
+const total = key => projectTimings.reduce((a, t) => a + (Array.isArray(t[key]) ? t[key].reduce((x, y) => x + y, 0) : t[key]), 0);
+const formatCount = projectTimings.reduce((a, t) => a + t.formatMs.length, 0);
+process.stderr.write(`time (${jobs} at once): before phase ${s1(phaseMs.before)}, migrate phase ${s1(phaseMs.migrate)}; summed over projects: ` +
+  `before builds ${s1(total('beforeMs'))}, ${formatCount} dotnet format runs ${s1(total('formatMs'))}, after builds ${s1(total('afterMs'))}\n`);
 
 const summary = summarise(results);
 fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ measured, results, summary }, null, 2));
@@ -252,9 +282,31 @@ function order(list) {
 
 // ── measuring ──────────────────────────────────────────────────────────────────────────────────────
 
-function report(project) {
-  const rep = run('dotnet', [reporter, project, '--json'], path.dirname(project), true);
+async function report(project) {
+  const rep = await runAsync('dotnet', [reporter, project, '--json'], path.dirname(project), true);
   return JSON.parse(rep.stdout.trim().split('\n').pop());
+}
+
+// Runs work(p) for each project, at most `jobs` at once, each after the projects it depends on (its references, and
+// projects in folders under its own). Resolves to the results in the order of list.
+function inOrder(list, work) {
+  const promises = new Map();
+  let active = 0;
+  const waiting = [];
+  const slot = () => (active < jobs ? (active++, Promise.resolve()) : new Promise(resolve => waiting.push(resolve)));
+  const release = () => { const next = waiting.shift(); if (next) next(); else active--; };
+  const dependencies = p => list.filter(q => q !== p && (p.refs.includes(path.resolve(q.file)) || isInside(path.dirname(q.file), path.dirname(p.file))));
+  const start = p => {
+    if (!promises.has(p.file)) {
+      promises.set(p.file, (async () => {
+        await Promise.all(dependencies(p).map(start));
+        await slot();
+        try { return await work(p); } finally { release(); }
+      })());
+    }
+    return promises.get(p.file);
+  };
+  return Promise.all(list.map(start));
 }
 
 function summarise(results) {
@@ -312,8 +364,23 @@ function top(counts, n) {
 
 // ── helpers ────────────────────────────────────────────────────────────────────────────────────────
 
+function runAsync(cmd, argv, cwd, mustSucceed) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, argv, { cwd, env: childEnv });
+    const out = [], err = [];
+    child.stdout.on('data', d => out.push(d));
+    child.stderr.on('data', d => err.push(d));
+    child.on('error', reject);
+    child.on('close', status => {
+      const r = { status, stdout: Buffer.concat(out).toString('utf8'), stderr: Buffer.concat(err).toString('utf8') };
+      if (mustSucceed && status !== 0) fail(`${cmd} ${argv[0]} failed (${status}):\n${r.stdout.slice(-4000)}${r.stderr}`);
+      resolve(r);
+    });
+  });
+}
+
 function run(cmd, argv, cwd, mustSucceed) {
-  const r = spawnSync(cmd, argv, { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  const r = spawnSync(cmd, argv, { cwd, env: childEnv, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
   if (mustSucceed && r.status !== 0) fail(`${cmd} ${argv[0]} failed (${r.status}):\n${(r.stdout ?? '').slice(-4000)}${r.stderr ?? ''}`);
   return r;
 }
@@ -343,6 +410,7 @@ function isInside(p, dir) {
   return r === '' || (!r.startsWith('..') && !path.isAbsolute(r));
 }
 
+function s1(ms) { return (ms / 1000).toFixed(1) + ' s'; }
 function sum(counts) { return Object.values(counts).reduce((a, b) => a + b, 0); }
 function sumAll(files, key) { return files.reduce((a, f) => a + sum(f[key]), 0); }
 function rel(f) { return path.relative(copy, f).replace(/\\/g, '/'); }
