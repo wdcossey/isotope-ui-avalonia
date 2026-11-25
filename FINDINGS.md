@@ -153,15 +153,17 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   come from the git remote (SourceLink's), and its version from MinVer. So no file in the repository names the owner,
   just as with the nuspec's repository URL. `tools/packaging` checks it against the package, and checks that the owner's
   name appears in it only there.
-- **Third-party notices:** `src/Isotope.UI.Mcp/THIRD-PARTY-NOTICES.md` lists 50 packages and 60 assemblies, each with its
+- **Third-party notices:** `src/Isotope.UI.Mcp/THIRD-PARTY-NOTICES.md` lists 50 packages and 61 assemblies (counted from its table: rows, and backticked DLL names), each with its
   licence and copyright, plus the licence texts: MIT, and the MCP C# SDK's own LICENSE (an Apache-2.0 transition with an
   MIT part, held in `tools/packaging/licenses/` as at the commit the bundled 2.4.0 was built from).
   `tools/packaging/lib/notices.mjs` generates the file from the tool's restore and each package's nuspec. `pack.mjs`
   fails when the file differs from what the packed tool carries, and `--write-notices` rewrites it.
 - **The tool no longer carries the desktop backends or renderers** (Win32, X11, macOS, FreeDesktop, Skia, HarfBuzz). It
   reflects over signatures that name none of them. The package went from 11.9 MB and 94 files to 10.6 MB and 84 files,
-  and it lost the only two bundled packages whose copyright line names a person rather than an organisation. The 51 MCP
-  tests and the stdio smoke test pass without them.
+  and it lost the only two bundled packages whose copyright line names a person rather than an organisation. The packed
+  tool is what runs without them: the package smoke test (its `migrate_code`, `map_reactor_name` and `get_api` for the
+  desktop startup) and the three fresh-agent runs below. The 51 MCP tests run from the test project's own output, which
+  still has them.
 - **Tested by a fresh agent before publishing:** a `claude -p` session (Sonnet) in an empty scratch folder.
   - Its setup:
     - `--setting-sources project`, so none of the user's settings, hooks or memory;

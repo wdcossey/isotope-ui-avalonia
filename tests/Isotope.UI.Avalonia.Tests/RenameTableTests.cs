@@ -321,7 +321,7 @@ internal sealed record RenameTable(
                 m.TryGetProperty("note", out var note) ? note.GetString() : null)).ToList(),
             root.GetProperty("parameters").EnumerateArray().Select(p => new Parameter(
                 p.GetProperty("factory").GetString()!, p.GetProperty("reactor").GetString()!, p.GetProperty("avalonia").GetString(),
-                p.TryGetProperty("position", out var position) ? position.GetInt32() : null)).ToList(),
+                p.TryGetProperty("position", out var position) && position.ValueKind == JsonValueKind.Number ? position.GetInt32() : null)).ToList(),
             Renames(root, "modifiers"),
             Renames(root, "types"),
             Renames(root, "factories"));

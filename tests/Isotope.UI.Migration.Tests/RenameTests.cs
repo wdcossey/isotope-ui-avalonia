@@ -143,10 +143,12 @@ public class RenameTests
                 public static Element A(double v) => NumberBox(v, _ => { }, "Enter a number");
                 public static Element B(double v) => NumberBox(v, _ => { }, header: "Percentage");
                 public static Element D(double v) => NumberBox(v, _ => { });
+                public static Element F(double v) => NumberBox(value: v, onValueChanged: _ => { }, "In position");
             }
             """;
         var described = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
-        Assert.Equal(2, described.Count(d => d.StartsWith("ISOMIG010: Parameter 'NumberBox(header: …)' is gone in Isotope: Avalonia's NumericUpDown has no header", StringComparison.Ordinal)));
+        // Named as the fixed call names it, and found after in-position named arguments too.
+        Assert.Equal(3, described.Count(d => d.StartsWith("ISOMIG010: Parameter 'NumericUpDown(header: …)' is gone in Isotope: Avalonia's NumericUpDown has no header", StringComparison.Ordinal)));
     }
 
     [Fact]

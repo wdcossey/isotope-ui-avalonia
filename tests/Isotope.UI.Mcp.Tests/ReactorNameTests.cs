@@ -67,6 +67,11 @@ public class ReactorNameTests
         Assert.DoesNotContain("Minimum and Maximum", IsotopeTools.MapReactorName("SliderElement.Range"));
         // A modifier for any record still does.
         Assert.Contains("Modifier: `HAlign` is `HorizontalAlignment`", IsotopeTools.MapReactorName("TextBlockElement.HAlign"));
+        // A member of Reactor's record that Isotope's renamed record has: found on it (what the Range note says to set).
+        var minimum = IsotopeTools.MapReactorName("NumberBoxElement.Minimum");
+        Assert.Contains("Element record: `NumberBoxElement` is `NumericUpDownElement` in Isotope.", minimum);
+        Assert.Contains("member `double NumericUpDownElement.Minimum", minimum);
+        Assert.Contains("has no `Header`", IsotopeTools.MapReactorName("global::Microsoft.UI.Reactor.NumberBoxElement.Header"));
         // A member Isotope's renamed record has under Reactor's name is found on it.
         Assert.Contains("member `double NumericUpDownElement.Minimum", IsotopeTools.MapReactorName("NumericUpDownElement.Minimum"));
         // The last part alone still answers a factory or a type: Factories.Button is Button.

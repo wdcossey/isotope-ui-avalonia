@@ -16,9 +16,7 @@ internal static class ReactorNames
     public static IReadOnlyList<string> Lookup(string name, MigrationTables? tables = null)
     {
         tables ??= MigrationTables.Default;
-        var n = name.Trim();
-        if (n.EndsWith("()", StringComparison.Ordinal)) n = n[..^2];
-        if (n.StartsWith("global::", StringComparison.Ordinal)) n = n["global::".Length..];
+        var n = Normalize(name);
         var hits = new List<string>();
         if (n.Length == 0) return hits;
 
@@ -91,17 +89,25 @@ internal static class ReactorNames
     static bool IsRecord(string name, MigrationTables tables) =>
         tables.Renames.Records.ContainsKey(name) || tables.Renames.Types.Any(t => t.Reactor == name && name.EndsWith("Element", StringComparison.Ordinal));
 
-    /// <summary>Whether Isotope's record has the member: declared on it or a base type (Element's Key), or as a modifier
-    /// of that name (Padding is on every element).</summary>
-    static bool Has(ApiCatalog catalog, string record, string member)
+    /// <summary>What Isotope's record has under the name: a member declared on it or a base type (Element's Key), or a
+    /// modifier that takes it (Padding is on every element); empty when nothing; null when the catalog lacks the record.</summary>
+    static List<ApiEntry>? Found(ApiCatalog catalog, string record, string member)
     {
         var type = catalog.Find(record).Select(e => e.Member).OfType<Type>().FirstOrDefault();
-        if (type is null) return true; // a record the catalog doesn't know: claim nothing
-        // A modifier counts only if it takes this record (Padding takes any element; Expander's Header doesn't).
-        if (catalog.Find(member).Any(e => e.Kind == ApiKind.Modifier && e.Member is System.Reflection.MethodInfo m && Takes(m, type))) return true;
+        if (type is null) return null; // a record the catalog doesn't know: claim nothing
         for (var t = type; t is not null && t != typeof(object); t = t.BaseType)
-            if (catalog.Find(t.Name + "." + member).Count > 0) return true;
-        return false;
+            if (catalog.Find(t.Name + "." + member) is { Count: > 0 } onType) return onType.ToList();
+        // A modifier counts only if it takes this record (Padding takes any element; Expander's Header doesn't).
+        return catalog.Find(member).Where(e => e.Kind == ApiKind.Modifier && e.Member is System.Reflection.MethodInfo m && Takes(m, type)).ToList();
+    }
+
+    /// <summary>A name as asked: trimmed, without a trailing <c>()</c> or a <c>global::</c> prefix.</summary>
+    static string Normalize(string name)
+    {
+        var n = name.Trim();
+        if (n.EndsWith("()", StringComparison.Ordinal)) n = n[..^2];
+        if (n.StartsWith("global::", StringComparison.Ordinal)) n = n["global::".Length..];
+        return n;
     }
 
     /// <summary>Whether a modifier's receiver (its first parameter, or that parameter's constraints) accepts the record.</summary>
@@ -127,28 +133,37 @@ internal static class ReactorNames
         // A hit of any table section answers the name (a parameter "header" is not the Header modifier).
         string[] answered = ["Type:", "Factory:", "Modifier:", "Member:", "Factory parameter:", "Element record:"];
         var renamed = hits.Any(h => answered.Any(a => h.StartsWith(a, StringComparison.Ordinal)));
-        var trimmed = name.Trim();
+        var trimmed = Normalize(name);
         if (trimmed.StartsWith(ReactorNamespace + ".", StringComparison.Ordinal)) trimmed = trimmed[(ReactorNamespace.Length + 1)..];
         var winui = tables.WinUI.IsWinUINamespace(trimmed);
-        // Record.Member that neither the tables nor Isotope's record (renamed or not) has: say which record it is in
-        // Isotope and that the member is not on it, rather than nothing (#68).
+        // Record.Member the tables don't hold, on a Reactor record: answered from Isotope's record (renamed or not), its
+        // bases and the modifiers that take it; or, when none has it, which record it is and that the member is not on it (#68).
+        List<ApiEntry>? onRecord = null;
         if (!renamed && !winui && trimmed.LastIndexOf('.') is var at and > 0)
         {
             var owner = trimmed[..at].Split('.')[^1];
             var member = trimmed[(at + 1)..];
             var isotope = IsotopeRecord(owner, tables);
-            if (IsRecord(owner, tables) && !Has(catalog, isotope, member))
+            if (IsRecord(owner, tables) && Found(catalog, isotope, member) is { } has)
             {
-                var control = tables.Renames.Records.TryGetValue(owner, out var c) ? $" (its members are Avalonia's `{c}`'s)" : "";
                 var named = isotope == owner ? $"`{owner}` keeps its name in Isotope" : $"`{owner}` is `{isotope}` in Isotope";
-                hits.Add($"Element record: {named}, and has no `{member}`{control}. get_api `{isotope}` lists its members.");
-                renamed = true;
+                if (has.Count == 0)
+                {
+                    var control = tables.Renames.Records.TryGetValue(owner, out var c) ? $" (its members are Avalonia's `{c}`'s)" : "";
+                    hits.Add($"Element record: {named}, and has no `{member}`{control}. get_api `{isotope}` lists its members.");
+                    renamed = true;
+                }
+                else
+                {
+                    if (isotope != owner) hits.Add($"Element record: {named}.");
+                    onRecord = has;
+                }
             }
         }
         // Owner.Member as a whole (ButtonElement.OnClick), else its last part as a factory, hook, modifier or type
         // (Factories.Button is Button, Core.Element is Element), never another record's member of that name.
-        var found = renamed || winui ? [] : catalog.Find(trimmed) is { Count: > 0 } whole ? whole
-            : catalog.Find(trimmed.Split('.')[^1]).Where(e => e.Kind != ApiKind.Member).ToList();
+        var found = renamed || winui ? [] : onRecord ?? (catalog.Find(trimmed) is { Count: > 0 } whole ? whole
+            : catalog.Find(trimmed.Split('.')[^1]).Where(e => e.Kind != ApiKind.Member).ToList());
         // A bare name that is only some types' member (OnClick) is not one Isotope name; Owner.Member is.
         var same = trimmed.Contains('.') || found.Any(e => e.Kind != ApiKind.Member) ? found.Where(e => e.Kind != ApiKind.Member || trimmed.Contains('.')).ToList() : [];
         var sb = new StringBuilder();

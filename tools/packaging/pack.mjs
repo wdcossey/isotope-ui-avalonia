@@ -187,13 +187,21 @@ if (opts.smoke) {
       check(JSON.stringify(tools) === JSON.stringify(expected), 'the MCP server lists ' + tools.join(', ') + ', not ' + expected.join(', '));
       const doc = (await server.request('tools/call', { name: 'get_api', arguments: { name: 'UseState' } })).content.map((c) => c.text).join('\n');
       check(doc.includes('RenderContext.UseState') && doc.includes('Declares a piece of state'), 'get_api UseState did not give the hook and its doc comment:\n' + doc.slice(0, 500));
+      // The packed tool carries no desktop backend (#68): its migration, names and the desktop API still work.
+      const call = async (name, args) => (await server.request('tools/call', { name, arguments: args })).content.map((c) => c.text).join('\n');
+      const migrated = await call('migrate_code', { code: 'using Microsoft.UI.Reactor;\nusing static Microsoft.UI.Reactor.Factories;\nstatic class Page\n{\n    public static Element View(double v) => NumberBox(v, _ => { }, "Amount").Range(0, 100);\n}\n' });
+      check(migrated.includes('NumericUpDown(v') && migrated.includes("Parameter 'NumericUpDown(header: …)' is gone") && migrated.includes("Modifier 'Range' is gone"), 'migrate_code did not migrate a NumberBox with its notes:\n' + migrated.slice(0, 800));
+      const mapped = await call('map_reactor_name', { name: 'NumberBoxElement.Minimum' });
+      check(mapped.includes('NumericUpDownElement.Minimum'), 'map_reactor_name NumberBoxElement.Minimum did not find NumericUpDownElement.Minimum:\n' + mapped.slice(0, 500));
+      const run = await call('get_api', { name: 'ReactorApp.Run' });
+      check(run.includes('ReactorApp.Run') && run.includes('overloads'), 'get_api ReactorApp.Run did not give the desktop startup:\n' + run.slice(0, 500));
       const resources = (await server.request('resources/list')).resources;
       check(resources.length > 0 && resources.every((x) => x.uri.startsWith('isotope://guides/')), 'the MCP server lists no guides as resources');
     } finally {
       await server.close();
     }
     timings.push(['smoke tool run', Date.now() - started]);
-    console.log('smoke: the MCP tool from its package listed its 6 tools, gave the docs of UseState and ' + 'listed the guides');
+    console.log('smoke: the MCP tool from its package listed its 6 tools, gave the docs of UseState and ReactorApp.Run, migrated a NumberBox, mapped a member and listed the guides');
   } catch (e) {
     failure = e;
   } finally {

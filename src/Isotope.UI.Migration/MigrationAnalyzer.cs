@@ -537,18 +537,19 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 var entry = _t.Renames.Parameters.FirstOrDefault(p => (p.Factory == factory || p.Factory == reactorFactory) && p.Reactor == parameter);
                 if (entry is null) continue;
                 if (entry.Avalonia is null)
-                    Report(ctx, Rules.NameRemoved, arg.GetLocation(), args: ["Parameter", (reactorFactory ?? factory) + "(" + parameter + ": …)", entry.Note ?? ""]);
+                    Report(ctx, Rules.NameRemoved, arg.GetLocation(), args: ["Parameter", factory + "(" + parameter + ": …)", entry.Note ?? ""]);
                 // A target already named here would be named twice: leave it to the compiler's error.
                 else if (!named.Contains(entry.Avalonia))
                     Report(ctx, Rules.ParameterRenamed, arg.NameColon.Name.GetLocation(), replace: entry.Avalonia, args: [factory, parameter, entry.Avalonia]);
             }
-            // A positional argument for a parameter with no counterpart, where no overload takes that many (#68).
-            var positional = inv.ArgumentList.Arguments.TakeWhile(a => a.NameColon is null).ToList();
+            // A positional argument for a parameter with no counterpart, where no overload takes that many (#68). By index: a
+            // named argument before it stands in its own position (C# 7.2), so the index is still the position.
+            var arguments = inv.ArgumentList.Arguments;
             foreach (var gone in _t.Renames.Parameters.Where(p => p.Avalonia is null && p.Position is not null && (p.Factory == factory || p.Factory == reactorFactory)))
             {
                 var at = gone.Position!.Value;
-                if (at < positional.Count && methods.All(m => m.Parameters.Length <= at && !m.Parameters.Any(p => p.IsParams)))
-                    Report(ctx, Rules.NameRemoved, positional[at].GetLocation(), args: ["Parameter", (reactorFactory ?? factory) + "(" + gone.Reactor + ": …)", gone.Note ?? ""]);
+                if (at < arguments.Count && arguments[at].NameColon is null && methods.All(m => m.Parameters.Length <= at && !m.Parameters.Any(p => p.IsParams)))
+                    Report(ctx, Rules.NameRemoved, arguments[at].GetLocation(), args: ["Parameter", factory + "(" + gone.Reactor + ": …)", gone.Note ?? ""]);
             }
         }
 

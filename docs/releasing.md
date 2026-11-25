@@ -56,7 +56,9 @@ nuget.org's copy of the same version):
   references only the desktop package and builds with the consumer's default C# version and warnings as errors.
 - `Migration`: `dotnet format analyzers` must find `ISOMIG001` and offer its fix, from the analyzer package.
 - The MCP tool: installed from its package into a temporary `--tool-path` (never globally), started over stdio, it must
-  list its six tools, answer `get_api UseState` with the hook's doc comment, and list the guides as resources.
+  list its six tools, answer `get_api UseState` with the hook's doc comment and `get_api ReactorApp.Run` (the desktop
+  startup it carries without the desktop backends), migrate a Reactor `NumberBox` with its notes, map
+  `NumberBoxElement.Minimum`, and list the guides as resources.
 
 The default output folder is emptied of earlier builds of these packages first. Another `--out` must be empty or
 new, or given `--clean` to delete earlier builds of these packages in it; a folder holding anything else is refused,
