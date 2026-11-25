@@ -100,8 +100,8 @@ projects (358 C# files), at the commit in `UPSTREAM.lock`.
 - A file counts as building when the compiler reports no error in it.
 - It also prints the commonest diagnostics and errors left.
 
-Measured on 2026-11-24, with #41–#44 and #49 (theme tokens, text and layout modifiers, named text styles, the next
-controls):
+Measured on 2026-11-25, on main after #68. The build counts are those of #41–#44 and #49 (theme tokens, text and
+layout modifiers, named text styles, the next controls), unchanged since:
 
 | | Before the fixes | After |
 |---|---|---|
@@ -112,15 +112,17 @@ controls):
 - No file that built before the fixes fails after them, and no `dotnet format` run failed.
 - The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
 - The two projects that build after are the hello-world app and the chat sample's model.
-- Diagnostics left: 1,169.
-  - 407 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
+- Diagnostics left: 1,176.
+  - 405 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
     `Resources` (14) and `SubtleButton` (14) on `ButtonElement`.
-  - 203 ISOMIG012: controls not ported yet. The commonest are `Run` (39), `Icon` (14), `Paragraph` (14) and
+  - 206 ISOMIG012: controls not ported yet. The commonest are `Run` (39), `Icon` (14), `Paragraph` (14) and
     `ListView` (12).
   - 199 ISOMIG002: Charting (159), Advanced (11), Docking (8), and smaller upstream namespaces.
   - 171 ISOMIG011 and 116 ISOMIG005: WinUI-only controls and types.
   - 57 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.
+  - 6 ISOMIG010: Reactor names with no counterpart, each with what to do instead: NumberBox's `Range`,
+    `SpinButtons` and header argument (#68).
   - 3 ISOMIG007: a ScrollView's `ContentOrientation`, left for a hand fix.
 - Most compile errors left are names Isotope doesn't have: the largest groups are 264 CS0234 (`UI`), 128 CS0103
   (`Palette`), 91 CS0103 (`Brush`) and 90 CS0103 (`D3Charts`, from Charting).
