@@ -13,7 +13,8 @@ namespace Isotope.UI.Core;
 
 public sealed partial class Reconciler
 {
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, ThemeBindingSet> s_themeBindings = new();
+    // By the object bound: a control, or an inline (#65).
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AvaloniaObject, ThemeBindingSet> s_themeBindings = new();
 
     // Theme.NotifyResourcesChanged() (upstream's resource refresh): the host's next root pass renders the whole tree,
     // past memoized components and the skip of unchanged elements, so a token a render resolves (ThemeRef.Resolve) is
@@ -44,17 +45,36 @@ public sealed partial class Reconciler
     /// type isn't a brush. Bindings equal to the last ones change nothing.
     /// </summary>
     internal static void ApplyThemeBindings(UIElement control, IReadOnlyDictionary<string, ThemeRef>? bindings)
+        => ApplyThemeBindings(control, control, bindings);
+
+    /// <summary>
+    /// Applies an element's theme bindings to <paramref name="target"/>, resolved for <paramref name="scope"/> and again when
+    /// its theme or resources change: a control's own, or an inline's (#65), whose scope is the text block that holds it (an
+    /// inline is not a control, and its theme and resources are the text block's).
+    /// </summary>
+    internal static void ApplyThemeBindings(AvaloniaObject target, Control scope, IReadOnlyDictionary<string, ThemeRef>? bindings)
     {
-        if (bindings is not { Count: > 0 } && !s_themeBindings.TryGetValue(control, out _)) return;
-        s_themeBindings.GetValue(control, static c => new ThemeBindingSet(c)).Apply(bindings);
+        if (bindings is not { Count: > 0 } && !s_themeBindings.TryGetValue(target, out _)) return;
+        s_themeBindings.GetValue(target, t => new ThemeBindingSet(t, scope)).Apply(bindings);
     }
 
-    /// <summary>Tests only: the brush properties a control's theme bindings drive now.</summary>
-    internal static IReadOnlyCollection<string> BoundThemeProperties(Control control) =>
-        s_themeBindings.TryGetValue(control, out var set) ? set.Properties : [];
+    /// <summary>Ends <paramref name="target"/>'s theme bindings: an inline the reconciler removed from a text block that stays (#65).</summary>
+    internal static void ReleaseThemeBindings(AvaloniaObject target)
+    {
+        if (!s_themeBindings.TryGetValue(target, out var set)) return;
+        set.Apply(null);
+        s_themeBindings.Remove(target);
+    }
 
-    /// <summary>One control's theme bindings, and what makes them resolve again.</summary>
-    private sealed class ThemeBindingSet(Control control)
+    /// <summary>Tests only: the brush properties a control's (or an inline's) theme bindings drive now.</summary>
+    internal static IReadOnlyCollection<string> BoundThemeProperties(AvaloniaObject target) =>
+        s_themeBindings.TryGetValue(target, out var set) ? set.Properties : [];
+
+    /// <summary>
+    /// One object's theme bindings, and what makes them resolve again: on <paramref name="target"/>, resolved for and
+    /// refreshed with <paramref name="control"/> (the same control, or the text block that holds an inline).
+    /// </summary>
+    private sealed class ThemeBindingSet(AvaloniaObject target, Control control)
     {
         private readonly Dictionary<string, ThemeSlot> _slots = new(StringComparer.Ordinal);
         private IReadOnlyDictionary<string, ThemeRef>? _bindings;
@@ -92,9 +112,9 @@ public sealed partial class Reconciler
                     }
                     continue;
                 }
-                if (BrushProperty(control, name) is not { } property) continue;
+                if (BrushProperty(target, name) is not { } property) continue;
                 slot = new ThemeSlot(themeRef, Resolve(themeRef));
-                slot.Binding = control.Bind(property, slot, BindingPriority.Style);
+                slot.Binding = target.Bind(property, slot, BindingPriority.Style);
                 _slots[name] = slot;
             }
             if (_slots.Count > 0) Hook();
@@ -175,9 +195,9 @@ public sealed partial class Reconciler
             return true;
         }
 
-        // The control's brush property of that name (Background, Foreground, BorderBrush, PaneBackground, …).
-        private static AvaloniaProperty? BrushProperty(Control control, string name) =>
-            AvaloniaPropertyRegistry.Instance.FindRegistered(control, name) is { IsReadOnly: false } p
+        // The target's brush property of that name (Background, Foreground, BorderBrush, PaneBackground, …).
+        private static AvaloniaProperty? BrushProperty(AvaloniaObject target, string name) =>
+            AvaloniaPropertyRegistry.Instance.FindRegistered(target, name) is { IsReadOnly: false } p
                 && p.PropertyType == typeof(IBrush)
                 ? p
                 : null;

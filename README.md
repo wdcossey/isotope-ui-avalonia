@@ -41,10 +41,11 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
 - **Platform hooks**, with Reactor's names, written for Avalonia: theme and colour scheme, high contrast, windows,
   displays and DPI ([guide](docs/guide/platform-hooks.md)), Reactor's theme tokens (`Theme.*`, [guide](docs/guide/theme-tokens.md)), and its named text styles (`Title`, `Body`,
   `Caption`…, [guide](docs/guide/text-styles.md)).
-- **32 controls:** text and image; button, toggle, repeat and hyperlink buttons; check box, radio button, toggle
-  switch; text box, numeric up-down, auto-complete box, combo box, list box, slider, progress; date and time pickers; tabs,
-  menus, context menus and tooltips; split view, expander, border, scroll viewer, separator, tree view, viewbox; and
-  stack, grid, wrap and flexbox layouts (`FlexPanel`, over Reactor's port of Yoga).
+- **33 controls:** text, selectable text and image, with rich text (runs, spans and elements in the text); button,
+  toggle, repeat and hyperlink buttons; check box, radio button, toggle switch; text box, numeric up-down, auto-complete
+  box, combo box, list box, slider, progress; date and time pickers; tabs, menus, context menus and tooltips; split view,
+  expander, border, scroll viewer, separator, tree view, viewbox; and stack, grid, wrap and flexbox layouts (`FlexPanel`,
+  over Reactor's port of Yoga).
 - **Function and class components**, keyed lists (reorders move controls instead of rebuilding them), and **error
   boundaries** ([guide](docs/guide/error-boundaries.md)).
 - **A one-line app startup**, `ReactorApp.Run<TRoot>(title, width, height)`, and a sample app
@@ -54,9 +55,9 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
 - **An MCP server for coding agents** (`Isotope.UI.Mcp`, a `dotnet tool` with the command `isotope-mcp`): search and read
   the API with its docs, map Reactor names to Isotope's, run the migration on a C# file, and read the guides
   ([its README](src/Isotope.UI.Mcp/README.md)).
-- **Tests:** 1,192 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,227 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
 
-Not there yet: more controls (rich text, icons, list views…), tracked from what the migration tool finds missing in
+Not there yet: more controls (icons, list views…), tracked from what the migration tool finds missing in
 upstream's samples (#35); animation; and published packages (they build and are checked on every push;
 [releasing](docs/releasing.md)).
 
@@ -132,9 +133,9 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1192 tests on each of net9.0, net10.0, net11.0; no upstream/)
-dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (48 tests)
-dotnet test tests/Isotope.UI.Mcp.Tests                   # the MCP server (51 tests)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1227 tests on each of net9.0, net10.0, net11.0; no upstream/)
+dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (52 tests)
+dotnet test tests/Isotope.UI.Mcp.Tests                   # the MCP server (52 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
 dotnet test tools/sync/verify/Upstream.Yoga.Tests        # upstream's Yoga tests on the vendored code

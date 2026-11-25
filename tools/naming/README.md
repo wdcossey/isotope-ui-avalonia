@@ -45,13 +45,15 @@ In `members`:
 
 - `record` is Reactor's record name, a key of `records`; `reactor` is Reactor's member name.
 - `avalonia` is the member's name here: a string, or an array when one member became several (`GridElement.Definition`
-  is `ColumnDefinitions` and `RowDefinitions`).
+  is `ColumnDefinitions` and `RowDefinitions`), or null for a `removed` member.
 - `kind` is one of:
   - `rename`: the same member under another name. A migration renames it.
   - `shape`: the member changed shape (merged with another, split, or retyped); `note` says how. A migration flags it
     for a hand fix, or fixes the simple cases. Several entries can share one `avalonia` member (`Label` and
     `ContentElement` are one `Content`); an entry whose `avalonia` equals `reactor` is a retyped member.
   - `kept`: no Avalonia counterpart, so the name stays (`avalonia` equals `reactor`); `note` says why.
+  - `removed`: no counterpart and no member here (`avalonia` is null); `note` says what to do instead. A migration
+    reports it (`TextBlockElement.IsTextSelectionEnabled`: use a `SelectableTextBlock`).
 
 `status` is one of:
 

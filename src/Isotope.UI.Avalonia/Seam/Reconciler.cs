@@ -211,6 +211,10 @@ public sealed partial class Reconciler
                 return HasConsumedContextChangedInSubtree(child);
             case ContentControl { Content: Control content }:
                 return HasConsumedContextChangedInSubtree(content);
+            case TextBlock text: // #65: the controls in its inlines
+                var changed = false;
+                VisitInlineUI(text, child => changed = changed || HasConsumedContextChangedInSubtree(child));
+                return changed;
             default:
                 return false;
         }
@@ -385,6 +389,10 @@ public sealed partial class Reconciler
                 ComponentElement comp => MountComponent(comp, requestRerender),
                 GroupElement => throw new NotSupportedException(
                     "A GroupElement is flattened into its container's children; it can't be mounted on its own."),
+                // #65: an inline is not a control.
+                InlineElement inline => throw new NotSupportedException(
+                    $"{inline.GetType().Name} is an inline: it goes in a text block's inlines, TextBlock(Run(\"a \"), Bold(\"b\")), " +
+                    "or a span's, not in a panel or a content slot."),
                 // Controls: the handler registered for the element type (a generated descriptor, #12).
                 _ when TryGetV1Handler(element.GetType(), out var entry) => entry.Mount(element, requestRerender, this),
                 _ => throw new NotSupportedException(
@@ -696,7 +704,7 @@ public sealed partial class Reconciler
     };
 
     // Writes a modifier that is set, and clears one that is no longer set.
-    private static void Set<T>(UIElement control, AvaloniaProperty<T> property, T? oldValue, T? newValue) where T : struct
+    private static void Set<T>(AvaloniaObject control, AvaloniaProperty<T> property, T? oldValue, T? newValue) where T : struct
     {
         if (newValue is { } v)
         {
@@ -706,7 +714,7 @@ public sealed partial class Reconciler
             control.ClearValue(property);
     }
 
-    private static void SetRef<T>(UIElement control, AvaloniaProperty<T> property, T? oldValue, T? newValue) where T : class?
+    private static void SetRef<T>(AvaloniaObject control, AvaloniaProperty<T> property, T? oldValue, T? newValue) where T : class?
     {
         if (newValue is not null)
         {
@@ -1012,6 +1020,11 @@ public sealed partial class Reconciler
                 break;
             case ContentControl { Content: Control content }:
                 UnmountChild(content);
+                break;
+            // #65: the controls in a text block's inlines. Its handler's unmount hook tears them down; this walk reaches
+            // them when that hook failed in an isolated teardown (RunIsolatedTeardown's recovery).
+            case TextBlock text:
+                VisitInlineUI(text, UnmountChild);
                 break;
         }
     }

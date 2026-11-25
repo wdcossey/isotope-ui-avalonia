@@ -280,10 +280,19 @@ public sealed partial class Reconciler
     // True when control sits in ancestor's subtree (logical parent first, then visual).
     private static bool IsAttachedUnder(UIElement control, UIElement ancestor)
     {
-        for (Visual? current = control; current is not null; current = current.Parent as Visual ?? current.GetVisualParent())
+        for (Visual? current = control; current is not null; current = LogicalOrVisualParent(current))
         {
             if (ReferenceEquals(current, ancestor)) return true;
         }
         return false;
+    }
+
+    // The logical parent that is a visual, past inlines (#65: a control in a text block's inlines has its inline UI container
+    // as its parent, inside spans, inside the text block), else the visual parent.
+    private static Visual? LogicalOrVisualParent(Visual current)
+    {
+        var parent = current.Parent;
+        while (parent is not null and not Visual) parent = parent.Parent;
+        return parent as Visual ?? current.GetVisualParent();
     }
 }

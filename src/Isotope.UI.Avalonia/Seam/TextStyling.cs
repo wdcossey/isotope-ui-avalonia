@@ -14,8 +14,17 @@ namespace Isotope.UI.Core;
 [WrapManual("FontSize")]
 [WrapManual("FontWeight")]
 [WrapManual("FontFamily")]
+// Text and Inlines are the text block's content, one or the other (#65): written through the reconciler's inline diff.
+[WrapManual("Text")]
+[WrapManual("Inlines")]
 public partial record TextBlockElement
 {
+    /// <summary>
+    /// The text as inlines (Avalonia's <c>Inlines</c>, #65): runs, spans, line breaks and inline elements, from
+    /// <c>TextBlock(Run("a "), Bold("b"))</c>. When set, it is the text, and <see cref="Text"/> is not shown.
+    /// </summary>
+    public InlineElement[]? Inlines { get; init; }
+
     /// <summary>The font size, in DIPs; <see langword="null"/> leaves the control's own.</summary>
     /// <remarks>Also an element-wide modifier (<c>.FontSize</c> on any element): on a text block, this member wins.</remarks>
     public double? FontSize { get; init; }
@@ -54,8 +63,12 @@ public partial record TextBlockElement
             && Equals(x.TextTrimming, y.TextTrimming) && x.LineHeight == y.LineHeight && x.MaxLines == y.MaxLines
             && TextStyleEquals(x, y);
 
-    // The named text styles' members (#44, TextStyles.cs).
-    private static partial ControlDescriptor<TextBlockElement, TextBlock> Customize(ControlDescriptor<TextBlockElement, TextBlock> d) => CustomizeTextStyles(d);
+    // The text or the inlines (#65, Reconciler.Inlines.cs), and the named text styles' members (#44, TextStyles.cs).
+    private static partial ControlDescriptor<TextBlockElement, TextBlock> Customize(ControlDescriptor<TextBlockElement, TextBlock> d)
+        => CustomizeTextStyles(d.ImperativeBridged(
+            mount:  static (ctx, c, e) => ctx.Reconciler.MountTextContent(c, e.Text, e.Inlines, ctx.RequestRerender),
+            update: static (ctx, c, o, n) => ctx.Reconciler.UpdateTextContent(c, o.Text, o.Inlines, n.Text, n.Inlines, ctx.RequestRerender),
+            unmount: static (ctx, c) => ctx.Reconciler.UnmountTextContent(c)));
 }
 
 public partial record ElementModifiers

@@ -175,6 +175,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   CS9260 on `ReactorApp.Run`. Measure a consumer at each target's default `LangVersion`, not the library's. (2026-11-25)
 - **A package built in a clone of a local folder has no SourceLink.** Its `origin` is a path, so pack.mjs reports
   every package (no repository URL, no SourceLink). Set `origin` to the GitHub URL in a scratch clone first. (2026-11-25)
+- **Avalonia's TextBlock has two contents that clear each other.** Writing `Text` (even `""`) empties `Inlines`, and adding
+  an inline to a text block with text turns that text into a run. Write one or the other, and clear the other first. (2026-11-25)
+- **A non-panel control's handler owns its child teardown.** Its unmount returns `CollectSelf`, so the generic
+  `UnmountChildren` walk never reaches a child slot the handler mounted (a text block's inline UI): tear it down in the
+  descriptor's unmount hook, and add the walk only for the isolated-teardown recovery. (2026-11-25)
+- **A `using static Factories` method shadows an Avalonia type of the same name in a constant pattern.** `LineBreak =>`
+  bound to the `LineBreak()` factory (CS0428); write a declaration pattern, `LineBreak _ =>`. (2026-11-25)
 
 ## Git, GitHub and merging
 

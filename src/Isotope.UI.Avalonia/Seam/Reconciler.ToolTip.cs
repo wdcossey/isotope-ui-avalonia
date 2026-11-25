@@ -36,7 +36,11 @@ public sealed partial class Reconciler
             return owner;
         }
         viaToolTip = false;
-        return child.Parent as Control;
+        // A control in a text block's inlines (#65) has its inline UI container as its parent, inside spans, inside the
+        // text block: the path goes on from the text block.
+        var parent = child.Parent;
+        while (parent is not null and not Control) parent = parent.Parent;
+        return parent as Control;
     }
 
     /// <summary>The text tooltip of an element: its modifier's, else its command's description (#29).</summary>

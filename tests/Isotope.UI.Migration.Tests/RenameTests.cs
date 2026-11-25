@@ -152,6 +152,30 @@ public class RenameTests
     }
 
     [Fact]
+    public void IsTextSelectionEnabled_is_reported_with_what_to_use_instead()
+    {
+        // #65: Avalonia's TextBlock can't be selected and its SelectableTextBlock always can. As a with or object
+        // initializer member, a modifier (and upstream's obsolete Selectable), and a constructor argument.
+        const string reactor = Usings + """
+            static class C
+            {
+                public static Element A() => TextBlock("a") with { IsTextSelectionEnabled = true };
+                public static Element B() => TextBlock("b").IsTextSelectionEnabled();
+                public static Element E() => TextBlock("e").Selectable(false);
+                public static Element D() => RichTextBlock("d") with { IsTextSelectionEnabled = true };
+                public static Element F() => new TextBlockElement("f") { IsTextSelectionEnabled = true };
+                public static Element G() => new TextBlockElement("g", IsTextSelectionEnabled: true);
+            }
+            """;
+        var described = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
+        Assert.Equal(3, described.Count(d => d.StartsWith("ISOMIG010: Member 'TextBlockElement.IsTextSelectionEnabled' is gone in Isotope: Avalonia's TextBlock can't be selected: drop it if false, or use SelectableTextBlock(text)", StringComparison.Ordinal)));
+        Assert.Single(described, d => d.StartsWith("ISOMIG010: Modifier 'IsTextSelectionEnabled' is gone in Isotope: No modifier: Avalonia's TextBlock can't be selected; drop it if false", StringComparison.Ordinal));
+        Assert.Single(described, d => d.StartsWith("ISOMIG010: Modifier 'Selectable' is gone in Isotope: No modifier (Reactor's obsolete IsTextSelectionEnabled)", StringComparison.Ordinal));
+        Assert.Single(described, d => d.StartsWith("ISOMIG010: Member 'RichTextBlockElement.IsTextSelectionEnabled' is gone in Isotope: Avalonia's SelectableTextBlock is always selectable", StringComparison.Ordinal));
+        Assert.DoesNotContain(described, d => d.Contains("ISOMIG013", StringComparison.Ordinal) && (d.Contains("IsTextSelectionEnabled", StringComparison.Ordinal) || d.Contains("Selectable", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void A_qualified_type_the_table_renamed_or_removed_is_renamed_or_reported()
     {
         var tables = Migrate.WithRenames(t =>

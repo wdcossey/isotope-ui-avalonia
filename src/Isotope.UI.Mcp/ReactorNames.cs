@@ -202,6 +202,7 @@ internal static class ReactorNames
         {
             "rename" => $"Member: `{m.Record}.{m.Reactor}` is {avalonia} in Isotope.{note}",
             "shape" => $"Member: `{m.Record}.{m.Reactor}` changed shape: it is {avalonia} in Isotope.{note}",
+            "removed" => $"Member: `{m.Record}.{m.Reactor}` has no counterpart in Isotope.{note}",
             _ => $"Member: `{m.Record}.{m.Reactor}` keeps Reactor's name ({avalonia}).{note}",
         };
     }
