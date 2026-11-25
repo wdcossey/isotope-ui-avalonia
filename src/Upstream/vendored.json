@@ -157,6 +157,7 @@
         "gen-obsolete-filter",
         "gen-items-host-ilist",
         "gen-items-host-adapter",
+        "gen-panel-children-flatten",
         "gen-missing-counterpart-check",
         "gen-missing-counterpart-report",
         "gen-drop-try-register-assembly",
@@ -165,7 +166,7 @@
         "gen-manual-content-slot",
         "namespace-isotope"
       ],
-      "sha256": "f9d7435826b3cfbd0c8c8dfd40231b81ea093f0bd44b73fea05c331adbf2ad72"
+      "sha256": "b229d6eee91c484483d09edc72ed3587e74158504012bfaf5988f693a27a6cc8"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",

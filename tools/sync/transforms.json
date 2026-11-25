@@ -304,6 +304,15 @@
       ]
     },
     {
+      "id": "gen-panel-children-flatten",
+      "find": "GetChildren: static e => e\\.Children,",
+      "replace": "GetChildren: static e => global::Isotope.UI.Core.V1Protocol.PanelChildren.Of(e.Children),",
+      "why": "Our rule (#79): the generated panel strategy flattens a GroupElement into its siblings (PanelChildren.Of, the library's Seam/V1Protocol/PanelChildren.cs), as Isotope's own panel records do, so a library's panel record needn't. Upstream's mount path would mount the group itself, which throws.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
       "id": "gen-missing-counterpart-check",
       "find": "(\\r?\\n)(        var ns = element\\.ContainingNamespace\\.IsGlobalNamespace)",
       "replace": "$1        var missingCounterpart = descriptorOnly ? MissingCounterparts(element, control, props, contentProp is null ? null : contentElementName, panelChildren, items, exclude) : null;$1$2",

@@ -76,16 +76,38 @@ public sealed class PanelTests
         Assert.Equal([3, 5], panel.Children.Cast<RatingBarControl>().Select(r => r.Value));
     }
 
-    // Gap 4 (docs/spikes/J-third-party-controls.md): Isotope's own panel records flatten a Group into their children with
-    // Reconciler.Flatten, which is internal, so a library's panel gets the group as one child, and mounting it throws.
-    // Parity would mount three ratings. Pinned as it is now.
+    // Gap 4 (docs/spikes/J-third-party-controls.md), closed by #79: the generated Panel children strategy flattens a Group
+    // into its siblings, as Isotope's own panel records do, so the vendor's record needn't. Unkeyed and keyed children.
     [AvaloniaFact]
-    public void Gap_a_group_element_inside_the_vendors_panel_throws()
+    public void A_group_element_inside_the_vendors_panel_mounts_its_children()
     {
-        using var m = new Mounted(_ => ErrorBoundary(SpreadPanel(RatingBar(1), Group(RatingBar(2), RatingBar(3))),
-            ex => TextBlock("caught: " + ex.GetType().Name)));
-        Assert.Contains(m.All<TextBlock>(), t => t.Text == "caught: NotSupportedException");
-        Assert.Empty(m.All<RatingBarControl>());
+        using (var m = new Mounted(_ => ErrorBoundary(SpreadPanel(RatingBar(1), Group(RatingBar(2), RatingBar(3))),
+            ex => TextBlock("caught: " + ex.GetType().Name))))
+        {
+            Assert.DoesNotContain(m.All<TextBlock>(), t => t.Text?.StartsWith("caught: ") == true);
+            var panel = m.One<SpreadPanelControl>();
+            Assert.Equal([1, 2, 3], panel.Children.Cast<RatingBarControl>().Select(r => r.Value));
+        }
+
+        string[] ids = ["a", "b", "c"];
+        Action<string[]>? setOrder = null;
+        using (var m = new Mounted(ctx =>
+        {
+            var (order, set) = ctx.UseState(ids);
+            setOrder = set;
+            return SpreadPanel(RatingBar(5), Group([.. order.Select(id => (Element)RatingBar(id[0] - 'a' + 1).WithKey(id))]));
+        }))
+        {
+            var panel = m.One<SpreadPanelControl>();
+            Assert.Equal([5, 1, 2, 3], panel.Children.Cast<RatingBarControl>().Select(r => r.Value));
+            var before = panel.Children.ToList();
+
+            setOrder!([.. ids.Reverse()]);
+            Mounted.Pump();
+
+            Assert.Equal([5, 3, 2, 1], panel.Children.Cast<RatingBarControl>().Select(r => r.Value));
+            Assert.Equal([before[0], before[3], before[2], before[1]], panel.Children);
+        }
     }
 
     [AvaloniaFact]
