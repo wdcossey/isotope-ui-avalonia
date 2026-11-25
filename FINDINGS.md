@@ -193,7 +193,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Measured on upstream's samples** (`node tools/migration/measure-samples.mjs --out <empty temp folder>`, 36 projects,
   358 files, upstream 561c5573, on main after this issue): 107 files build and 3,001 compile errors are left, as after
   #46. The diagnostics left went from 1,172 to 1,176: 6 new ISOMIG010 for NumberBox's `Range`, `SpinButtons` and header
-  argument, which were compile errors only, and 2 fewer ISOMIG013. The migration guide has the new counts, and #71 makes CI check them.
+  argument, and 2 fewer ISOMIG013. The migration guide has the new counts; #71 is to make CI check them.
 - **Not done** (run 3's asks): rewriting `Range`, `SpinButtons` and the header automatically, rather than reporting them; a
   `using` for the types the migration writes (it writes them in full, on purpose); one complete app example in one place.
 
