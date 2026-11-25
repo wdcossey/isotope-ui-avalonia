@@ -2,6 +2,8 @@
 // Measures the Reactor -> Isotope migration (#33) on upstream's samples, read-only input from the upstream cache.
 //
 //   node tools/migration/measure-samples.mjs --out <empty folder outside the repo> [--samples <dir>] [--passes 4] [--only <name>]
+//       [--check | --write-baseline]
+//   node tools/migration/measure-samples.mjs --summary <summary.json of an earlier run> (--check | --write-baseline)
 //
 // For each sample project it:
 //   1. copies the project's folder from <samples> (default: upstream/samples) to <out>, and writes an Isotope project
@@ -12,14 +14,30 @@
 //   3. counts, per file, compile errors and the migration diagnostics left (tools/migration/MigrationReport).
 // A file "builds" when the compiler reports no error in it. Prints a summary (no local paths) and writes
 // <out>/summary.json. The repo and the upstream cache are only read; the script checks git status is unchanged.
+//
+// The baseline (#71): --check compares the run's counts with tools/migration/samples-baseline.json (lib/baseline.mjs
+// says which counts) and fails on any difference, naming each count that got worse, and each that got better so the
+// same PR updates the baseline. --write-baseline writes the baseline and the migration guide's counts table from the
+// run, and fails when either changed, so an update is a deliberate, reviewed commit. CI runs --check (ci.yml, job
+// samples). --summary <file> does either on an earlier run's summary.json without measuring again; it assumes the run
+// was at the upstream commit in UPSTREAM.lock.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { baselineOf, compare, countsOf, withGuideTable } from './lib/baseline.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const args = parseArgs(process.argv.slice(2));
+const baselineFile = path.join(repo, 'tools', 'migration', 'samples-baseline.json');
+const guideFile = path.join(repo, 'docs', 'guide', 'migrating-from-reactor.md');
+if (args.check && args['write-baseline']) fail('give --check or --write-baseline, not both');
+if (args.only && (args.check || args['write-baseline'])) fail('--only measures part of the samples, so it cannot be compared with the baseline');
+if (args.summary) {
+  if (!args.check && !args['write-baseline']) fail('--summary needs --check or --write-baseline');
+  process.exit(gate(JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8')).summary));
+}
 const samples = path.resolve(args.samples ?? path.join(repo, 'upstream', 'samples'));
 const out = args.out ? path.resolve(args.out) : fail('--out <folder> is required');
 const passes = Number(args.passes ?? 4);
@@ -84,6 +102,52 @@ const summary = summarise(results);
 fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ results, summary }, null, 2));
 print(results, summary);
 if (gitStatus() !== statusBefore) fail('git status of the repo changed during the run');
+if (args.check || args['write-baseline']) process.exitCode = gate(summary);
+
+// ── the baseline (#71) ──────────────────────────────────────────────────────────────────────────────
+
+// Checks or writes the baseline; returns the exit code.
+function gate(summary) {
+  const upstream = fs.readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8').match(/^baseline=([0-9a-f]{40})\s*$/m)?.[1];
+  if (!upstream) fail("UPSTREAM.lock has no valid 'baseline=<40 hex>' line");
+  const counts = countsOf(summary);
+  const update = 'To update it, run node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline, review the diff of ' +
+    'tools/migration/samples-baseline.json and the guide, and commit both in this PR (docs/guide/migrating-from-reactor.md).';
+  if (args['write-baseline']) {
+    const text = JSON.stringify(baselineOf(counts, upstream), null, 2) + '\n';
+    const old = fs.existsSync(baselineFile) ? fs.readFileSync(baselineFile, 'utf8').replace(/\r\n/g, '\n') : '';
+    const guide = fs.readFileSync(guideFile, 'utf8');
+    const newGuide = withGuideTable(guide, counts);
+    if (old === text && newGuide === guide) {
+      console.log('baseline: tools/migration/samples-baseline.json and the guide are up to date');
+      return 0;
+    }
+    if (old !== text) fs.writeFileSync(baselineFile, text);
+    if (newGuide !== guide) fs.writeFileSync(guideFile, newGuide);
+    if (old) printDiff(compare(JSON.parse(old), counts, upstream));
+    console.error('baseline: wrote tools/migration/samples-baseline.json and the guide\'s counts: review the diff and commit both (this run fails so the update is deliberate; --check passes on the same counts)');
+    return 1;
+  }
+  const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
+  const diff = compare(baseline, counts, upstream);
+  if (!printDiff(diff)) {
+    console.log('baseline: the counts match tools/migration/samples-baseline.json');
+    return 0;
+  }
+  if (diff.worse.length) console.error('baseline: the migration on the samples got worse (' + diff.worse.length + ' count(s) above). Fix it, or if the change is intended, update the baseline and say why in the PR.');
+  if (diff.better.length) console.error('baseline: ' + diff.better.length + ' count(s) got better: update the baseline in this PR, so the next change is measured against them.');
+  if (diff.changed.length) console.error('baseline: the sample set or the upstream commit changed: update the baseline in this PR.');
+  console.error('baseline: ' + update);
+  return 1;
+}
+
+// Prints the differences; returns whether there were any.
+function printDiff({ worse, better, changed }) {
+  for (const line of worse) console.error('worse: ' + line);
+  for (const line of better) console.error('better: ' + line);
+  for (const line of changed) console.error('changed: ' + line);
+  return worse.length + better.length + changed.length > 0;
+}
 
 // ── project-file step ───────────────────────────────────────────────────────────────────────────────
 
@@ -249,9 +313,11 @@ function sorted(o) { return Object.fromEntries(Object.entries(o).sort()); }
 function parseArgs(argv) {
   const o = {};
   for (let i = 0; i < argv.length; i++) {
-    const m = argv[i].match(/^--(\w+)$/);
+    const m = argv[i].match(/^--([\w-]+)$/);
     if (!m) fail(`unexpected argument ${argv[i]}`);
-    o[m[1]] = argv[++i];
+    if (m[1] === 'check' || m[1] === 'write-baseline') o[m[1]] = true;
+    else if (i + 1 < argv.length) o[m[1]] = argv[++i];
+    else fail(`--${m[1]} needs a value`);
   }
   return o;
 }

@@ -241,3 +241,58 @@ jobs:
       - name: Pack, check the packages, and run the consumer smoke test against them
         shell: bash
         run: node tools/packaging/pack.mjs --out "$RUNNER_TEMP/packages"
+
+  samples:
+    # The migration on upstream's samples (#71): tools/migration/measure-samples.mjs migrates and builds each sample, and
+    # --check fails when a count differs from tools/migration/samples-baseline.json (docs/guide/migrating-from-reactor.md
+    # says how to update it). It builds upstream's sample code, so it holds a read-only token and neither checkout keeps
+    # credentials (CLAUDE.md). GitHub-hosted only.
+    name: samples migration (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read the upstream baseline
+        id: lock
+        shell: bash
+        run: |
+          sha="$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "UPSTREAM.lock has no valid 'baseline=<40 hex>' line"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out upstream at the baseline (the samples only need the commit, not the history)
+        uses: actions/checkout@v7
+        with:
+          repository: microsoft/microsoft-ui-reactor
+          ref: ${{ steps.lock.outputs.sha }}
+          path: upstream
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          # The SDK from global.json (C# 15 compiler) and the .NET 10 runtime: the converted samples and MigrationReport
+          # target net10.0.
+          global-json-file: global.json
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Baseline tests (the comparison, and the guide's table against the baseline)
+        shell: bash
+        run: node --test tools/migration/test/*.test.mjs
+
+      - name: Migrate and build upstream's samples, and compare the counts with the baseline
+        shell: bash
+        run: node tools/migration/measure-samples.mjs --out "$RUNNER_TEMP/samples" --check
