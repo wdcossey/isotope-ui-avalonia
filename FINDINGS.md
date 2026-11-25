@@ -145,6 +145,22 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Samples migration gate (issue #71, 2026-11-25)
+
+- **CI's `samples migration` job** (ubuntu-latest) runs `measure-samples.mjs --check` against
+  `tools/migration/samples-baseline.json` on every push. It fails when any count differs: worse, better, or measured on
+  another sample set or upstream commit. A better count fails too, so the same PR updates the baseline
+  (`--write-baseline`, which writes the file and the guide's table and still fails), as `expected-total.txt` works.
+- **Measured** on main `bfa57e1`: 108 of 358 files build, 2,936 compile errors, 2 of 36 projects build, 1,122 migration
+  diagnostics left. These are identical on Windows (local and `windows-latest`) and `ubuntu-latest`; the "before" build
+  needs no Windows (the converted projects drop `UseWinUI`).
+- **Run time:** 15.6 to 17.0 min on Ubuntu, 22.2 min on Windows (job timings, 4 Ubuntu runs and 1 Windows run), so it
+  sets each push's CI wall time (other jobs take 1 to 5 min). Locally on Windows, 644 s.
+- **Not gated:** per-message counts and compile errors per ID: each names a member or type, so they move with every
+  rename or control. The run still prints the commonest.
+- **Proven:** a commit dropping `Thickness` from `winui-types.json` failed the job (+3 compile errors), and its revert
+  passed. 20 node tests for the comparison and the guide's generated table.
+
 ## Spike J: third-party controls (issue #75, 2026-11-25)
 
 - **A third party can wrap its own controls using only Isotope's packages.** A library built outside the repo against the
