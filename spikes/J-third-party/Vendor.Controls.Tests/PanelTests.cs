@@ -84,7 +84,7 @@ public sealed class PanelTests
         using (var m = new Mounted(_ => ErrorBoundary(SpreadPanel(RatingBar(1), Group(RatingBar(2), RatingBar(3))),
             ex => TextBlock("caught: " + ex.GetType().Name))))
         {
-            Assert.DoesNotContain(m.All<TextBlock>(), t => t.Text!.StartsWith("caught: "));
+            Assert.DoesNotContain(m.All<TextBlock>(), t => t.Text?.StartsWith("caught: ") == true);
             var panel = m.One<SpreadPanelControl>();
             Assert.Equal([1, 2, 3], panel.Children.Cast<RatingBarControl>().Select(r => r.Value));
         }

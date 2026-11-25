@@ -84,7 +84,7 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 | `.Accent(token)` binds a misspelt property | 2: `A_token_on_the_vendors_own_brush_property_...`, `The_elements_own_brush_wins_...` |
 | The keyed ratings lose their keys | 1: `A_keyed_reverse_moves_...` |
 | The card's content keyed by its header (so it remounts when the header changes) | 2: `A_component_in_the_content_slot_...`, `A_state_change_updates_...` |
-| `SpreadPanel(...)` flattens a group itself (before #79) | 1: `Gap_a_group_element_...` |
+| `SpreadPanel(...)` flattens a group itself (before #79) | 1: `Gap_a_group_element_inside_the_vendors_panel_throws` (since renamed by #79) |
 | The generated strategy doesn't flatten (#79's rule reverted; each framework) | 1: `A_group_element_inside_the_vendors_panel_...` |
 | The render returns the same rating instance each time (so it is skipped) | 1: `Gap_vendor_an_unchanged_element_...` (1 update, not 11) |
 
@@ -128,7 +128,7 @@ error: in one project only CS0115 was reported.
    - **Change:** diagnostics at the record: a missing `Setters` (or emit `GetSetters` only when the member exists, as
      the polymorphic path already checks), a callback type that doesn't match the event, and `[WrapDecorator]` /
      `[WrapPolymorphic]` not supported on Isotope yet. Our partial.
-4. **Closed by #79 (2026-11-26): the generated `Panel` children strategy flattens groups** (`PanelChildren.Of`, a
+4. **Closed by #79: the generated `Panel` children strategy flattens groups** (`PanelChildren.Of`, a
    public helper beside `ItemsList`; `Reconciler.Flatten` stays internal), and the test now asserts the children mount.
    As found: **a `Group` inside a third party's panel throws** `NotSupportedException` ("A GroupElement is flattened into its
    container's children"), caught by a boundary in the test. Isotope's own panel records flatten their children with

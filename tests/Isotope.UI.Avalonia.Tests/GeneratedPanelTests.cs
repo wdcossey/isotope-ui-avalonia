@@ -117,4 +117,19 @@ public sealed class GeneratedPanelTests
         Element[] grouped = [TextBlock("a"), Group(TextBlock("b"))];
         Assert.Same(PanelChildren.Of(grouped), PanelChildren.Of(grouped));
     }
+
+    [AvaloniaFact]
+    public void A_list_that_is_not_an_array_is_flattened_too()
+    {
+        // A generated record that declares no Children of its own has an IReadOnlyList<Element>, which needn't be an array.
+        var b = TextBlock("b");
+        var c = TextBlock("c");
+        List<Element> grouped = [TextBlock("a"), Group(b, Group(c))];
+        var flat = PanelChildren.Of(grouped);
+        Assert.Equal(3, flat.Count);
+        Assert.Same(b, flat[1]);
+        Assert.Same(c, flat[2]);
+        List<Element> plain = [b, c];
+        Assert.Same(plain, PanelChildren.Of(plain));
+    }
 }
