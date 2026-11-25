@@ -150,7 +150,9 @@ test('--base-branch compares with that branch, and a bad name or argument measur
   };
   assert.equal(run(repo(based)).out, 'measure=true\n');
   assert.equal(run(repo(based), {}, ['--base-branch', 'base']).out, 'measure=false\n');
-  assert.equal(run(repo(based), { GITHUB_REF: 'refs/heads/base' }, ['--base-branch', 'base']).out, 'measure=true\n');
+  const self = run(repo(based), { GITHUB_REF: 'refs/heads/base' }, ['--base-branch', 'base']);
+  assert.equal(self.out, 'measure=true\n');
+  assert.match(self.reason, /the base branch itself/);
   for (const args of [['--base-branch', '-x'], ['--base-branch', 'a..b'], ['--base-branch'], ['--other', 'x']]) {
     const r = run(repo(based), {}, args);
     assert.equal(r.out, 'measure=true\n', args.join(' '));

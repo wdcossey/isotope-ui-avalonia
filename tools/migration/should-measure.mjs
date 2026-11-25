@@ -21,7 +21,7 @@ try {
   const argv = process.argv.slice(2);
   const base = argv[0] === '--base-branch' && argv.length === 2 ? argv[1] : argv.length === 0 ? 'main' : null;
   if (!base || !/^[A-Za-z0-9][\w./-]*$/.test(base) || base.includes('..')) throw new Error('usage: should-measure.mjs [--base-branch <name>]');
-  const facts = { event: process.env.GITHUB_EVENT_NAME, ref: process.env.GITHUB_REF };
+  const facts = { event: process.env.GITHUB_EVENT_NAME, ref: process.env.GITHUB_REF, base };
   if (facts.event === 'push' && facts.ref !== 'refs/heads/main' && facts.ref !== 'refs/heads/' + base && facts.ref?.startsWith('refs/heads/')) {
     try {
       facts.shallow = git('rev-parse', '--is-shallow-repository').trim() === 'true';
