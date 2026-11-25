@@ -37,18 +37,22 @@ const args = parseArgs(process.argv.slice(2));
 // MSBuild node reuse is off for every child: concurrent builds then share no long-lived MSBuild node, and none is left
 // running after the script.
 const childEnv = { ...process.env, MSBUILDDISABLENODEREUSE: '1', DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' };
+// The children running now, stopped when the run fails, so none outlives it.
+const children = new Set();
 
 // The baseline and the guide; the tests point these at copies (SAMPLES_BASELINE_FILE, SAMPLES_GUIDE_FILE).
 const baselineFile = path.resolve(process.env.SAMPLES_BASELINE_FILE ?? path.join(repo, 'tools', 'migration', 'samples-baseline.json'));
 const guideFile = path.resolve(process.env.SAMPLES_GUIDE_FILE ?? path.join(repo, 'docs', 'guide', 'migrating-from-reactor.md'));
-const lockCommit = fs.readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8').match(/^baseline=([0-9a-f]{40})\s*$/m)?.[1];
+const lockCommit = fs.readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8').match(/^baseline=([0-9a-f]{40})(?![0-9a-f])/m)?.[1]; // as ci.yml's sed reads it
 const gating = args.check || args['write-baseline'];
 if (args.check && args['write-baseline']) fail('give --check or --write-baseline, not both');
 if (gating && !lockCommit) fail("UPSTREAM.lock has no valid 'baseline=<40 hex>' line");
 if (args.summary) {
   if (!gating) fail('--summary needs --check or --write-baseline');
   for (const o of ['out', 'samples', 'passes', 'only', 'jobs']) if (args[o] !== undefined) fail(`--summary measures nothing, so --${o} does nothing`);
-  const earlier = JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8'));
+  let earlier;
+  try { earlier = JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8')); }
+  catch (e) { fail('cannot read that summary.json (' + (e.code ?? e.message) + ')'); }
   const problem = notComparable(earlier.measured);
   if (problem) fail('that summary.json ' + problem);
   // gate() writes synchronously, so exiting straight after loses no output.
@@ -182,16 +186,24 @@ function gate(summary) {
     'tools/migration/samples-baseline.json and the guide, and commit both in this PR (docs/guide/migrating-from-reactor.md).';
   if (args['write-baseline']) {
     const text = JSON.stringify(baselineOf(counts, upstream), null, 2) + '\n';
-    const old = fs.existsSync(baselineFile) ? fs.readFileSync(baselineFile, 'utf8').replace(/\r\n/g, '\n') : '';
-    const guide = fs.readFileSync(guideFile, 'utf8');
-    const newGuide = withGuideTable(guide, counts);
+    // Everything is read and checked before anything is written.
+    let old, oldBaseline, guide, newGuide;
+    try {
+      old = fs.existsSync(baselineFile) ? fs.readFileSync(baselineFile, 'utf8').replace(/\r\n/g, '\n') : '';
+      oldBaseline = old ? JSON.parse(old) : undefined;
+      guide = fs.readFileSync(guideFile, 'utf8');
+      newGuide = withGuideTable(guide, counts);
+    } catch (e) {
+      warn('baseline: cannot write the baseline: ' + (e.code ?? e.message));
+      return 1;
+    }
     if (old === text && newGuide === guide) {
       say('baseline: tools/migration/samples-baseline.json and the guide are up to date');
       return 0;
     }
     if (old !== text) fs.writeFileSync(baselineFile, text);
     if (newGuide !== guide) fs.writeFileSync(guideFile, newGuide);
-    if (old) printDiff(compare(JSON.parse(old), counts, upstream));
+    if (oldBaseline) printDiff(compare(oldBaseline, counts, upstream));
     warn('baseline: wrote tools/migration/samples-baseline.json and the guide\'s counts: review the diff and commit both (this run fails so the update is deliberate; --check passes on the same counts)');
     return 1;
   }
@@ -296,13 +308,17 @@ function inOrder(list, work) {
   const slot = () => (active < jobs ? (active++, Promise.resolve()) : new Promise(resolve => waiting.push(resolve)));
   const release = () => { const next = waiting.shift(); if (next) next(); else active--; };
   const dependencies = p => list.filter(q => q !== p && (p.refs.includes(path.resolve(q.file)) || isInside(path.dirname(q.file), path.dirname(p.file))));
+  const visiting = new Set();
   const start = p => {
+    if (visiting.has(p.file)) fail('the sample projects depend on each other in a cycle, through ' + rel(p.file) + ' (references, or a project in a folder under another)');
     if (!promises.has(p.file)) {
+      visiting.add(p.file);
       promises.set(p.file, (async () => {
         await Promise.all(dependencies(p).map(start));
         await slot();
         try { return await work(p); } finally { release(); }
       })());
+      visiting.delete(p.file);
     }
     return promises.get(p.file);
   };
@@ -367,11 +383,13 @@ function top(counts, n) {
 function runAsync(cmd, argv, cwd, mustSucceed) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, argv, { cwd, env: childEnv });
+    children.add(child);
     const out = [], err = [];
     child.stdout.on('data', d => out.push(d));
     child.stderr.on('data', d => err.push(d));
     child.on('error', reject);
     child.on('close', status => {
+      children.delete(child);
       const r = { status, stdout: Buffer.concat(out).toString('utf8'), stderr: Buffer.concat(err).toString('utf8') };
       if (mustSucceed && status !== 0) fail(`${cmd} ${argv[0]} failed (${status}):\n${r.stdout.slice(-4000)}${r.stderr}`);
       resolve(r);
@@ -430,6 +448,8 @@ function parseArgs(argv) {
 }
 
 function fail(message) {
-  console.error(message);
+  // Written synchronously, since it exits straight after (console's writes to a pipe can be asynchronous).
+  fs.writeSync(2, message + '\n');
+  for (const child of children) child.kill();
   process.exit(1);
 }

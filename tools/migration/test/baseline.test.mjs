@@ -120,7 +120,7 @@ test('a guide without both markers, in order and once each, is refused', () => {
 
 const read = (...p) => fs.readFileSync(path.join(repo, ...p), 'utf8');
 const committed = JSON.parse(read('tools', 'migration', 'samples-baseline.json'));
-const lock = read('UPSTREAM.lock').match(/^baseline=([0-9a-f]{40})\s*$/m)?.[1];
+const lock = read('UPSTREAM.lock').match(/^baseline=([0-9a-f]{40})(?![0-9a-f])/m)?.[1];
 
 test('the baseline is for the upstream commit in UPSTREAM.lock', () => {
   assert.equal(committed.upstream, lock, 'UPSTREAM.lock moved: measure again and write the baseline (docs/guide/migrating-from-reactor.md)');
@@ -226,4 +226,24 @@ test('a flag where a value belongs is refused, and --summary with measuring opti
   r = spawnSync(process.execPath, [script, '--check', '--write-baseline'], { encoding: 'utf8' });
   assert.equal(r.status, 1);
   assert.match(r.stdout + r.stderr, /not both/);
+});
+
+test('an unreadable summary.json, or a guide without its markers, fails with a message and writes nothing', () => {
+  const script = path.join(repo, 'tools', 'migration', 'measure-samples.mjs');
+  let r = spawnSync(process.execPath, [script, '--summary', path.join(os.tmpdir(), 'no-such-summary.json'), '--check'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /cannot read that summary.json \(ENOENT\)/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'isotope-baseline-'));
+  try {
+    const baselineFile = path.join(dir, 'b.json'), guideFile = path.join(dir, 'g.md'), file = path.join(dir, 'summary.json');
+    fs.writeFileSync(baselineFile, '{"counts": {}}');
+    fs.writeFileSync(guideFile, 'no markers');
+    fs.writeFileSync(file, JSON.stringify({ measured, results: [], summary: { ...committed.counts, brokenByMigration: [] } }));
+    r = spawnSync(process.execPath, [script, '--summary', file, '--write-baseline'], { encoding: 'utf8', env: { ...process.env, SAMPLES_BASELINE_FILE: baselineFile, SAMPLES_GUIDE_FILE: guideFile } });
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout + r.stderr, /cannot write the baseline: the guide needs one/);
+    assert.equal(fs.readFileSync(baselineFile, 'utf8'), '{"counts": {}}');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
