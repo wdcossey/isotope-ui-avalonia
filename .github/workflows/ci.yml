@@ -205,7 +205,8 @@ jobs:
   packages:
     # Packs the four packages (the MCP tool included, #60), checks them, builds and runs a tiny consumer app against the
     # packed packages alone, and installs the tool into a temporary folder and lists its tools over stdio
-    # (#52; tools/packaging/pack.mjs), so packaging can't silently break. Publishing is release.yml's, on a v* tag only.
+    # (#52; tools/packaging/pack.mjs), so packaging can't silently break. Then spike J builds a third-party control
+    # library against the same packages (#75). Publishing is release.yml's, on a v* tag only.
     # Like the library job, it needs no upstream/ checkout. GitHub-hosted runners only.
     name: packages (${{ matrix.os }})
     strategy:
@@ -241,3 +242,11 @@ jobs:
       - name: Pack, check the packages, and run the consumer smoke test against them
         shell: bash
         run: node tools/packaging/pack.mjs --out "$RUNNER_TEMP/packages"
+
+      - name: Spike J, a third-party control library on the packed packages (#75)
+        # Builds a library outside the repo's build against the packages above only, and runs its tests and probes on
+        # each framework (spikes/J-third-party/README.md). The probes pin the gaps #77-#79 close.
+        shell: bash
+        env:
+          AVALONIA_TELEMETRY_OPTOUT: "1"
+        run: node spikes/J-third-party/run.mjs --packages "$RUNNER_TEMP/packages"
