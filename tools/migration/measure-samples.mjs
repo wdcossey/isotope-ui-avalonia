@@ -19,8 +19,9 @@
 // says which counts) and fails on any difference, naming each count that got worse, and each that got better so the
 // same PR updates the baseline. --write-baseline writes the baseline and the migration guide's counts table from the
 // run, and fails when either changed, so an update is a deliberate, reviewed commit. CI runs --check (ci.yml, job
-// samples). --summary <file> does either on an earlier run's summary.json without measuring again; it assumes the run
-// was at the upstream commit in UPSTREAM.lock.
+// samples). --summary <file> does either on an earlier run's summary.json without measuring again. Both refuse a run
+// measured otherwise than the baseline: another upstream commit, a changed upstream/, another samples folder, --only or
+// --passes (summary.json records how it was measured).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -51,7 +52,7 @@ const out = args.out ? path.resolve(args.out) : fail('--out <folder> is required
 const passes = Number(args.passes ?? 4);
 // How this run measures, saved in summary.json: the baseline is of the whole upstream sample set, at UPSTREAM.lock's
 // commit, with the default passes, so a run measured otherwise is refused before it starts (and --summary refuses its file).
-const measured = { upstream: upstreamCommit(), samples: args.samples === undefined ? 'upstream' : 'other', passes, only: args.only ?? null };
+const measured = { upstream: upstreamCommit(), samples: samples === path.resolve(repo, 'upstream', 'samples') ? 'upstream' : 'other', passes, only: args.only ?? null };
 if (gating && notComparable(measured)) fail('this run ' + notComparable(measured));
 const fixable = ['ISOMIG001', 'ISOMIG003', 'ISOMIG004', 'ISOMIG006', 'ISOMIG008', 'ISOMIG009', 'ISOMIG014'];
 
@@ -124,17 +125,22 @@ function notComparable(m) {
   if (m.only) return 'measures only ' + m.only + ', not the whole sample set';
   if (m.samples !== 'upstream') return 'measures another samples folder than upstream/samples';
   if (m.passes !== 4) return 'runs the fixes ' + m.passes + ' times, not 4';
+  if (m.upstream === 'changed') return 'measures an upstream/ with changes in its working tree';
   if (m.upstream !== lockCommit) return 'measures upstream at ' + String(m.upstream).slice(0, 8) + ', and UPSTREAM.lock is ' + lockCommit.slice(0, 8) + ': check out the lock commit in upstream/';
   return undefined;
 }
 
-// The commit the upstream cache is at (read-only git), or null when it isn't a git checkout.
+// The commit the upstream cache is at (read-only git), 'changed' when its working tree differs from that commit, or null
+// when it isn't a git checkout.
 function upstreamCommit() {
-  const r = spawnSync('git', ['-C', path.join(repo, 'upstream'), 'rev-parse', 'HEAD'], { encoding: 'utf8' });
-  return r.status === 0 ? r.stdout.trim() : null;
+  const git = (...a) => spawnSync('git', ['-C', path.join(repo, 'upstream'), ...a], { encoding: 'utf8' });
+  const head = git('rev-parse', 'HEAD'), status = git('status', '--porcelain');
+  if (head.status !== 0 || status.status !== 0) return null;
+  return status.stdout.trim() ? 'changed' : head.stdout.trim();
 }
 
-// Output that is written before the process exits (console's writes to a pipe can be asynchronous).
+// The gate's output, written synchronously: the --summary path exits straight after it (console's writes to a pipe can
+// be asynchronous). It is a few lines, so a full pipe can't stall it the way the long report could.
 function say(text) { fs.writeSync(1, text + '\n'); }
 function warn(text) { fs.writeSync(2, text + '\n'); }
 
@@ -159,13 +165,15 @@ function gate(summary) {
     warn('baseline: wrote tools/migration/samples-baseline.json and the guide\'s counts: review the diff and commit both (this run fails so the update is deliberate; --check passes on the same counts)');
     return 1;
   }
-  const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
+  let baseline;
+  try { baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8')); }
+  catch (e) { warn('baseline: cannot read tools/migration/samples-baseline.json (' + (e.code ?? e.message) + '). ' + update); return 1; }
   const diff = compare(baseline, counts, upstream);
   if (!printDiff(diff)) {
     say('baseline: the counts match tools/migration/samples-baseline.json');
     return 0;
   }
-  if (diff.worse.length) warn('baseline: the migration on the samples got worse (' + diff.worse.length + ' count(s) above). Fix it, or if the change is intended, update the baseline and say why in the PR.');
+  if (diff.worse.length) warn('baseline: the migration on the samples got worse (the "worse" lines above). Fix it, or if the change is intended, update the baseline and say why in the PR.');
   if (diff.better.length) warn('baseline: ' + diff.better.length + ' count(s) got better: update the baseline in this PR, so the next change is measured against them.');
   if (diff.changed.length) warn('baseline: the sample set or the upstream commit changed: update the baseline in this PR.');
   warn('baseline: ' + update);
@@ -282,20 +290,20 @@ function print(results, s) {
     const before = Object.values(r.before.files);
     return `| ${r.project} | ${files.length} | ${before.filter(f => sum(f.errors) === 0).length} | ${files.filter(f => sum(f.errors) === 0).length} | ${sumAll(before, 'errors')} | ${sumAll(files, 'errors')} | ${sumAll(files, 'migration')} | ${r.projectBuilds ? 'yes' : 'no'} | ${r.dropped.join(', ')} |`;
   });
-  say('| Project | Files | Build before | Build after | Errors before | Errors after | Migration diagnostics left | Project builds | Dropped references |');
-  say('|---|---|---|---|---|---|---|---|---|');
-  for (const row of rows) say(row);
-  say(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
-  say(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
-  say(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
-  say(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
-  say(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
-  say('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
-  say('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));
-  say('\ncommonest migration diagnostics left:');
-  for (const [m, n] of top(s.migrationMessagesLeft, 40)) say(`  ${n} ${m}`);
-  say('\ncommonest compile errors left (ID and the name they are about):');
-  for (const [m, n] of top(s.errorsLeft, 40)) say(`  ${n} ${m}`);
+  console.log('| Project | Files | Build before | Build after | Errors before | Errors after | Migration diagnostics left | Project builds | Dropped references |');
+  console.log('|---|---|---|---|---|---|---|---|---|');
+  for (const row of rows) console.log(row);
+  console.log(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
+  console.log(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
+  console.log(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
+  console.log(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
+  console.log(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
+  console.log('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
+  console.log('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));
+  console.log('\ncommonest migration diagnostics left:');
+  for (const [m, n] of top(s.migrationMessagesLeft, 40)) console.log(`  ${n} ${m}`);
+  console.log('\ncommonest compile errors left (ID and the name they are about):');
+  for (const [m, n] of top(s.errorsLeft, 40)) console.log(`  ${n} ${m}`);
 }
 
 function top(counts, n) {
@@ -354,6 +362,6 @@ function parseArgs(argv) {
 }
 
 function fail(message) {
-  warn(message);
+  console.error(message);
   process.exit(1);
 }

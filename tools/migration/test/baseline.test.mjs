@@ -140,12 +140,12 @@ test('the baseline file is what --write-baseline writes for its counts', () => {
 
 const measured = { upstream: lock, samples: 'upstream', passes: 4, only: null };
 
-function cli(counts, flags, { measuredAs = measured, files } = {}) {
+function cli(counts, flags, { measuredAs = measured, files, noBaseline = false } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'isotope-baseline-'));
   try {
     const file = path.join(dir, 'summary.json');
     const baselineFile = path.join(dir, 'samples-baseline.json'), guideFile = path.join(dir, 'guide.md');
-    fs.writeFileSync(baselineFile, read('tools', 'migration', 'samples-baseline.json'));
+    if (!noBaseline) fs.writeFileSync(baselineFile, read('tools', 'migration', 'samples-baseline.json'));
     fs.writeFileSync(guideFile, read('docs', 'guide', 'migrating-from-reactor.md'));
     fs.writeFileSync(file, JSON.stringify({ measured: measuredAs, results: [], summary: { ...counts, brokenByMigration: counts.brokenFiles } }));
     const r = spawnSync(process.execPath, [path.join(repo, 'tools', 'migration', 'measure-samples.mjs'), '--summary', file, ...flags],
@@ -194,10 +194,17 @@ test('--write-baseline with the baseline counts writes nothing and passes', () =
   assert.equal(files[0].replace(/\r\n/g, '\n'), read('tools', 'migration', 'samples-baseline.json').replace(/\r\n/g, '\n'));
 });
 
+test('--check without a readable baseline fails with what to do, not a stack trace', () => {
+  const r = cli(committed.counts, ['--check'], { noBaseline: true });
+  assert.equal(r.status, 1, r.out);
+  assert.match(r.out, /cannot read tools\/migration\/samples-baseline.json \(ENOENT\)\. To update it, run/);
+});
+
 test('a summary measured otherwise than the baseline is refused', () => {
   for (const [as, message] of [
     [null, /does not say how it was measured/],
     [{ ...measured, upstream: 'b'.repeat(40) }, /measures upstream at bbbbbbbb/],
+    [{ ...measured, upstream: 'changed' }, /changes in its working tree/],
     [{ ...measured, only: 'HelloWorld' }, /measures only HelloWorld/],
     [{ ...measured, samples: 'other' }, /another samples folder/],
     [{ ...measured, passes: 1 }, /runs the fixes 1 times/],
