@@ -51,6 +51,9 @@ internal static class ReactorNames
 
         var found = hits.Count;
         var dot = n.LastIndexOf('.');
+        // Record.Member of a Reactor record: only that record's member answers it, never another record's member or
+        // another factory's parameter of that name (NumberBoxElement.Header is not ExpanderElement.Header, #68).
+        var ofRecord = false;
         if (dot > 0)
         {
             // Record.Member, or Factory.parameter.
@@ -60,6 +63,7 @@ internal static class ReactorNames
             foreach (var p in tables.Renames.Parameters.Where(p => p.Factory == owner && p.Reactor == member)) hits.Add(Parameter(p));
             foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == member && e.Target == owner)) hits.Add(Name("Modifier", mod));
             if (hits.Count > found || tables.WinUI.IsWinUINamespace(n)) return hits;
+            ofRecord = IsRecord(owner, tables);
             // Factories.TabView, Core.Element: the last part on its own.
             n = member;
         }
@@ -70,15 +74,25 @@ internal static class ReactorNames
         foreach (var f in tables.Renames.Factories.Where(e => e.Reactor == n)) hits.Add(Name("Factory", f));
         foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == n)) hits.Add(Name("Modifier", mod));
         if (tables.Controls.Factories.TryGetValue(n, out var c)) hits.Add(Control(c));
+        if (ofRecord) return hits;
         foreach (var m in tables.Renames.Members.Where(m => m.Reactor == n)) hits.Add(Member(m, tables));
         foreach (var p in tables.Renames.Parameters.Where(p => p.Reactor == n)) hits.Add(Parameter(p));
         return hits;
     }
 
+    /// <summary>A Reactor element record the tables know (by its Reactor name), renamed or not.</summary>
+    static bool IsRecord(string name, MigrationTables tables) =>
+        tables.Renames.Records.ContainsKey(name) || tables.Renames.Types.Any(t => t.Reactor == name && name.EndsWith("Element", StringComparison.Ordinal));
+
+    /// <summary>The record's name in Isotope: its rename, or its own.</summary>
+    static string IsotopeRecord(string name, MigrationTables tables) =>
+        tables.Renames.Types.FirstOrDefault(t => t.Reactor == name && t.Applied && t.Avalonia is not null)?.Avalonia ?? name;
+
     /// <summary>The tables' answer, or, for a name they don't hold, whether Isotope has it under the same name.</summary>
     public static string Map(string name, ApiCatalog? catalog = null, MigrationTables? tables = null)
     {
-        var hits = Lookup(name, tables);
+        tables ??= MigrationTables.Default;
+        var hits = Lookup(name, tables).ToList();
         catalog ??= ApiCatalog.Default;
         // A Reactor name the rename table doesn't hold is Isotope's name too (Button, UseState), unless the table renames it.
         // A hit of any table section answers the name (a parameter "header" is not the Header modifier).
@@ -86,7 +100,22 @@ internal static class ReactorNames
         var renamed = hits.Any(h => answered.Any(a => h.StartsWith(a, StringComparison.Ordinal)));
         var trimmed = name.Trim();
         if (trimmed.StartsWith(ReactorNamespace + ".", StringComparison.Ordinal)) trimmed = trimmed[(ReactorNamespace.Length + 1)..];
-        var winui = (tables ?? MigrationTables.Default).WinUI.IsWinUINamespace(trimmed);
+        var winui = tables.WinUI.IsWinUINamespace(trimmed);
+        // Record.Member that neither the tables nor Isotope's record (renamed or not) has: say which record it is in
+        // Isotope and that the member is not on it, rather than nothing (#68).
+        if (!renamed && !winui && trimmed.LastIndexOf('.') is var at and > 0)
+        {
+            var owner = trimmed[..at].Split('.')[^1];
+            var member = trimmed[(at + 1)..];
+            var isotope = IsotopeRecord(owner, tables);
+            if (IsRecord(owner, tables) && catalog.Find(isotope + "." + member).Count == 0)
+            {
+                var control = tables.Renames.Records.TryGetValue(owner, out var c) ? $" (its members are Avalonia's `{c}`'s)" : "";
+                var named = isotope == owner ? $"`{owner}` keeps its name in Isotope" : $"`{owner}` is `{isotope}` in Isotope";
+                hits.Add($"Element record: {named}, and has no `{member}`{control}. get_api `{isotope}` lists its members.");
+                renamed = true;
+            }
+        }
         // Owner.Member as a whole (ButtonElement.OnClick), else its last part as a factory, hook, modifier or type
         // (Factories.Button is Button, Core.Element is Element), never another record's member of that name.
         var found = renamed || winui ? [] : catalog.Find(trimmed) is { Count: > 0 } whole ? whole

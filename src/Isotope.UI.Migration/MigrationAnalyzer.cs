@@ -351,7 +351,16 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             var receiverSymbol = model.GetSymbolInfo(ma.Expression, ctx.CancellationToken).Symbol;
             if (receiverSymbol is INamespaceSymbol) return;
             var receiver = Constraint(receiverSymbol as INamedTypeSymbol ?? model.GetTypeInfo(ma.Expression, ctx.CancellationToken).Type);
-            if (receiver is null or IErrorTypeSymbol) return;
+            if (receiver is null or IErrorTypeSymbol)
+            {
+                // x.Range(0, 100).SpinButtons(): a link Isotope lacks (Range) leaves the rest of the chain unresolved. Reactor's
+                // modifiers return the record they are called on, so the table's modifier entries are looked up on the last
+                // receiver that resolves; only those, never "no such member" (#68).
+                if (ma.Parent is InvocationExpressionSyntax chainCall && chainCall.Expression == ma
+                    && Constraint(ChainReceiver(model, ma.Expression, ctx.CancellationToken)) is { } chained and not IErrorTypeSymbol)
+                    InvokedMember(ctx, ma, chained, name, isStatic: false, fromChain: true);
+                return;
+            }
             var text = name.Identifier.ValueText;
             if (ma.Parent is InvocationExpressionSyntax inv && inv.Expression == ma)
             {
@@ -362,8 +371,24 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             MemberUse(ctx, receiver, name, value);
         }
 
+        /// <summary>The receiver type of an unresolved modifier chain: past each unresolved call (a.B().C()) to the first
+        /// receiver that resolves, or null.</summary>
+        static ITypeSymbol? ChainReceiver(SemanticModel model, ExpressionSyntax e, System.Threading.CancellationToken ct)
+        {
+            for (var depth = 0; depth < 16 && e is InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax inner } call; depth++)
+            {
+                var info = model.GetSymbolInfo(call, ct);
+                if (info.Symbol is not null || !info.CandidateSymbols.IsEmpty) return null;
+                var t = model.GetTypeInfo(inner.Expression, ct).Type;
+                if (t is not null and not IErrorTypeSymbol) return t;
+                e = inner.Expression;
+            }
+            return null;
+        }
+
         /// <summary>`el.HeaderContent(x)` or `el?.HeaderContent(x)`: a modifier the table renamed, or a member Isotope lacks.</summary>
-        void InvokedMember(SyntaxNodeAnalysisContext ctx, ExpressionSyntax call, ITypeSymbol receiver, IdentifierNameSyntax name, bool isStatic)
+        void InvokedMember(SyntaxNodeAnalysisContext ctx, ExpressionSyntax call, ITypeSymbol receiver, IdentifierNameSyntax name, bool isStatic,
+            bool fromChain = false)
         {
             var model = ctx.SemanticModel;
             var text = name.Identifier.ValueText;
@@ -380,6 +405,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                         return;
                     }
                 }
+                if (fromChain) return;
                 if (receiver.Name is "ReactorApp" && text is "Run" or "OpenWindow") return; // Invocation's
                 if (receiver.Name is "Factories" && IsFactoryEntry(text)) return; // Invocation's
                 if (IsIsotope(receiver)) Report(ctx, Rules.NoIsotopeMember, name.GetLocation(), args: [receiver.Name, text]);

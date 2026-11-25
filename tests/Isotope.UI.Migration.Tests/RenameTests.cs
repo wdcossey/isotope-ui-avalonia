@@ -106,6 +106,28 @@ public class RenameTests
     }
 
     [Fact]
+    public void NumberBox_modifiers_with_no_counterpart_are_reported_with_what_to_set_instead()
+    {
+        // #68: a fresh agent found .Range and .SpinButtons unexplained. They are record members in Isotope.
+        const string reactor = """
+            using Microsoft.UI.Reactor;
+            using static Microsoft.UI.Reactor.Factories;
+            static class C
+            {
+                public static Element A(double v) => NumberBox(v, _ => { }).Range(0, 100).SpinButtons();
+                public static Element B(double v) => NumberBox(v, _ => { }).Range(0, 100).NoSuchThing();
+            }
+            """;
+        // As migrate_code reports them: what is left once the fixes ran (the factory renamed, so the receiver resolves).
+        var described = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
+        Assert.Contains(described, d => d.StartsWith("ISOMIG010: Modifier 'Range' is gone in Isotope: No modifier: set the record's Minimum and Maximum", StringComparison.Ordinal));
+        Assert.Contains(described, d => d.StartsWith("ISOMIG010: Modifier 'SpinButtons' is gone in Isotope: No modifier: Avalonia's NumericUpDown shows its spinner", StringComparison.Ordinal));
+        // Past an unresolved link only the table's modifiers are named: an unknown name is left to the compiler.
+        Assert.DoesNotContain(described, d => d.Contains("NoSuchThing", StringComparison.Ordinal));
+        Assert.Equal(2, described.Count(d => d.Contains("Modifier 'Range'", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void A_qualified_type_the_table_renamed_or_removed_is_renamed_or_reported()
     {
         var tables = Migrate.WithRenames(t =>

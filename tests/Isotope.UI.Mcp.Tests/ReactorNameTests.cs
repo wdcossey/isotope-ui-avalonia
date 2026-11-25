@@ -23,6 +23,9 @@ public class ReactorNameTests
     [InlineData("Visibility", "WinUI type: `Microsoft.UI.Xaml.Visibility` has no Avalonia counterpart.")]
     [InlineData("Microsoft.UI.Reactor.Core", "`Microsoft.UI.Reactor.Core` is `Isotope.UI.Core`")]
     [InlineData("Microsoft.UI.Reactor.Factories.ScrollView", "Factory: `ScrollView` is `ScrollViewer` in Isotope.")]
+    [InlineData("SpinButtons", "Modifier: `SpinButtons` has no counterpart in Isotope. No modifier: Avalonia's NumericUpDown shows its spinner by default")]
+    [InlineData("NumberBoxElement.Range", "Modifier: `Range` has no counterpart in Isotope. No modifier: set the record's Minimum and Maximum")]
+    [InlineData("NumberBox", "It has no header (NumberBox's third argument): put a TextBlock label beside it")]
     [InlineData("ScrollView", "The migration writes `(ScrollViewer(...) with { HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled })`")]
     public void A_Reactor_name_maps_to_Isotopes(string reactor, string expected) =>
         Assert.Contains(expected, IsotopeTools.MapReactorName(reactor));
@@ -48,7 +51,16 @@ public class ReactorNameTests
     public void A_record_member_neither_has_is_not_answered_with_another_records_member()
     {
         // SliderElement has no OnClick; ButtonElement's is another record's.
-        Assert.StartsWith("`SliderElement.OnClick` is not in the rename table", IsotopeTools.MapReactorName("SliderElement.OnClick"));
+        var slider = IsotopeTools.MapReactorName("SliderElement.OnClick");
+        Assert.Contains("Element record: `SliderElement` keeps its name in Isotope, and has no `OnClick`", slider);
+        Assert.DoesNotContain("ButtonElement", slider);
+        // NumberBoxElement has no Header; ExpanderElement's and ToggleSwitchElement's are other records' (#68).
+        var header = IsotopeTools.MapReactorName("NumberBoxElement.Header");
+        Assert.Contains("Element record: `NumberBoxElement` is `NumericUpDownElement` in Isotope, and has no `Header`", header);
+        Assert.DoesNotContain("ExpanderElement", header);
+        Assert.DoesNotContain("ToggleSwitchElement", header);
+        // A member Isotope's renamed record has under Reactor's name is found on it.
+        Assert.Contains("member `double NumericUpDownElement.Minimum", IsotopeTools.MapReactorName("NumericUpDownElement.Minimum"));
         // The last part alone still answers a factory or a type: Factories.Button is Button.
         Assert.Contains("factory `static ButtonElement Factories.Button(", IsotopeTools.MapReactorName("Factories.Button"));
     }

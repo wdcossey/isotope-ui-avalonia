@@ -133,8 +133,8 @@ git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
 dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1192 tests on each of net9.0, net10.0, net11.0; no upstream/)
-dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (46 tests)
-dotnet test tests/Isotope.UI.Mcp.Tests                   # the MCP server (47 tests)
+dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (47 tests)
+dotnet test tests/Isotope.UI.Mcp.Tests                   # the MCP server (50 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
 node tools/sync/test/all.mjs                             # the sync harness's own tests (needs dotnet: the Roslyn step)
 dotnet test tools/sync/verify/Upstream.Yoga.Tests        # upstream's Yoga tests on the vendored code
