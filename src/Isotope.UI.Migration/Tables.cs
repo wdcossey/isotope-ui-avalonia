@@ -16,10 +16,14 @@ internal sealed class MemberEntry
     public string? SingleAvalonia => Avalonia.Length == 1 ? Avalonia[0] : null;
 }
 
-/// <summary>A factory parameter renamed (renames.json, <c>parameters</c>).</summary>
+/// <summary>A factory parameter renamed, or with no counterpart (renames.json, <c>parameters</c>): then
+/// <see cref="Avalonia"/> is null, <see cref="Note"/> says what to do instead, and <see cref="Position"/> is its index, so
+/// a positional argument is found too (NumberBox's header, #68).</summary>
 internal sealed class ParameterEntry
 {
-    public string Factory = "", Reactor = "", Avalonia = "";
+    public string Factory = "", Reactor = "";
+    public string? Avalonia, Note;
+    public int? Position;
 }
 
 /// <summary>A type, factory or modifier name (renames.json, <c>types</c>, <c>factories</c>, <c>modifiers</c>).</summary>
@@ -69,7 +73,11 @@ internal sealed class RenameTable
             });
         }
         foreach (var p in Arr(root, "parameters").Select(o => Obj(o, "parameters")))
-            t.Parameters.Add(new ParameterEntry { Factory = Str(p, "factory")!, Reactor = Str(p, "reactor")!, Avalonia = Str(p, "avalonia")! });
+            t.Parameters.Add(new ParameterEntry
+            {
+                Factory = Str(p, "factory")!, Reactor = Str(p, "reactor")!, Avalonia = Str(p, "avalonia"), Note = Str(p, "note"),
+                Position = p.TryGetValue("position", out var position) && position is double at ? (int)at : null,
+            });
         t.Modifiers = Names(root, "modifiers");
         t.Types = Names(root, "types");
         t.Factories = Names(root, "factories");

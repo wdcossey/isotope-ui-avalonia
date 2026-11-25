@@ -109,6 +109,12 @@ public class RenameTableTests
             var overloads = factories.Where(f => f.Name == entry.Factory).ToList();
             if (overloads.Count == 0)
                 problems.Add($"parameters: no factory {entry.Factory}");
+            else if (entry.Avalonia is null)
+            {
+                // No counterpart (#68): no overload has it under Reactor's name either.
+                if (overloads.Any(f => f.GetParameters().Any(p => p.Name == entry.Reactor)))
+                    problems.Add($"parameters: {entry.Factory} has {entry.Reactor}, which the table says has no counterpart");
+            }
             else if (!overloads.Any(f => f.GetParameters().Any(p => p.Name == entry.Avalonia)))
                 problems.Add($"parameters: no {entry.Factory} has a parameter {entry.Avalonia}");
         }
@@ -274,7 +280,7 @@ internal sealed record RenameTable(
 {
     internal sealed record Member(string Record, string Reactor, string[] Avalonia, string Kind, string? Note);
 
-    internal sealed record Parameter(string Factory, string Reactor, string Avalonia);
+    internal sealed record Parameter(string Factory, string Reactor, string? Avalonia);
 
     /// <summary>
     /// The library's name for a Reactor record: the Avalonia name an applied type rename gives it (TreeViewNodeData is
@@ -311,7 +317,7 @@ internal sealed record RenameTable(
                 m.GetProperty("kind").GetString()!,
                 m.TryGetProperty("note", out var note) ? note.GetString() : null)).ToList(),
             root.GetProperty("parameters").EnumerateArray().Select(p => new Parameter(
-                p.GetProperty("factory").GetString()!, p.GetProperty("reactor").GetString()!, p.GetProperty("avalonia").GetString()!)).ToList(),
+                p.GetProperty("factory").GetString()!, p.GetProperty("reactor").GetString()!, p.GetProperty("avalonia").GetString())).ToList(),
             Renames(root, "modifiers"),
             Renames(root, "types"),
             Renames(root, "factories"));

@@ -534,9 +534,20 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 var parameter = arg.NameColon.Name.Identifier.ValueText;
                 if (methods.Any(m => m.Parameters.Any(p => p.Name == parameter))) continue;
                 var entry = _t.Renames.Parameters.FirstOrDefault(p => (p.Factory == factory || p.Factory == reactorFactory) && p.Reactor == parameter);
+                if (entry is null) continue;
+                if (entry.Avalonia is null)
+                    Report(ctx, Rules.NameRemoved, arg.GetLocation(), args: ["Parameter", (reactorFactory ?? factory) + "(" + parameter + ": …)", entry.Note ?? ""]);
                 // A target already named here would be named twice: leave it to the compiler's error.
-                if (entry is not null && !named.Contains(entry.Avalonia))
+                else if (!named.Contains(entry.Avalonia))
                     Report(ctx, Rules.ParameterRenamed, arg.NameColon.Name.GetLocation(), replace: entry.Avalonia, args: [factory, parameter, entry.Avalonia]);
+            }
+            // A positional argument for a parameter with no counterpart, where no overload takes that many (#68).
+            var positional = inv.ArgumentList.Arguments.TakeWhile(a => a.NameColon is null).ToList();
+            foreach (var gone in _t.Renames.Parameters.Where(p => p.Avalonia is null && p.Position is not null && (p.Factory == factory || p.Factory == reactorFactory)))
+            {
+                var at = gone.Position!.Value;
+                if (at < positional.Count && methods.All(m => m.Parameters.Length <= at && !m.Parameters.Any(p => p.IsParams)))
+                    Report(ctx, Rules.NameRemoved, positional[at].GetLocation(), args: ["Parameter", (reactorFactory ?? factory) + "(" + gone.Reactor + ": …)", gone.Note ?? ""]);
             }
         }
 

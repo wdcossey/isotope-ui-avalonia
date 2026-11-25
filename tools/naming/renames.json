@@ -103,6 +103,7 @@
     {"record": "TreeViewNodeData", "reactor": "Children", "avalonia": "Items", "kind": "rename"}
   ],
   "parameters": [
+    {"factory": "NumericUpDown", "reactor": "header", "avalonia": null, "position": 2, "note": "Avalonia's NumericUpDown has no header (Reactor's NumberBox took it third): put a TextBlock label beside it; PlaceholderText is the text shown while it is empty (#68)."},
     {"factory": "TextBlock", "reactor": "content", "avalonia": "text"},
     {"factory": "Button", "reactor": "label", "avalonia": "content"},
     {"factory": "ToggleButton", "reactor": "label", "avalonia": "content"},

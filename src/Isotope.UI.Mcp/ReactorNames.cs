@@ -60,7 +60,9 @@ internal static class ReactorNames
             var owner = n[..dot].Split('.')[^1];
             var member = n[(dot + 1)..];
             foreach (var m in tables.Renames.Members.Where(m => m.Record == owner && m.Reactor == member)) hits.Add(Member(m, tables));
-            foreach (var p in tables.Renames.Parameters.Where(p => p.Factory == owner && p.Reactor == member)) hits.Add(Parameter(p));
+            // Reactor's factory name or Isotope's: the table names parameters by Isotope's factory (NumberBox.header is NumericUpDown's).
+            var isotopeFactory = tables.Renames.Factories.FirstOrDefault(f => f.Reactor == owner && f.Applied && f.Avalonia is not null)?.Avalonia;
+            foreach (var p in tables.Renames.Parameters.Where(p => (p.Factory == owner || p.Factory == isotopeFactory) && p.Reactor == member)) hits.Add(Parameter(p));
             foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == member && e.Target == owner)) hits.Add(Name("Modifier", mod));
             if (hits.Count > found || tables.WinUI.IsWinUINamespace(n)) return hits;
             ofRecord = IsRecord(owner, tables);
@@ -162,8 +164,9 @@ internal static class ReactorNames
         };
     }
 
-    static string Parameter(ParameterEntry p) =>
-        $"Factory parameter: `{p.Factory}({p.Reactor}: …)` is `{p.Factory}({p.Avalonia}: …)` in Isotope.";
+    static string Parameter(ParameterEntry p) => p.Avalonia is null
+        ? $"Factory parameter: `{p.Factory}({p.Reactor}: …)` has no counterpart in Isotope.{(p.Note is null ? "" : " " + p.Note)}"
+        : $"Factory parameter: `{p.Factory}({p.Reactor}: …)` is `{p.Factory}({p.Avalonia}: …)` in Isotope.";
 
     static string Control(ControlEntry c) => c.WinUIOnly
         ? $"Factory: `{c.Factory}` is a WinUI control with no Isotope counterpart. {c.Alternative}".TrimEnd()

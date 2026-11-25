@@ -10,8 +10,10 @@ its tests, and `DocSnippetTests` fails if the page and the code drift apart.
 
 ## A project
 
-An app's project file needs only the desktop package, which brings the library and its generator. The packages target
-`net9.0`, `net10.0` and `net11.0`; on `net9.0`, add `<LangVersion>14</LangVersion>` for `ReactorApp.Run`.
+An app's project file needs only the desktop package, `Isotope.UI.Avalonia.Desktop`: it brings the library and its
+generator with it (referencing `Isotope.UI.Avalonia` too does no harm). `dotnet add package Isotope.UI.Avalonia.Desktop
+--prerelease` adds the latest preview; `<version>` below is that version. The packages target `net9.0`, `net10.0` and
+`net11.0`; on `net9.0`, add `<LangVersion>14</LangVersion>` for `ReactorApp.Run`.
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">

@@ -128,6 +128,24 @@ public class RenameTests
     }
 
     [Fact]
+    public void A_factory_parameter_with_no_counterpart_is_reported_named_or_positional()
+    {
+        // #68: NumberBox(value, onValueChanged, header) left a header NumericUpDown has no place for, as CS1501 only.
+        const string reactor = """
+            using Microsoft.UI.Reactor;
+            using static Microsoft.UI.Reactor.Factories;
+            static class C
+            {
+                public static Element A(double v) => NumberBox(v, _ => { }, "Enter a number");
+                public static Element B(double v) => NumberBox(v, _ => { }, header: "Percentage");
+                public static Element D(double v) => NumberBox(v, _ => { });
+            }
+            """;
+        var described = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
+        Assert.Equal(2, described.Count(d => d.StartsWith("ISOMIG010: Parameter 'NumberBox(header: …)' is gone in Isotope: Avalonia's NumericUpDown has no header", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void A_qualified_type_the_table_renamed_or_removed_is_renamed_or_reported()
     {
         var tables = Migrate.WithRenames(t =>

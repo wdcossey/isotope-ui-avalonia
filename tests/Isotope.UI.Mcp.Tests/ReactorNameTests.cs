@@ -25,6 +25,7 @@ public class ReactorNameTests
     [InlineData("Microsoft.UI.Reactor.Factories.ScrollView", "Factory: `ScrollView` is `ScrollViewer` in Isotope.")]
     [InlineData("SpinButtons", "Modifier: `SpinButtons` has no counterpart in Isotope. No modifier: Avalonia's NumericUpDown shows its spinner by default")]
     [InlineData("NumberBoxElement.Range", "Modifier: `Range` has no counterpart in Isotope. No modifier: set the record's Minimum and Maximum")]
+    [InlineData("NumberBox.header", "Factory parameter: `NumericUpDown(header: …)` has no counterpart in Isotope. Avalonia's NumericUpDown has no header")]
     [InlineData("NumberBox", "It has no header (NumberBox's third argument): put a TextBlock label beside it")]
     [InlineData("ScrollView", "The migration writes `(ScrollViewer(...) with { HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled })`")]
     public void A_Reactor_name_maps_to_Isotopes(string reactor, string expected) =>

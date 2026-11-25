@@ -36,7 +36,7 @@ or the developer chose to keep it (`VStack` and `HStack`, Reactor's shortcuts fo
 |---|---|---|
 | `records` | `"<record>": "<control>"` | Each element or data record (by Reactor's type name, also when an applied `types` entry gives it an Avalonia name: `TreeViewNodeData` is `TreeViewItemData` in the code) and the full name of the Avalonia type its members are named after. Every record with `[GenerateReactorDescriptor]` is listed, with the control in that attribute. |
 | `members` | `{ "record", "reactor", "avalonia", "kind", "note"? }` | A record member whose Reactor name or shape differs, or that keeps Reactor's name. |
-| `parameters` | `{ "factory", "reactor", "avalonia" }` | A factory parameter renamed, in every overload of that factory. |
+| `parameters` | `{ "factory", "reactor", "avalonia", "position"?, "note"? }` | A factory parameter renamed, in every overload of that factory (`factory` is Isotope's name). `avalonia` null: the parameter has no counterpart, `note` says what to do instead, and `position` (its index) lets the migration find a positional argument too. |
 | `modifiers` | `{ "reactor", "avalonia", "target"?, "status", "note"? }` | An extension method on elements (`target`: the record it extends, when only one). |
 | `types` | `{ "reactor", "avalonia", "status", "note"? }` | A record or data type. |
 | `factories` | `{ "reactor", "avalonia", "status", "note"?, "with"? }` | A factory method. `with` is an object initializer the migration writes onto each call it renames, `(ScrollViewer(...) with { ... })`, so the call keeps the Reactor factory's behaviour; its names are written in full, because a using added for them can give other Reactor names a meaning. |
