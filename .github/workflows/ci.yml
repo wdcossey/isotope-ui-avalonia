@@ -197,7 +197,8 @@ jobs:
           test "$total" = "$expected"
 
   packages:
-    # Packs the three packages, checks them, and builds and runs a tiny consumer app against the packed packages alone
+    # Packs the four packages (the MCP tool included, #60), checks them, builds and runs a tiny consumer app against the
+    # packed packages alone, and installs the tool into a temporary folder and lists its tools over stdio
     # (#52; tools/packaging/pack.mjs), so packaging can't silently break. Publishing is release.yml's, on a v* tag only.
     # Like the library job, it needs no upstream/ checkout. GitHub-hosted runners only.
     name: packages (${{ matrix.os }})

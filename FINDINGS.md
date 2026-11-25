@@ -144,6 +144,21 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## MCP server, phase 1 (#60, 2026-11-25)
+
+- `isotope-mcp` (package `Isotope.UI.Mcp`, a `net10.0` dotnet tool, ModelContextProtocol 2.4.0, stdio) reads the API by
+  reflection over the library and desktop DLLs it ships with and their XML docs. Doc IDs computed from reflection equal
+  Roslyn's for every public method, constructor and property of both assemblies (`ApiTests.Doc_ids_from_reflection_are_the_compilers`).
+- C# 14 extension blocks: reflection shows the declared members on compiler-made `<G>$…` nested types, which carry the
+  docs, and the implementations on the static class, whose XML doc is an `<inheritdoc cref>` to them.
+- Referencing the desktop project brings Skia, HarfBuzz and ANGLE native libraries for every RID: the Debug output
+  was 592 MB with them and 33 MB without (`du -sh`). The tool drops them (it never runs Avalonia); its package is
+  11,938,998 bytes, 94 files (`pack.mjs`).
+- The SDK's stdio client skips lines on stdout that aren't JSON-RPC: with every log sent to stdout, 1 of the stdio tests
+  failed (a proof run). The pack smoke test's own client fails on such a line.
+- **Not published yet:** `release.yml` leaves the tool package out (the developer decides; it would also need a
+  third-party notices file for the Apache-2.0 MCP SDK it bundles).
+
 ## Spike E: wrappers generator (issue #8, 2026-11-23)
 
 - **Upstream's generator ports to Avalonia** in descriptor-only mode, which upstream itself uses for 74 built-in elements. A patched copy (36 added and 33 removed lines, after the rename) generated descriptors for Button, TextBox and Slider from Avalonia 12.1.6 metadata.

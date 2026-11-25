@@ -117,9 +117,9 @@ on nuget.org if it must not be used, and release the next one.
 ## Not done yet
 
 - No package icon (nuget.org shows its default).
-- `release.yml` still counts three packages, so a release fails at its count check now that `pack.mjs` packs four
-  (the MCP tool, #60): whether the tool is published with the others is the developer's call, and the workflow changes
-  with it.
+- `release.yml` publishes the three library packages and leaves out the MCP tool (#60), which `pack.mjs` also packs:
+  whether the tool is published is the developer's call. Publishing it means dropping that filter, counting four, and
+  adding a third-party notices file (it bundles the Apache-2.0 MCP SDK).
 - No GitHub Release is created for a tag; the packages are the release.
 - The first real run of `release.yml` is the first release: the token exchange and the symbol push have only been
   reviewed, not run.
