@@ -177,7 +177,14 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
     by default.
 - **Not done:** `Hyperlink` (no hyperlink inline in Avalonia; the migration points to `InlineUIContainer(HyperlinkButton(...))`),
   `InlineUI(Func<FrameworkElement>)`, a paragraph's `Margin`, `TextIndent`, `TextAlignment` and `LineHeight`,
-  `IsTextSelectionEnabled`, `LineStackingStrategy`, and `CharacterSpacing` (reported with the conversion to `LetterSpacing`).
+  `LineStackingStrategy`, and `CharacterSpacing` (reported with the conversion to `LetterSpacing`).
+- **Decided** (developer, 2026-11-25):
+  - `IsTextSelectionEnabled` isn't added. Avalonia's `TextBlock` can't be selected and its `SelectableTextBlock` always
+    is, so the migration reports it (ISOMIG010) with what to do: on a text block, drop it if false or use a
+    `SelectableTextBlock`; on a rich text block, drop it. Upstream's obsolete `Selectable()` gets the same note. A new
+    `removed` kind of member entry in `tools/naming/renames.json` carries the member.
+  - Inlines stay `Element`s, and paragraphs stay spans in one selectable text block: a selection can cross paragraphs,
+    and a paragraph has no margin or alignment of its own.
 - **Measured on upstream's samples** (`node tools/migration/measure-samples.mjs --out <empty temp folder>`: 36 projects,
   358 files, upstream 561c5573; after the fixes, on main at a2dd42d and on this branch):
 
@@ -191,9 +198,11 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 
   - ISOMIG012 lost 70: `Run` 39, `Paragraph` 14, `RichTextBlock` 9, `InlineUI` 8.
   - Rich text left: `IsBold` 9 and `IsItalic` 2 (ISOMIG007, a hand fix with a note), `Hyperlink` 2 (ISOMIG012), and
-    `IsTextSelectionEnabled` 3 and `LineStackingStrategy` 2 on a selectable text block (ISOMIG013).
+    `LineStackingStrategy` 2 on a selectable text block (ISOMIG013). `IsTextSelectionEnabled` (9) is reported with what
+    to do (ISOMIG010).
   - No file that built before the fixes fails after them, and no `dotnet format` run failed.
-- **Tests:** 35 library tests and 3 migration tests, each proven to fail (30 deliberate breaks).
+- **Tests:** 35 library tests and 4 migration tests, each proven to fail (30 deliberate breaks, and 7 for
+  `IsTextSelectionEnabled`).
 
 ## MCP tool ready to publish (issue #68, 2026-11-25)
 

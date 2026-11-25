@@ -83,6 +83,8 @@ public class RenameTableTests
             if (entry.Kind == "shape" && entry.Note is null)
                 problems.Add($"{entry.Record}.{entry.Reactor}: a shape change says what changed (note)");
             var members = Members(Record(table.IsotopeName(entry.Record))).ToHashSet();
+            if (entry.Kind == "removed" && members.Contains(entry.Reactor))
+                problems.Add($"{entry.Record}.{entry.Reactor}: removed in the table, but {entry.Record} has it");
             foreach (var name in entry.Avalonia.Where(n => !members.Contains(n)))
                 problems.Add($"{entry.Record}.{entry.Reactor}: {entry.Record} has no member {name}");
         }

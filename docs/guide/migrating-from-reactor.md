@@ -112,15 +112,15 @@ Measured on 2026-11-25, with rich text (#65):
 - The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
 - The two projects that build after are the hello-world app and the chat sample's model.
 - Diagnostics left: 1,122.
-  - 410 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
+  - 401 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
     `Resources` (14) and `SubtleButton` (14) on `ButtonElement`.
   - 136 ISOMIG012: controls not ported yet. The commonest are `Icon` (14), `ListView` (12) and `FontIcon` (10).
   - 199 ISOMIG002: Charting (159), Advanced (11), Docking (8), and smaller upstream namespaces.
   - 171 ISOMIG011 and 116 ISOMIG005: WinUI-only controls and types.
   - 57 ISOMIG016: WinUI names the table doesn't list.
   - 13 ISOMIG015: startup.
-  - 6 ISOMIG010: Reactor names with no counterpart, each with what to do instead: NumberBox's `Range`,
-    `SpinButtons` and header argument (#68).
+  - 15 ISOMIG010: Reactor names with no counterpart, each with what to do instead: `IsTextSelectionEnabled` (9, #65),
+    and NumberBox's `Range`, `SpinButtons` and header argument (#68).
   - 14 ISOMIG007: shapes left for a hand fix, each with a note: rich text's `IsBold` (9) and `IsItalic` (2), and a
     ScrollView's `ContentOrientation` (3).
 - Most compile errors left are names Isotope doesn't have: the largest groups are 264 CS0234 (`UI`), 128 CS0103
