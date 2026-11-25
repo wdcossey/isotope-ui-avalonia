@@ -16,9 +16,7 @@ internal static class ReactorNames
     public static IReadOnlyList<string> Lookup(string name, MigrationTables? tables = null)
     {
         tables ??= MigrationTables.Default;
-        var n = name.Trim();
-        if (n.EndsWith("()", StringComparison.Ordinal)) n = n[..^2];
-        if (n.StartsWith("global::", StringComparison.Ordinal)) n = n["global::".Length..];
+        var n = Normalize(name);
         var hits = new List<string>();
         if (n.Length == 0) return hits;
 
@@ -51,19 +49,31 @@ internal static class ReactorNames
 
         var found = hits.Count;
         var dot = n.LastIndexOf('.');
+        // Record.Member of a Reactor record: only that record's member answers it, never another record's member or
+        // another factory's parameter of that name (NumberBoxElement.Header is not ExpanderElement.Header, #68).
+        var ofRecord = false;
         if (dot > 0)
         {
             // Record.Member, or Factory.parameter.
             var owner = n[..dot].Split('.')[^1];
             var member = n[(dot + 1)..];
             foreach (var m in tables.Renames.Members.Where(m => m.Record == owner && m.Reactor == member)) hits.Add(Member(m, tables));
-            foreach (var p in tables.Renames.Parameters.Where(p => p.Factory == owner && p.Reactor == member)) hits.Add(Parameter(p));
+            // Reactor's factory name or Isotope's: the table names parameters by Isotope's factory (NumberBox.header is NumericUpDown's).
+            var isotopeFactory = tables.Renames.Factories.FirstOrDefault(f => f.Reactor == owner && f.Applied && f.Avalonia is not null)?.Avalonia;
+            foreach (var p in tables.Renames.Parameters.Where(p => (p.Factory == owner || p.Factory == isotopeFactory) && p.Reactor == member)) hits.Add(Parameter(p));
             foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == member && e.Target == owner)) hits.Add(Name("Modifier", mod));
             if (hits.Count > found || tables.WinUI.IsWinUINamespace(n)) return hits;
+            ofRecord = IsRecord(owner, tables);
             // Factories.TabView, Core.Element: the last part on its own.
             n = member;
         }
 
+        // Record.Member: past the record's own entries, only a modifier for any record (HAlign) can answer it.
+        if (ofRecord)
+        {
+            foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == n && e.Target is null)) hits.Add(Name("Modifier", mod));
+            return hits;
+        }
         foreach (var t in tables.Renames.Types.Where(e => e.Reactor == n)) hits.Add(Name("Type", t));
         if (tables.Renames.Records.TryGetValue(n, out var control2) && !tables.Renames.Types.Any(t => t.Reactor == n))
             hits.Add($"Element record: `{n}` keeps its name in Isotope; its members are named after Avalonia's `{control2}`.");
@@ -75,22 +85,85 @@ internal static class ReactorNames
         return hits;
     }
 
+    /// <summary>A Reactor element record the tables know (by its Reactor name), renamed or not.</summary>
+    static bool IsRecord(string name, MigrationTables tables) =>
+        tables.Renames.Records.ContainsKey(name) || tables.Renames.Types.Any(t => t.Reactor == name && name.EndsWith("Element", StringComparison.Ordinal));
+
+    /// <summary>What Isotope's record has under the name: a member declared on it or a base type (Element's Key), or a
+    /// modifier that takes it (Padding is on every element); empty when nothing; null when the catalog lacks the record.</summary>
+    static List<ApiEntry>? Found(ApiCatalog catalog, string record, string member)
+    {
+        var type = catalog.Find(record).Select(e => e.Member).OfType<Type>().FirstOrDefault();
+        if (type is null) return null; // a record the catalog doesn't know: claim nothing
+        for (var t = type; t is not null && t != typeof(object); t = t.BaseType)
+            if (catalog.Find(t.Name + "." + member) is { Count: > 0 } onType) return onType.ToList();
+        // A modifier counts only if it takes this record (Padding takes any element; Expander's Header doesn't).
+        return catalog.Find(member).Where(e => e.Kind == ApiKind.Modifier && e.Member is System.Reflection.MethodInfo m && Takes(m, type)).ToList();
+    }
+
+    /// <summary>A name as asked: trimmed, without a trailing <c>()</c> or a <c>global::</c> prefix.</summary>
+    static string Normalize(string name)
+    {
+        var n = name.Trim();
+        if (n.EndsWith("()", StringComparison.Ordinal)) n = n[..^2];
+        if (n.StartsWith("global::", StringComparison.Ordinal)) n = n["global::".Length..];
+        return n;
+    }
+
+    /// <summary>Whether a modifier's receiver (its first parameter, or that parameter's constraints) accepts the record.</summary>
+    static bool Takes(System.Reflection.MethodInfo modifier, Type record)
+    {
+        var receiver = modifier.GetParameters().FirstOrDefault()?.ParameterType;
+        if (receiver is null) return false;
+        if (!receiver.IsGenericParameter) return receiver.IsAssignableFrom(record);
+        return receiver.GetGenericParameterConstraints().All(c => c.IsAssignableFrom(record) || (c.ContainsGenericParameters && c.IsInterface));
+    }
+
+    /// <summary>The record's name in Isotope: its rename, or its own.</summary>
+    static string IsotopeRecord(string name, MigrationTables tables) =>
+        tables.Renames.Types.FirstOrDefault(t => t.Reactor == name && t.Applied && t.Avalonia is not null)?.Avalonia ?? name;
+
     /// <summary>The tables' answer, or, for a name they don't hold, whether Isotope has it under the same name.</summary>
     public static string Map(string name, ApiCatalog? catalog = null, MigrationTables? tables = null)
     {
-        var hits = Lookup(name, tables);
+        tables ??= MigrationTables.Default;
+        var hits = Lookup(name, tables).ToList();
         catalog ??= ApiCatalog.Default;
         // A Reactor name the rename table doesn't hold is Isotope's name too (Button, UseState), unless the table renames it.
         // A hit of any table section answers the name (a parameter "header" is not the Header modifier).
         string[] answered = ["Type:", "Factory:", "Modifier:", "Member:", "Factory parameter:", "Element record:"];
         var renamed = hits.Any(h => answered.Any(a => h.StartsWith(a, StringComparison.Ordinal)));
-        var trimmed = name.Trim();
+        var trimmed = Normalize(name);
         if (trimmed.StartsWith(ReactorNamespace + ".", StringComparison.Ordinal)) trimmed = trimmed[(ReactorNamespace.Length + 1)..];
-        var winui = (tables ?? MigrationTables.Default).WinUI.IsWinUINamespace(trimmed);
+        var winui = tables.WinUI.IsWinUINamespace(trimmed);
+        // Record.Member the tables don't hold, on a Reactor record: answered from Isotope's record (renamed or not), its
+        // bases and the modifiers that take it; or, when none has it, which record it is and that the member is not on it (#68).
+        List<ApiEntry>? onRecord = null;
+        if (!renamed && !winui && trimmed.LastIndexOf('.') is var at and > 0)
+        {
+            var owner = trimmed[..at].Split('.')[^1];
+            var member = trimmed[(at + 1)..];
+            var isotope = IsotopeRecord(owner, tables);
+            if (IsRecord(owner, tables) && Found(catalog, isotope, member) is { } has)
+            {
+                var named = isotope == owner ? $"`{owner}` keeps its name in Isotope" : $"`{owner}` is `{isotope}` in Isotope";
+                if (has.Count == 0)
+                {
+                    var control = tables.Renames.Records.TryGetValue(owner, out var c) ? $" (its members are Avalonia's `{c}`'s)" : "";
+                    hits.Add($"Element record: {named}, and has no `{member}`{control}. get_api `{isotope}` lists its members.");
+                    renamed = true;
+                }
+                else
+                {
+                    if (isotope != owner) hits.Add($"Element record: {named}.");
+                    onRecord = has;
+                }
+            }
+        }
         // Owner.Member as a whole (ButtonElement.OnClick), else its last part as a factory, hook, modifier or type
         // (Factories.Button is Button, Core.Element is Element), never another record's member of that name.
-        var found = renamed || winui ? [] : catalog.Find(trimmed) is { Count: > 0 } whole ? whole
-            : catalog.Find(trimmed.Split('.')[^1]).Where(e => e.Kind != ApiKind.Member).ToList();
+        var found = renamed || winui ? [] : onRecord ?? (catalog.Find(trimmed) is { Count: > 0 } whole ? whole
+            : catalog.Find(trimmed.Split('.')[^1]).Where(e => e.Kind != ApiKind.Member).ToList());
         // A bare name that is only some types' member (OnClick) is not one Isotope name; Owner.Member is.
         var same = trimmed.Contains('.') || found.Any(e => e.Kind != ApiKind.Member) ? found.Where(e => e.Kind != ApiKind.Member || trimmed.Contains('.')).ToList() : [];
         var sb = new StringBuilder();
@@ -133,8 +206,9 @@ internal static class ReactorNames
         };
     }
 
-    static string Parameter(ParameterEntry p) =>
-        $"Factory parameter: `{p.Factory}({p.Reactor}: …)` is `{p.Factory}({p.Avalonia}: …)` in Isotope.";
+    static string Parameter(ParameterEntry p) => p.Avalonia is null
+        ? $"Factory parameter: `{p.Factory}({p.Reactor}: …)` has no counterpart in Isotope.{(p.Note is null ? "" : " " + p.Note)}"
+        : $"Factory parameter: `{p.Factory}({p.Reactor}: …)` is `{p.Factory}({p.Avalonia}: …)` in Isotope.";
 
     static string Control(ControlEntry c) => c.WinUIOnly
         ? $"Factory: `{c.Factory}` is a WinUI control with no Isotope counterpart. {c.Alternative}".TrimEnd()

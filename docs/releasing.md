@@ -10,7 +10,7 @@ nothing is published except by pushing a `v*` tag, and agents never push tags.
 | `Isotope.UI.Avalonia` | The library | `lib/net9.0`, `lib/net10.0` and `lib/net11.0` (DLL and XML docs each), and the wrappers generator in `analyzers/dotnet/cs`, so a consumer's own `[GenerateReactorDescriptor]` records get descriptors as the library's do |
 | `Isotope.UI.Avalonia.Desktop` | The one-line desktop startup | `lib/net9.0`, `lib/net10.0` and `lib/net11.0`; depends on the library at the same version, declaring every asset (`include="All"`, the generator included) |
 | `Isotope.UI.Migration` | The Reactor → Isotope migration analyzer and code fixes | `analyzers/dotnet/cs` only; a development dependency with no dependencies |
-| `Isotope.UI.Mcp` | The MCP server for coding agents (#60), a `dotnet tool` with the command `isotope-mcp` | `tools/net10.0/any`: the tool and everything it runs, the library's and desktop startup's DLLs and XML docs (which it reads) and the migration among them; no dependencies, and no native libraries (it never runs Avalonia) |
+| `Isotope.UI.Mcp` | The MCP server for coding agents (#60), a `dotnet tool` with the command `isotope-mcp`, and an MCP server package (`McpServer`, #68) | `tools/net10.0/any`: the tool and everything it runs, the library's and desktop startup's DLLs and XML docs (which it reads) and the migration among them; no dependencies, no native libraries and no desktop backends (it never runs Avalonia). `.mcp/server.json`, written at pack time: its name (`io.github.<owner>/<repo>`) and repository from the git remote, as SourceLink's, and the package's version. `THIRD-PARTY-NOTICES.md`: every third-party assembly it carries, by package, with the licence texts |
 
 Each also carries its README (next to its project file), this repository's `LICENSE`, and upstream's licence and
 third-party notices under `licenses/microsoft-ui-reactor/`, since the packages ship upstream's code (Yoga included).
@@ -43,8 +43,11 @@ node --test tools/packaging/test/*.test.mjs   # the checks' own tests (no dotnet
 The script packs with `ContinuousIntegrationBuild`, which maps source paths to `/_/`, so no local path reaches a DLL
 or PDB; a plain `dotnet pack` of a package fails on purpose and says so. Then it checks each package (layout,
 metadata, the Isotope dependencies, SourceLink in every PDB at the package's commit, personal data in the nuspecs and
-READMEs, local paths in every DLL, every PDB's source documents under the deterministic `/_/` root, and the tool package's type,
-command, contents and lack of native libraries), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
+READMEs, local paths in every DLL, every PDB's source documents under the deterministic `/_/` root, and the tool package's types,
+command, contents and lack of native libraries and desktop backends; its `server.json` against the package, and its
+`THIRD-PARTY-NOTICES.md` naming every third-party DLL it carries, and matching what `lib/notices.mjs` generates from the
+tool's restore: after a dependency change, `node tools/packaging/pack.mjs --write-notices` rewrites it, then pack again
+and review its diff), and builds and runs `tests/Isotope.UI.PackageSmoke` against the packed
 packages alone: a fresh packages folder, and a `nuget.config` that takes `Isotope.UI.*` from the packed folder only (never
 nuget.org's copy of the same version):
 
@@ -53,7 +56,9 @@ nuget.org's copy of the same version):
   references only the desktop package and builds with the consumer's default C# version and warnings as errors.
 - `Migration`: `dotnet format analyzers` must find `ISOMIG001` and offer its fix, from the analyzer package.
 - The MCP tool: installed from its package into a temporary `--tool-path` (never globally), started over stdio, it must
-  list its six tools, answer `get_api UseState` with the hook's doc comment, and list the guides as resources.
+  list its six tools, answer `get_api UseState` with the hook's doc comment and `get_api ReactorApp.Run` (the desktop
+  startup it carries without the desktop backends), migrate a Reactor `NumberBox` with its notes, map
+  `NumberBoxElement.Minimum`, and list the guides as resources.
 
 The default output folder is emptied of earlier builds of these packages first. Another `--out` must be empty or
 new, or given `--clean` to delete earlier builds of these packages in it; a folder holding anything else is refused,
@@ -106,7 +111,7 @@ secrets or variables without the developer).
      commit of `main`, and unless MinVer's version equals the tag's. It packs, checks, runs the smoke test, and uploads the packages
      (kept 30 days as the run's `packages` artifact).
    - `publish to nuget.org` (after your approval, if the environment requires it) exchanges the run's OIDC token for a
-     key and pushes the three packages, each with its symbols. A re-run skips what is already there.
+     key and pushes the four packages, each with its symbols. A re-run skips what is already there.
 5. nuget.org validates and indexes the packages, which takes a few minutes. Check each package page: version, README,
    licence, the source repository link, and the symbols.
 
@@ -117,9 +122,6 @@ on nuget.org if it must not be used, and release the next one.
 ## Not done yet
 
 - No package icon (nuget.org shows its default).
-- `release.yml` publishes the three library packages and leaves out the MCP tool (#60), which `pack.mjs` also packs:
-  whether the tool is published is the developer's call. Publishing it means dropping that filter, counting four, and
-  adding a third-party notices file (it bundles the Apache-2.0 MCP SDK).
 - No GitHub Release is created for a tag; the packages are the release.
 - The first real run of `release.yml` is the first release: the token exchange and the symbol push have only been
   reviewed, not run.

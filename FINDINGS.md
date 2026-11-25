@@ -145,6 +145,54 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## MCP tool ready to publish (issue #68, 2026-11-25)
+
+- **The tool ships in the first release** (developer, 2026-11-25). `release.yml` now publishes all four packages.
+- **An MCP server package,** as the `dotnet new mcpserver` template packs one. It has the package types `DotnetTool` and
+  `McpServer`, and an `.mcp/server.json` written at pack time: its name (`io.github.<owner>/<repo>`) and repository
+  come from the git remote (SourceLink's), and its version from MinVer. So no file in the repository names the owner,
+  just as with the nuspec's repository URL. `tools/packaging` checks it against the package, and checks that the owner's
+  name appears in it only there.
+- **Third-party notices:** `src/Isotope.UI.Mcp/THIRD-PARTY-NOTICES.md` lists 50 packages and 61 assemblies (counted from its table: rows, and backticked DLL names), each with its
+  licence and copyright, plus the licence texts: MIT, and the MCP C# SDK's own LICENSE (an Apache-2.0 transition with an
+  MIT part, held in `tools/packaging/licenses/` as at the commit the bundled 2.4.0 was built from).
+  `tools/packaging/lib/notices.mjs` generates the file from the tool's restore and each package's nuspec. `pack.mjs`
+  fails when the file differs from what the packed tool carries, and `--write-notices` rewrites it.
+- **The tool no longer carries the desktop backends or renderers** (Win32, X11, macOS, FreeDesktop, Skia, HarfBuzz). It
+  reflects over signatures that name none of them. The package went from 11.9 MB and 94 files to 10.6 MB and 84 files,
+  and it lost the only two bundled packages whose copyright line names a person rather than an organisation. The packed
+  tool is what runs without them: the package smoke test (its `migrate_code`, `map_reactor_name` and `get_api` for the
+  desktop startup) and the three fresh-agent runs below. The 51 MCP tests run from the test project's own output, which
+  still has them.
+- **Tested by a fresh agent before publishing:** a `claude -p` session (Sonnet) in an empty scratch folder.
+  - Its setup:
+    - `--setting-sources project`, so none of the user's settings, hooks or memory;
+    - `--strict-mcp-config`, so its only MCP server is the tool, installed from the locally packed package into a
+      scratch tool path;
+    - an allow-list of `dotnet`, file tools and the tool;
+    - a `nuget.config` that takes `Isotope.*` from the scratch packages only, and a fresh `NUGET_PACKAGES`.
+  - Its tasks: a counter app, and a port of a trimmed version of upstream's NumberBox sample page. Each run's build was
+    checked again afterwards. Turns and cost are the CLI's own report.
+
+  | Run | Turns | Cost (USD) | Build | What it found |
+  |---|---|---|---|---|
+  | 1 | 16 | 0.18 | 0 errors | `map_reactor_name("NumberBoxElement.Header")` gave other records' `Header` (Expander, ToggleSwitch); `SpinButtons` unknown; `.Range` unexplained; the header argument left as CS1501; no project file in the guide |
+  | 2 | 14 | 0.18 | 0 errors | `Range` and `SpinButtons` now explained; the header argument still left as CS1501 only; the guide's project file unclear (one package or two, which version) |
+  | 3 | 15 | 0.18 | 0 errors | Every error and warning the migration left came with what to do; nothing wrong or misleading. It asks for enhancements only (below) |
+
+  - The fixes:
+    - `map_reactor_name` answers `Record.Member` only from that record. When the member is missing, it says which
+      Isotope record it is and that the member isn't on it.
+    - The rename table has `Range` and `SpinButtons` on `NumberBoxElement`: no modifier, set the record's `Minimum`
+      and `Maximum` and `ShowButtonSpinner` instead.
+    - A factory parameter can now have no counterpart (`avalonia` null, with a `note` and a `position`).
+      `NumberBox`'s header is the first. The migration reports it whether it's passed by name or by position.
+    - The migration looks a modifier up past an unresolved link in its chain (`.Range(...).SpinButtons()`), for the
+      table's modifiers only.
+    - The guide has a project file.
+- **Not done** (run 3's asks): rewriting `Range`, `SpinButtons` and the header automatically, rather than reporting them; a
+  `using` for the types the migration writes (it writes them in full, on purpose); one complete app example in one place.
+
 ## Target frameworks (issue #67, 2026-11-25)
 
 - **The library and desktop packages ship for `net9.0`, `net10.0` and `net11.0`** (developer, 2026-11-25: 10 is the

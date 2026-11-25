@@ -103,6 +103,7 @@
     {"record": "TreeViewNodeData", "reactor": "Children", "avalonia": "Items", "kind": "rename"}
   ],
   "parameters": [
+    {"factory": "NumericUpDown", "reactor": "header", "avalonia": null, "position": 2, "note": "Avalonia's NumericUpDown has no header (Reactor's NumberBox took it third): put a TextBlock label beside it; PlaceholderText is the text shown while it is empty (#68)."},
     {"factory": "TextBlock", "reactor": "content", "avalonia": "text"},
     {"factory": "Button", "reactor": "label", "avalonia": "content"},
     {"factory": "ToggleButton", "reactor": "label", "avalonia": "content"},
@@ -154,6 +155,8 @@
     {"reactor": "HAlign", "avalonia": "HorizontalAlignment", "status": "applied", "note": "Avalonia's Layoutable.HorizontalAlignment, which upstream also has as an alias of HAlign (#46)."},
     {"reactor": "VAlign", "avalonia": "VerticalAlignment", "status": "applied", "note": "Avalonia's Layoutable.VerticalAlignment, which upstream also has as an alias of VAlign (#46)."},
     {"reactor": "WithContextFlyout", "avalonia": "ContextFlyout", "status": "applied", "note": "Avalonia's Control.ContextFlyout (#46)."},
+    {"reactor": "Range", "avalonia": null, "target": "NumberBoxElement", "status": "applied", "note": "No modifier: set the record's Minimum and Maximum, NumericUpDown(value, onValueChanged) with { Minimum = min, Maximum = max } (#68)."},
+    {"reactor": "SpinButtons", "avalonia": null, "target": "NumberBoxElement", "status": "applied", "note": "No modifier: Avalonia's NumericUpDown shows its spinner by default (ShowButtonSpinner, null keeps it); with { ShowButtonSpinner = false } hides it, and Reactor's placement has no counterpart (#68)."},
     {"reactor": "ApplyStyle", "avalonia": "ApplyStyle", "target": "TextBlockElement", "status": "kept", "note": "No Avalonia counterpart by name: Avalonia sets a ControlTheme through Theme. This sets one by resource key (a WinUI style key), with Isotope's type ramp as the fallback; text blocks only (#44)."}
   ],
   "types": [
@@ -178,7 +181,7 @@
   "factories": [
     {"reactor": "TabView", "avalonia": "TabControl", "status": "applied", "note": "Avalonia's TabControl (#46)."},
     {"reactor": "Tab", "avalonia": "TabItem", "status": "applied", "note": "Avalonia's TabItem (#46)."},
-    {"reactor": "NumberBox", "avalonia": "NumericUpDown", "status": "applied", "note": "Avalonia's NumericUpDown (#46)."},
+    {"reactor": "NumberBox", "avalonia": "NumericUpDown", "status": "applied", "note": "Avalonia's NumericUpDown (#46). It has no header (NumberBox's third argument): put a TextBlock label beside it; PlaceholderText is the text shown while it is empty (#68)."},
     {"reactor": "AutoSuggestBox", "avalonia": "AutoCompleteBox", "status": "applied", "note": "Avalonia's AutoCompleteBox (#46)."},
     {"reactor": "Progress", "avalonia": "ProgressBar", "status": "applied", "note": "Avalonia's ProgressBar (#46)."},
     {"reactor": "ScrollView", "avalonia": "ScrollViewer", "status": "applied", "with": "HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", "note": "WinUI ScrollView's content is as wide as the view (vertical content orientation): a ScrollViewer with its horizontal scroll bar disabled, which the migration writes (#43)."},

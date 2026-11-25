@@ -5,8 +5,31 @@ an `Element`, a description of the controls to show. Isotope mounts the descript
 state changes, renders the function again and updates only the controls that changed. There is no XAML, no binding
 and no view model.
 
-Every code block on this page is a region of the test project (`tests/Isotope.UI.Avalonia.Tests`), compiled and run by
+Every C# block on this page is a region of the test project (`tests/Isotope.UI.Avalonia.Tests`), compiled and run by
 its tests, and `DocSnippetTests` fails if the page and the code drift apart.
+
+## A project
+
+An app's project file needs only the desktop package, `Isotope.UI.Avalonia.Desktop`: it brings the library and its
+generator with it (referencing `Isotope.UI.Avalonia` too does no harm). `dotnet add package Isotope.UI.Avalonia.Desktop
+--prerelease` adds the latest preview; `<version>` below is that version. The packages target `net9.0`, `net10.0` and
+`net11.0`; on `net9.0`, add `<LangVersion>14</LangVersion>` for `ReactorApp.Run`.
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia.Desktop" Version="<version>" />
+  </ItemGroup>
+</Project>
+```
+
+`ReactorApp.Run(...)` in `Program.cs` opens the window (see *Running an app* below).
 
 ## The vocabulary
 

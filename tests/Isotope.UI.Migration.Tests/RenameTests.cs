@@ -106,6 +106,52 @@ public class RenameTests
     }
 
     [Fact]
+    public void NumberBox_modifiers_with_no_counterpart_are_reported_with_what_to_set_instead()
+    {
+        // #68: a fresh agent found .Range and .SpinButtons unexplained. They are record members in Isotope.
+        const string reactor = """
+            using Microsoft.UI.Reactor;
+            using static Microsoft.UI.Reactor.Factories;
+            static class C
+            {
+                public static Element A(double v) => NumberBox(v, _ => { }).Range(0, 100).SpinButtons();
+                public static Element B(double v) => NumberBox(v, _ => { }).Range(0, 100).NoSuchThing();
+                public static object E() => new System.Text.StringBuilder().Missing().HAlign(1);
+            }
+            """;
+        // As migrate_code reports them: what is left once the fixes ran (the factory renamed, so the receiver resolves).
+        var described = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
+        Assert.Contains(described, d => d.StartsWith("ISOMIG010: Modifier 'Range' is gone in Isotope: No modifier: set the record's Minimum and Maximum", StringComparison.Ordinal));
+        Assert.Contains(described, d => d.StartsWith("ISOMIG010: Modifier 'SpinButtons' is gone in Isotope: No modifier: Avalonia's NumericUpDown shows its spinner", StringComparison.Ordinal));
+        // Past an unresolved link only the table's modifiers are named: an unknown name is left to the compiler.
+        Assert.DoesNotContain(described, d => d.Contains("NoSuchThing", StringComparison.Ordinal));
+        // Only an element's chain: HAlign on a StringBuilder's is no modifier of Isotope's, so the fix leaves it alone (a
+        // reported rename would have been applied, and is gone from the diagnostics of the fixed code).
+        Assert.Contains("new System.Text.StringBuilder().Missing().HAlign(1)", Migrate.Fix(reactor));
+        Assert.Equal(2, described.Count(d => d.Contains("Modifier 'Range'", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void A_factory_parameter_with_no_counterpart_is_reported_named_or_positional()
+    {
+        // #68: NumberBox(value, onValueChanged, header) left a header NumericUpDown has no place for, as CS1501 only.
+        const string reactor = """
+            using Microsoft.UI.Reactor;
+            using static Microsoft.UI.Reactor.Factories;
+            static class C
+            {
+                public static Element A(double v) => NumberBox(v, _ => { }, "Enter a number");
+                public static Element B(double v) => NumberBox(v, _ => { }, header: "Percentage");
+                public static Element D(double v) => NumberBox(v, _ => { });
+                public static Element F(double v) => NumberBox(value: v, onValueChanged: _ => { }, "In position");
+            }
+            """;
+        var described = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
+        // Named as the fixed call names it, and found after in-position named arguments too.
+        Assert.Equal(3, described.Count(d => d.StartsWith("ISOMIG010: Parameter 'NumericUpDown(header: …)' is gone in Isotope: Avalonia's NumericUpDown has no header", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void A_qualified_type_the_table_renamed_or_removed_is_renamed_or_reported()
     {
         var tables = Migrate.WithRenames(t =>
