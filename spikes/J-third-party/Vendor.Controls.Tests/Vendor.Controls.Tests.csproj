@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Spike J's checks (#75), headless, on each framework: the vendor's elements next to Isotope's built-ins, from the
+       packed packages only. No InternalsVisibleTo: everything here is public API. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- As the library's tests (xunit.v3 3.2.x: the version Avalonia.Headless.XUnit 12.1.6 is built against). -->
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vendor.Controls.Isotope\Vendor.Controls.Isotope.csproj" />
+  </ItemGroup>
+</Project>

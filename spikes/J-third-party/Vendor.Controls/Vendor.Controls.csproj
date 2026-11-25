@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- An Avalonia control library that knows nothing of Isotope, as a third party's would be: a plain control
+       (RatingBar). Vendor.Controls.Isotope adds the Isotope elements for it. -->
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+  </ItemGroup>
+</Project>
