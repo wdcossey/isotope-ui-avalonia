@@ -254,7 +254,10 @@ jobs:
     # --check fails when a count differs from tools/migration/samples-baseline.json (docs/guide/migrating-from-reactor.md
     # says how to update it). It builds upstream's sample code, so it holds a read-only token and neither checkout keeps
     # credentials (CLAUDE.md). Ubuntu only: Windows gave the same counts, on a runner and locally, and took 22 minutes to
-    # Ubuntu's 16 (measured on #71's branch). Meant as a required check, so it runs on every push, with no path filter.
+    # Ubuntu's 16 (measured on #71's branch). A required check, so it runs and reports on every push, with no path filter;
+    # only the measurement step is skipped, for a branch push whose changes since its merge base with origin/main are
+    # all docs: files under docs/ or *.md files anywhere, and nothing else (tools/migration/lib/changes.mjs). Main, a
+    # manual run, and any push the comparison can't be made for are always measured. The tests always run.
     name: samples migration
     runs-on: ubuntu-latest # GitHub-hosted only (public repo; CLAUDE.md)
     permissions:
@@ -263,6 +266,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          # The history, for the merge base with main (should-measure.mjs; a shallow one measures).
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Read the upstream baseline
@@ -293,10 +298,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Baseline tests (the comparison, and the guide's table against the baseline)
+      - name: Baseline and skip tests (the comparison, the guide's table against the baseline, the docs-only decision)
         shell: bash
         run: node --test tools/migration/test/*.test.mjs
 
+      - name: Measure, unless the changes are docs only
+        id: changes
+        shell: bash
+        # The script prints only measure=true or measure=false, never a file name (a fork chooses those).
+        run: node tools/migration/should-measure.mjs >> "$GITHUB_OUTPUT"
+
       - name: Migrate and build upstream's samples, and compare the counts with the baseline
+        if: steps.changes.outputs.measure != 'false'
         shell: bash
         run: node tools/migration/measure-samples.mjs --out "$RUNNER_TEMP/samples" --check

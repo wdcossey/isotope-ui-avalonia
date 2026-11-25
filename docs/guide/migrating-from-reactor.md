@@ -110,6 +110,10 @@ and fails when a count differs from it (#71):
 - A count that got better fails the job too, so the same PR updates the baseline, and the next change is measured
   against the new counts.
 - Moving `UPSTREAM.lock` changes the samples, so the same PR updates the baseline.
+- A branch push whose changes since its merge base with `main` are all docs skips the measurement: every changed
+  file is under `docs/` or is a `*.md` file anywhere, and nothing else. The job still runs and reports, and its tests,
+  this page's table check among them, still run. `main`, a manual run, and any push the comparison can't be made for
+  are always measured.
 
 To update it, measure with `--write-baseline`:
 
