@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { homedir, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FRAMEWORKS, PACKAGES, checkPackages, parseNuspec } from './lib/checks.mjs';
+import { FRAMEWORKS, PACKAGES, TOOL_DLL, checkPackages, parseNuspec } from './lib/checks.mjs';
 import { generateNotices } from './lib/notices.mjs';
 import { readZip } from './lib/zip.mjs';
 import { initialize, startMcp } from './lib/mcp.mjs';
@@ -97,13 +97,14 @@ function toolNotices(tool) {
   const assets = JSON.parse(readFileSync(path.join(REPO, 'src', 'Isotope.UI.Mcp', 'obj', 'project.assets.json'), 'utf8'));
   const folder = Object.keys(assets.packageFolders ?? {})[0];
   const target = Object.values(assets.targets)[0];
-  const dlls = [...tool.entries.keys()].filter((n) => /^tools\/[^/]+\/any\/[^/]+\.dll$/i.test(n)).map((n) => n.split('/').pop()).filter((n) => !/^Isotope\./.test(n));
+  const dlls = [...new Set([...tool.entries.keys()].filter((n) => TOOL_DLL.test(n)).map((n) => n.split('/').pop()).filter((n) => !/^Isotope\./.test(n)))];
   const pkgs = Object.entries(assets.libraries).filter(([, v]) => v.type === 'package').map(([key]) => {
     const [id, version] = key.split('/');
     const nuspecFile = path.join(folder, id.toLowerCase(), version.toLowerCase(), id.toLowerCase() + '.nuspec');
     const m = existsSync(nuspecFile) ? parseNuspec(readFileSync(nuspecFile, 'utf8')) : {};
     const license = m.license?.type === 'expression' ? m.license.value : (m.license ? 'file' : 'unknown');
-    return { id, version, license, copyright: m.copyright ?? '', dlls: Object.keys(target[key]?.runtime ?? {}).map((f) => f.split('/').pop()).filter((f) => f.endsWith('.dll')) };
+    const assets = [...Object.keys(target[key]?.runtime ?? {}), ...Object.keys(target[key]?.runtimeTargets ?? {})];
+    return { id, version, license, copyright: m.copyright ?? '', dlls: [...new Set(assets.map((f) => f.split('/').pop()).filter((f) => f.endsWith('.dll')))] };
   });
   const licDir = path.join(REPO, 'tools', 'packaging', 'licenses');
   const licenceTexts = Object.fromEntries(readdirSync(licDir).map((f) => [f, readFileSync(path.join(licDir, f), 'utf8')]));
@@ -116,7 +117,7 @@ if (tool) {
   noticeProblems.push(...np.map((p) => 'notices: ' + p));
   const committed = existsSync(NOTICES) ? readFileSync(NOTICES, 'utf8').replace(/\r\n/g, '\n') : '';
   if (opts.writeNotices) {
-    if (committed !== text) { writeFileSync(NOTICES, text); console.log('pack: wrote ' + path.relative(REPO, NOTICES) + '; pack again so the package holds it'); }
+    if (committed !== text) { writeFileSync(NOTICES, text); noticeProblems.push('wrote ' + path.relative(REPO, NOTICES) + ': these packages hold the old one, so pack again (and review its diff)'); }
     else console.log('pack: ' + path.relative(REPO, NOTICES) + ' is up to date');
   } else if (committed !== text) noticeProblems.push(path.relative(REPO, NOTICES) + ' is not what the packed tool carries: run node tools/packaging/pack.mjs --write-notices, review its diff, and pack again');
 }

@@ -314,3 +314,9 @@ test('the notices name each carried assembly by package, and flag what they cann
   const noFile = generateNotices({ dlls: ['ModelContextProtocol.dll'], packages, licenceTexts: {} });
   assert.ok(noFile.problems.some((p) => /no licence file modelcontextprotocol-csharp-sdk/.test(p)));
 });
+
+test('McpServer only on the MCP server package, and RID-specific DLLs in the notices (#68 review)', () => {
+  has(problems({ nuspecOver: { 'Isotope.UI.Avalonia': { extra: '    <packageTypes><packageType name="McpServer" /></packageTypes>\n' } } }), /Isotope\.UI\.Avalonia\.0.*only Isotope\.UI\.Mcp is an MCP server/);
+  const tool = (change) => problems({ change: (id, e) => id === TOOL.id && change(e) });
+  has(tool((e) => e.set('tools/net10.0/any/runtimes/win/lib/net10.0/Other.Rid.dll', 'MZ')), /THIRD-PARTY-NOTICES\.md does not name Other\.Rid\.dll/);
+});

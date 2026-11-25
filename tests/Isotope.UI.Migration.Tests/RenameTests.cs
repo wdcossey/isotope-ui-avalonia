@@ -116,6 +116,7 @@ public class RenameTests
             {
                 public static Element A(double v) => NumberBox(v, _ => { }).Range(0, 100).SpinButtons();
                 public static Element B(double v) => NumberBox(v, _ => { }).Range(0, 100).NoSuchThing();
+                public static object E() => new System.Text.StringBuilder().Missing().HAlign(1);
             }
             """;
         // As migrate_code reports them: what is left once the fixes ran (the factory renamed, so the receiver resolves).
@@ -124,6 +125,8 @@ public class RenameTests
         Assert.Contains(described, d => d.StartsWith("ISOMIG010: Modifier 'SpinButtons' is gone in Isotope: No modifier: Avalonia's NumericUpDown shows its spinner", StringComparison.Ordinal));
         // Past an unresolved link only the table's modifiers are named: an unknown name is left to the compiler.
         Assert.DoesNotContain(described, d => d.Contains("NoSuchThing", StringComparison.Ordinal));
+        // Only an element's chain: HAlign on a StringBuilder's is no modifier of Isotope's.
+        Assert.DoesNotContain(described, d => d.Contains("HAlign", StringComparison.Ordinal));
         Assert.Equal(2, described.Count(d => d.Contains("Modifier 'Range'", StringComparison.Ordinal)));
     }
 

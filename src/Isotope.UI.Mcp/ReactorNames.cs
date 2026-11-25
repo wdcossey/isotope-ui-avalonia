@@ -70,13 +70,18 @@ internal static class ReactorNames
             n = member;
         }
 
+        // Record.Member: past the record's own entries, only a modifier for any record (HAlign) can answer it.
+        if (ofRecord)
+        {
+            foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == n && e.Target is null)) hits.Add(Name("Modifier", mod));
+            return hits;
+        }
         foreach (var t in tables.Renames.Types.Where(e => e.Reactor == n)) hits.Add(Name("Type", t));
         if (tables.Renames.Records.TryGetValue(n, out var control2) && !tables.Renames.Types.Any(t => t.Reactor == n))
             hits.Add($"Element record: `{n}` keeps its name in Isotope; its members are named after Avalonia's `{control2}`.");
         foreach (var f in tables.Renames.Factories.Where(e => e.Reactor == n)) hits.Add(Name("Factory", f));
         foreach (var mod in tables.Renames.Modifiers.Where(e => e.Reactor == n)) hits.Add(Name("Modifier", mod));
         if (tables.Controls.Factories.TryGetValue(n, out var c)) hits.Add(Control(c));
-        if (ofRecord) return hits;
         foreach (var m in tables.Renames.Members.Where(m => m.Reactor == n)) hits.Add(Member(m, tables));
         foreach (var p in tables.Renames.Parameters.Where(p => p.Reactor == n)) hits.Add(Parameter(p));
         return hits;
@@ -85,6 +90,28 @@ internal static class ReactorNames
     /// <summary>A Reactor element record the tables know (by its Reactor name), renamed or not.</summary>
     static bool IsRecord(string name, MigrationTables tables) =>
         tables.Renames.Records.ContainsKey(name) || tables.Renames.Types.Any(t => t.Reactor == name && name.EndsWith("Element", StringComparison.Ordinal));
+
+    /// <summary>Whether Isotope's record has the member: declared on it or a base type (Element's Key), or as a modifier
+    /// of that name (Padding is on every element).</summary>
+    static bool Has(ApiCatalog catalog, string record, string member)
+    {
+        var type = catalog.Find(record).Select(e => e.Member).OfType<Type>().FirstOrDefault();
+        if (type is null) return true; // a record the catalog doesn't know: claim nothing
+        // A modifier counts only if it takes this record (Padding takes any element; Expander's Header doesn't).
+        if (catalog.Find(member).Any(e => e.Kind == ApiKind.Modifier && e.Member is System.Reflection.MethodInfo m && Takes(m, type))) return true;
+        for (var t = type; t is not null && t != typeof(object); t = t.BaseType)
+            if (catalog.Find(t.Name + "." + member).Count > 0) return true;
+        return false;
+    }
+
+    /// <summary>Whether a modifier's receiver (its first parameter, or that parameter's constraints) accepts the record.</summary>
+    static bool Takes(System.Reflection.MethodInfo modifier, Type record)
+    {
+        var receiver = modifier.GetParameters().FirstOrDefault()?.ParameterType;
+        if (receiver is null) return false;
+        if (!receiver.IsGenericParameter) return receiver.IsAssignableFrom(record);
+        return receiver.GetGenericParameterConstraints().All(c => c.IsAssignableFrom(record) || (c.ContainsGenericParameters && c.IsInterface));
+    }
 
     /// <summary>The record's name in Isotope: its rename, or its own.</summary>
     static string IsotopeRecord(string name, MigrationTables tables) =>
@@ -110,7 +137,7 @@ internal static class ReactorNames
             var owner = trimmed[..at].Split('.')[^1];
             var member = trimmed[(at + 1)..];
             var isotope = IsotopeRecord(owner, tables);
-            if (IsRecord(owner, tables) && catalog.Find(isotope + "." + member).Count == 0)
+            if (IsRecord(owner, tables) && !Has(catalog, isotope, member))
             {
                 var control = tables.Renames.Records.TryGetValue(owner, out var c) ? $" (its members are Avalonia's `{c}`'s)" : "";
                 var named = isotope == owner ? $"`{owner}` keeps its name in Isotope" : $"`{owner}` is `{isotope}` in Isotope";

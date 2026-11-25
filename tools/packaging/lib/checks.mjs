@@ -224,6 +224,9 @@ function checkTool(spec, pkg, m, names, where) {
 // An MCP server package (#68). server.json: its name and repository from the package's repository URL (so the owner's
 // name, which only that URL may hold, matches it), its version and identifier the package's, stdio, a description of
 // at most 100 characters. THIRD-PARTY-NOTICES.md names every third-party DLL the tool carries.
+/** A managed DLL the tool carries: in tools/<tfm>/any/, or RID-specific in its runtimes/<rid>/lib/<tfm>/. */
+export const TOOL_DLL = /^tools\/[^/]+\/any\/(?:runtimes\/[^/]+\/lib\/[^/]+\/)?[^/]+\.dll$/i;
+
 export function checkMcpServer(spec, pkg, m, names, where, identities = []) {
   const problems = [];
   if (!m.packageTypes.includes('McpServer')) problems.push(where + ': an MCP server package must have the McpServer package type');
@@ -252,7 +255,8 @@ export function checkMcpServer(spec, pkg, m, names, where, identities = []) {
   const notices = pkg.entries.get('THIRD-PARTY-NOTICES.md')?.toString('utf8') ?? '';
   for (const h of scanText(notices)) problems.push(where + ' THIRD-PARTY-NOTICES.md:' + h.line + ': ' + h.kind);
   problems.push(...checkIdentities(notices, identities, where + ' THIRD-PARTY-NOTICES.md'));
-  const dlls = names.filter((n) => /^tools\/[^/]+\/any\/[^/]+\.dll$/i.test(n)).map((n) => n.split('/').pop());
+  // Also the RID-specific managed assemblies (runtimes/<rid>/lib/<tfm>/), which a restore's runtimeTargets bring.
+  const dlls = [...new Set(names.filter((n) => TOOL_DLL.test(n)).map((n) => n.split('/').pop()))];
   for (const d of dlls) if (!/^Isotope\./.test(d) && !notices.includes('`' + d + '`')) problems.push(where + ': THIRD-PARTY-NOTICES.md does not name ' + d);
   for (const d of dlls) if (spec.mcpServer.forbidden.includes(d)) problems.push(where + ': carries ' + d + ', which the tool never loads');
   return problems;
@@ -292,8 +296,9 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
     }
     for (const n of names) if (n.startsWith('analyzers/') && !n.startsWith('analyzers/dotnet/cs/')) problems.push(where + ': analyzer outside analyzers/dotnet/cs: ' + n);
     if (spec.tool) problems.push(...checkTool(spec, pkg, m, names, where));
-    if (spec.mcpServer) problems.push(...checkMcpServer(spec, pkg, m, names, where, identities));
     else if (m.packageTypes.includes('DotnetTool')) problems.push(where + ': only ' + PACKAGES.filter((s) => s.tool).map((s) => s.id).join(', ') + ' is a dotnet tool');
+    if (spec.mcpServer) problems.push(...checkMcpServer(spec, pkg, m, names, where, identities));
+    else if (m.packageTypes.includes('McpServer')) problems.push(where + ': only ' + PACKAGES.filter((s) => s.mcpServer).map((s) => s.id).join(', ') + ' is an MCP server');
 
     // Metadata.
     if (m.authors !== AUTHORS) problems.push(where + ': authors must be "' + AUTHORS + '", not "' + m.authors + '"');

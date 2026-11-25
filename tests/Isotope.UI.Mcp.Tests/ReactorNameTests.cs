@@ -60,6 +60,13 @@ public class ReactorNameTests
         Assert.Contains("Element record: `NumberBoxElement` is `NumericUpDownElement` in Isotope, and has no `Header`", header);
         Assert.DoesNotContain("ExpanderElement", header);
         Assert.DoesNotContain("ToggleSwitchElement", header);
+        // Inherited members and modifiers are not "missing" (#68 review): Element's Key, the Padding modifier.
+        Assert.DoesNotContain("has no `Key`", IsotopeTools.MapReactorName("ButtonElement.Key"));
+        Assert.DoesNotContain("has no `Padding`", IsotopeTools.MapReactorName("ButtonElement.Padding"));
+        // Another record's modifier never answers: SliderElement.Range is not NumberBoxElement's Range.
+        Assert.DoesNotContain("Minimum and Maximum", IsotopeTools.MapReactorName("SliderElement.Range"));
+        // A modifier for any record still does.
+        Assert.Contains("Modifier: `HAlign` is `HorizontalAlignment`", IsotopeTools.MapReactorName("TextBlockElement.HAlign"));
         // A member Isotope's renamed record has under Reactor's name is found on it.
         Assert.Contains("member `double NumericUpDownElement.Minimum", IsotopeTools.MapReactorName("NumericUpDownElement.Minimum"));
         // The last part alone still answers a factory or a type: Factories.Button is Button.

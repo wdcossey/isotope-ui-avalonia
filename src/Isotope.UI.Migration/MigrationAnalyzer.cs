@@ -357,7 +357,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 // modifiers return the record they are called on, so the table's modifier entries are looked up on the last
                 // receiver that resolves; only those, never "no such member" (#68).
                 if (ma.Parent is InvocationExpressionSyntax chainCall && chainCall.Expression == ma
-                    && Constraint(ChainReceiver(model, ma.Expression, ctx.CancellationToken)) is { } chained and not IErrorTypeSymbol)
+                    && Constraint(ChainReceiver(model, ma.Expression, ctx.CancellationToken)) is { } chained and not IErrorTypeSymbol
+                    && IsIsotope(chained) && IsOrDerivesFrom(chained, "Element", _recordAliases))
                     InvokedMember(ctx, ma, chained, name, isStatic: false, fromChain: true);
                 return;
             }

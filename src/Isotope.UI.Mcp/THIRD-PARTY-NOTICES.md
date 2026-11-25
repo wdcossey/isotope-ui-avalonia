@@ -54,7 +54,7 @@ checked on every pack: not edited by hand.
 | System.Composition.Runtime | 10.0.10 | MIT | © Microsoft Corporation. All rights reserved. | `System.Composition.Runtime.dll` |
 | System.Composition.TypedParts | 10.0.10 | MIT | © Microsoft Corporation. All rights reserved. | `System.Composition.TypedParts.dll` |
 | System.Diagnostics.DiagnosticSource | 11.0.0 | MIT | © Microsoft Corporation. All rights reserved. | `System.Diagnostics.DiagnosticSource.dll` |
-| System.Diagnostics.EventLog | 11.0.0 | MIT | © Microsoft Corporation. All rights reserved. | `System.Diagnostics.EventLog.dll` |
+| System.Diagnostics.EventLog | 11.0.0 | MIT | © Microsoft Corporation. All rights reserved. | `System.Diagnostics.EventLog.Messages.dll`, `System.Diagnostics.EventLog.dll` |
 | System.IO.Pipelines | 11.0.0 | MIT | © Microsoft Corporation. All rights reserved. | `System.IO.Pipelines.dll` |
 | System.Text.Encodings.Web | 11.0.0 | MIT | © Microsoft Corporation. All rights reserved. | `System.Text.Encodings.Web.dll` |
 | System.Text.Json | 11.0.0 | MIT | © Microsoft Corporation. All rights reserved. | `System.Text.Json.dll` |
