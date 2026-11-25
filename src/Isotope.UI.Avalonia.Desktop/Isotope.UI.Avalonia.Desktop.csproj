@@ -3,11 +3,14 @@
        over a default app builder (Avalonia's platform detection and the Fluent theme). A package of its own, as
        Avalonia.Desktop is: the library stays free of the desktop backends (Win32, X11, macOS) for other heads. -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- The library's frameworks (#67). -->
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
     <RootNamespace>Isotope.UI</RootNamespace>
     <AssemblyName>Isotope.UI.Avalonia.Desktop</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- ReactorApp.Run is a C# 14 extension member; net9.0's default is C# 13 (#67). -->
+    <LangVersion>15</LangVersion>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <!-- The package (#52; shared metadata in src/Directory.Build.props). -->

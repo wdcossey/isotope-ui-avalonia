@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateRawSync } from 'node:zlib';
-import { PACKAGES, checkPackages, embeddedPdb, findLocalPaths, parseNuspec, pdbDocuments } from '../lib/checks.mjs';
+import { FRAMEWORKS, PACKAGES, checkPackages, embeddedPdb, findLocalPaths, parseNuspec, pdbDocuments } from '../lib/checks.mjs';
 import { readZip } from '../lib/zip.mjs';
 
 const VERSION = '0.1.0-preview.1';
@@ -79,7 +79,10 @@ function nuspec(spec, over = {}) {
     (spec.tool && !over.noToolType ? '    <packageTypes>\n      <packageType name="DotnetTool" />\n    </packageTypes>\n' : '') +
     '    <license type="expression">MIT</license>\n    <readme>README.md</readme>\n    <projectUrl>' + m.projectUrl + '</projectUrl>\n' +
     '    <description>A package.</description>\n    <tags>' + m.tags + '</tags>\n    ' + m.repository + '\n' + m.extra +
-    (deps ? '    <dependencies>\n      <group targetFramework="net10.0">\n' + deps + '\n      </group>\n    </dependencies>\n' : '') +
+    // A library package has a group per framework (over.frameworks), as the SDK writes them; a tool or analyzer none.
+    (!spec.tool && !spec.analyzerOnly
+      ? '    <dependencies>\n' + (over.frameworks ?? FRAMEWORKS).map((f) => deps ? '      <group targetFramework="' + f + '">\n' + deps + '\n      </group>\n' : '      <group targetFramework="' + f + '" />\n').join('') + '    </dependencies>\n'
+      : deps ? '    <dependencies>\n      <group targetFramework="net10.0">\n' + deps + '\n      </group>\n    </dependencies>\n' : '') +
     '  </metadata>\n</package>';
 }
 
@@ -130,7 +133,7 @@ test('the nuspec parser reads the metadata the checks use', () => {
   assert.equal(m.authors, 'The Isotope.UI.Avalonia authors');
   assert.deepEqual(m.license, { type: 'expression', value: 'MIT' });
   assert.equal(m.repository.commit, COMMIT);
-  assert.deepEqual(m.dependencies, [{ id: 'Isotope.UI.Avalonia', version: VERSION }]);
+  assert.deepEqual(m.dependencies, FRAMEWORKS.map(() => ({ id: 'Isotope.UI.Avalonia', version: VERSION })));
 });
 
 test('a missing generator, notice or README is reported', () => {
@@ -237,4 +240,15 @@ test("the tool's PDBs, embedded or next to their DLLs, carry SourceLink at the c
   has(tool((e) => e.delete('tools/net10.0/any/Isotope.UI.Avalonia.Desktop.pdb')), /Mcp.*missing tools\/net10\.0\/any\/Isotope\.UI\.Avalonia\.Desktop\.pdb/);
   has(tool((e) => e.set('tools/net10.0/any/Isotope.UI.Mcp.dll', Buffer.from('MZ no pdb'))), /Isotope\.UI\.Mcp\.dll: no embedded PDB/);
   has(tool((e) => e.set('tools/net10.0/any/Isotope.UI.Avalonia.pdb', pdb(COMMIT, '/_/', ['/_/src/A.cs', LOCAL + '/obj/G.cs']))), /Mcp.*Isotope\.UI\.Avalonia\.pdb: 1 of 2 source documents are outside/);
+});
+
+test('each library package ships every framework, with a dependency group for each (#67)', () => {
+  has(problems({ change: (id, e) => id === 'Isotope.UI.Avalonia' && e.delete('lib/net9.0/Isotope.UI.Avalonia.dll') }), /Isotope\.UI\.Avalonia\.0.*missing lib\/net9\.0\/Isotope\.UI\.Avalonia\.dll/);
+  has(problems({ change: (id, e, s) => id === 'Isotope.UI.Avalonia.Desktop' && s.delete('lib/net11.0/Isotope.UI.Avalonia.Desktop.pdb') }), /snupkg: missing lib\/net11\.0\/Isotope\.UI\.Avalonia\.Desktop\.pdb/);
+  has(problems({ nuspecOver: { 'Isotope.UI.Avalonia.Desktop': { frameworks: ['net10.0', 'net11.0'] } } }), /Desktop.*no dependency group for net9\.0/);
+  has(problems({ nuspecOver: { 'Isotope.UI.Avalonia': { frameworks: ['net8.0', ...FRAMEWORKS] } } }), /dependency groups for frameworks it does not ship for: net8\.0/);
+  const m = parseNuspec(nuspec(PACKAGES[1]));
+  assert.deepEqual(m.dependencyGroups.map((g) => g.targetFramework), FRAMEWORKS);
+  assert.ok(m.dependencyGroups.every((g) => g.ids.includes('Isotope.UI.Avalonia')));
+  assert.deepEqual(parseNuspec(nuspec(PACKAGES[0])).dependencyGroups.map((g) => g.ids), FRAMEWORKS.map(() => []));
 });

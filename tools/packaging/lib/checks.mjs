@@ -9,6 +9,10 @@ export const TAGS = ['avalonia', 'ui', 'react', 'hooks', 'declarative', 'mvu'];
 /** Files every package carries: its README, our licence, and upstream's licence and third-party notices. */
 export const COMMON_FILES = ['README.md', 'LICENSE', 'licenses/microsoft-ui-reactor/LICENSE', 'licenses/microsoft-ui-reactor/ThirdPartyNoticeText.txt'];
 
+/** The frameworks the library and desktop packages ship for (#67): lib/<framework>/ in each, and a dependency group. */
+export const FRAMEWORKS = ['net9.0', 'net10.0', 'net11.0'];
+const lib = (...names) => FRAMEWORKS.flatMap((f) => names.map((n) => 'lib/' + f + '/' + n));
+
 /**
  * The packages, in pack order. files: what the package must hold besides COMMON_FILES. symbols: the PDBs its .snupkg
  * must hold (null: no symbols package). embedded: with symbols null, the DLLs whose PDB is embedded (default: every DLL
@@ -21,15 +25,15 @@ export const PACKAGES = [
   {
     id: 'Isotope.UI.Avalonia',
     project: 'src/Isotope.UI.Avalonia/Isotope.UI.Avalonia.csproj',
-    files: ['lib/net10.0/Isotope.UI.Avalonia.dll', 'lib/net10.0/Isotope.UI.Avalonia.xml', 'analyzers/dotnet/cs/Isotope.UI.Avalonia.Generators.dll'],
-    symbols: ['lib/net10.0/Isotope.UI.Avalonia.pdb'],
+    files: [...lib('Isotope.UI.Avalonia.dll', 'Isotope.UI.Avalonia.xml'), 'analyzers/dotnet/cs/Isotope.UI.Avalonia.Generators.dll'],
+    symbols: lib('Isotope.UI.Avalonia.pdb'),
     dependsOn: [],
   },
   {
     id: 'Isotope.UI.Avalonia.Desktop',
     project: 'src/Isotope.UI.Avalonia.Desktop/Isotope.UI.Avalonia.Desktop.csproj',
-    files: ['lib/net10.0/Isotope.UI.Avalonia.Desktop.dll', 'lib/net10.0/Isotope.UI.Avalonia.Desktop.xml'],
-    symbols: ['lib/net10.0/Isotope.UI.Avalonia.Desktop.pdb'],
+    files: lib('Isotope.UI.Avalonia.Desktop.dll', 'Isotope.UI.Avalonia.Desktop.xml'),
+    symbols: lib('Isotope.UI.Avalonia.Desktop.pdb'),
     dependsOn: ['Isotope.UI.Avalonia'],
   },
   {
@@ -77,6 +81,11 @@ export function parseNuspec(text) {
     developmentDependency: el('developmentDependency') === 'true',
     repository: repoTag ? attrs(repoTag) : undefined,
     dependencies: [...meta.matchAll(/<dependency\s[^>]*\/?>/g)].map((m) => attrs(m[0])),
+    // One per target framework (an empty one is self-closing): the framework and the ids it depends on.
+    dependencyGroups: [...meta.matchAll(/<group\s([^>]*?)(?:\/>|>([\s\S]*?)<\/group>)/g)].map((g) => ({
+      targetFramework: attrs(g[1]).targetFramework,
+      ids: [...(g[2] ?? '').matchAll(/<dependency\s[^>]*\/?>/g)].map((d) => attrs(d[0]).id),
+    })),
     packageTypes: [...meta.matchAll(/<packageType\s[^>]*\/?>/g)].map((m) => attrs(m[0]).name),
   };
 }
@@ -267,6 +276,16 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
       }
     }
     for (const id of spec.dependsOn) if (!isotopeDeps.some((d) => d.id === id)) problems.push(where + ': no dependency on ' + id);
+    // A library package: a dependency group for each framework, each with the Isotope dependencies (#67).
+    if (!spec.tool && !spec.analyzerOnly) {
+      for (const f of FRAMEWORKS) {
+        const group = m.dependencyGroups.find((g) => g.targetFramework === f);
+        if (!group) problems.push(where + ': no dependency group for ' + f);
+        else for (const id of spec.dependsOn) if (!group.ids.includes(id)) problems.push(where + ': no dependency on ' + id + ' for ' + f);
+      }
+      const extra = m.dependencyGroups.map((g) => g.targetFramework).filter((f) => !FRAMEWORKS.includes(f));
+      if (extra.length) problems.push(where + ': dependency groups for frameworks it does not ship for: ' + extra.join(', '));
+    }
 
     // Personal data in what nuget.org shows.
     for (const [name, text] of [['nuspec', pkg.text], ['README.md', pkg.entries.get('README.md')?.toString('utf8') ?? '']]) {

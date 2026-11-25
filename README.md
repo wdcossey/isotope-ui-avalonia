@@ -62,7 +62,7 @@ upstream's samples (#35); animation; and published packages (they build and are 
 
 ## Try it
 
-You need the **.NET 11 SDK** (11.0.100 or later, pinned in `global.json`; the projects target `net10.0`, the LTS) and git.
+You need the **.NET 11 SDK** (11.0.100 or later, pinned in `global.json`; the packages target `net9.0`, `net10.0` and `net11.0`; the samples and tools `net10.0`, the LTS) and git.
 
 ```sh
 git clone <this repository> isotope && cd isotope

@@ -8,6 +8,9 @@ function components and hooks for Avalonia 12.
 `ReactorApp.CreateDefaultAppBuilder()`: an Avalonia app with the Fluent theme on the platform Avalonia detects. Pass that
 builder, configured further, to `ReactorApp.Run(builder, ...)` to keep the defaults and add to them.
 
+Targets `net9.0`, `net10.0` and `net11.0`. `ReactorApp.Run` and `CreateDefaultAppBuilder` are C# 14 extension members:
+an app on `net9.0` (C# 13 by default) sets `<LangVersion>14</LangVersion>`, which needs the .NET 10 SDK or later.
+
 A package of its own, as `Avalonia.Desktop` is, so the library stays free of the desktop backends for other heads.
 
 > **Preview.** The API may still change. An independent project, not affiliated with or endorsed by Microsoft or the

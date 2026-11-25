@@ -2,7 +2,8 @@
   <!-- Isotope.UI.Avalonia: upstream's engine files (ChildReconciler, KeyedListDiff, RenderContext and the helpers
        they need) compiled against our Avalonia implementation of the engine seam (Seam/). -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- .NET 10 (LTS) and 11 (STS), and 9 for a few months more (#67); the generator stays netstandard2.0. -->
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
     <RootNamespace>Isotope.UI</RootNamespace>
     <AssemblyName>Isotope.UI.Avalonia</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -35,7 +36,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.6" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0" />
+    <!-- 11.0 supports net10.0 and later only (on net9.0 it warns, and falls back to its netstandard2.0 build); net9.0 takes
+         the 10.0 line, which supports it. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0" Condition="'$(TargetFramework)' != 'net9.0'" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" Condition="'$(TargetFramework)' == 'net9.0'" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Isotope.UI.Avalonia.Tests" />
@@ -55,7 +59,8 @@
   <Target Name="_IsotopePackGenerator" DependsOnTargets="ResolveProjectReferences">
     <ItemGroup>
       <_IsotopeGenerator Include="@(Analyzer)" Condition="'%(Filename)%(Extension)' == 'Isotope.UI.Avalonia.Generators.dll'" />
-      <TfmSpecificPackageFile Include="@(_IsotopeGenerator)" PackagePath="analyzers/dotnet/cs" />
+      <!-- analyzers/ is shared by every framework, so it is added from one of them (#67; each would give NU5118). -->
+      <TfmSpecificPackageFile Include="@(_IsotopeGenerator)" PackagePath="analyzers/dotnet/cs" Condition="'$(TargetFramework)' == 'net10.0'" />
     </ItemGroup>
     <Error Condition="'@(_IsotopeGenerator)' == ''" Text="The wrappers generator (Isotope.UI.Avalonia.Generators.dll) was not found among the analyzers: the package would ship without it." />
   </Target>
