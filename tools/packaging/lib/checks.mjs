@@ -48,13 +48,19 @@ export const PACKAGES = [
     id: 'Isotope.UI.Mcp',
     project: 'src/Isotope.UI.Mcp/Isotope.UI.Mcp.csproj',
     // The tool and what it reads: the library's and the desktop startup's DLLs and XML docs, and the migration.
-    files: ['tools/net10.0/any/Isotope.UI.Mcp.dll', 'tools/net10.0/any/DotnetToolSettings.xml', 'tools/net10.0/any/Isotope.UI.Avalonia.dll', 'tools/net10.0/any/Isotope.UI.Avalonia.xml',
+    files: ['.mcp/server.json', 'THIRD-PARTY-NOTICES.md', 'tools/net10.0/any/Isotope.UI.Mcp.dll', 'tools/net10.0/any/DotnetToolSettings.xml', 'tools/net10.0/any/Isotope.UI.Avalonia.dll', 'tools/net10.0/any/Isotope.UI.Avalonia.xml',
       'tools/net10.0/any/Isotope.UI.Avalonia.Desktop.dll', 'tools/net10.0/any/Isotope.UI.Avalonia.Desktop.xml', 'tools/net10.0/any/Isotope.UI.Migration.dll'],
     symbols: null,
     embedded: ['tools/net10.0/any/Isotope.UI.Mcp.dll', 'tools/net10.0/any/Isotope.UI.Migration.dll'],
     pdbs: ['tools/net10.0/any/Isotope.UI.Avalonia.pdb', 'tools/net10.0/any/Isotope.UI.Avalonia.Desktop.pdb'],
     dependsOn: [],
     tool: { command: 'isotope-mcp', entryPoint: 'Isotope.UI.Mcp.dll', settings: 'tools/net10.0/any/DotnetToolSettings.xml' },
+    // An MCP server package (#68): the McpServer type, .mcp/server.json, the notices of what it carries, and none of the
+    // desktop backends or renderers (it reflects over signatures that name none of them).
+    mcpServer: {
+      forbidden: ['Avalonia.Win32.dll', 'Avalonia.X11.dll', 'Avalonia.Native.dll', 'Avalonia.FreeDesktop.dll', 'Avalonia.FreeDesktop.AtSpi.dll',
+        'Avalonia.Skia.dll', 'Avalonia.HarfBuzz.dll', 'SkiaSharp.dll', 'HarfBuzzSharp.dll', 'MicroCom.Runtime.dll', 'Tmds.DBus.Protocol.dll'],
+    },
   },
 ];
 
@@ -215,6 +221,43 @@ function checkTool(spec, pkg, m, names, where) {
   return problems;
 }
 
+// An MCP server package (#68). server.json: its name and repository from the package's repository URL (so the owner's
+// name, which only that URL may hold, matches it), its version and identifier the package's, stdio, a description of
+// at most 100 characters. THIRD-PARTY-NOTICES.md names every third-party DLL the tool carries.
+export function checkMcpServer(spec, pkg, m, names, where, identities = []) {
+  const problems = [];
+  if (!m.packageTypes.includes('McpServer')) problems.push(where + ': an MCP server package must have the McpServer package type');
+  const raw = pkg.entries.get('.mcp/server.json')?.toString('utf8');
+  let s;
+  try { s = raw === undefined ? undefined : JSON.parse(raw); } catch { problems.push(where + ': .mcp/server.json is not JSON'); }
+  if (s) {
+    const repo = (m.projectUrl ?? '').replace(/\.git$/, '');
+    const gh = repo.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)$/);
+    const name = gh ? 'io.github.' + gh[1] + '/' + gh[2] : undefined;
+    if (!name || s.name !== name) problems.push(where + ': server.json name must be io.github.<owner>/<repo> of the package\'s GitHub repository');
+    if (s.repository?.url !== repo || s.repository?.source !== 'github') problems.push(where + ': server.json repository must be the package\'s GitHub repository');
+    if (s.version !== m.version) problems.push(where + ': server.json version ' + s.version + ' is not the package\'s ' + m.version);
+    if (typeof s.description !== 'string' || !s.description || s.description.length > 100) problems.push(where + ': server.json description must be 1 to 100 characters');
+    const p = Array.isArray(s.packages) && s.packages.length === 1 ? s.packages[0] : undefined;
+    if (!p) problems.push(where + ': server.json must list one package');
+    else {
+      if (p.registryType !== 'nuget' || p.identifier !== m.id || p.version !== m.version) problems.push(where + ': server.json package must be nuget ' + m.id + ' ' + m.version);
+      if (p.transport?.type !== 'stdio') problems.push(where + ': server.json transport must be stdio');
+    }
+    // The owner's name may appear only as the repository and the name derived from it.
+    const scrubbed = raw.split(JSON.stringify(s.name ?? '')).join('').split(JSON.stringify(s.repository?.url ?? '')).join('');
+    for (const h of scanText(scrubbed)) problems.push(where + ' server.json:' + h.line + ': ' + h.kind);
+    problems.push(...checkIdentities(scrubbed, identities, where + ' server.json'));
+  }
+  const notices = pkg.entries.get('THIRD-PARTY-NOTICES.md')?.toString('utf8') ?? '';
+  for (const h of scanText(notices)) problems.push(where + ' THIRD-PARTY-NOTICES.md:' + h.line + ': ' + h.kind);
+  problems.push(...checkIdentities(notices, identities, where + ' THIRD-PARTY-NOTICES.md'));
+  const dlls = names.filter((n) => /^tools\/[^/]+\/any\/[^/]+\.dll$/i.test(n)).map((n) => n.split('/').pop());
+  for (const d of dlls) if (!/^Isotope\./.test(d) && !notices.includes('`' + d + '`')) problems.push(where + ': THIRD-PARTY-NOTICES.md does not name ' + d);
+  for (const d of dlls) if (spec.mcpServer.forbidden.includes(d)) problems.push(where + ': carries ' + d + ', which the tool never loads');
+  return problems;
+}
+
 const isDll = (name) => /\.(dll|pdb)$/i.test(name);
 
 /**
@@ -249,6 +292,7 @@ export function checkPackages({ packages, symbols = [], expectVersion, localPath
     }
     for (const n of names) if (n.startsWith('analyzers/') && !n.startsWith('analyzers/dotnet/cs/')) problems.push(where + ': analyzer outside analyzers/dotnet/cs: ' + n);
     if (spec.tool) problems.push(...checkTool(spec, pkg, m, names, where));
+    if (spec.mcpServer) problems.push(...checkMcpServer(spec, pkg, m, names, where, identities));
     else if (m.packageTypes.includes('DotnetTool')) problems.push(where + ': only ' + PACKAGES.filter((s) => s.tool).map((s) => s.id).join(', ') + ' is a dotnet tool');
 
     // Metadata.

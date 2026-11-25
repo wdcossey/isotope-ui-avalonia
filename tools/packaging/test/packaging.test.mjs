@@ -76,7 +76,7 @@ function nuspec(spec, over = {}) {
   return '<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">\n  <metadata>\n' +
     '    <id>' + spec.id + '</id>\n    <version>' + m.version + '</version>\n    <authors>' + m.authors + '</authors>\n' +
     (spec.analyzerOnly ? '    <developmentDependency>true</developmentDependency>\n' : '') +
-    (spec.tool && !over.noToolType ? '    <packageTypes>\n      <packageType name="DotnetTool" />\n    </packageTypes>\n' : '') +
+    (spec.tool && !over.noToolType ? '    <packageTypes>\n      <packageType name="DotnetTool" />\n' + (spec.mcpServer && !over.noMcpType ? '      <packageType name="McpServer" />\n' : '') + '    </packageTypes>\n' : '') +
     '    <license type="expression">MIT</license>\n    <readme>README.md</readme>\n    <projectUrl>' + m.projectUrl + '</projectUrl>\n' +
     '    <description>A package.</description>\n    <tags>' + m.tags + '</tags>\n    ' + m.repository + '\n' + m.extra +
     // A library package has a group per framework (over.frameworks), as the SDK writes them; a tool or analyzer none.
@@ -89,6 +89,16 @@ function nuspec(spec, over = {}) {
 const toolSettings = (spec, command = spec.tool.command) => '<?xml version="1.0" encoding="utf-8"?>\n<DotNetCliTool Version="1">\n  <Commands>\n' +
   '    <Command Name="' + command + '" EntryPoint="' + spec.tool.entryPoint + '" Runner="dotnet" />\n  </Commands>\n</DotNetCliTool>';
 
+// The MCP server description and notices as they must ship (#68); over changes server.json's fields.
+const serverJson = (over = {}) => JSON.stringify({
+  $schema: 'https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json',
+  name: 'io.github.example-org/example-repo', description: 'The API and guides for coding agents.', version: VERSION,
+  repository: { url: URL, source: 'github' },
+  packages: [{ registryType: 'nuget', identifier: 'Isotope.UI.Mcp', version: VERSION, transport: { type: 'stdio' }, packageArguments: [], environmentVariables: [] }],
+  ...over,
+}, null, 2);
+const NOTICES_TEXT = '# Third-party notices\n\n| Package | Version | Licence | Copyright | Assemblies |\n|---|---|---|---|---|\n| Some.Package | 1.0.0 | MIT | Some Org | `Some.Package.dll` |\n';
+
 // The packages as they must ship; change(id, entries, spec) edits one before it is zipped.
 function fixture({ change = () => {}, readme = '# Package\n\nA package.\n', nuspecOver = {} } = {}) {
   const packages = [], symbols = [];
@@ -99,7 +109,7 @@ function fixture({ change = () => {}, readme = '# Package\n\nA package.\n', nusp
       ['licenses/microsoft-ui-reactor/ThirdPartyNoticeText.txt', 'Yoga, MIT'],
     ]);
     const embedded = spec.symbols ? [] : (spec.embedded ?? spec.files.filter((f) => f.endsWith('.dll')));
-    for (const f of spec.files) entries.set(f, embedded.includes(f) ? dllWithEmbeddedPdb() : Buffer.from('MZ binary'));
+    for (const f of spec.files) entries.set(f, embedded.includes(f) ? dllWithEmbeddedPdb() : f === '.mcp/server.json' ? serverJson() : f === 'THIRD-PARTY-NOTICES.md' ? NOTICES_TEXT : Buffer.from('MZ binary'));
     for (const p of spec.pdbs ?? []) entries.set(p, pdb());
     if (spec.tool) entries.set(spec.tool.settings, toolSettings(spec));
     const sym = spec.symbols ? new Map([[spec.id + '.nuspec', nuspec(spec)], ...spec.symbols.map((p) => [p, pdb()])]) : null;
@@ -258,4 +268,49 @@ test('each library package ships every framework, with a dependency group for ea
   assert.deepEqual(m.dependencyGroups.map((g) => g.targetFramework), FRAMEWORKS);
   assert.ok(m.dependencyGroups.every((g) => g.ids.includes('Isotope.UI.Avalonia')));
   assert.deepEqual(parseNuspec(nuspec(PACKAGES[0])).dependencyGroups.map((g) => g.ids), FRAMEWORKS.map(() => []));
+});
+
+test('the MCP server package: its type, server.json, notices, and no desktop backends (#68)', () => {
+  const tool = (change) => problems({ change: (id, e) => id === TOOL.id && change(e) });
+  const json = (over) => tool((e) => e.set('.mcp/server.json', serverJson(over)));
+  has(problems({ nuspecOver: { [TOOL.id]: { noMcpType: true } } }), /Mcp.*must have the McpServer package type/);
+  has(tool((e) => e.delete('.mcp/server.json')), /Mcp.*missing \.mcp\/server\.json/);
+  has(tool((e) => e.set('.mcp/server.json', '{ not json')), /\.mcp\/server\.json is not JSON/);
+  has(json({ name: 'io.github.someone-else/example-repo' }), /server\.json name must be io\.github\.<owner>\/<repo>/);
+  has(json({ repository: { url: 'https://github.com/other/repo', source: 'github' } }), /server\.json repository must be the package's GitHub repository/);
+  has(json({ version: '0.0.1' }), /server\.json version 0\.0\.1 is not the package's/);
+  has(json({ description: 'x'.repeat(101) }), /description must be 1 to 100 characters/);
+  has(json({ packages: [{ registryType: 'nuget', identifier: 'Other', version: VERSION, transport: { type: 'stdio' } }] }), /server\.json package must be nuget Isotope\.UI\.Mcp/);
+  has(json({ packages: [{ registryType: 'nuget', identifier: 'Isotope.UI.Mcp', version: VERSION, transport: { type: 'sse' } }] }), /transport must be stdio/);
+  // The owner may appear as the name and repository only, not elsewhere.
+  const owned = checkPackages({ ...fixture(), identities: ['example-org'] });
+  assert.deepEqual(owned.filter((p) => /server\.json/.test(p)), []);
+  const leaked = checkPackages({ ...fixture({ change: (id, e) => id === TOOL.id && e.set('.mcp/server.json', serverJson({ description: 'Made by example-org.' })) }), identities: ['example-org'] });
+  has(leaked, /server\.json: contains this machine's user or git identity/);
+  // Every third-party DLL is named in the notices; the backends are never carried.
+  has(tool((e) => e.set('tools/net10.0/any/Other.Package.dll', 'MZ')), /THIRD-PARTY-NOTICES\.md does not name Other\.Package\.dll/);
+  assert.deepEqual(tool((e) => e.set('tools/net10.0/any/Some.Package.dll', dllWithEmbeddedPdb())).filter((p) => /NOTICES/.test(p)), []);
+  has(tool((e) => e.set('tools/net10.0/any/Avalonia.X11.dll', 'MZ')), /carries Avalonia\.X11\.dll, which the tool never loads/);
+  has(tool((e) => e.delete('THIRD-PARTY-NOTICES.md')), /Mcp.*missing THIRD-PARTY-NOTICES\.md/);
+});
+
+test('the notices name each carried assembly by package, and flag what they cannot cover (#68)', async () => {
+  const { generateNotices } = await import('../lib/notices.mjs');
+  const packages = [
+    { id: 'B.Pkg', version: '2.0.0', license: 'MIT', copyright: 'B Org', dlls: ['B.dll', 'B.Extra.dll'] },
+    { id: 'A.Pkg', version: '1.0.0', license: 'MIT', copyright: 'A Org', dlls: ['A.dll'] },
+    { id: 'Unused', version: '1.0.0', license: 'GPL-3.0', copyright: 'U', dlls: ['U.dll'] },
+    { id: 'ModelContextProtocol', version: '2.4.0', license: 'Apache-2.0', copyright: 'LF', dlls: ['ModelContextProtocol.dll'] },
+  ];
+  const ok = generateNotices({ dlls: ['A.dll', 'B.dll', 'ModelContextProtocol.dll'], packages, licenceTexts: { 'modelcontextprotocol-csharp-sdk.LICENSE.txt': 'SDK LICENCE TEXT' } });
+  assert.deepEqual(ok.problems, []);
+  assert.ok(ok.text.indexOf('| A.Pkg |') < ok.text.indexOf('| B.Pkg |'), 'rows sorted by package');
+  assert.match(ok.text, /\| B\.Pkg \| 2\.0\.0 \| MIT \| B Org \| `B\.dll` \|/);
+  assert.doesNotMatch(ok.text, /Unused|B\.Extra/);
+  assert.match(ok.text, /SDK LICENCE TEXT/);
+  const bad = generateNotices({ dlls: ['A.dll', 'U.dll', 'Stray.dll'], packages, licenceTexts: {} });
+  assert.ok(bad.problems.some((p) => /Unused 1\.0\.0: licence GPL-3\.0 has no text/.test(p)));
+  assert.ok(bad.problems.some((p) => /Stray\.dll: in the tool, but no package/.test(p)));
+  const noFile = generateNotices({ dlls: ['ModelContextProtocol.dll'], packages, licenceTexts: {} });
+  assert.ok(noFile.problems.some((p) => /no licence file modelcontextprotocol-csharp-sdk/.test(p)));
 });

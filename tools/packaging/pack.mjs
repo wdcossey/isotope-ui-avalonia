@@ -12,17 +12,19 @@
 //    Isotope.* to the packed folder alone, so nuget.org's copy of a version is never used instead.
 // The version comes from MinVer (git tags); --expect-version fails the run if it is another.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, realpathSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FRAMEWORKS, PACKAGES, checkPackages, parseNuspec } from './lib/checks.mjs';
+import { generateNotices } from './lib/notices.mjs';
 import { readZip } from './lib/zip.mjs';
 import { initialize, startMcp } from './lib/mcp.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SMOKE = path.join(REPO, 'tests', 'Isotope.UI.PackageSmoke');
-const USAGE = 'usage: node tools/packaging/pack.mjs [--out <dir> [--clean]] [--expect-version <version>] [--no-smoke]';
+const USAGE = 'usage: node tools/packaging/pack.mjs [--out <dir> [--clean]] [--expect-version <version>] [--no-smoke] [--write-notices]';
+const NOTICES = path.join(REPO, 'src', 'Isotope.UI.Mcp', 'THIRD-PARTY-NOTICES.md');
 const DEFAULT_OUT = path.join(REPO, 'bin', 'packages');
 
 function parseArgs(argv) {
@@ -33,6 +35,7 @@ function parseArgs(argv) {
     else if (a === '--expect-version' && argv[i + 1]) opts.expectVersion = argv[++i].replace(/^v/, '');
     else if (a === '--no-smoke') opts.smoke = false;
     else if (a === '--clean') opts.clean = true;
+    else if (a === '--write-notices') opts.writeNotices = true;
     else if (a === '--help' || a === '-h') { console.log(USAGE); process.exit(0); }
     else { console.error(USAGE); process.exit(2); }
   }
@@ -88,13 +91,42 @@ let osUser = process.env.USER || process.env.USERNAME || '';
 try { osUser = userInfo().username || osUser; } catch { /* keep the environment's */ }
 const gitName = gitConfig('user.name'), gitEmail = gitConfig('user.email');
 const identities = [...new Set([gitName, ...gitName.split(/\s+/), gitEmail, ...gitEmail.split('@')[0].split('+'), osUser].filter((s) => s && s.length >= 3))];
-const problems = checkPackages({
+// The MCP tool's third-party notices (#68): generated from what the packed tool carries and the tool's restore, and
+// compared with the committed file the package holds. --write-notices writes it (then pack again).
+function toolNotices(tool) {
+  const assets = JSON.parse(readFileSync(path.join(REPO, 'src', 'Isotope.UI.Mcp', 'obj', 'project.assets.json'), 'utf8'));
+  const folder = Object.keys(assets.packageFolders ?? {})[0];
+  const target = Object.values(assets.targets)[0];
+  const dlls = [...tool.entries.keys()].filter((n) => /^tools\/[^/]+\/any\/[^/]+\.dll$/i.test(n)).map((n) => n.split('/').pop()).filter((n) => !/^Isotope\./.test(n));
+  const pkgs = Object.entries(assets.libraries).filter(([, v]) => v.type === 'package').map(([key]) => {
+    const [id, version] = key.split('/');
+    const nuspecFile = path.join(folder, id.toLowerCase(), version.toLowerCase(), id.toLowerCase() + '.nuspec');
+    const m = existsSync(nuspecFile) ? parseNuspec(readFileSync(nuspecFile, 'utf8')) : {};
+    const license = m.license?.type === 'expression' ? m.license.value : (m.license ? 'file' : 'unknown');
+    return { id, version, license, copyright: m.copyright ?? '', dlls: Object.keys(target[key]?.runtime ?? {}).map((f) => f.split('/').pop()).filter((f) => f.endsWith('.dll')) };
+  });
+  const licDir = path.join(REPO, 'tools', 'packaging', 'licenses');
+  const licenceTexts = Object.fromEntries(readdirSync(licDir).map((f) => [f, readFileSync(path.join(licDir, f), 'utf8')]));
+  return generateNotices({ dlls, packages: pkgs, licenceTexts });
+}
+const tool = packages.find((p) => /^Isotope\.UI\.Mcp\.\d/i.test(p.file));
+const noticeProblems = [];
+if (tool) {
+  const { text, problems: np } = toolNotices(tool);
+  noticeProblems.push(...np.map((p) => 'notices: ' + p));
+  const committed = existsSync(NOTICES) ? readFileSync(NOTICES, 'utf8').replace(/\r\n/g, '\n') : '';
+  if (opts.writeNotices) {
+    if (committed !== text) { writeFileSync(NOTICES, text); console.log('pack: wrote ' + path.relative(REPO, NOTICES) + '; pack again so the package holds it'); }
+    else console.log('pack: ' + path.relative(REPO, NOTICES) + ' is up to date');
+  } else if (committed !== text) noticeProblems.push(path.relative(REPO, NOTICES) + ' is not what the packed tool carries: run node tools/packaging/pack.mjs --write-notices, review its diff, and pack again');
+}
+const problems = [...noticeProblems, ...checkPackages({
   packages,
   symbols,
   expectVersion: opts.expectVersion,
   localPaths: [...new Set([REPO, realRepo, homedir()])],
   identities,
-});
+})];
 const nuspec = (p) => parseNuspec([...p.entries].find(([n]) => n.endsWith('.nuspec'))[1].toString('utf8'));
 const version = packages.length ? nuspec(packages[0]).version : undefined;
 for (const p of [...packages, ...symbols]) {

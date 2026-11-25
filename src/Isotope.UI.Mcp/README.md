@@ -61,8 +61,12 @@ VS Code (`.vscode/mcp.json`):
 For a local tool, the command is `dotnet` with the arguments `["tool", "run", "isotope-mcp"]`. Logs go to stderr,
 because stdout carries the protocol.
 
+The package is an MCP server package (package type `McpServer`, with `.mcp/server.json`), the form the
+`dotnet new mcpserver` template packs.
+
 > **Preview.** An independent project, not affiliated with or endorsed by Microsoft or the Avalonia project.
 
 ## Licence
 
-MIT. See `LICENSE` and `licenses/microsoft-ui-reactor/` in the package.
+MIT. See `LICENSE` and `licenses/microsoft-ui-reactor/` in the package. The tool carries third-party assemblies too
+(the MCP C# SDK, Roslyn, Microsoft.Extensions, Avalonia): `THIRD-PARTY-NOTICES.md` lists each with its licence.
