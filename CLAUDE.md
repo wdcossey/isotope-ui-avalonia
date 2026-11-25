@@ -102,7 +102,7 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
   - docs and chores get one pass: `medium main...<branch> --max-findings all`.
   - Check each finding before acting; findings can be wrong.
 - **Prove each new test fails** with its behaviour broken (on committed work), then run clean from a fresh clone.
-- **Merge** through a PR (ruleset `main`: no direct pushes; the required CI checks green, branch up to date). Squash with
+- **Merge** through a PR (ruleset `main`: no direct pushes; required CI checks must pass, branch up to date). Squash with
   `gh pr merge --squash` (one commit per PR); the message records the review levels, tokens, findings fixed or waived, and `Closes #n`.
 - **Report numbers that were measured, never estimated.** Say how each was measured.
 - **Lessons:** `docs/LESSONS.md`. Add one when a new trap is hit.

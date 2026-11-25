@@ -79,11 +79,11 @@ Never without the developer's go-ahead in the conversation:
 ## 5. Merging
 
 Claude opens a PR for each branch and merges it once the build, tests, both review passes and the clean run hold, and
-the PR's six CI checks pass. Merge with `gh pr merge <n> --squash --subject <subject> --body-file <file>` (squash only, 2026-11-24): the
+the PR's required CI checks pass. Merge with `gh pr merge <n> --squash --subject <subject> --body-file <file>` (squash only, 2026-11-24): the
 commit message records each pass's level, tokens ("not measured" if not visible), what it
 found, fixed and waived, tests proven to fail, **For you to decide** and **Hands-on follow-ups**. Then delete the
 branch and its worktree.
-- **Ruleset `main`:** no deletion, no force-push, a PR for every change (no direct push, no bypass), the six CI checks
+- **Ruleset `main`:** no deletion, no force-push, a PR for every change (no direct push, no bypass), the CI checks
   required and the branch up to date with `main`. Squash only: one commit per PR on `main`.
 - **Identity:** a merge made on GitHub takes its author from the developer's GitHub profile (the name falls back to the
   login, and email privacy gives the noreply address). Check the first merge after any profile change.
