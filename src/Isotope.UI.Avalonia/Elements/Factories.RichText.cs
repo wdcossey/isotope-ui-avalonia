@@ -5,7 +5,8 @@ namespace Isotope.UI;
 // Rich text (#65): our own version (tier 3) of upstream's rich text factories (src/Reactor/Elements/Dsl.cs: RichTextBlock,
 // Paragraph, Run, InlineUI), with Avalonia's names (#46): RichTextBlock is SelectableTextBlock and InlineUI is
 // InlineUIContainer, and Avalonia's Span, Bold, Italic, Underline and LineBreak join them. Like a container's children, a
-// null inline is dropped, so cond ? Run("x") : null works as one.
+// null inline is dropped, so cond ? Run("x") : null works as one, and an array passed in is kept as it is: don't change it
+// after passing it (a text block whose inlines array is the last render's is skipped).
 
 public static partial class Factories
 {

@@ -395,6 +395,9 @@ public sealed class RichTextTests
         Assert.Equal([TextDecorationLocation.Underline, TextDecorationLocation.Strikethrough], run.TextDecorations!.Select(d => d.Location));
         run = (Run)InlinesOf(new TestHost(() => TextBlock(Run("a").Strikethrough().Strikethrough())))[0];
         Assert.Equal([TextDecorationLocation.Strikethrough], run.TextDecorations!.Select(d => d.Location));
+        // An Underline span is underlined by default: struck through, it is both.
+        var span = (Underline)InlinesOf(new TestHost(() => TextBlock(Underline("a").Strikethrough())))[0];
+        Assert.Equal([TextDecorationLocation.Underline, TextDecorationLocation.Strikethrough], span.TextDecorations!.Select(d => d.Location));
     }
 
     [AvaloniaFact]

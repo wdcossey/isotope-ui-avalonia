@@ -73,9 +73,11 @@ public record UnderlineElement(InlineElement[] Inlines) : SpanElement(Inlines);
 
 /// <summary>
 /// A paragraph of a selectable text block (upstream's <c>RichTextParagraph</c>, from <c>Paragraph(...)</c>). Avalonia's text
-/// has no paragraphs (blocks), so it is a <see cref="Avalonia.Controls.Documents.Span"/> of its inlines, on a line of its
-/// own: <see cref="SelectableTextBlockElement.Paragraphs"/> puts a line break between paragraphs. Upstream's paragraph layout
-/// members (<c>Margin</c>, <c>TextIndent</c>, <c>TextAlignment</c>, <c>LineHeight</c>) have no counterpart on a span.
+/// has no paragraphs (blocks), so it is a <see cref="Avalonia.Controls.Documents.Span"/> of its inlines. In
+/// <see cref="SelectableTextBlockElement.Paragraphs"/> (<c>SelectableTextBlock(Paragraph(...), Paragraph(...))</c>) each is on a
+/// line of its own, with a line break between paragraphs; among other inlines it is a span like any other. Upstream's
+/// paragraph layout members (<c>Margin</c>, <c>TextIndent</c>, <c>TextAlignment</c>, <c>LineHeight</c>) have no counterpart on a
+/// span.
 /// </summary>
 public record RichTextParagraph(InlineElement[] Inlines) : SpanElement(Inlines);
 
@@ -89,4 +91,4 @@ public record LineBreakElement : InlineElement;
 /// changes, and takes the child out of the visual tree and puts it back as it does, so the child keeps its state but not
 /// its focus.
 /// </summary>
-public record InlineUIContainerElement(Element? Child) : InlineElement;
+public record InlineUIContainerElement(Element? Child = null) : InlineElement;

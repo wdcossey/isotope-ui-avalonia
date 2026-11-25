@@ -34,6 +34,8 @@ public class RichTextMigrationTests
                 public static RichTextInline[] Blank() => new RichTextInline[] { Run(" "), new RichTextLineBreak() };
 
                 public static RichTextInlineUIContainer Embedded(Element child) => InlineUI(child);
+
+                public static RichTextInlineUIContainer Initialized(Element child) => new RichTextInlineUIContainer { Child = child };
             }
             """;
         var before = Migrate.Analyze(reactor).Describe();
@@ -50,6 +52,7 @@ public class RichTextMigrationTests
         Assert.Contains("SelectableTextBlock(\"\") with { Paragraphs = [new RichTextParagraph([new RunElement(line) { FontFamily = \"Consolas\" }])] };", fixedText);
         Assert.Contains("public static InlineElement[] Blank() => new InlineElement[] { Run(\" \"), new LineBreakElement() };", fixedText);
         Assert.Contains("public static InlineUIContainerElement Embedded(Element child) => InlineUIContainer(child);", fixedText);
+        Assert.Contains("public static InlineUIContainerElement Initialized(Element child) => new InlineUIContainerElement { Child = child };", fixedText);
         Assert.Empty(Migrate.Errors(fixedText));
         Assert.Empty(Migrate.Analyze(fixedText));
     }

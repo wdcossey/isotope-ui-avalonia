@@ -23,14 +23,18 @@ public static partial class ElementExtensions
 
     /// <summary>Underlined (Avalonia's <see cref="Avalonia.Media.TextDecorations.Underline"/>), with any decoration it has already.</summary>
     public static T Underline<T>(this T el) where T : InlineElement =>
-        el with { TextDecorations = WithDecorations(el.TextDecorations, Avalonia.Media.TextDecorations.Underline) };
+        el with { TextDecorations = WithDecorations(DecorationsOf(el), Avalonia.Media.TextDecorations.Underline) };
 
     /// <summary>
     /// Struck through (Avalonia's <see cref="Avalonia.Media.TextDecorations.Strikethrough"/>; upstream's <c>IsStrikethrough</c>), with
     /// any decoration it has already: <c>.Underline().Strikethrough()</c> is both.
     /// </summary>
     public static T Strikethrough<T>(this T el) where T : InlineElement =>
-        el with { TextDecorations = WithDecorations(el.TextDecorations, Avalonia.Media.TextDecorations.Strikethrough) };
+        el with { TextDecorations = WithDecorations(DecorationsOf(el), Avalonia.Media.TextDecorations.Strikethrough) };
+
+    // The decorations an inline shows: its member, else an Underline span's own underline (Avalonia's default for it).
+    private static TextDecorationCollection? DecorationsOf(InlineElement el) =>
+        el.TextDecorations ?? (el is UnderlineElement ? Avalonia.Media.TextDecorations.Underline : null);
 
     public static T FontStyle<T>(this T el, FontStyle style) where T : InlineElement => el with { FontStyle = style };
 
