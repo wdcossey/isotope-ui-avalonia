@@ -154,12 +154,17 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Measured** on main `bfa57e1`: 108 of 358 files build, 2,936 compile errors, 2 of 36 projects build, 1,122 migration
   diagnostics left. These are identical on Windows (local and `windows-latest`) and `ubuntu-latest`; the "before" build
   needs no Windows (the converted projects drop `UseWinUI`).
-- **Run time:** 15.6 to 17.0 min on Ubuntu, 22.2 min on Windows (job timings, 4 Ubuntu runs and 1 Windows run), so it
-  sets each push's CI wall time (other jobs take 1 to 5 min). Locally on Windows, 644 s.
+- **Run time:** 15.6 to 17.0 min on Ubuntu one project at a time, 22.2 min on Windows (4 Ubuntu runs, 1 Windows run).
+  Measuring up to 4 projects at once (`--jobs`, default the processor count) gives 8.1 to 14.7 min on Ubuntu (runs 274,
+  275, 278, 283, 289) and 235 s against 804 s locally; the 4-vCPU runner is CPU-bound, so each `dotnet format` run slows
+  from about 5 s to 10–19 s when four run at once. Locally, one at a time, the 96 `dotnet format` runs took 494 s (4.2 s
+  to 7.5 s each, mostly start-up), the before builds 157 s and the after builds 143 s.
+- **Docs-only skip:** a branch push whose changes since its merge base with main are all under `docs/` or `*.md` skips
+  the measurement; the job still reports and its tests still run (run 276 skipped, run 278 measured).
 - **Not gated:** per-message counts and compile errors per ID: each names a member or type, so they move with every
   rename or control. The run still prints the commonest.
 - **Proven:** a commit dropping `Thickness` from `winui-types.json` failed the job (+3 compile errors), and its revert
-  passed. 20 node tests for the comparison and the guide's generated table.
+  passed. 34 node tests for the comparison, the guide's generated table and the docs-only skip.
 
 ## Vendor elements skip like built-ins (issue #77, 2026-11-25)
 
