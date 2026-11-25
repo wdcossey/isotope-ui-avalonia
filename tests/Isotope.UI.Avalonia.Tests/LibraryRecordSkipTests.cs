@@ -137,6 +137,17 @@ public class LibraryRecordSkipTests
             .Select(t => t.Name)
             .ToList();
         Assert.Empty(overriding);
-        Assert.Contains(typeof(ListBoxElement), typeof(Element).Assembly.GetTypes());
+    }
+
+    // A built-in record with no arm is still updated on every render: an unchanged list box isn't skipped.
+    [AvaloniaFact]
+    public void A_built_in_record_with_no_arm_is_still_updated()
+    {
+        string[] items = ["a", "b"];
+        int n = 0;
+        var host = new TestHost(() => VStack(TextBlock("render " + n), new ListBoxElement(items)));
+        var skipped = host.Reconciler.DebugElementsSkipped;
+        for (int i = 0; i < 3; i++) { n++; host.Render(); }
+        Assert.Equal(skipped, host.Reconciler.DebugElementsSkipped);
     }
 }

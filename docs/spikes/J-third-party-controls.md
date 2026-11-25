@@ -98,7 +98,7 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 |---|---|---|
 | `Gen001` | A record member with no counterpart on the control | **ISOTOPEGEN001**, an error at the record, as inside the repo |
 | `NoSetters` | A record with no `Setters` member | CS1061 **inside the generated file**: the descriptor reads `e.Setters` unconditionally |
-| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never mentions `OnClosed`: the callback is silently dropped |
+| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never wires `OnClosed`: the callback is silently dropped (since #77 the generated skip members name it, so the probe looks for the descriptor's wiring, `el.OnClosed`) |
 | `WrapEventMismatch` | The same with `[WrapEvent("Closed")]` | CS1501 inside the generated file: `[WrapEvent]` passes the args, so the callback must be `Action<EventArgs>` |
 | `Decorator` | `[WrapDecorator]` (a control made and changed by the author's own methods) | CS0117 inside the generated file: `Reconciler.SetElementTag`, `DetachReactorState` and `ControlRegistry.RegisterDecorator` don't exist (decorators were left out in Spike F, tier 3) |
 | `InternalOverride` | `override HasCallbacks`, as built-in records do | CS0115: internal. **Since #77:** the record overrides the protected `HasCallbacks` and `ShallowEqualsCore` and builds clean, and the generator writes neither |

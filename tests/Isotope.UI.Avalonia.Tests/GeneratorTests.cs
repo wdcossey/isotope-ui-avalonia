@@ -187,4 +187,56 @@ public class GeneratorTests
         Assert.DoesNotContain("ShallowEqualsCore", generated);
         Assert.DoesNotContain("HasCallbacks", generated);
     }
+
+    // #77, what can't be compared safely: another delegate by reference, a computed property not at all, and nothing
+    // generated for a struct holding an element, a base's member out of reach, or a HasCallbacks a base declares.
+    [Fact]
+    public void The_skip_members_compare_only_what_they_safely_can()
+    {
+        var (_, generated, errors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public System.Func<double, string>? Format { get; init; }
+                public int Computed => Child is null ? 0 : 1;
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(errors);
+        Assert.Contains("global::System.Object.ReferenceEquals(this.@Format, o.@Format)", generated);
+        Assert.DoesNotContain("Computed", generated);
+
+        var (_, withOptional, optionalErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public Isotope.UI.Optional<Element> Header { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(optionalErrors);
+        Assert.DoesNotContain("ShallowEqualsCore", withOptional);
+
+        // SliderElement declares HasCallbacks, and its Setters is internal to the library. (The descriptor itself reads
+        // e.Setters, which a record outside the library can't reach: CS1061, as before #77.)
+        var (_, derived, _) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Slider))]
+            public partial record ProbeSliderElement : SliderElement
+            {
+                public System.Action<double>? OnOther { get; init; }
+            }
+            """, "ProbeSliderElement");
+        Assert.NotNull(derived);
+        Assert.DoesNotContain("HasCallbacks", derived);
+        Assert.DoesNotContain("ShallowEqualsCore", derived);
+    }
 }

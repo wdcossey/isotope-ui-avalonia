@@ -60,7 +60,7 @@ public abstract record Element
     /// True when the element carries an event-handler delegate. A skipped update still refreshes the
     /// control's mounted element so its handlers dispatch to the current render's closures, and a change
     /// in callback presence declines the skip. Protected (#77) so a library's record can say so: the wrappers generator
-    /// writes it for a `[GenerateReactorDescriptor]` record outside this library.
+    /// writes it for a <c>[GenerateReactorDescriptor]</c> record outside this library.
     /// </summary>
     protected internal virtual bool HasCallbacks => false;
 
@@ -69,7 +69,7 @@ public abstract record Element
     /// the members this type declares, so an update can be skipped (#77). <see cref="ShallowEquals"/> calls it for a type
     /// it has no arm for, after the shared checks (type, key, modifiers, transition, resource overrides, theme bindings,
     /// context values, attached data). False by default: such an element is updated on every render.
-    /// <para>The rule is the built-in records': compare delegates by presence (and say which are present in
+    /// <para>The rule is the built-in records': compare callbacks by presence (and say whether any is present in
     /// <see cref="HasCallbacks"/>), child elements, arrays and collections by reference, other values by value. The
     /// wrappers generator writes it for a <c>[GenerateReactorDescriptor]</c> record outside this library, over every member
     /// the record declares, unless the record declares it itself.</para>

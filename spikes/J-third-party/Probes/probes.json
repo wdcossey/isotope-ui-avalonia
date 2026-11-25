@@ -19,7 +19,7 @@
     {
       "name": "UnwiredCallback",
       "expect": "pass",
-      "generatedLacks": "e.OnClosed",
+      "generatedLacks": "el.OnClosed",
       "record": "ChipElement"
     },
     {

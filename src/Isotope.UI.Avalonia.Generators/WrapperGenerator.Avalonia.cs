@@ -91,12 +91,15 @@ public sealed partial class WrapperGenerator
     /// Our rule (#77), descriptor-only mode: the skip members of a record outside the library that declares
     /// <c>Element</c>, appended to its descriptor's source, so a library's element is skipped when it equals the last
     /// render's, as a built-in one is (FINDINGS, decisions after Spike F, 3). <c>ShallowEqualsCore</c> compares every
-    /// member the record (and its bases below <c>Element</c>) declares: delegates by presence, elements and reference-type
-    /// collections (<c>Children</c>, <c>Items</c>, <c>Setters</c>) by reference, an <c>object</c> as the button arms compare
-    /// their content (an element never equal), and the rest by <c>EqualityComparer&lt;T&gt;.Default</c>. <c>HasCallbacks</c>
-    /// says whether any delegate is set. A member the record declares itself is left to it. The library's own records
-    /// get nothing: their arms in <c>Element.ShallowEquals</c> decide, so they behave as before. Empty when nothing is
-    /// emitted.
+    /// field the record (and its bases below <c>Element</c>) declares, through its property for an auto-property: callbacks
+    /// (<c>On{X}</c> delegates, which the descriptor reads from the latest element) by presence, other delegates (a
+    /// template, a formatter) and elements and reference-type collections (<c>Children</c>, <c>Items</c>, <c>Setters</c>)
+    /// by reference, an <c>object</c> as the button arms compare their content (an element never equal), and the rest by
+    /// <c>EqualityComparer&lt;T&gt;.Default</c>. <c>HasCallbacks</c> says whether any delegate is set. Nothing is compared,
+    /// so the element is never skipped, when a field can't be: one the record can't reach (a base's internal member in
+    /// another assembly), a struct holding an element (<c>Optional&lt;Element&gt;</c>), a ref-like or pointer type. A member
+    /// the record or a base below <c>Element</c> declares itself is left to it. The library's own records get nothing:
+    /// their arms in <c>Element.ShallowEquals</c> decide, so they behave as before. Empty when nothing is emitted.
     /// </summary>
     private static string SkipMembers(INamedTypeSymbol element, Compilation compilation)
     {
@@ -106,24 +109,47 @@ public sealed partial class WrapperGenerator
         if (elementBase.GetMembers("ShallowEqualsCore").IsEmpty) return "";
         if (element.IsGenericType || element.ContainingType is not null) return "";
 
+        // A member the record, or a base below Element (a built-in record's command-aware HasCallbacks), declares.
+        bool DeclaredBelowElement(string name)
+        {
+            for (INamedTypeSymbol? t = element; t is not null && !SymbolEqualityComparer.Default.Equals(t, elementBase); t = t.BaseType)
+                if (!t.GetMembers(name).IsEmpty) return true;
+            return false;
+        }
+
         var compares = new List<string>();
         var callbacks = new List<string>();
         var seen = new HashSet<string>(System.StringComparer.Ordinal);
         bool comparable = true;
         for (INamedTypeSymbol? t = element; t is not null && !SymbolEqualityComparer.Default.Equals(t, elementBase); t = t.BaseType)
         {
+            // A base from another assembly (a built-in record, a vendor's) shows none of its private state: nothing is compared.
+            if (!SymbolEqualityComparer.Default.Equals(t.ContainingAssembly, compilation.Assembly))
+            {
+                comparable = false;
+                break;
+            }
+            // The type's state: its explicit fields, and the auto-properties (positional ones too) behind its backing
+            // fields. A computed property is left out: it follows from the fields, and its getter could throw here.
+            var autoProperties = new HashSet<string>(t.GetMembers().OfType<IFieldSymbol>()
+                .Where(f => !f.IsStatic && f.AssociatedSymbol is IPropertySymbol).Select(f => f.AssociatedSymbol!.Name), System.StringComparer.Ordinal);
             foreach (var member in t.GetMembers())
             {
                 if (member.IsStatic || member.Name == "EqualityContract") continue;
-                if (!SymbolEqualityComparer.Default.Equals(t, element) && member.DeclaredAccessibility == Accessibility.Private) continue;
                 ITypeSymbol type;
                 switch (member)
                 {
-                    case IPropertySymbol { IsIndexer: false, GetMethod: not null } p: type = p.Type; break;
+                    case IPropertySymbol { IsIndexer: false, GetMethod: not null, ExplicitInterfaceImplementations.IsEmpty: true } p when autoProperties.Contains(p.Name): type = p.Type; break;
                     case IFieldSymbol { IsConst: false, IsImplicitlyDeclared: false, AssociatedSymbol: null } f: type = f.Type; break;
                     default: continue;
                 }
                 if (!seen.Add(member.Name)) continue;
+                // A base's member the record can't reach (private, or internal to another assembly): nothing is compared.
+                if (!compilation.IsSymbolAccessibleWithin(member, element))
+                {
+                    comparable = false;
+                    continue;
+                }
                 var name = "@" + member.Name;
                 if (type.IsRefLikeType || type.TypeKind is TypeKind.Pointer or TypeKind.FunctionPointer or TypeKind.TypeParameter)
                 {
@@ -132,8 +158,17 @@ public sealed partial class WrapperGenerator
                 }
                 if (type.TypeKind == TypeKind.Delegate)
                 {
-                    compares.Add($"(this.{name} is null) == (o.{name} is null)");
+                    // A callback by presence, as the built-in arms (the skip refreshes the element its handler reads); any
+                    // other delegate by reference, since what it returns can change with what it captures.
+                    compares.Add(IsCallbackName(member.Name)
+                        ? $"(this.{name} is null) == (o.{name} is null)"
+                        : $"global::System.Object.ReferenceEquals(this.{name}, o.{name})");
                     callbacks.Add($"this.{name} is not null");
+                }
+                else if (type.IsValueType && HoldsElement(type, elementBase))
+                {
+                    comparable = false;
+                    continue;
                 }
                 else if (type.SpecialType == SpecialType.System_Object)
                     compares.Add($"!(this.{name} is global::Isotope.UI.Core.Element) && !(o.{name} is global::Isotope.UI.Core.Element) && global::System.Object.Equals(this.{name}, o.{name})");
@@ -148,8 +183,8 @@ public sealed partial class WrapperGenerator
             }
         }
 
-        bool emitEquals = comparable && element.GetMembers("ShallowEqualsCore").IsEmpty;
-        bool emitCallbacks = callbacks.Count > 0 && element.GetMembers("HasCallbacks").IsEmpty;
+        bool emitEquals = comparable && !DeclaredBelowElement("ShallowEqualsCore");
+        bool emitCallbacks = callbacks.Count > 0 && !DeclaredBelowElement("HasCallbacks");
         if (!emitEquals && !emitCallbacks) return "";
 
         var sb = new System.Text.StringBuilder();
@@ -174,6 +209,16 @@ public sealed partial class WrapperGenerator
         }
         sb.AppendLine("}");
         return sb.ToString();
+    }
+
+    // On{X}, the callbacks' names (tools/naming/README.md).
+    private static bool IsCallbackName(string name) => name.Length > 2 && name.StartsWith("On", System.StringComparison.Ordinal) && char.IsUpper(name[2]);
+
+    // A struct with an element in it (Optional<Element>, a tuple): its equality would compare the element by value.
+    private static bool HoldsElement(ITypeSymbol type, INamedTypeSymbol elementBase)
+    {
+        if (DerivesFrom(type, elementBase)) return true;
+        return type is INamedTypeSymbol { IsGenericType: true } named && named.TypeArguments.Any(a => HoldsElement(a, elementBase));
     }
 
     private static bool DerivesFrom(ITypeSymbol type, INamedTypeSymbol baseType)
