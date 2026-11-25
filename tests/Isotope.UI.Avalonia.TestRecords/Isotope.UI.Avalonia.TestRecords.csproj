@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Element records written as a third party writes them (#77): in an assembly of their own, with the wrappers
+       generator as an analyzer, as the library package adds it. The library tests mount them next to the built-ins. -->
+  <PropertyGroup>
+    <!-- The library tests' frameworks (#67), since they reference it. -->
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Isotope.UI.Avalonia.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
+    <ProjectReference Include="..\..\src\Isotope.UI.Avalonia.Generators\Isotope.UI.Avalonia.Generators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

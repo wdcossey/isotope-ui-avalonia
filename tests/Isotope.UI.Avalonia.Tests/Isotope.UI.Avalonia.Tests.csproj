@@ -31,10 +31,14 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
+    <!-- Records written as a third party writes them, in an assembly of their own with the generator (#77). -->
+    <ProjectReference Include="..\Isotope.UI.Avalonia.TestRecords\Isotope.UI.Avalonia.TestRecords.csproj" />
     <!-- The one-line startup and its default app builder (#32), tested headless through ReactorApp's start seam. -->
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia.Desktop\Isotope.UI.Avalonia.Desktop.csproj" />
-    <!-- The generator as a plain assembly, so GeneratorTests can run it through Roslyn's generator driver. -->
-    <ProjectReference Include="..\..\src\Isotope.UI.Avalonia.Generators\Isotope.UI.Avalonia.Generators.csproj" />
+    <!-- The generator as a plain assembly, so GeneratorTests can run it through Roslyn's generator driver, and as an
+         analyzer, so the test records here get their descriptors as a library's would (GeneratedPanelTests, #79). -->
+    <ProjectReference Include="..\..\src\Isotope.UI.Avalonia.Generators\Isotope.UI.Avalonia.Generators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
   </ItemGroup>
 </Project>

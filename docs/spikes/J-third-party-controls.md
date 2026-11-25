@@ -5,6 +5,12 @@ the Fluent theme, and Isotope's packages packed from this branch (`0.1.0-preview
 `bfa57e1`). Code: `spikes/J-third-party/` (its README says how to run it). Measured numbers say how they were measured;
 judgements are marked [J].
 
+**Since the spike:** gaps 1 and 6 are closed by #77 (2026-11-25). A library's element is skipped as a built-in one is,
+through `Element.ShallowEqualsCore` and `HasCallbacks`, which the bundled generator writes (gap 1). A token is resolved
+for a library's control with no new API (gap 6). The spike's two `Gap_vendor_...` tests became
+`Vendor_a_rejected_edit_stays_...` and `Vendor_an_unchanged_element_is_skipped`, and the `InternalOverride` and
+`InternalEquality` probes were updated. The measurements below are the spike's own, from before #77, except where marked.
+
 ## Answer
 
 - **Yes: a third party can wrap its own controls using only Isotope's published packages,** and they behave like
@@ -17,7 +23,8 @@ judgements are marked [J].
   rejects is written back on the next render (a built-in keeps it), and every render of the parent updates the
   control. This needs a change to the library's public surface (Gap 1).
 - **The rest is traps a guide or diagnostics can remove:** callbacks that are silently never wired, errors reported
-  inside generated files, a `Group` inside a third party's panel, and factory names that clash (Gaps 2 to 6).
+  inside generated files, a `Group` inside a third party's panel (closed by #79), and factory names that clash (Gaps 2
+  to 6).
 - **Recommendation: (c), then (a).** Public-surface and generator changes first (four follow-up issues), then the
   "Writing controls for Isotope" guide. A compatibility package (b) isn't needed yet: the generator, which is where the
   diagnostics belong, already ships in the library package. See **For you to decide**.
@@ -69,7 +76,7 @@ version `0.1.0-preview.0.75`), took 65 s with the same results:
 | **Controlled value:** `Value` paired with `ValueChanged` by name; a user change calls back once, and the engine's own write doesn't echo; a new value is written; an Unset value leaves the control its own | `A_user_change_calls_back_...`, `Vendor_a_new_controlled_value_...`, `Vendor_an_unset_value_...` |
 | **Events:** a routed event becomes `Action? OnDismissed` and calls the latest render's closure, from code or from the template's button; unmounting detaches both callbacks | `A_routed_event_...`, `Unmounting_detaches_the_callbacks` |
 | **Keyed reorder:** a reverse of 5 keyed ratings in a `VStack` keeps the instances in the new order with 0 `DetachedFromVisualTree`; a reverse of 3 keyed cards keeps each card's content state, and a focused button inside one card's template keeps focus | `A_keyed_reverse_moves_...`, `A_keyed_reverse_of_cards_...` |
-| **Keyed reorder in the vendor's own panel** (the generated `Panel` children strategy): 4 cards reversed with 0 detaches and their state kept; keyed adds and removes keep the others; an `Empty()` child is left out | 3 of `PanelTests`' 5 |
+| **Keyed reorder in the vendor's own panel** (the generated `Panel` children strategy): 4 cards reversed with 0 detaches and their state kept; keyed adds and removes keep the others; an `Empty()` child is left out; a `Group`'s children mount, unkeyed and keyed, and keyed ones in a group reverse with the same controls (#79) | 4 of `PanelTests`' 5 |
 | **Content slot:** a component in the card keeps its state (2 clicks) while the card's header and accent change, same button instance; another kind of content replaces the child and keeps the card; cards nest | `A_component_in_the_content_slot_...`, `Another_kind_of_content_...`, `Cards_nest_...` |
 | **Error boundaries:** a boundary around a card catches its content's throw; a boundary inside the content slot keeps the card and recovers on the next render; the vendor control's own throw (Avalonia's `ArgumentException` for `Maximum` 0) is caught on mount and on update; a throw in the escape hatch is caught | `ErrorBoundaryTests` (5) |
 | **Theme tokens:** `.Background`, `.Foreground` and `.BorderBrush` with a token reach a templated control and follow a light-to-dark switch with no re-render; a token on the vendor's own brush properties (`Accent`, `Fill`) does too, through the public `Element.ThemeBindings`; the element's own brush wins and the token returns when it goes; a token for a property the control lacks is skipped | `ThemeTokenTests` (6) |
@@ -83,7 +90,8 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 | `.Accent(token)` binds a misspelt property | 2: `A_token_on_the_vendors_own_brush_property_...`, `The_elements_own_brush_wins_...` |
 | The keyed ratings lose their keys | 1: `A_keyed_reverse_moves_...` |
 | The card's content keyed by its header (so it remounts when the header changes) | 2: `A_component_in_the_content_slot_...`, `A_state_change_updates_...` |
-| `SpreadPanel(...)` flattens a group itself | 1: `Gap_a_group_element_...` |
+| `SpreadPanel(...)` flattens a group itself (before #79) | 1: `Gap_a_group_element_inside_the_vendors_panel_throws` (since renamed by #79) |
+| The generated strategy doesn't flatten (#79's rule reverted; each framework) | 1: `A_group_element_inside_the_vendors_panel_...` |
 | The render returns the same rating instance each time (so it is skipped) | 1: `Gap_vendor_an_unchanged_element_...` (1 update, not 11) |
 
 ### Probes (each framework)
@@ -92,11 +100,11 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 |---|---|---|
 | `Gen001` | A record member with no counterpart on the control | **ISOTOPEGEN001**, an error at the record, as inside the repo |
 | `NoSetters` | A record with no `Setters` member | CS1061 **inside the generated file**: the descriptor reads `e.Setters` unconditionally |
-| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never mentions `OnClosed`: the callback is silently dropped |
+| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never wires `OnClosed`: the callback is silently dropped (since #77 the generated skip members name it, so the probe looks for the descriptor's wiring, `el.OnClosed`) |
 | `WrapEventMismatch` | The same with `[WrapEvent("Closed")]` | CS1501 inside the generated file: `[WrapEvent]` passes the args, so the callback must be `Action<EventArgs>` |
 | `Decorator` | `[WrapDecorator]` (a control made and changed by the author's own methods) | CS0117 inside the generated file: `Reconciler.SetElementTag`, `DetachReactorState` and `ControlRegistry.RegisterDecorator` don't exist (decorators were left out in Spike F, tier 3) |
-| `InternalOverride` | `override HasCallbacks`, as built-in records do | CS0115: internal |
-| `InternalEquality` | Calling `Element.ShallowEquals` | CS0117: internal |
+| `InternalOverride` | `override HasCallbacks`, as built-in records do | CS0115: internal. **Since #77:** the record overrides the protected `HasCallbacks` and `ShallowEqualsCore` and builds clean, and the generator writes neither |
+| `InternalEquality` | Calling `Element.ShallowEquals` | CS0117: internal. **Since #77:** still CS0117, and CS0122 for a call to the protected `ShallowEqualsCore` from outside the record |
 | `NameClash` | A second `Card(Element)` factory beside Isotope's, and `RatingBar.ValueProperty` with the factory imported | CS0121 (ambiguous call) and CS0119 (the factory hides the control type) |
 
 `InternalOverride` and `InternalEquality` are two probes because Roslyn binds no method body once a declaration has an
@@ -104,7 +112,7 @@ error: in one project only CS0115 was reported.
 
 ## Gaps, each with the change it needs
 
-1. **No skip for a third party's element (behaviour).** `Element.ShallowEquals` ends in `_ => false`, and its arms are
+1. **Closed by #77.** **No skip for a third party's element (behaviour).** `Element.ShallowEquals` ends in `_ => false`, and its arms are
    internal, one per built-in record. Measured: a rating whose handler rejects the user's 4 is back at 2 after an
    unrelated render, where a built-in slider in the same tree keeps the rejected 30; an unchanged rating element is
    updated on all 11 of 11 renders. Counted by its `.Set`, made once outside the render, so each render's element is a
@@ -126,10 +134,12 @@ error: in one project only CS0115 was reported.
    - **Change:** diagnostics at the record: a missing `Setters` (or emit `GetSetters` only when the member exists, as
      the polymorphic path already checks), a callback type that doesn't match the event, and `[WrapDecorator]` /
      `[WrapPolymorphic]` not supported on Isotope yet. Our partial.
-4. **A `Group` inside a third party's panel throws** `NotSupportedException` ("A GroupElement is flattened into its
+4. **Closed by #79: the generated `Panel` children strategy flattens groups** (`PanelChildren.Of`, a
+   public helper beside `ItemsList`; `Reconciler.Flatten` stays internal), and the test now asserts the children mount.
+   As found: **a `Group` inside a third party's panel throws** `NotSupportedException` ("A GroupElement is flattened into its
    container's children"), caught by a boundary in the test. Isotope's own panel records flatten their children with
-   `Reconciler.Flatten`, which is internal; `VStack(..., Group(...))` mounts 3 ratings. Workaround, measured (the
-   break above): the library flattens `GroupElement.Children` itself, since the record is public.
+   `Reconciler.Flatten`, which is internal; `VStack(..., Group(...))` mounts 3 ratings. The workaround then, measured (the
+   break above), is no longer needed since #79: the library flattened `GroupElement.Children` itself.
    - **Change:** flatten in the generated `Panel` children strategy, so no record needs to, or make `Reconciler.Flatten`
      public. [J: the first, since a library can't forget it.]
 5. **Name clashes** (`NameClash`): a library factory with the name and parameters of one of Isotope's is ambiguous
@@ -138,10 +148,16 @@ error: in one project only CS0115 was reported.
    - **Change:** docs: check a library's factory names against Isotope's, and alias the control type
      (`using RatingBarControl = Vendor.Controls.RatingBar;`). The spike names its factory class `VendorFactories`, not
      `Factories`, so a file importing both namespaces can still name each class [J: CS0104 not probed].
-6. **Resolving a token for one control is internal.** `ThemeRef.Resolve(string, Control)` is internal; the public
+6. **Closed by #77, with no new API.** **Resolving a token for one control is internal.** `ThemeRef.Resolve(string, Control)` is internal; the public
    overload resolves for the app's light or dark theme only. Binding a token to a brush property needs neither (gap-free,
    above); a library resolving a token itself, in a setter, does.
    - **Change:** make that overload public [J: small]. Not needed for anything the spike's controls do.
+   - **#77:** no new API. A library binds a token to its control's own brush property (`.Accent(Theme.Accent)`, through
+     the public `Element.ThemeBindings`), which follows a theme switch with no render. A setter runs only on a render, so a
+     token resolved there would keep the old theme's brush after a switch. To read a token's brush once, the public
+     `ThemeRef.Resolve(key, isDark)` takes the control's variant: `A_token_resolves_for_a_controls_theme_...` checks that it
+     gives the bound brush. It doesn't see the resources of the control's subtree or a host's stand-in colour values,
+     which the internal overload does. That case waits until a library needs it.
 
 Not gaps, but traps for the guide: reference members are written only when set unless the record sets
 `ClearValueOnUnset = true` (the break above shows the difference); and the generated descriptor writes the one-way
@@ -165,7 +181,7 @@ porting to Isotope would need its own record, member and factory renames applied
 1. Public surface and generator first, as four follow-up issues:
    - Gap 1, the skip for a third party's element: `Element` and the generator;
    - Gaps 2 and 3, diagnostics at the record: the generator partial only;
-   - Gap 4, flattening in the generated panel strategy;
+   - Gap 4, flattening in the generated panel strategy (done, #79);
    - Gap 6, the public `ThemeRef.Resolve` overload (or fold it into the guide's issue if you'd rather not widen the API).
 2. Then the guide, "Writing controls for Isotope", with the spike's library as its worked example: the record rules
    (`Setters`, member names, `ClearValueOnUnset`, routed events), factory and modifier naming, theme tokens on a

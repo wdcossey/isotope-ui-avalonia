@@ -41,7 +41,7 @@ public partial record ButtonElement(object? Content, Action? OnClick = null) : E
 
     internal Action<Button>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
+    protected internal override bool HasCallbacks => CommandBindings.EffectiveCallback(OnClick, Command) is not null;
 
     // IsEnabled has a second source, the IsEnabled modifier: the reconciler writes the two as one value
     // (Reconciler.ApplyEnabled), so neither overwrites the other, and the descriptor leaves it alone. As upstream's,
@@ -95,7 +95,7 @@ public partial record TextBoxElement(
 
     internal Action<TextBox>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnTextChanged is not null;
+    protected internal override bool HasCallbacks => OnTextChanged is not null;
 
     // Reports user edits, as upstream's does: the echo of each write of the engine's own (the controlled Text) carries
     // a suppression token, which the trampoline consumes. Avalonia posts TextChanged, so the event arrives after the
@@ -164,7 +164,7 @@ public partial record SliderElement(
 
     internal Action<Slider>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnValueChanged is not null;
+    protected internal override bool HasCallbacks => OnValueChanged is not null;
 
     // As upstream's: Minimum and Maximum are written before Value (Customize's entries come first), so the first value
     // lands in the right range, and a bound that coerces the value drops the change event the coercion raises.

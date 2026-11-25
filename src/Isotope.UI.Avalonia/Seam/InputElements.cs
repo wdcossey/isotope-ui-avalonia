@@ -40,7 +40,7 @@ public partial record NumericUpDownElement(Optional<double> Value = default, Act
 
     internal Action<NumericUpDown>[] Setters { get; init; } = [];
 
-    internal override bool HasCallbacks => OnValueChanged is not null;
+    protected internal override bool HasCallbacks => OnValueChanged is not null;
 
     private static readonly EventHandler<NumericUpDownValueChangedEventArgs> __ValueChangedTrampoline = (s, _) =>
     {

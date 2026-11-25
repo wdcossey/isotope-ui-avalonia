@@ -304,6 +304,15 @@
       ]
     },
     {
+      "id": "gen-panel-children-flatten",
+      "find": "GetChildren: static e => e\\.Children,",
+      "replace": "GetChildren: static e => global::Isotope.UI.Core.V1Protocol.PanelChildren.Of(e.Children),",
+      "why": "Our rule (#79): the generated panel strategy flattens a GroupElement into its siblings (PanelChildren.Of, the library's Seam/V1Protocol/PanelChildren.cs), as Isotope's own panel records do, so a library's panel record needn't. Upstream's mount path would mount the group itself, which throws.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
       "id": "gen-missing-counterpart-check",
       "find": "(\\r?\\n)(        var ns = element\\.ContainingNamespace\\.IsGlobalNamespace)",
       "replace": "$1        var missingCounterpart = descriptorOnly ? MissingCounterparts(element, control, props, contentProp is null ? null : contentElementName, panelChildren, items, exclude) : null;$1$2",
@@ -335,6 +344,15 @@
       "find": "(\\? global::Microsoft\\.UI\\.Reactor\\.Optional<\\{p\\.ValueType\\}>\\.Unset : )e\\.\\{p\\.Name\\}\"",
       "replace": "$1global::Microsoft.UI.Reactor.Optional<{p.ValueType}>.Of(e.{p.Name})\"",
       "why": "A reference-typed member on the ClearValue channel (ClearValueOnUnset, descriptor-only mode) is wrapped with Optional<T>.Of: upstream's ternary converts it implicitly, which C# doesn't allow from an interface such as Avalonia's IBrush. The same value for a class type (#22).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-skip-members",
+      "find": "(\\r?\\n)(        var hint = descriptorOnly \\? )",
+      "replace": "$1        if (descriptorOnly) source += SkipMembers(element, compilation); // Isotope (#77): a library's record skips like a built-in$1$2",
+      "why": "Our rule (#77): in descriptor-only mode a record outside the library that declares Element gets ShallowEqualsCore and HasCallbacks (WrapperGenerator.Avalonia.cs), so it is skipped when it equals the last render's, as a built-in record is (upstream's rule). The library's own records get nothing: their Element.ShallowEquals arms decide.",
       "files": [
         "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
       ]

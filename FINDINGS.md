@@ -160,6 +160,40 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   rename or control. The run still prints the commonest.
 - **Proven:** a commit dropping `Thickness` from `winui-types.json` failed the job (+3 compile errors), and its revert
   passed. 20 node tests for the comparison and the guide's generated table.
+## Vendor elements skip like built-ins (issue #77, 2026-11-25)
+
+- **Decided by the developer:** a library's element follows the built-ins' skip rule (upstream's, decisions after Spike F, 3).
+- **Surface:** two members on `Element`. `protected virtual bool ShallowEqualsCore(Element other)`, false by default, is
+  called by `ShallowEquals` for a type with no built-in arm, after the shared checks. `HasCallbacks` is
+  `protected internal` (was internal); the built-ins' overrides are unchanged in behaviour.
+- **Generator (rule `gen-skip-members`, our partial):** in descriptor-only mode, a record outside the library gets both
+  members, over its auto-properties and fields. Callbacks (`On{X}`) are compared by presence; other delegates, elements,
+  arrays, collections and records by reference; the rest by value. It writes nothing, so the element updates on every
+  render, for an unreachable or hidden member, a struct holding an element, a base from another assembly, or a base that
+  declares either member. The library's own records get nothing, so those with no arm (ListBox, Expander, the pickers)
+  still update on every render.
+- **Gap 6:** no new API. A library binds tokens through `Element.ThemeBindings`, which follows a theme switch with no
+  render; `ThemeRef.Resolve(key, isDark)` covers a one-off value.
+- **For the guide (#80):** a hand-written `ShallowEqualsCore` must compare every member: a member it ignores is lost when
+  the element is skipped, because the next update diffs against the last render's element.
+- **Measured:** library tests 1245 on net9.0, net10.0 and net11.0 (1234 before, plus 11 new; each new behaviour shown to
+  fail when broken). Spike J: 34 of 34 tests and 8 of 8 probes on each framework (`node spikes/J-third-party/run.mjs`).
+
+## Groups in a vendor's panel (issue #79, 2026-11-26)
+
+- **A `Group` in a library's panel now mounts its children,** as in Isotope's own panels (spike J's gap 4). The generated
+  `Panel` children strategy reads its children through `PanelChildren.Of` (public, beside `ItemsList` in
+  `Isotope.UI.Core.V1Protocol`), which flattens with the internal `Reconciler.Flatten`, child slots included, so a group
+  that grows or shrinks keeps its siblings' controls. One transform rule (`gen-panel-children-flatten`); the generator
+  partial is unchanged and `Reconciler.Flatten` stays internal.
+- **Isotope's own panels are unchanged:** their records already flatten, so `Of` returns the same array. The library suite
+  passes 1234 of 1234 on net9.0, net10.0 and net11.0 (1227 before; 7 new in `GeneratedPanelTests`, which run the
+  generator on a test record as a library's build does).
+- **Spike J:** `run.mjs`, 34 of 34 tests and 8 of 8 probes on each framework (packed `0.1.0-preview.0.78`, 63 s); its
+  group test now asserts the children mount, keyed and unkeyed.
+- **Proven to fail** (net10.0): with the strategy not flattening, 5 of the 6 mount and flatten tests and spike J's group
+  test on each framework; with a flatten that drops child slots, or one that copies the array, the nested-group, resize
+  and pass-through tests (3 each); with the list branch unflattened, the list test.
 
 ## Spike J: third-party controls (issue #75, 2026-11-25)
 
@@ -170,15 +204,17 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - **Like a built-in:** mount and update in place, controlled values with no echo, routed-event callbacks, keyed moves
   (0 detaches, focus kept) in Isotope's panels and its own, a component in a content slot keeping its state, error
   boundaries (the control's own throw too), and theme tokens, on its own brush properties too.
-- **One difference:** its element is never skipped (`Element.ShallowEquals` and `HasCallbacks` are internal), so a value
-  the handler rejects is written back on the next render, and an unchanged element updates on every render (11 of 11).
+- **One difference, closed by #77:** a library's element is now skipped as a built-in one is:
+  `Element.ShallowEqualsCore` (protected) and `HasCallbacks` (protected internal) are written by the bundled generator for
+  a record outside the library. Measured by spike J: an unchanged element reaches its control on 1 of 11 renders (11 of
+  11 before), and a rejected edit stays as on the built-in slider.
 - **Traps:** an `On{Event}` for a plain `EventHandler` is silently never wired; a missing `Setters`, a `[WrapEvent]`
-  type mismatch and `[WrapDecorator]` fail inside generated files; a `Group` in a library's panel throws; factory names
+  type mismatch and `[WrapDecorator]` fail inside generated files; a `Group` in a library's panel threw (closed by #79); factory names
   can clash (CS0121, CS0119). 8 probes pin them (`Probes/probes.json`).
 - **Recommendation:** public-surface and generator changes first, then a "Writing controls for Isotope" guide. The
   migration tool takes no library rename table; that can wait.
 - **In CI:** the `packages` job runs it on the packages it just packed, on Ubuntu and Windows. Follow-ups: #77 (skip
-  parity, the developer's choice, and a single control's token), #78 (generator diagnostics), #79 (groups in a vendor's panel), then the guide (#80).
+  parity; closed) and #79 (groups in a vendor's panel; closed), #78 (generator diagnostics), then the guide (#80).
 - Report: `docs/spikes/J-third-party-controls.md`.
 
 ## Rich text (issue #65, 2026-11-25)

@@ -22,7 +22,8 @@ namespace Vendor.Controls.Tests;
 /// <summary>
 /// Isotope's rule (FINDINGS, decisions after Spike F, 3): an element equal to the last render's is skipped, so a value the
 /// handler rejects stays in the control until the element changes. Built-in records get that from an arm in
-/// <c>Element.ShallowEquals</c>, which is internal; a third party's record has none.
+/// <c>Element.ShallowEquals</c>; a third party's record from the <c>ShallowEqualsCore</c> and <c>HasCallbacks</c> the
+/// bundled generator writes for it (#77, gap 1 closed).
 /// </summary>
 public sealed class ControlledValueTests
 {
@@ -62,11 +63,10 @@ public sealed class ControlledValueTests
         Assert.Equal(30, slider.Value); // skipped: not written back
     }
 
-    // Gap 1 (docs/spikes/J-third-party-controls.md): the vendor's element has no ShallowEquals arm, so it is never skipped,
-    // and its controlled entry writes the element's value back over the drifted control. Parity with the built-ins would
-    // keep 4. This test pins what happens now, so it fails when the gap closes.
+    // Gap 1, closed by #77 (docs/spikes/J-third-party-controls.md): the vendor's element is skipped as the built-in slider
+    // is, so its controlled entry doesn't write the element's value back over the rejected edit.
     [AvaloniaFact]
-    public void Gap_vendor_a_rejected_edit_is_written_back_on_a_render_with_the_same_value()
+    public void Vendor_a_rejected_edit_stays_across_a_render_with_the_same_value()
     {
         var s = MountRejecting();
         using var _ = s.Mounted;
@@ -77,7 +77,7 @@ public sealed class ControlledValueTests
         Mounted.Pump();
         Assert.Contains(s.Mounted.All<TextBlock>(), t => t.Text == "render 1");
         Assert.Equal([4], s.RatingReports);
-        Assert.Equal(2, bar.Value); // a built-in keeps the rejected 4 (the test above)
+        Assert.Equal(4, bar.Value); // skipped: not written back, as the built-in slider above
     }
 
     [AvaloniaFact]
@@ -116,14 +116,13 @@ public sealed class ControlledValueTests
         Assert.Equal(4, bar.Value);
     }
 
-    // Gap 1, the cause: an unchanged vendor element is updated on every render of its parent, where a built-in one equal
-    // to the last render's is skipped. Pinned as it is now.
+    // Gap 1, the cause, closed by #77: an unchanged vendor element is skipped, as a built-in one equal to the last render's.
     [AvaloniaFact]
-    public void Gap_vendor_an_unchanged_element_is_updated_on_every_render()
+    public void Vendor_an_unchanged_element_is_skipped()
     {
         // How often an unchanged element reaches its control: the escape hatch (.Set) runs after every mount and update.
         // One escape hatch made once, so each render's element is a new instance equal to the last one (the same Setters
-        // array): what a skip comparing Setters by reference, as the built-in arms do, would skip.
+        // array), which the generated ShallowEqualsCore compares by reference, as the built-in arms do.
         int vendor = 0;
         Action? bump = null;
         var unchanged = RatingBar(2).Set(_ => vendor++);
@@ -135,6 +134,6 @@ public sealed class ControlledValueTests
         });
         for (int i = 0; i < 10; i++) { bump!(); Mounted.Pump(); }
         Assert.Equal(11, m.Renders);
-        Assert.Equal(11, vendor); // the mount and 10 updates
+        Assert.Equal(1, vendor); // the mount only: the 10 renders after it skip the element (11 before #77)
     }
 }
