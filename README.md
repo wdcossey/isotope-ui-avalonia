@@ -133,7 +133,7 @@ Besides the .NET SDK and git: Node.js 20 or later for `tools/`.
 git clone https://github.com/microsoft/microsoft-ui-reactor upstream
 git -C upstream checkout "$(sed -n 's/^baseline=\([0-9a-f]*\).*/\1/p' UPSTREAM.lock)"
 
-dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1254 tests on each of net9.0, net10.0, net11.0; no upstream/)
+dotnet test tests/Isotope.UI.Avalonia.Tests              # the library (1258 tests on each of net9.0, net10.0, net11.0; no upstream/)
 dotnet test tests/Isotope.UI.Migration.Tests             # the migration analyzer (52 tests)
 dotnet test tests/Isotope.UI.Mcp.Tests                   # the MCP server (52 tests)
 node tools/sync/sync.mjs --check --no-fetch              # vendored files match upstream + transforms
