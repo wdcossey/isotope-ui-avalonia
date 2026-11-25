@@ -161,6 +161,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   can clash (CS0121, CS0119). 8 probes pin them (`Probes/probes.json`).
 - **Recommendation:** public-surface and generator changes first, then a "Writing controls for Isotope" guide. The
   migration tool takes no library rename table; that can wait.
+- **In CI:** the `packages` job runs it on the packages it just packed, on Ubuntu and Windows. Follow-ups: #77 (skip
+  parity, the developer's choice, and a single control's token), #78 (generator diagnostics), #79 (groups in a vendor's panel), then the guide (#80).
 - Report: `docs/spikes/J-third-party-controls.md`.
 
 ## Rich text (issue #65, 2026-11-25)
