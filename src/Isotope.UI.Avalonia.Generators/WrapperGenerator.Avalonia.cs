@@ -94,11 +94,12 @@ public sealed partial class WrapperGenerator
     /// field the record (and its bases below <c>Element</c>) declares, through its property for an auto-property: callbacks
     /// (<c>On{X}</c> delegates, which the descriptor reads from the latest element) by presence, other delegates (a
     /// template, a formatter) and elements and reference-type collections (<c>Children</c>, <c>Items</c>, <c>Setters</c>)
-    /// by reference, an <c>object</c> as the button arms compare their content (an element never equal), and the rest by
+    /// and records by reference, an <c>object</c> as the button arms compare their content (an element never equal), and the rest by
     /// <c>EqualityComparer&lt;T&gt;.Default</c>. <c>HasCallbacks</c> says whether any delegate is set. Nothing is compared,
     /// so the element is never skipped, when a field can't be: one the record can't reach (a base's internal member in
-    /// another assembly), a struct holding an element (<c>Optional&lt;Element&gt;</c>), a ref-like or pointer type. A member
-    /// the record or a base below <c>Element</c> declares itself is left to it. The library's own records get nothing:
+    /// another assembly), a member hidden by a same-named one, a struct holding an element (<c>Optional&lt;Element&gt;</c>), a
+    /// ref-like or pointer type, or a base below <c>Element</c> that declares either skip member. One the record declares
+    /// itself is left to it. The library's own records get nothing:
     /// their arms in <c>Element.ShallowEquals</c> decide, so they behave as before. Empty when nothing is emitted.
     /// </summary>
     private static string SkipMembers(INamedTypeSymbol element, Compilation compilation)
@@ -109,13 +110,10 @@ public sealed partial class WrapperGenerator
         if (elementBase.GetMembers("ShallowEqualsCore").IsEmpty) return "";
         if (element.IsGenericType || element.ContainingType is not null) return "";
 
-        // A member the record, or a base below Element (a built-in record's command-aware HasCallbacks), declares.
-        bool DeclaredBelowElement(string name)
-        {
-            for (INamedTypeSymbol? t = element; t is not null && !SymbolEqualityComparer.Default.Equals(t, elementBase); t = t.BaseType)
-                if (!t.GetMembers(name).IsEmpty) return true;
-            return false;
-        }
+        // A skip member a base below Element declares knows nothing of this record's members: then nothing is generated,
+        // and the element is updated on every render. One the record declares itself is left to it.
+        for (INamedTypeSymbol? b = element.BaseType; b is not null && !SymbolEqualityComparer.Default.Equals(b, elementBase); b = b.BaseType)
+            if (!b.GetMembers("ShallowEqualsCore").IsEmpty || !b.GetMembers("HasCallbacks").IsEmpty) return "";
 
         var compares = new List<string>();
         var callbacks = new List<string>();
@@ -143,7 +141,12 @@ public sealed partial class WrapperGenerator
                     case IFieldSymbol { IsConst: false, IsImplicitlyDeclared: false, AssociatedSymbol: null } f: type = f.Type; break;
                     default: continue;
                 }
-                if (!seen.Add(member.Name)) continue;
+                // A member hidden by a same-named one (`new`): nothing is compared.
+                if (!seen.Add(member.Name))
+                {
+                    comparable = false;
+                    continue;
+                }
                 // A base's member the record can't reach (private, or internal to another assembly): nothing is compared.
                 if (!compilation.IsSymbolAccessibleWithin(member, element))
                 {
@@ -165,7 +168,7 @@ public sealed partial class WrapperGenerator
                         : $"global::System.Object.ReferenceEquals(this.{name}, o.{name})");
                     callbacks.Add($"this.{name} is not null");
                 }
-                else if (type.IsValueType && HoldsElement(type, elementBase))
+                else if (HoldsElement(type, elementBase, 0))
                 {
                     comparable = false;
                     continue;
@@ -173,7 +176,7 @@ public sealed partial class WrapperGenerator
                 else if (type.SpecialType == SpecialType.System_Object)
                     compares.Add($"!(this.{name} is global::Isotope.UI.Core.Element) && !(o.{name} is global::Isotope.UI.Core.Element) && global::System.Object.Equals(this.{name}, o.{name})");
                 else if (type.IsReferenceType && type.SpecialType != SpecialType.System_String
-                    && (DerivesFrom(type, elementBase) || type.TypeKind == TypeKind.Array || IsEnumerable(type)))
+                    && (DerivesFrom(type, elementBase) || type.TypeKind == TypeKind.Array || IsEnumerable(type) || type.IsRecord))
                     compares.Add($"global::System.Object.ReferenceEquals(this.{name}, o.{name})");
                 else
                 {
@@ -183,8 +186,8 @@ public sealed partial class WrapperGenerator
             }
         }
 
-        bool emitEquals = comparable && !DeclaredBelowElement("ShallowEqualsCore");
-        bool emitCallbacks = callbacks.Count > 0 && !DeclaredBelowElement("HasCallbacks");
+        bool emitEquals = comparable && element.GetMembers("ShallowEqualsCore").IsEmpty;
+        bool emitCallbacks = callbacks.Count > 0 && element.GetMembers("HasCallbacks").IsEmpty;
         if (!emitEquals && !emitCallbacks) return "";
 
         var sb = new System.Text.StringBuilder();
@@ -214,11 +217,16 @@ public sealed partial class WrapperGenerator
     // On{X}, the callbacks' names (tools/naming/README.md).
     private static bool IsCallbackName(string name) => name.Length > 2 && name.StartsWith("On", System.StringComparison.Ordinal) && char.IsUpper(name[2]);
 
-    // A struct with an element in it (Optional<Element>, a tuple): its equality would compare the element by value.
-    private static bool HoldsElement(ITypeSymbol type, INamedTypeSymbol elementBase)
+    // A struct with an element in it (Optional<Element>, a tuple, a field): its equality would compare the element by
+    // value. A record or other class holding one is compared by reference instead (above).
+    private static bool HoldsElement(ITypeSymbol type, INamedTypeSymbol elementBase, int depth)
     {
-        if (DerivesFrom(type, elementBase)) return true;
-        return type is INamedTypeSymbol { IsGenericType: true } named && named.TypeArguments.Any(a => HoldsElement(a, elementBase));
+        if (!type.IsValueType || depth > 4) return false;
+        if (type is not INamedTypeSymbol named) return false;
+        bool Element(ITypeSymbol t) => DerivesFrom(t, elementBase) || HoldsElement(t, elementBase, depth + 1);
+        if (named.IsGenericType && named.TypeArguments.Any(Element)) return true;
+        return named.SpecialType == SpecialType.None
+            && named.GetMembers().OfType<IFieldSymbol>().Any(f => !f.IsStatic && Element(f.Type));
     }
 
     private static bool DerivesFrom(ITypeSymbol type, INamedTypeSymbol baseType)

@@ -223,6 +223,62 @@ public class GeneratorTests
         Assert.Empty(optionalErrors);
         Assert.DoesNotContain("ShallowEqualsCore", withOptional);
 
+        // A base in the same assembly declares HasCallbacks; a member hides the base's; a record member holds an element.
+        var (_, overBase, overBaseErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public abstract record BaseElement : Element
+            {
+                public System.Action? OnTapped { get; init; }
+                protected override bool HasCallbacks => OnTapped is not null;
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : BaseElement
+            {
+                public System.Action? OnOther { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(overBaseErrors);
+        Assert.DoesNotContain("ShallowEqualsCore", overBase);
+        Assert.DoesNotContain("HasCallbacks", overBase);
+
+        var (_, holder, holderErrors) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public record HeaderData(string Title, Element Icon);
+            public struct Slot { public Element E; }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeBorderElement(Element? Child) : Element
+            {
+                public HeaderData? Header { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeSlotElement(Element? Child) : Element
+            {
+                public Slot Slot { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeBorderElement");
+        Assert.Empty(holderErrors);
+        Assert.Contains("global::System.Object.ReferenceEquals(this.@Header, o.@Header)", holder);
+        var (_, slot, _) = Compile("""
+            using Isotope.UI.Core;
+            using Isotope.UI.Wrappers;
+            namespace Probe;
+            public struct Slot { public Element E; }
+            [GenerateReactorDescriptor(typeof(Avalonia.Controls.Border))]
+            public partial record ProbeSlotElement(Element? Child) : Element
+            {
+                public Slot Slot { get; init; }
+                internal System.Action<Avalonia.Controls.Border>[] Setters { get; init; } = [];
+            }
+            """, "ProbeSlotElement");
+        Assert.DoesNotContain("ShallowEqualsCore", slot);
+
         // SliderElement declares HasCallbacks, and its Setters is internal to the library. (The descriptor itself reads
         // e.Setters, which a record outside the library can't reach: CS1061, as before #77.)
         var (_, derived, _) = Compile("""
