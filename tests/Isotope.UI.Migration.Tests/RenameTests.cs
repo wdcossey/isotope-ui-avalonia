@@ -125,8 +125,9 @@ public class RenameTests
         Assert.Contains(described, d => d.StartsWith("ISOMIG010: Modifier 'SpinButtons' is gone in Isotope: No modifier: Avalonia's NumericUpDown shows its spinner", StringComparison.Ordinal));
         // Past an unresolved link only the table's modifiers are named: an unknown name is left to the compiler.
         Assert.DoesNotContain(described, d => d.Contains("NoSuchThing", StringComparison.Ordinal));
-        // Only an element's chain: HAlign on a StringBuilder's is no modifier of Isotope's.
-        Assert.DoesNotContain(described, d => d.Contains("HAlign", StringComparison.Ordinal));
+        // Only an element's chain: HAlign on a StringBuilder's is no modifier of Isotope's, so the fix leaves it alone (a
+        // reported rename would have been applied, and is gone from the diagnostics of the fixed code).
+        Assert.Contains("new System.Text.StringBuilder().Missing().HAlign(1)", Migrate.Fix(reactor));
         Assert.Equal(2, described.Count(d => d.Contains("Modifier 'Range'", StringComparison.Ordinal)));
     }
 
