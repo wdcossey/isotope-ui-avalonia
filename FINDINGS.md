@@ -160,6 +160,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   rename or control. The run still prints the commonest.
 - **Proven:** a commit dropping `Thickness` from `winui-types.json` failed the job (+3 compile errors), and its revert
   passed. 20 node tests for the comparison and the guide's generated table.
+
 ## Vendor elements skip like built-ins (issue #77, 2026-11-25)
 
 - **Decided by the developer:** a library's element follows the built-ins' skip rule (upstream's, decisions after Spike F, 3).
