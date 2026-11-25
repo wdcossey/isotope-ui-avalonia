@@ -6,8 +6,8 @@ namespace Isotope.UI;
 // Our own version (tier 3) of upstream's text modifiers (src/Reactor/Elements/ElementExtensions.cs, #42): upstream's
 // names and overloads, Avalonia's value types. As upstream's, the element-wide ones (Foreground, FontSize, FontWeight,
 // FontFamily) are modifiers that reach a text block or a templated control, and the TextBlockElement ones set the
-// record's members and keep its type for chaining. Not here yet: IsTextSelectionEnabled (Avalonia's TextBlock has no
-// selection; SelectableTextBlock is another control), CharacterSpacing and TextDecorations (their Avalonia counterparts,
+// record's members and keep its type for chaining. Not here: IsTextSelectionEnabled (Avalonia's TextBlock has no
+// selection; SelectableTextBlock is another control, and the migration says to use it, #65). Not here yet: CharacterSpacing and TextDecorations (their Avalonia counterparts,
 // LetterSpacing in DIPs and a TextDecorationCollection, change shape), and Foreground(ThemeRef) (#41).
 
 public static partial class ElementExtensions

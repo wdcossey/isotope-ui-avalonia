@@ -12,7 +12,7 @@ internal sealed class MemberEntry
     public string[] Avalonia = [];
     public string? Note;
 
-    /// <summary>One Avalonia member, as most entries have (Grid's Definition has two).</summary>
+    /// <summary>One Avalonia member, as most entries have (Grid's Definition has two; a removed member has none).</summary>
     public string? SingleAvalonia => Avalonia.Length == 1 ? Avalonia[0] : null;
 }
 
@@ -64,7 +64,8 @@ internal sealed class RenameTable
             {
                 string s => new[] { s },
                 List<object?> list => list.Select(x => (string)x!).ToArray(),
-                _ => throw new FormatException("renames.json: members[].avalonia is a string or an array."),
+                null => [], // a removed member (kind "removed", #65)
+                _ => throw new FormatException("renames.json: members[].avalonia is a string, an array or null."),
             };
             t.Members.Add(new MemberEntry
             {

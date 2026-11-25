@@ -65,8 +65,8 @@ public class RenameTableTests
         var problems = new List<string>();
         foreach (var entry in table.Members)
         {
-            if (entry.Kind is not ("rename" or "shape" or "kept"))
-                problems.Add($"{entry.Record}.{entry.Reactor}: kind '{entry.Kind}' is not rename, shape or kept");
+            if (entry.Kind is not ("rename" or "shape" or "kept" or "removed"))
+                problems.Add($"{entry.Record}.{entry.Reactor}: kind '{entry.Kind}' is not rename, shape, kept or removed");
             if (!table.Records.ContainsKey(entry.Record))
             {
                 problems.Add($"{entry.Record}.{entry.Reactor}: {entry.Record} is not in the table's records");
@@ -76,6 +76,10 @@ public class RenameTableTests
                 problems.Add($"{entry.Record}.{entry.Reactor}: a rename names one other member");
             if (entry.Kind == "kept" && (entry.Avalonia.Length != 1 || entry.Avalonia[0] != entry.Reactor || entry.Note is null))
                 problems.Add($"{entry.Record}.{entry.Reactor}: a kept member keeps its name and says why (note)");
+            if (entry.Kind == "removed" && (entry.Avalonia.Length != 0 || entry.Note is null))
+                problems.Add($"{entry.Record}.{entry.Reactor}: a removed member names no member and says what to do instead (note)");
+            if (entry.Kind != "removed" && entry.Avalonia.Length == 0)
+                problems.Add($"{entry.Record}.{entry.Reactor}: only a removed member has no avalonia name");
             if (entry.Kind == "shape" && entry.Note is null)
                 problems.Add($"{entry.Record}.{entry.Reactor}: a shape change says what changed (note)");
             var members = Members(Record(table.IsotopeName(entry.Record))).ToHashSet();
@@ -314,9 +318,12 @@ internal sealed record RenameTable(
             root.GetProperty("members").EnumerateArray().Select(m => new Member(
                 m.GetProperty("record").GetString()!,
                 m.GetProperty("reactor").GetString()!,
-                m.GetProperty("avalonia").ValueKind == JsonValueKind.Array
-                    ? m.GetProperty("avalonia").EnumerateArray().Select(a => a.GetString()!).ToArray()
-                    : [m.GetProperty("avalonia").GetString()!],
+                m.GetProperty("avalonia").ValueKind switch
+                {
+                    JsonValueKind.Array => m.GetProperty("avalonia").EnumerateArray().Select(a => a.GetString()!).ToArray(),
+                    JsonValueKind.Null => [], // a removed member (#65)
+                    _ => [m.GetProperty("avalonia").GetString()!],
+                },
                 m.GetProperty("kind").GetString()!,
                 m.TryGetProperty("note", out var note) ? note.GetString() : null)).ToList(),
             root.GetProperty("parameters").EnumerateArray().Select(p => new Parameter(

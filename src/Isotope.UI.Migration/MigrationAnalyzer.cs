@@ -331,6 +331,11 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 if (ctors.Any(c => c.Parameters.Any(p => p.Name == parameter))) continue;
                 var entry = FindMember(type, parameter, out var record);
                 if (entry is null || entry.Kind == "kept") continue;
+                if (entry.Kind == "removed")
+                {
+                    Report(ctx, Rules.NameRemoved, arg.NameColon.Name.GetLocation(), args: ["Member", record + "." + parameter, entry.Note ?? ""]);
+                    continue;
+                }
                 var target = entry.SingleAvalonia;
                 // A target already named here would be named twice: leave it to the compiler's error.
                 if (target is not null && named.Contains(target)) continue;
@@ -423,6 +428,12 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
             if (entry is not null)
             {
                 if (entry.Kind == "kept") return;
+                if (entry.Kind == "removed")
+                {
+                    // No counterpart (IsTextSelectionEnabled, #65): say what to do instead.
+                    if (info.Symbol is null) Report(ctx, Rules.NameRemoved, name.GetLocation(), args: ["Member", record + "." + member, entry.Note ?? ""]);
+                    return;
+                }
                 var target = entry.SingleAvalonia;
                 if (target == member)
                 {
