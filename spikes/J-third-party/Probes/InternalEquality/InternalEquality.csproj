@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The skip test the reconciler runs, Element.ShallowEquals, is internal, with no arm for a library's record (CS0117). A probe of its own: Roslyn binds no method body once a declaration has an error. Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,22 @@
+<Project>
+  <!-- Spike J (#75): a third-party control library and its tests, built from outside the repository. Nothing of the
+       repo's build is imported (this file stops the search), and Isotope comes only from packages packed from this
+       branch, in a local folder (nuget.config), as the package smoke test (tests/Isotope.UI.PackageSmoke) does. run.mjs
+       passes IsotopeVersion, ISOTOPE_PACKAGES and a fresh NUGET_PACKAGES. global.json still applies, as it would to any
+       project built with that SDK. -->
+  <PropertyGroup>
+    <IsotopeVersion Condition="'$(IsotopeVersion)' == ''">0.0.0-run-spikes-J-third-party-run</IsotopeVersion>
+    <!-- Every framework the library ships for (#67). -->
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- No LangVersion: each framework's default (C# 13 on net9.0, 14 on net10.0, 15 on net11.0), as a library
+         author's would be. -->
+    <IsPackable>false</IsPackable>
+    <!-- As the smoke test: an analyzer that can't load (CS8032) is only a warning, and would hide a generator that isn't
+         running, so warnings fail the build; NuGet's audit stays a warning. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <AvaloniaVersion>12.1.6</AvaloniaVersion>
+  </PropertyGroup>
+</Project>

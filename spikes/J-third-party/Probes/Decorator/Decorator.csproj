@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- [WrapDecorator] (a control created once and changed in place by the author's code): the generated handler calls engine members Isotope doesn't have. Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <ItemGroup>
+    <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
+    <ProjectReference Include="..\..\Vendor.Controls\Vendor.Controls.csproj" />
+  </ItemGroup>
+</Project>
