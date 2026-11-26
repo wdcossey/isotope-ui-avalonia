@@ -87,7 +87,8 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 - [x] The **Like** button sits in the second line of text, on its baseline; a click → "liked 1 times", and the button is
   still in place.
 - [x] Tab to **Like** and press Space → the count goes up. (Avalonia lays the text out again when it changes, so the
-  button loses keyboard focus after each press: note what happens.)
+  button loses keyboard focus after each press: note what happens.) On Windows, 2026-11-26: focus doesn't stay on the
+  button after a press.
 - [x] "Red Green Blue", each in its colour and bold. **Rotate the colours** → "Green Blue Red", then "Blue Red Green".
 - [x] Drag over the two lines under the button → the text is selected across both lines; Ctrl+C copies it (paste it
   somewhere: two lines). The second line is smaller.
@@ -97,11 +98,13 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 - [x] The first row: a black diamond (20 by 20), a steel-blue tick (32) and a triangle in the accent colour (48), each
   crisp at its size. **Change the colour** → the tick turns sea green; again → steel blue.
 - [x] The second row: "Aa" in the default font, and on Windows a star outline in steel blue (a glyph of Segoe Fluent
-  Icons). On Linux or macOS the star is missing or a box: note which.
+  Icons). On Linux or macOS the star is missing or a box: note which. On Windows, 2026-11-26: the star is centred in
+  its box.
 - [x] The third row: a steel-blue ring (the bitmap's shape in the foreground), the same ring in its own teal and orange,
-  and a bigger teal and orange ring (an image). **Change the colour** turns the first ring sea green.
+  and a bigger teal and orange ring (an image). **Change the colour** turns the first ring sea green. On Windows,
+  2026-11-26: the first ring is an even colour, but its edges aren't smooth (#98).
 - [x] **Next kind** → the last icon shows a glyph ("Aa"), then the ring as a shape, then the ring in its colours, then the
-  tick again, with the line above saying which.
+  tick again, with the line above saying which. The row doesn't flicker or shift.
 
 ### Errors
 
