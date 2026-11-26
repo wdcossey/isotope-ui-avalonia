@@ -60,7 +60,8 @@ public class FactoryTests
         Assert.Equal((false, 0.0, 100.0), (d.Value.HasValue, d.Minimum, d.Maximum));
     }
 
-    [Fact]
+    // A headless test: it makes an Avalonia control, which takes the calling thread's dispatcher (#105).
+    [AvaloniaFact]
     public void Factories_named_like_Avalonia_controls_are_the_factories_in_calls_and_the_controls_as_types()
     {
         // This file imports Avalonia.Controls and the factories (#46). A call names the factory, a type names Avalonia's
