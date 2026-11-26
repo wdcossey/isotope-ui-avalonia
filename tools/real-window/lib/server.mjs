@@ -1,8 +1,9 @@
 // The checklist page and its HTTP endpoints (#106). Local only: it listens on 127.0.0.1; every request's Host must be
 // 127.0.0.1:<port> or localhost:<port> and its Origin, when sent, the same origin (against DNS rebinding); every POST
 // carries the run's random token in a header (against cross-site requests), is JSON, and has a capped body. Everything
-// rendered is escaped, and a content security policy allows only the page's own script. No request names a file: the
-// server reads and writes only through the callbacks it is given.
+// rendered is escaped, and a content security policy allows only the page's own script and style. No request names a
+// file: apart from its stylesheet, read once at load, the server reads and writes only through the callbacks it is given.
+import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { sections } from './parse.mjs';
@@ -23,17 +24,14 @@ export const inlineMarkdown = (s) => escapeHtml(s).split(/(`[^`]+`)/).map((part,
   ? '<code>' + part.slice(1, -1) + '</code>'
   : part.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'))).join('');
 
-const STYLE = `body{font:14px system-ui,sans-serif;max-width:920px;margin:1.5em auto;padding:0 1em}
-h2{margin-top:1.6em;border-bottom:1px solid #ccc;font-size:1.2em}
-.it{padding:.6em .4em;border-bottom:1px solid #eee}.was{font-size:11px;background:#eee;padding:1px 4px;border-radius:3px}
-.b{margin-top:.4em;display:flex;gap:.4em;align-items:center}.b input{flex:1;padding:3px}.s{font-weight:600;min-width:5em}
-button{padding:2px 10px}.v-pass{background:#eefbea}.v-fail{background:#fdecec}.v-skip{background:#f4f4f4}
-.v-pass .s{color:green}.v-fail .s{color:crimson}.v-skip .s{color:#777}
-#top{position:sticky;top:0;background:#fff;padding:.5em 0;border-bottom:1px solid #ccc;display:flex;gap:.6em;align-items:center}
-#top input{width:22em;padding:3px}textarea{width:100%;box-sizing:border-box}pre{white-space:pre-wrap;background:#f6f6f6;padding:.8em}`;
+// The page's stylesheet (#109): shadcn/ui's look in plain CSS, read once and inlined in the page by the request's nonce,
+// so the CSP stays as it is. It names no URL (no @import, url() or web font).
+export const STYLE = readFileSync(new URL('./checklist.css', import.meta.url), 'utf8');
 
 // The page's script: one click per line sends its verdict and note; changing a note resends the line's verdict.
 // Posts go one at a time, in order, so a note's resend (on blur) can't land after the click that caused the blur.
+// P, F and S answer the focused line (the line itself or a button in it) and move to the next line; never from a
+// field, with Ctrl, Alt or Meta held, on a key held down, or after Finish.
 export const SCRIPT = `const token = document.querySelector('meta[name="checklist-token"]').content;
 let queue = Promise.resolve();
 function post(path, body) {
@@ -46,21 +44,54 @@ function post(path, body) {
   queue = p.catch(() => {});
   return p;
 }
-function progress(r) { if (r && r.total != null) document.getElementById('progress').textContent = r.answered + ' of ' + r.total + ' answered'; }
+const KEYS = { p: 'pass', f: 'fail', s: 'skip' };
+let finished = false;
+function typing(t) { return !!t && (t.isContentEditable === true || /^(INPUT|TEXTAREA|SELECT)$/i.test(String(t.tagName))); }
+function shortcut(e) {
+  if (finished || e.defaultPrevented || e.repeat || e.ctrlKey || e.altKey || e.metaKey || typing(e.target)) return null;
+  const verdict = KEYS[String(e.key).toLowerCase()];
+  const it = verdict && e.target && typeof e.target.closest === 'function' ? e.target.closest('.it') : null;
+  return it ? { it, verdict } : null;
+}
+function progress(r) {
+  if (!r || r.total == null) return;
+  document.getElementById('progress').textContent = r.answered + ' of ' + r.total + ' answered';
+  const bar = document.getElementById('bar'); bar.max = r.total; bar.value = r.answered;
+}
+function sectionCount(it) {
+  const sec = it.closest('section'), lines = [...sec.querySelectorAll('.it')], done = lines.filter((l) => l.dataset.verdict).length;
+  const c = sec.querySelector('.count');
+  c.textContent = done + ' of ' + lines.length;
+  c.classList.toggle('badge-default', done === lines.length); c.classList.toggle('badge-outline', done !== lines.length);
+}
 async function answer(it, verdict) {
   const s = it.querySelector('.s');
   try {
     progress(await post('/answer', { key: it.dataset.key, verdict, note: it.querySelector('.note').value }));
-    it.dataset.verdict = verdict; it.className = 'it v-' + verdict; s.textContent = verdict;
-  } catch (e) { s.textContent = 'error: ' + e.message; }
+    it.dataset.verdict = verdict; s.textContent = verdict; s.classList.remove('err');
+    for (const b of it.querySelectorAll('button[data-verdict]')) b.setAttribute('aria-pressed', String(b.dataset.verdict === verdict));
+    sectionCount(it);
+    return true;
+  } catch (e) { s.textContent = 'error: ' + e.message; s.classList.add('err'); return false; }
 }
+function show(el) { if (el) { el.focus(); el.scrollIntoView({ block: 'nearest' }); } }
+document.addEventListener('keydown', async (e) => {
+  const k = shortcut(e);
+  if (!k) return;
+  e.preventDefault();
+  const lines = [...document.querySelectorAll('.it')];
+  const next = lines[lines.indexOf(k.it) + 1] || document.getElementById('finish');
+  if (await answer(k.it, k.verdict) && k.it.contains(document.activeElement)) show(next);
+});
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('button[data-verdict]');
   if (b) return answer(b.closest('.it'), b.dataset.verdict);
+  if (e.target.id === 'next') return show(document.querySelector('.it[data-verdict=""]') || document.getElementById('finish'));
   if (e.target.id === 'finish') {
     if (!confirm('Write the answers into the checklist and stop the tool?')) return;
     try {
       const r = await post('/finish', {});
+      finished = true;
       document.getElementById('summary').textContent = r.summary;
       for (const x of document.querySelectorAll('button, input, textarea')) x.disabled = true;
     } catch (err) { document.getElementById('summary').textContent = 'error: ' + err.message; }
@@ -75,27 +106,44 @@ document.addEventListener('change', async (e) => {
   } catch (err) { if (st) st.textContent = 'error: ' + err.message; }
 });`;
 
+// Each verdict's button, in shadcn/ui's variants: Pass the default, Fail destructive, Skip outline.
+const VARIANT = { pass: 'default', fail: 'destructive', skip: 'outline' };
+const label = (v) => v[0].toUpperCase() + v.slice(1);
+
 export function renderPage({ title, items, results, token, nonce }) {
   const answers = results.answers ?? {};
-  const answered = items.filter((it) => answers[it.key]).length;
+  const done = (list) => list.filter((it) => answers[it.key]).length;
+  const answered = done(items);
   let body = '';
   for (const s of sections(items)) {
-    body += '<h2>' + escapeHtml(s.name || '(no heading)') + '</h2>';
-    for (const it of s.items) {
+    const n = done(s.items);
+    body += `<section class="card"><div class="card-header"><h2>${escapeHtml(s.name || '(no heading)')}</h2>`
+      + `<span class="badge ${n === s.items.length ? 'badge-default' : 'badge-outline'} count">${n} of ${s.items.length}</span></div><div class="card-content lines">`;
+    s.items.forEach((it, i) => {
       const a = answers[it.key];
-      body += `<div class="it${a ? ' v-' + escapeHtml(a.verdict) : ''}" data-key="${escapeHtml(it.key)}" data-verdict="${escapeHtml(a?.verdict ?? '')}">`
-        + `<div class="t">${it.ticked ? '<span class="was">ticked</span> ' : ''}${inlineMarkdown(it.text)}</div><div class="b">`
-        + VERDICTS.map((v) => `<button data-verdict="${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')
-        + `<input class="note" placeholder="note (optional)" value="${escapeHtml(a?.note ?? '')}"><span class="s">${escapeHtml(a?.verdict ?? '')}</span></div></div>`;
-    }
+      if (i) body += '<div class="sep" role="none"></div>';
+      body += `<div class="it" tabindex="0" data-key="${escapeHtml(it.key)}" data-verdict="${escapeHtml(a?.verdict ?? '')}">`
+        + `<div class="t">${it.ticked ? '<span class="badge badge-outline was">ticked before</span> ' : ''}${inlineMarkdown(it.text)}</div><div class="b">`
+        + VERDICTS.map((v) => `<button class="btn btn-sm btn-${VARIANT[v]}" data-verdict="${v}" aria-pressed="${a?.verdict === v}">${label(v)}</button>`).join('')
+        + `<input class="input input-sm note" aria-label="Note" placeholder="note (optional)" value="${escapeHtml(a?.note ?? '')}"><span class="badge s">${escapeHtml(a?.verdict ?? '')}</span></div></div>`;
+    });
+    body += '</div></section>';
   }
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="checklist-token" content="${escapeHtml(token)}">`
+    + '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">'
     + `<title>${escapeHtml(title)}</title><style nonce="${nonce}">${STYLE}</style></head><body>`
-    + `<h1>${escapeHtml(title)}</h1><div id="top"><label>System <input id="sys" placeholder="OS, display server, version" value="${escapeHtml(results.system)}"></label>`
-    + `<span id="syss"></span><span id="progress">${answered} of ${items.length} answered</span></div>${body}`
-    + `<h2>Anything else</h2><textarea id="free" rows="5">${escapeHtml(results.notes)}</textarea><div id="frees"></div>`
-    + `<p><button id="finish">Finish: write the answers into the checklist</button></p><pre id="summary"></pre>`
-    + `<script nonce="${nonce}">${SCRIPT}</script></body></html>`;
+    + `<header id="top" class="top"><div class="top-in"><div class="top-head"><h1>${escapeHtml(title)}</h1>`
+    + '<p class="hint">Answers are saved as you go. On the focused line: <kbd>P</kbd> pass, <kbd>F</kbd> fail, <kbd>S</kbd> skip.</p></div>'
+    + `<div class="top-row"><label class="field"><span class="label">System</span><input id="sys" class="input" placeholder="OS, display server, version" value="${escapeHtml(results.system)}"></label>`
+    + `<span id="syss" class="status"></span><div class="meter"><progress id="bar" max="${items.length}" value="${answered}" aria-label="Lines answered"></progress>`
+    + `<span id="progress" class="badge badge-secondary">${answered} of ${items.length} answered</span></div>`
+    + '<button id="next" class="btn btn-sm btn-ghost">Next unanswered</button></div></div></header><main>'
+    + body
+    + '<section class="card"><div class="card-header stack"><h2>Anything else</h2><p class="card-desc">Notes for the run as a whole.</p></div>'
+    + `<div class="card-content"><textarea id="free" class="textarea" rows="5" aria-label="Anything else">${escapeHtml(results.notes)}</textarea><div id="frees" class="status"></div></div></section>`
+    + '<section class="card finish"><div class="card-header stack"><h2>Finish</h2><p class="card-desc">Ticks the passed lines, unticks the failed ones, adds the notes, and stops the tool.</p></div>'
+    + '<div class="card-content"><button id="finish" class="btn btn-lg btn-default">Finish: write the answers into the checklist</button><pre id="summary"></pre></div></section>'
+    + `</main><script nonce="${nonce}">${SCRIPT}</script></body></html>`;
 }
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }

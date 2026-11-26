@@ -23,9 +23,9 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 serves this checklist and records the results), or from the repository root run
 `node tools/real-window/checklist.mjs samples/Isotope.UI.Samples/README.md --clear` and open the page it prints
 (`http://127.0.0.1:8765/`; `--port` picks another). Fill in the system (OS, display server, version) once, then click
-**Pass**, **Fail** or **Skip** on each line, with a note when there is something to say. Each answer is saved as it is
-given, to `README.md.results.json` beside this file (git-ignored), so a closed tab or a stopped tool loses nothing: run
-the command again to resume. **Finish** ticks the passed lines and unticks the failed ones, appends each note to its
+**Pass**, **Fail** or **Skip** on each line (or press P, F or S on the focused line), with a note when there is
+something to say. Each answer is saved as it is given, to `README.md.results.json` beside this file (git-ignored), so a
+closed tab or a stopped tool loses nothing: run the command again to resume. **Finish** ticks the passed lines and unticks the failed ones, appends each note to its
 line (`**Failed (<system>, <date>):** <note>` for a failure, `(<system>, <date>: <note>)` for a pass), leaves skipped
 lines as they were, and prints a summary with a suggested "Last run" sentence for the paragraph above, which it
 doesn't write. `--clear` unticks every line, as a new run needs; notes from earlier runs stay until removed by hand.

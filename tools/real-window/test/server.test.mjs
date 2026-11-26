@@ -3,9 +3,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseChecklist } from '../lib/parse.mjs';
 import { emptyResults } from '../lib/results.mjs';
+import { readFileSync } from 'node:fs';
 import net from 'node:net';
 import vm from 'node:vm';
-import { SCRIPT, createChecklistServer, inlineMarkdown, renderPage } from '../lib/server.mjs';
+import { SCRIPT, STYLE, createChecklistServer, escapeHtml, inlineMarkdown, renderPage } from '../lib/server.mjs';
 import { post, request, tokenOf } from './http.mjs';
 
 const TOKEN = 'ab'.repeat(24);
@@ -171,4 +172,80 @@ test('the page sends its posts one at a time, in order', async () => {
   await Promise.all([context.post('/answer', { n: 1 }), context.post('/answer', { n: 2 })]);
   assert.deepEqual(finished, [1, 2]);
   assert.deepEqual(started, [1, 2]);
+});
+
+test('the page carries its stylesheet under the same CSP, by the response\'s nonce, and fetches nothing', { timeout: 15000 }, () => withServer(async ({ port }) => {
+  const r = await request(port);
+  const csp = r.headers['content-security-policy'];
+  const nonce = /style-src 'nonce-([^']+)'/.exec(csp)?.[1];
+  assert.ok(nonce, csp);
+  assert.equal(csp, `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+  // One stylesheet, inline, under the nonce, and it is the tool's own file (#109).
+  const styles = [...r.text.matchAll(/<style([^>]*)>([\s\S]*?)<\/style>/g)];
+  assert.equal(styles.length, 1);
+  assert.equal(styles[0][1], ` nonce="${nonce}"`);
+  assert.equal(styles[0][2], readFileSync(new URL('../lib/checklist.css', import.meta.url), 'utf8'));
+  assert.match(STYLE, /--background:/);
+  // Nothing the CSP would block or that would fetch: no style attribute, link, src or href; no url(), @import or web
+  // font; no address at all outside the stylesheet's licence comment.
+  assert.doesNotMatch(r.text, /\sstyle=|<link|\s(src|srcset|href|action|formaction|poster|data)=/i);
+  const code = r.text.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(code, /url\(|@import|@font-face|https?:|\/\/[a-z0-9]/i);
+}));
+
+test('the stylesheet carries shadcn/ui\'s copyright and MIT notice', () => {
+  const header = /^\/\*([\s\S]*?)\*\//.exec(STYLE)?.[1] ?? '';
+  assert.match(header, /Copyright \(c\) 2023 shadcn/);
+  assert.match(header, /Permission is hereby granted, free of charge/);
+  assert.match(header, /THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND/);
+});
+
+test('escaping holds in every element the page adds: header, cards, badges, buttons and fields', () => {
+  const BAD = '"><script>bad()</script><img src=x onerror=bad()>\'';
+  const items = parseChecklist(`### ${BAD}\n- [x] ${BAD}\n- [ ] Plain\n`).items;
+  const results = emptyResults('c.md');
+  results.system = BAD;
+  results.notes = BAD;
+  // A verdict loadResults would refuse, so the page's escaping is tested on its own.
+  results.answers[items[0].key] = { verdict: BAD, note: BAD, date: '2026-11-26' };
+  const html = renderPage({ title: BAD, items, results, token: TOKEN, nonce: 'n' });
+  const body = html.replace(/<style nonce="n">[\s\S]*?<\/style>/, '').replace(/<script nonce="n">[\s\S]*?<\/script>/, '');
+  // Every tag left is the page's own, with quoted attribute values and no event handler.
+  for (const [tag, name, attrs] of body.matchAll(/<([a-z][a-z0-9]*)([^>]*)>/gi)) {
+    assert.doesNotMatch(name, /^(script|img|iframe|object|embed|svg|link)$/i, tag);
+    assert.match(attrs, /^(?:\s+[a-z-]+(?:="[^"<>]*")?)*$/i, tag);
+    for (const [, attr] of attrs.matchAll(/\s([a-z-]+)(?:="[^"]*")?/gi)) assert.doesNotMatch(attr, /^on/i, tag);
+  }
+  const e = escapeHtml(BAD);
+  for (const part of [`<h1>${e}</h1>`, `<h2>${e}</h2>`, `data-key="${escapeHtml(items[0].key)}"`, `data-verdict="${e}"`,
+    `<span class="badge s">${e}</span>`, `id="sys" class="input" placeholder="OS, display server, version" value="${e}"`,
+    `placeholder="note (optional)" value="${e}"`, `aria-label="Anything else">${e}</textarea>`, '<span class="badge badge-outline was">ticked before</span>']) {
+    assert.ok(html.includes(part), part);
+  }
+  // An unknown verdict presses no button.
+  assert.equal((body.match(/aria-pressed="true"/g) ?? []).length, 0);
+});
+
+test('P, F and S answer the focused line, but never from a field, with a modifier, or after Finish', () => {
+  const document = { querySelector: () => ({ content: TOKEN }), addEventListener: () => {} };
+  const context = vm.createContext({ document, fetch: () => {}, setTimeout, Promise, JSON, Error });
+  vm.runInContext(SCRIPT + ';globalThis.shortcut = shortcut;', context);
+  const line = { line: 1 };
+  const on = (tagName, more = {}) => ({ tagName, closest: (sel) => (sel === '.it' ? line : null), ...more });
+  const verdict = (key, target, mods = {}) => {
+    const r = context.shortcut({ key, target, ...mods });
+    if (r) assert.equal(r.it, line);
+    return r?.verdict ?? null;
+  };
+  assert.deepEqual(['p', 'f', 's', 'P', 'S'].map((k) => verdict(k, on('DIV'))), ['pass', 'fail', 'skip', 'pass', 'skip']);
+  assert.equal(verdict('f', on('BUTTON')), 'fail');
+  for (const field of [on('INPUT'), on('TEXTAREA'), on('SELECT'), on('input'), on('DIV', { isContentEditable: true })]) {
+    assert.equal(verdict('p', field), null, field.tagName);
+  }
+  for (const mod of ['ctrlKey', 'altKey', 'metaKey', 'repeat', 'defaultPrevented']) assert.equal(verdict('p', on('DIV'), { [mod]: true }), null, mod);
+  assert.equal(verdict('x', on('DIV')), null);
+  assert.equal(verdict('p', { tagName: 'DIV', closest: () => null }), null, 'outside a line');
+  assert.equal(verdict('p', null), null, 'no target');
+  vm.runInContext('finished = true;', context);
+  assert.equal(verdict('p', on('DIV')), null, 'after Finish');
 });

@@ -1,0 +1,311 @@
+/* The checklist page's stylesheet (#109): shadcn/ui's look as plain, hand-written CSS, with no build step. The tool
+   (lib/server.mjs) inlines it in the page under the page's content security policy, by the request's nonce, so it
+   names no URL: no @import, no url(), no web font (system fonts only).
+
+   The theme tokens (shadcn/ui's "neutral" theme, light and dark) and the component styles (card, button, input,
+   textarea, badge, separator, progress, kbd, the focus ring and the radius scale) are taken from shadcn/ui
+   (the new-york-v4 registry) and rewritten from its Tailwind classes as CSS. shadcn/ui's licence:
+
+   MIT License
+
+   Copyright (c) 2023 shadcn
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+*/
+
+/* Theme tokens: light, and dark when the system asks for it. */
+:root {
+  color-scheme: light;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+
+  /* Tailwind's values behind shadcn's classes. */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* shadcn's focus ring: the ring colour at half strength, 3px wide. */
+  --focus-ring: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+  --focus-ring-destructive: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent);
+  --destructive-fill: var(--destructive);
+  --field-fill: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --focus-ring-destructive: 0 0 0 3px color-mix(in oklab, var(--destructive) 40%, transparent);
+    --destructive-fill: color-mix(in oklab, var(--destructive) 60%, transparent);
+    --field-fill: color-mix(in oklab, var(--input) 30%, transparent);
+  }
+}
+
+/* Base */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: 14px/1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, p { margin: 0; }
+b { font-weight: 600; }
+code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.3rem;
+}
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font: 500 0.75rem var(--font-sans);
+  user-select: none;
+}
+
+/* The sticky header: title, keys, the system field and the progress. */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in oklab, var(--background) 95%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.top-in, main { max-width: 56rem; margin: 0 auto; padding-inline: 1.5rem; }
+.top-in { padding-block: 0.875rem; display: grid; gap: 0.75rem; }
+.top-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
+.top h1 { font-size: 1rem; font-weight: 600; line-height: 1.5rem; letter-spacing: -0.01em; }
+.hint { color: var(--muted-foreground); font-size: 0.8125rem; }
+.top-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.field { display: flex; align-items: center; gap: 0.625rem; flex: 1 1 20rem; }
+.label { font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; }
+.meter { display: flex; align-items: center; gap: 0.625rem; flex: 0 1 18rem; }
+.status { font-size: 0.75rem; color: var(--muted-foreground); }
+
+main { padding-block: 1.5rem 4rem; display: grid; gap: 1.5rem; }
+
+/* Card */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  padding-block: 1.5rem;
+}
+.card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding-inline: 1.5rem; }
+.card-header.stack { display: grid; gap: 0.375rem; }
+.card h2 { font-size: 1rem; font-weight: 600; line-height: 1.25; }
+.card-desc { color: var(--muted-foreground); font-size: 0.875rem; }
+.card-content { padding-inline: 1.5rem; }
+.card-content.lines { padding-inline: 1rem; }
+
+/* Separator */
+.sep { height: 1px; width: 100%; flex-shrink: 0; background: var(--border); }
+
+/* A checklist line: focusable, so P, F and S can answer it; the verdict shows as a bar, a badge and the pressed button. */
+.it {
+  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
+  border-left: 3px solid transparent;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  outline: none;
+  scroll-margin-block: 10rem 2rem;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+.it:focus-within { background: color-mix(in oklab, var(--accent) 70%, transparent); }
+.it:focus-visible { box-shadow: var(--focus-ring); }
+.it[data-verdict="pass"] { border-left-color: var(--primary); }
+.it[data-verdict="fail"] { border-left-color: var(--destructive); background: color-mix(in oklab, var(--destructive) 6%, transparent); }
+.it[data-verdict="skip"] { border-left-color: var(--muted-foreground); }
+.t { font-size: 0.875rem; line-height: 1.5; }
+.b { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.625rem; }
+.b .note { flex: 1 1 12rem; width: auto; }
+
+/* Button */
+.btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.btn:focus-visible { border-color: var(--ring); box-shadow: var(--focus-ring); }
+.btn:disabled { pointer-events: none; opacity: 0.5; }
+.btn-sm { height: 2rem; padding: 0 0.75rem; gap: 0.375rem; }
+.btn-lg { height: 2.5rem; padding: 0 1.5rem; }
+.btn-default { background: var(--primary); color: var(--primary-foreground); }
+.btn-default:hover { background: color-mix(in oklab, var(--primary) 90%, transparent); }
+.btn-destructive { background: var(--destructive-fill); color: #fff; }
+.btn-destructive:hover { background: color-mix(in oklab, var(--destructive) 90%, transparent); }
+.btn-destructive:focus-visible { box-shadow: var(--focus-ring-destructive); }
+.btn-outline { background: var(--background); color: var(--foreground); border-color: var(--border); box-shadow: var(--shadow-xs); }
+.btn-outline:hover { background: var(--accent); color: var(--accent-foreground); }
+.btn-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+.btn-secondary:hover { background: color-mix(in oklab, var(--secondary) 80%, transparent); }
+.btn-ghost { background: transparent; color: var(--foreground); }
+.btn-ghost:hover { background: var(--accent); color: var(--accent-foreground); }
+.btn[aria-pressed="true"]::before { content: "\2713"; }
+@media (prefers-color-scheme: dark) {
+  .btn-outline { background: var(--field-fill); border-color: var(--input); }
+  .btn-outline:hover { background: color-mix(in oklab, var(--input) 50%, transparent); }
+  .btn-ghost:hover { background: color-mix(in oklab, var(--accent) 50%, transparent); }
+}
+
+/* Input and textarea */
+.input, .textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  background: var(--field-fill);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-xs);
+  outline: none;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.input { height: 2.25rem; padding: 0.25rem 0.75rem; }
+.input-sm { height: 2rem; }
+.textarea { display: flex; min-height: 4rem; padding: 0.5rem 0.75rem; resize: vertical; field-sizing: content; }
+.input::placeholder, .textarea::placeholder { color: var(--muted-foreground); }
+.input::selection, .textarea::selection { background: var(--primary); color: var(--primary-foreground); }
+.input:focus-visible, .textarea:focus-visible { border-color: var(--ring); box-shadow: var(--focus-ring); }
+.input:disabled, .textarea:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: fit-content;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.badge-default { background: var(--primary); color: var(--primary-foreground); }
+.badge-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+.badge-destructive { background: var(--destructive-fill); color: #fff; }
+.badge-outline { border-color: var(--border); color: var(--foreground); }
+.was { color: var(--muted-foreground); }
+/* The line's verdict: empty until it has one; coloured by it; an error in the destructive colour. */
+.s:empty { display: none; }
+.s { text-transform: capitalize; }
+.it[data-verdict="pass"] .s { background: var(--primary); color: var(--primary-foreground); }
+.it[data-verdict="fail"] .s { background: var(--destructive-fill); color: #fff; }
+.it[data-verdict="skip"] .s { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
+.it .s.err { background: transparent; color: var(--destructive); border-color: color-mix(in oklab, var(--destructive) 40%, transparent); text-transform: none; white-space: normal; }
+
+/* Progress */
+progress {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  flex: 1 1 6rem;
+  width: 100%;
+  height: 0.5rem;
+  border: 0;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--primary) 20%, transparent);
+}
+progress::-webkit-progress-bar { background: transparent; }
+progress::-webkit-progress-value { background: var(--primary); transition: width 0.2s; }
+progress::-moz-progress-bar { background: var(--primary); }
+
+/* Finish */
+.finish .btn { width: 100%; }
+pre {
+  margin: 1rem 0 0;
+  padding: 1rem;
+  white-space: pre-wrap;
+  font: 0.8125rem/1.5 var(--font-mono);
+  background: var(--muted);
+  border-radius: var(--radius-md);
+}
+pre:empty { display: none; }
