@@ -463,10 +463,10 @@ public sealed class ListBoxTests : IDisposable
         var before = list.Items.Cast<Control>().ToArray();
         var edits = new List<NotifyCollectionChangedAction>();
         list.Items.CollectionChanged += (_, e) => edits.Add(e.Action);
-        keys = keys.Reverse().ToArray();
+        keys = Enumerable.Reverse(keys).ToArray();
         host.Render();
         Layout(window);
-        Assert.True(before.Reverse().SequenceEqual(list.Items.Cast<Control>()), "every item control is kept, in the new order");
+        Assert.True(Enumerable.Reverse(before).SequenceEqual(list.Items.Cast<Control>()), "every item control is kept, in the new order");
         Assert.All(edits, a => Assert.Equal(NotifyCollectionChangedAction.Move, a));
         Assert.InRange(list.GetRealizedContainers().Count(), 1, 50);
         Assert.Equal("k9999", ((TextBlock)((ContentControl)list.ContainerFromIndex(0)!).Content!).Text);

@@ -51,7 +51,7 @@ public sealed class ListBoxMeasurements
             sw.Restart();
             host.Render();
             var same = sw.Elapsed.TotalMilliseconds;
-            keys = keys.Reverse().ToArray();
+            keys = Enumerable.Reverse(keys).ToArray();
             int detached = 0;
             foreach (var c in items0) c.DetachedFromVisualTree += (_, _) => detached++;
             int logicalDetached = 0;
@@ -63,7 +63,7 @@ public sealed class ListBoxMeasurements
             w.UpdateLayout(); Dispatcher.UIThread.RunJobs();
             var layout = sw.Elapsed.TotalMilliseconds;
             var items1 = list.Items.Cast<Control>().ToArray();
-            var allSame = items0.Reverse().SequenceEqual(items1);
+            var allSame = Enumerable.Reverse(items0).SequenceEqual(items1);
             var cont1 = list.GetRealizedContainers().ToArray();
             var keptContainers = cont1.Count(c => cont0.Contains(c));
             Log($"n={n} run={run} mount={mount:F1}ms show={show:F1}ms realized={realized} render-same={same:F1}ms reverse={rev:F1}ms layout-after={layout:F1}ms sameControls={allSame} realizedAfter={cont1.Length} containersReused={keptContainers} rowVisualDetached={detached} rowLogicalDetached={logicalDetached}");
