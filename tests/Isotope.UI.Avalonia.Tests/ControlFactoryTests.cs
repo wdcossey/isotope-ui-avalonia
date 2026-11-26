@@ -61,7 +61,7 @@ public class ControlFactoryTests
         Assert.Same(changed, list.OnSelectedIndexChanged);
         Assert.False(ListBox(items).SelectedIndex.HasValue);
         Assert.Throws<ArgumentNullException>(() => ComboBox(null!));
-        Assert.Throws<ArgumentNullException>(() => ListBox(null!));
+        Assert.Throws<ArgumentNullException>(() => ListBox((string[])null!));
 
         var day = new DateTimeOffset(2026, 1, 2, 0, 0, 0, TimeSpan.Zero);
         Action<DateTimeOffset> dateChanged = _ => { };

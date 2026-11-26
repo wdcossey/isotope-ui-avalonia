@@ -30,9 +30,10 @@ public static class SampleApp
         ("Buttons", ButtonsPage.Render),
         ("Menus", MenusPage.Render),
         ("Numbers", NumbersPage.Render),
-        ("Split view", SplitViewPage.Render),
-        ("Rich text", RichTextPage.Render),
+        ("Split", SplitViewPage.Render),
+        ("Text", RichTextPage.Render),
         ("Icons", IconsPage.Render),
+        ("Lists", ListsPage.Render),
         ("Errors", ErrorsPage.Render),
     ];
 

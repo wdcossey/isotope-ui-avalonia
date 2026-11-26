@@ -10,9 +10,10 @@ The headless tests (`SampleAppTests`) mount every page, click through its main i
 window still has to show what they can't: hover tooltips appearing, menus opened with the mouse, right-click menus,
 keyboard input, and how the tabs and the split view look and animate. The checklist below is that run.
 
-**Last run:** 2026-11-26, Windows, at `cf10271` (#73, #92): the two lines that list the pages, and the Rich text and
-Icons pages, passed. Every other line passed on 2026-11-24 at `3678918` (#34). Linux and macOS haven't been run in a
-real window yet. Before a new run, clear the ticks.
+**Last run:** 2026-11-26, Windows, at `cf10271` (#73, #92): the Rich text and Icons pages passed, and so did the page
+list as it was then (eight tabs). Every other line passed on 2026-11-24 at `3678918` (#34). The Lists page (#94) came
+later: its lines, and the two that list the pages (now nine tabs: #94 shortened Split view to **Split** and Rich text to
+**Text**), haven't been run. Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
 
 ## Checklist
 
@@ -20,10 +21,10 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### The window and its menus
 
-- [x] The window opens titled "Isotope samples", with a menu bar (Go, View) above eight tabs on one line (on
-  Windows; another system's UI font may wrap the last): Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons,
+- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above nine tabs on one line (on
+  Windows; another system's UI font may wrap the last): Basics, Buttons, Menus, Numbers, Split, Text, Icons, Lists,
   Errors. Basics is selected.
-- [x] Click **Go** with the mouse → its menu drops down, listing the eight pages with a radio mark on Basics.
+- [ ] Click **Go** with the mouse → its menu drops down, listing the nine pages with a radio mark on Basics.
 - [x] Choose **Go > Numbers** → the Numbers tab is selected. Click the **Buttons** tab, then open **Go** again → the
   radio mark is on Buttons.
 - [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
@@ -71,7 +72,7 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
   where they were (Avalonia's NumericUpDown refuses typed text outside its range unless ClipValueToMinMax is on).
 - [x] Empty the box and press Enter → the box stays empty; "Value:" and the slider keep the last number.
 
-### Split view
+### Split (the split view)
 
 - [x] The pane (grey, with Inbox, Sent, Archive) is open on the left beside the content; **Pane** is pressed.
 - [x] Click **Archive** → "Showing Archive".
@@ -80,7 +81,7 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
   by itself (a light dismiss) and **Pane** is released: the state followed the control.
 - [x] **Compact inline** and **Compact overlay** → a closed pane leaves a narrow strip.
 
-### Rich text
+### Text (rich text)
 
 - [x] The first line reads "Rich text is **bold**, *italic*, underlined, struck through and coloured, in one text block.",
   each word styled as it says (underlined underlined, struck through crossed out, coloured green).
@@ -105,6 +106,17 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
   2026-11-26: the first ring is an even colour, but its edges aren't smooth (#98).
 - [x] **Next kind** → the last icon shows a glyph ("Aa"), then the ring as a shape, then the ring in its colours, then the
   tick again, with the line above saying which. The row doesn't flicker or shift.
+
+### Lists
+
+- [ ] Four fruit rows (Apple, Banana, Cherry, Damson), each with "counted 0" and a **+1** button. **+1** on Banana →
+  "counted 1"; "Last clicked" still says "nothing yet" (the button's click isn't the item's).
+- [ ] **Reverse**, then **Rotate** → the rows move and Banana keeps "counted 1". **Add** → Elderberry joins at the end.
+- [ ] Click a row → it is highlighted, "Selected:" and "Last clicked:" name it. Reverse → the same fruit stays selected.
+- [ ] Pick **Multiple (Ctrl, Shift)** → a plain click selects one row; Ctrl+click adds one, Shift+click a range.
+  **Toggle (each tap)** → each click selects or deselects its row.
+- [ ] Focus a row (click it, then the arrow keys) and press Enter or Space → "Last clicked" names it.
+- [ ] The thousand rows scroll smoothly to "Row 1000" (Avalonia realises only the rows in view).
 
 ### Errors
 

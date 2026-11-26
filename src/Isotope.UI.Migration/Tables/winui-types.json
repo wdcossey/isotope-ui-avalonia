@@ -3,7 +3,7 @@
     "WinUI and WinRT types and their Avalonia 12 counterparts, for the Reactor -> Isotope migration analyzer (#33).",
     "roots: the first segments of WinUI/WinRT namespaces; excluded: namespaces under a root that aren't WinUI.",
     "namespaces: a WinUI namespace and the Avalonia namespace holding most of its counterparts (used for namespace aliases).",
-    "types[]: winui (full name), avalonia (full name, or null with a note saying what to use instead), members (WinUI member -> Avalonia member, or null for none; unlisted members keep their name).",
+    "types[]: winui (full name), avalonia (full name, or null with a note saying what to use instead), members (WinUI member -> Avalonia member, flags joined by | for a combination, or null for none, which the note explains; unlisted members keep their name).",
     "TableAndFixTests checks that every Avalonia type and member named here exists."
   ],
   "version": 1,
@@ -69,6 +69,7 @@
     {"winui": "Microsoft.UI.Xaml.Media.Stretch", "avalonia": "Avalonia.Media.Stretch"},
     {"winui": "Microsoft.UI.Xaml.Controls.StretchDirection", "avalonia": "Avalonia.Media.StretchDirection"},
     {"winui": "Microsoft.UI.Xaml.Controls.TreeViewSelectionMode", "avalonia": "Avalonia.Controls.SelectionMode", "members": {"None": null}},
+    {"winui": "Microsoft.UI.Xaml.Controls.ListViewSelectionMode", "avalonia": "Avalonia.Controls.SelectionMode", "members": {"Extended": "Multiple", "Multiple": "Multiple | Toggle", "None": null}, "note": "Avalonia's ListBox always lets the user select an item: use SelectionMode.Single and ignore the selection (OnItemClick still reports a tap), or a VStack of buttons (#94)."},
     {"winui": "Microsoft.UI.Xaml.Controls.ScrollingScrollBarVisibility", "avalonia": "Avalonia.Controls.Primitives.ScrollBarVisibility"},
     {"winui": "Microsoft.UI.Xaml.Controls.ScrollingContentOrientation", "avalonia": null, "note": "Upstream's ScrollView is a ScrollViewer here: set its scroll bar visibilities instead (Disabled keeps the content as wide or as tall as the view)."},
     {"winui": "Microsoft.UI.Xaml.Controls.ScrollingScrollMode", "avalonia": null, "note": "Avalonia's ScrollViewer has no scroll mode: use ScrollBarVisibility (Disabled turns scrolling off on that axis)."},
