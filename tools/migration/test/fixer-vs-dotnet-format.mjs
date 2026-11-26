@@ -69,8 +69,9 @@ test('the in-process fixes give the files and the summary dotnet format gives', 
     const source = tree(fixture, false);
     for (const f of ['App/Program.cs', 'Lib/Widgets.cs']) assert.notEqual(files[f], source[f], f + ' was not fixed');
     for (const f of ['App/Strings.Designer.cs', 'App/Generated.cs', 'App/Skipped.cs', 'App/Quiet.cs']) assert.equal(files[f], source[f], f + ' was fixed');
-    const app = inProcess.results.find(r => r.project === 'App/App.csproj');
-    assert.ok(app.formatRuns >= 3, 'the app took ' + app.formatRuns + ' passes');
+    // In ordinal order, each project's IDs are all fixed in two passes (the second once the first has made Isotope's
+    // names resolve), and a third changes nothing.
+    assert.deepEqual(inProcess.results.map(r => [r.project, r.formatRuns]), [['Lib/Lib.csproj', 3], ['App/App.csproj', 3]]);
     assert.equal(inProcess.summary.formatFailures, 0);
     // Renames the namespace fix had to come first for (ISOMIG006, ISOMIG009: members and factories of Isotope's types).
     const program = fs.readFileSync(path.join(tmp, 'in-process', 'samples', 'App', 'Program.cs'), 'utf8');
