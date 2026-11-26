@@ -1,0 +1,29 @@
+{
+  "about": "The migration on upstream's samples (#71), as tools/migration/measure-samples.mjs measures it at the upstream commit below. CI fails when a run differs. Write it with: node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline",
+  "upstream": "561c55739d6999094fed83b63dda6e2c94aef8ec",
+  "counts": {
+    "projects": 36,
+    "files": 358,
+    "projectsBuildBefore": 1,
+    "projectsBuild": 2,
+    "filesBuildBefore": 51,
+    "filesBuildAfter": 108,
+    "errorsBefore": 13699,
+    "errorsAfter": 2936,
+    "brokenByMigration": 0,
+    "brokenFiles": [],
+    "formatFailures": 0,
+    "migrationLeftTotal": 1122,
+    "migrationLeft": {
+      "ISOMIG002": 199,
+      "ISOMIG005": 116,
+      "ISOMIG007": 14,
+      "ISOMIG010": 15,
+      "ISOMIG011": 171,
+      "ISOMIG012": 136,
+      "ISOMIG013": 401,
+      "ISOMIG015": 13,
+      "ISOMIG016": 57
+    }
+  }
+}

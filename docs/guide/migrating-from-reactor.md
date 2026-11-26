@@ -91,8 +91,8 @@ The analyzer binds to Isotope's types, so it runs in the project *after* its ref
 
 ## On upstream's samples
 
-`node tools/migration/measure-samples.mjs --out <empty folder>` measures the migration on upstream's 36 sample
-projects (358 C# files), at the commit in `UPSTREAM.lock`.
+`node tools/migration/measure-samples.mjs --out <empty folder>` measures the migration on upstream's sample projects, at
+the commit in `UPSTREAM.lock`.
 
 - It copies each sample out of the upstream cache and writes an Isotope project file.
 - It compiles every project first, with the project's source generators, as a build does.
@@ -100,30 +100,61 @@ projects (358 C# files), at the commit in `UPSTREAM.lock`.
 - A file counts as building when the compiler reports no error in it.
 - It also prints the commonest diagnostics and errors left.
 
-Measured on 2026-11-25, with rich text (#65):
+### The baseline
 
+The counts below are `tools/migration/samples-baseline.json`. CI's `samples migration` job measures again on every push,
+and fails when a count differs from it (#71):
+
+- A count that got worse fails the job, and the job names it. Fix the change; if it is intended (a new control can
+  bring diagnostics for the members Isotope lacks on it), update the baseline and say why in the PR.
+- A count that got better fails the job too, so the same PR updates the baseline, and the next change is measured
+  against the new counts.
+- Moving `UPSTREAM.lock` changes the samples, so the same PR updates the baseline.
+- A branch push whose changes since its merge base with `main` are all docs skips the measurement: every changed
+  file is under `docs/` or is a `*.md` file anywhere, and nothing else. The job still runs and reports, and its tests,
+  this page's table check among them, still run. `main`, a manual run, and any push the comparison can't be made for
+  are always measured.
+
+To update it, measure with `--write-baseline`:
+
+```sh
+node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline
+```
+
+- It writes the baseline and this page's table, and fails even then, so an update is a deliberate commit: review the
+  diff and commit both files.
+- `--check` instead runs CI's comparison.
+- `--summary <folder>/summary.json` instead of `--out <folder>` checks or writes from an earlier run, without measuring
+  again.
+- Per-message counts (each message names a member or type) and compile errors per ID aren't checked: they move whenever
+  a rename or a control lands, often while the totals get better. The run still prints the commonest.
+
+<!-- samples-baseline: generated from tools/migration/samples-baseline.json by measure-samples.mjs --write-baseline -->
 | | Before the fixes | After |
 |---|---|---|
 | Files that build | 51 of 358 | 108 of 358 |
 | Compile errors | 13,699 | 2,936 |
 | Projects that build | 1 of 36 | 2 of 36 |
+| Files that built before the fixes and not after | | 0 |
+| Failed `dotnet format` runs | | 0 |
 
-- No file that built before the fixes fails after them, and no `dotnet format` run failed.
-- The 51 files that built before use no Reactor or WinUI names, such as the chat sample's model.
-- The two projects that build after are the hello-world app and the chat sample's model.
-- Diagnostics left: 1,122.
-  - 401 ISOMIG013: members and modifiers Isotope lacks. The commonest are `FullDescription` (39) on `Element`, and
-    `Resources` (14) and `SubtleButton` (14) on `ButtonElement`.
-  - 136 ISOMIG012: controls not ported yet. The commonest are `Icon` (14), `ListView` (12) and `FontIcon` (10).
-  - 199 ISOMIG002: Charting (159), Advanced (11), Docking (8), and smaller upstream namespaces.
-  - 171 ISOMIG011 and 116 ISOMIG005: WinUI-only controls and types.
-  - 57 ISOMIG016: WinUI names the table doesn't list.
-  - 13 ISOMIG015: startup.
-  - 15 ISOMIG010: Reactor names with no counterpart, each with what to do instead: `IsTextSelectionEnabled` (9, #65),
-    and NumberBox's `Range`, `SpinButtons` and header argument (#68).
-  - 14 ISOMIG007: shapes left for a hand fix, each with a note: rich text's `IsBold` (9) and `IsItalic` (2), and a
-    ScrollView's `ContentOrientation` (3).
-- Most compile errors left are names Isotope doesn't have: the largest groups are 264 CS0234 (`UI`), 128 CS0103
-  (`Palette`), 91 CS0103 (`Brush`) and 90 CS0103 (`D3Charts`, from Charting).
+| Migration diagnostics left | Count |
+|---|---|
+| ISOMIG002 | 199 |
+| ISOMIG005 | 116 |
+| ISOMIG007 | 14 |
+| ISOMIG010 | 15 |
+| ISOMIG011 | 171 |
+| ISOMIG012 | 136 |
+| ISOMIG013 | 401 |
+| ISOMIG015 | 13 |
+| ISOMIG016 | 57 |
+| All | 1,122 |
+<!-- end samples-baseline -->
+
+- The files that build before the fixes use no Reactor or WinUI names (the chat sample's model, for one).
+- What is left is mostly what Isotope doesn't have yet: members and modifiers (ISOMIG013), controls (ISOMIG012), and
+  upstream's other libraries, Charting most of all (ISOMIG002). Then come WinUI-only controls and types (ISOMIG011,
+  ISOMIG005). The run prints the commonest names for each, and most compile errors left are the same names, unresolved.
 - The samples' other upstream projects (Charting, Advanced, Devtools…) and their NuGet packages are dropped, and the
   script lists them.

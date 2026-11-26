@@ -227,6 +227,10 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **`gh pr merge --auto` stays armed through `gh pr update-branch`.** It merges before any local-only re-run.
 - **Conflict markers can reach `main` through a green build** when they sit in a doc CI doesn't build. After any merge
   or rebase, `git grep -n -I -E '^(<<<<<<<|>>>>>>>)'` must print nothing.
+- **A branch push cancels the branch's running CI (`cancel-in-progress`).** With a 16-minute job, push a proof break and
+  its revert one after the other, each after its run ends, not together. (2026-11-25)
+- **`gh run view --job <id> --log` waits until the whole run ends.** Read a finished job's log early with
+  `gh api repos/<owner>/<repo>/actions/jobs/<id>/logs`. (2026-11-25)
 
 ## Parallel agents
 
@@ -259,6 +263,8 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   `ToggleButtonAutomationPeer` does. Headless tests pass regardless.
 - **PowerShell unrolls a one-item array a function returns.** Return it with `Write-Output -NoEnumerate`, and test the
   one-item case.
+- **A proof helper that restores with `git checkout --` wipes uncommitted edits to that file.** Commit before proving,
+  every time, even for a quick one. (2026-11-25)
 
 ## Working with the developer
 
