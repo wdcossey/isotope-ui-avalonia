@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseChecklist } from '../lib/parse.mjs';
+import { applyResults } from '../lib/writeback.mjs';
 import { post, request, tokenOf } from './http.mjs';
 import { fixture } from './fixture.mjs';
 
@@ -58,7 +59,9 @@ test('serve, answer, stop, resume, finish: the checklist is written back and the
     assert.equal(readFileSync(file, 'utf8'), original.replace('- [x] A ticked', '- [ ] A ticked').replace('- [X] Another', '- [ ] Another'));
     let token = tokenOf((await request(run.port)).text);
     assert.equal((await post(run.port, '/system', { system: 'Test OS' }, token)).status, 200);
-    assert.equal((await post(run.port, '/answer', { key: items[0].key, verdict: 'pass' }, token)).status, 200);
+    // A pass whose note wraps onto new lines, so the failure below it moves down in the written file.
+    const LONG = 'fine '.repeat(40).trim();
+    assert.equal((await post(run.port, '/answer', { key: items[0].key, verdict: 'pass', note: LONG }, token)).status, 200);
     assert.equal((await post(run.port, '/answer', { key: items[1].key, verdict: 'fail', note: 'it broke' }, token)).status, 200);
     const saved = JSON.parse(readFileSync(resultsFile, 'utf8'));
     assert.equal(saved.checklist, 'README.md');
@@ -66,7 +69,7 @@ test('serve, answer, stop, resume, finish: the checklist is written back and the
     // The temporary folder's own name, which any form of its path (escaped backslashes or not) would hold.
     assert.ok(!readFileSync(resultsFile, 'utf8').includes(path.basename(dir)), 'the results file holds a path');
     assert.equal(existsSync(resultsFile + '.tmp'), false, 'a temporary file is left');
-    assert.deepEqual(run.events.filter((e) => e.event === 'answer').map((e) => [e.line, e.verdict, e.note]), [[14, 'pass', ''], [16, 'fail', 'it broke']]);
+    assert.deepEqual(run.events.filter((e) => e.event === 'answer').map((e) => [e.line, e.verdict, e.note]), [[14, 'pass', LONG], [16, 'fail', 'it broke']]);
     run.child.kill();
     await run.exited;
 
@@ -87,9 +90,16 @@ test('serve, answer, stop, resume, finish: the checklist is written back and the
     const written = readFileSync(file, 'utf8');
     const date = /\*\*Failed \(Test OS, (\d{4}-\d{2}-\d{2})\):\*\*/.exec(written)?.[1];
     assert.ok(date, 'no failure note written');
-    const expected = clearedFixture().replace('- [ ] Click **Go**', '- [x] Click **Go**')
-      .replace('- [ ] A ticked line.', `- [ ] A ticked line. **Failed (Test OS, ${date}):** it broke`);
+    // The library's own write-back (tested on its own) of the same answers.
+    const expected = applyResults(clearedFixture(), { system: 'Test OS', answers: {
+      [items[0].key]: { verdict: 'pass', note: LONG, date }, [items[1].key]: { verdict: 'fail', note: 'it broke', date }, [items[2].key]: { verdict: 'skip', note: '', date },
+    } }).text;
     assert.equal(written, expected);
+    assert.match(written, /^- \[x\] Click \*\*Go\*\*/m);
+    assert.ok(written.split('\r\n').length > original.split('\r\n').length, 'the pass note did not wrap');
+    // The summary's line number is the failed line's in the written file.
+    const failedLine = run.events.find((e) => e.event === 'finish').failed[0].line;
+    assert.match(written.split('\r\n')[failedLine - 1], /^- \[ \] A ticked line\./);
     assert.ok(!written.replace(/\r\n/g, '').includes('\n'), 'a bare LF was written');
     assert.equal(existsSync(resultsFile), false, 'the results file is left');
     assert.equal(run.events.at(-1).event, 'finish');
