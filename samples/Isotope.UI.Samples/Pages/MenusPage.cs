@@ -71,7 +71,7 @@ public static class MenusPage
         }
 
         return VStack(12,
-            TextBlock("Right-click a file for its menu. The menus above the tabs work with the mouse too."),
+            TextBlock("Right-click a file for its menu. The menus in the menu bar work with the mouse too."),
             VStack(4, rows.Select(Row).ToArray()),
             TextBlock("Last command: " + last),
             Button("Bring the files back", () =>

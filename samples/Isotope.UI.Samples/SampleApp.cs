@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Isotope.UI;
 using Isotope.UI.Core;
@@ -8,9 +9,10 @@ using static Isotope.UI.Factories;
 namespace Isotope.UI.Samples;
 
 /// <summary>
-/// The sample app: one tab per area (#30), so a real-window run can check what headless tests can't (menus opened with
-/// the mouse, hover tooltips, right-click menus, the look of tabs and the split view). UI as a function of state: each
-/// page is a C# function of its hooks' state, and the root holds the selected page and the tooltip switch.
+/// The sample app: one page per area (#30), chosen from a list beside it (#96), so a real-window run can check what
+/// headless tests can't (menus opened with the mouse, hover tooltips, right-click menus, the look of the list and the
+/// split view). UI as a function of state: each page is a C# function of its hooks' state, and the root holds the
+/// selected page and the tooltip switch.
 /// </summary>
 public static class SampleApp
 {
@@ -23,7 +25,10 @@ public static class SampleApp
     /// <summary>The window's size, as Program opens it.</summary>
     public const double WindowWidth = 820, WindowHeight = 680;
 
-    /// <summary>The pages, in tab order: each tab and each item of the Go menu comes from this list.</summary>
+    /// <summary>The width of the page list beside the pages.</summary>
+    public const double PaneWidth = 120;
+
+    /// <summary>The pages, in list order: each item of the list and of the Go menu, and each page shown, comes from this list.</summary>
     public static readonly (string Name, Func<RenderContext, Element> Render)[] Pages =
     [
         ("Basics", Basics),
@@ -41,11 +46,24 @@ public static class SampleApp
         var (page, setPage) = ctx.UseState(0);
         var (tips, setTips) = ctx.UseState(true);
         return FlexColumn(
-            // The Go menu and the tabs show one state: choosing either moves both.
+            // The Go menu and the list show one state: choosing from either moves both.
             MenuBar(
                 Menu("Go", Pages.Select((p, i) => (MenuFlyoutItemBase)RadioMenuItem(p.Name, "page", i == page, () => setPage(i))).ToArray()),
                 Menu("View", ToggleMenuItem("Show tooltips", tips, setTips))),
-            TabControl(page, setPage, Pages.Select(p => TabItem(p.Name, Component(p.Render))).ToArray())
+            (SplitView(
+                // AlwaysSelected: a Ctrl+click on the selected page can't leave the list with nothing selected.
+                ListBox(Pages.Select(p => p.Name).ToArray(), page, i => { if (i >= 0) setPage(i); }) with
+                {
+                    SelectionMode = SelectionMode.AlwaysSelected,
+                },
+                // Every page stays mounted, in one cell, and only the selected one is shown: each keeps its state.
+                Grid([GridSize.Star()], [GridSize.Star()],
+                    Pages.Select((p, i) => (Element?)Component(p.Render).IsVisible(i == page)).ToArray()))
+            with
+            {
+                DisplayMode = SplitViewDisplayMode.Inline,
+                OpenPaneLength = PaneWidth,
+            })
                 .Provide(ShowTips, tips)
                 .Flex(grow: 1));
     }

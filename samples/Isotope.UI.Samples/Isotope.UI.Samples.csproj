@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- The sample app (#16, #30): a tab per area (the counter and todo, buttons, menus, numbers, the split view, error
-       boundaries), through the public factories. Run it with "dotnet run" (a real window); README.md has the checklist. -->
+  <!-- The sample app (#16, #30): a page per area, chosen from a list (#96): the counter and todo, buttons, menus,
+       numbers, the split view, rich text, icons and error boundaries, through the public factories. Run it with "dotnet run" (a real window); README.md has the checklist. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>

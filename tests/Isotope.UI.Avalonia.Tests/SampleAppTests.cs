@@ -17,7 +17,8 @@ namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
 /// The sample app's pages (#30), headless: the whole app in a headless window (no real window), each page selected with a
-/// headless click on its tab and its main interaction driven with headless mouse input, then rendered to PNG. What only a
+/// headless click on its item in the page list (#96) and its main interaction driven with headless mouse input, then
+/// rendered to PNG. What only a
 /// real window shows (hover tooltips appearing, how menus and the split view look) is the developer's check, from
 /// samples/Isotope.UI.Samples/README.md.
 /// </summary>
@@ -64,16 +65,42 @@ public sealed class SampleAppTests : IDisposable
     private static T Labelled<T>(Control root, string label) where T : ContentControl =>
         All<T>(root).FirstOrDefault(c => Equals(c.Content, label)) ?? throw new InvalidOperationException("nothing labelled " + label);
 
-    private static TabControl Tabs(DispatcherHost host) => All<TabControl>(host.Root).Single();
+    // The app's split view: the first in the tree (the Split view page has its own, inside the content).
+    private static AvSplitView Shell(DispatcherHost host) => All<AvSplitView>(host.Root).First();
 
-    // Selects a page as the user does: a click on its tab's header.
+    private static ListBox PageList(DispatcherHost host) => Assert.IsType<ListBox>(Shell(host).Pane);
+
+    // Every page's control, in list order: all mounted, one shown.
+    private static List<Control> PageControls(DispatcherHost host) =>
+        Assert.IsType<Grid>(Shell(host).Content).Children.ToList();
+
+    // The page shown, after checking that it's the only one shown and that the list has it selected.
+    private static Control Shown(DispatcherHost host, string name)
+    {
+        var index = Array.FindIndex(SampleApp.Pages, p => p.Name == name);
+        Assert.Equal(index, PageList(host).SelectedIndex);
+        var pages = PageControls(host);
+        Assert.Equal(SampleApp.Pages.Length, pages.Count);
+        Assert.Equal([index], pages.Select((p, i) => (p, i)).Where(x => x.p.IsVisible).Select(x => x.i));
+        return pages[index];
+    }
+
+    // The Go menu's items that have the radio mark.
+    private static IEnumerable<string> GoMarked(DispatcherHost host) =>
+        All<AvMenuItem>(host.Root).Single(i => Equals(i.Header, "Go")).Items.Cast<AvMenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header!);
+
+    // Selects a page as the user does: a click on its item in the list.
     private static Control Page(DispatcherHost host, string name)
     {
-        var tabs = Tabs(host);
-        var tab = tabs.Items.Cast<TabItem>().Single(t => Equals(t.Header, name));
-        Click(tab);
-        Assert.Same(tab, tabs.SelectedItem);
-        return (Control)tab.Content!;
+        Click(Labelled<ListBoxItem>(PageList(host), name));
+        return Shown(host, name);
+    }
+
+    private static void Press(Window window, PhysicalKey key)
+    {
+        window.KeyPressQwerty(key, RawInputModifiers.None);
+        window.KeyReleaseQwerty(key, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
     }
 
     // Opens a menu bar's top-level menu with a click on its header, then clicks the item.
@@ -96,46 +123,101 @@ public sealed class SampleAppTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void The_app_shows_a_tab_per_page_and_the_Basics_counter_and_todo_work()
+    public void The_app_lists_every_page_beside_it_and_the_Basics_counter_and_todo_work()
     {
         var (host, window) = Open();
-        var tabs = Tabs(host);
-        Assert.Equal(SampleApp.Pages.Select(p => p.Name), tabs.Items.Cast<TabItem>().Select(t => (string)t.Header!));
-        Assert.Equal(0, tabs.SelectedIndex);
+        var shell = Shell(host);
+        Assert.Equal((SplitViewDisplayMode.Inline, true), (shell.DisplayMode, shell.IsPaneOpen));
+        var list = PageList(host);
+        Assert.Equal(SampleApp.Pages.Select(p => p.Name), All<ListBoxItem>(list).Select(i => (string)i.Content!));
+        var page = Shown(host, "Basics");
+        Assert.Equal(["Basics"], GoMarked(host));
 
-        Click(Labelled<Button>(host.Root, "Click"));
-        Assert.Contains("Clicked 1 times", Texts(host.Root));
+        Click(Labelled<Button>(page, "Click"));
+        Assert.Contains("Clicked 1 times", Texts(page));
 
-        var box = All<TextBox>(host.Root).Single();
+        var box = All<TextBox>(page).Single();
         box.Focus();
         window.KeyTextInput("Water the plants");
         Dispatcher.UIThread.RunJobs();
-        Click(Labelled<Button>(host.Root, "Add"));
-        Assert.Contains("[ ] Water the plants", Texts(host.Root));
-        Assert.Contains("1 of 1 left", Texts(host.Root));
+        Click(Labelled<Button>(page, "Add"));
+        Assert.Contains("[ ] Water the plants", Texts(page));
+        Assert.Contains("1 of 1 left", Texts(page));
         Save(window, "sample-basics.png");
     }
 
     [AvaloniaFact]
-    public void The_Go_menu_and_the_tabs_share_the_page_and_the_View_menu_turns_tooltips_off()
+    public void The_Go_menu_and_the_list_share_the_page_and_the_View_menu_turns_tooltips_off()
     {
         var (host, window) = Open();
-        var tabs = Tabs(host);
 
-        ChooseFromMenuBar(host, "Go", "Numbers");
-        Assert.Equal(3, tabs.SelectedIndex);
-        Assert.Contains("Value: 20", Texts(host.Root));
+        ChooseFromMenuBar(host, "Go", "Numbers"); // the menu moves the list's selection
+        Assert.Contains("Value: 20", Texts(Shown(host, "Numbers")));
+        Assert.Equal(["Numbers"], GoMarked(host));
 
-        Page(host, "Buttons"); // a tab click moves the Go menu's radio item
-        var go = All<AvMenuItem>(host.Root).Single(i => Equals(i.Header, "Go"));
-        Assert.Equal(["Buttons"], go.Items.Cast<AvMenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header!));
+        var page = Page(host, "Buttons"); // a click in the list moves the Go menu's radio item
+        Assert.Equal(["Buttons"], GoMarked(host));
 
-        var bold = Labelled<ToggleButton>(host.Root, "Bold");
+        var bold = Labelled<ToggleButton>(page, "Bold");
         Assert.Equal("Stays pressed until clicked again", AvToolTip.GetTip(bold));
         ChooseFromMenuBar(host, "View", "Show tooltips");
         Assert.Null(AvToolTip.GetTip(bold));
         ChooseFromMenuBar(host, "View", "Show tooltips");
         Assert.Equal("Stays pressed until clicked again", AvToolTip.GetTip(bold));
+    }
+
+    [AvaloniaFact]
+    public void Switching_pages_keeps_each_pages_state()
+    {
+        var (host, window) = Open();
+        var basics = Shown(host, "Basics");
+        Click(Labelled<Button>(basics, "Click"));
+        Click(Labelled<Button>(basics, "Click"));
+        var draft = All<TextBox>(basics).Single();
+        draft.Focus();
+        window.KeyTextInput("Not added yet");
+        Dispatcher.UIThread.RunJobs();
+
+        var numbers = Page(host, "Numbers");
+        var box = All<NumericUpDown>(numbers).Single();
+        Click(All<RepeatButton>(box).Single(b => b.Name == "PART_IncreaseButton"));
+        Assert.Equal(25m, box.Value);
+
+        var errors = Page(host, "Errors");
+        Click(Labelled<Button>(errors, "Throw"));
+        Assert.Contains("The panel failed: " + ErrorsPage.Message, Texts(errors));
+
+        // Back to each: the same controls, with what was done on them.
+        Assert.Same(basics, Page(host, "Basics"));
+        Assert.Contains("Clicked 2 times", Texts(basics));
+        Assert.Equal("Not added yet", draft.Text);
+        Assert.Same(numbers, Page(host, "Numbers"));
+        Assert.Equal(25m, box.Value);
+        Assert.Contains("Value: 25", Texts(numbers));
+        Assert.Same(errors, Page(host, "Errors"));
+        Assert.Contains("The panel failed: " + ErrorsPage.Message, Texts(errors));
+    }
+
+    [AvaloniaFact]
+    public void Arrow_keys_in_the_list_change_the_page_and_Tab_goes_into_the_page_shown()
+    {
+        var (host, window) = Open();
+        var list = PageList(host);
+        var basics = All<ListBoxItem>(list)[0];
+        basics.Focus();
+        Dispatcher.UIThread.RunJobs();
+
+        Press(window, PhysicalKey.ArrowDown);
+        var buttons = Shown(host, "Buttons");
+        Assert.Equal(["Buttons"], GoMarked(host));
+        Press(window, PhysicalKey.ArrowDown);
+        Shown(host, "Menus");
+        Press(window, PhysicalKey.ArrowUp);
+        Assert.Same(buttons, Shown(host, "Buttons"));
+
+        Press(window, PhysicalKey.Tab); // out of the list and into the shown page, not a hidden one
+        var focused = Assert.IsAssignableFrom<Control>(window.FocusManager!.GetFocusedElement());
+        Assert.Contains(buttons, focused.GetVisualAncestorsOfType<Control>());
     }
 
     [AvaloniaFact]
@@ -320,16 +402,30 @@ public sealed class SampleAppTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void The_tabs_fit_on_one_line_in_the_apps_window()
+    public void Every_page_and_the_list_fit_in_the_apps_window()
     {
+        // What each wants with no limit (its desired size measured against infinity) against the room it has: the list
+        // beside the pages, and each page in the rest of the window's width. The window is 820 wide for this (#96).
         var (host, _) = Open();
-        var tabs = Tabs(host).Items.Cast<TabItem>().ToList();
-        Assert.All(tabs, t => Assert.True(t.Bounds.Width > 20, $"{t.Header} is {t.Bounds.Width} wide: not measured"));
-        // The 820 width is chosen for Windows' UI font. With ubuntu-latest's default font the headers are wider and the eighth
-        // wraps (CI run 318), as it may in a real window on Linux, so only Windows checks the line.
-        if (!OperatingSystem.IsWindows()) return;
-        Assert.Single(tabs.Select(t => t.Bounds.Top).Distinct()); // every header on the first line: none wrapped
-        Assert.True(tabs[^1].Bounds.Right <= SampleApp.WindowWidth, $"the last header ends at {tabs[^1].Bounds.Right}");
+        var list = PageList(host);
+        var room = Shell(host).Content is Control content ? content.Bounds.Size : default;
+        Assert.Equal(SampleApp.WindowWidth - SampleApp.PaneWidth, room.Width);
+        static Size Wanted(Control c)
+        {
+            c.Measure(Size.Infinity);
+            var size = c.DesiredSize;
+            c.InvalidateMeasure();
+            return size;
+        }
+
+        Assert.All(All<ListBoxItem>(list), i => Assert.True(Wanted(i).Width <= SampleApp.PaneWidth, $"{i.Content} wants {Wanted(i).Width}"));
+        Assert.True(Wanted(list).Height <= list.Bounds.Height, $"the list wants {Wanted(list).Height} of {list.Bounds.Height}");
+        foreach (var (name, _) in SampleApp.Pages)
+        {
+            var page = Page(host, name);
+            var wanted = Wanted(page);
+            Assert.True(wanted.Width <= room.Width && wanted.Height <= room.Height, $"{name} wants {wanted} of {room}");
+        }
     }
 
     [AvaloniaFact]

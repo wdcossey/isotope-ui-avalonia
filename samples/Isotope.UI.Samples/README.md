@@ -1,6 +1,7 @@
 # The sample app
 
-One window with a tab per area, written as Isotope function components (no XAML). Run it from the repository root:
+One window with a page per area, chosen from a list on the left (#96), written as Isotope function components (no
+XAML). Run it from the repository root:
 
 ```sh
 dotnet run --project samples/Isotope.UI.Samples
@@ -8,12 +9,12 @@ dotnet run --project samples/Isotope.UI.Samples
 
 The headless tests (`SampleAppTests`) mount every page, click through its main interaction and render it to PNG. A real
 window still has to show what they can't: hover tooltips appearing, menus opened with the mouse, right-click menus,
-keyboard input, and how the tabs and the split view look and animate. The checklist below is that run.
+keyboard input, and how the page list and the split view look and animate. The checklist below is that run.
 
 **Last run:** 2026-11-24, Windows, at `3678918` (#34): every line passed. Linux and macOS haven't been run in a real
-window yet. The Rich text page (#65) and the Icons page (#91) came later: their lines, and the two that list the pages,
-haven't been run. Before a
-new run, clear the ticks.
+window yet. The Rich text page (#65) and the Icons page (#91) came later: their lines haven't been run. The window
+and menu lines are new (#96: a list of the pages replaced the tabs) and haven't been run either. Before a new run, clear
+the ticks.
 
 ## Checklist
 
@@ -21,15 +22,17 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### The window and its menus
 
-- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above eight tabs on one line (on
-  Windows; another system's UI font may wrap the last): Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons,
-  Errors. Basics is selected.
+- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above a list of the pages on the left, each
+  name on one line and none cut off: Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons, Errors. Basics is
+  selected, and its page fills the rest of the window; no page is cut off on the right.
 - [ ] Click **Go** with the mouse → its menu drops down, listing the eight pages with a radio mark on Basics.
-- [x] Choose **Go > Numbers** → the Numbers tab is selected. Click the **Buttons** tab, then open **Go** again → the
-  radio mark is on Buttons.
+- [ ] Choose **Go > Numbers** → Numbers is selected in the list and its page shows. Click **Buttons** in the list, then
+  open **Go** again → the radio mark is on Buttons.
 - [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
   closes it.
-- [x] Switch between tabs → each page keeps what you did on it (a count, a typed draft, a deleted file).
+- [ ] Switch between pages → each page keeps what you did on it (a count, a typed draft, a deleted file).
+- [ ] Click a page in the list, then press Down and Up → the selection moves and its page shows. Press Tab → the focus
+  moves into the page shown (its first control), never into a hidden page.
 
 ### Basics
 
