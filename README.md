@@ -57,7 +57,7 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
 - **An MCP server for coding agents** (`Isotope.UI.Mcp`, a `dotnet tool` with the command `isotope-mcp`): search and read
   the API with its docs, map Reactor names to Isotope's, run the migration on a C# file, and read the guides
   ([its README](src/Isotope.UI.Mcp/README.md)).
-- **Tests:** 1,311 headless library tests, 622 of them upstream's own engine tests, plus upstream's 794 Yoga tests.
+- **Tests:** 1,311 headless library tests, 622 of them upstream's own engine tests, plus upstream's 780 Yoga tests.
 
 Not there yet: more controls (grid views, lazily mounted lists…), tracked from what the migration tool finds missing in
 upstream's samples (#35); animation; and published packages (they build and are checked on every push;
