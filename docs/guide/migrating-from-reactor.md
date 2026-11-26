@@ -136,7 +136,7 @@ node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline
 | | Before the fixes | After |
 |---|---|---|
 | Files that build | 51 of 358 | 108 of 358 |
-| Compile errors | 13,699 | 2,936 |
+| Compile errors | 13,699 | 2,912 |
 | Projects that build | 1 of 36 | 2 of 36 |
 | Files that built before the fixes and not after | | 0 |
 | Failed `dotnet format` runs | | 0 |
@@ -144,15 +144,15 @@ node tools/migration/measure-samples.mjs --out <empty folder> --write-baseline
 | Migration diagnostics left | Count |
 |---|---|
 | ISOMIG002 | 199 |
-| ISOMIG005 | 116 |
+| ISOMIG005 | 118 |
 | ISOMIG007 | 14 |
 | ISOMIG010 | 15 |
-| ISOMIG011 | 171 |
-| ISOMIG012 | 136 |
-| ISOMIG013 | 401 |
+| ISOMIG011 | 176 |
+| ISOMIG012 | 106 |
+| ISOMIG013 | 402 |
 | ISOMIG015 | 13 |
-| ISOMIG016 | 57 |
-| All | 1,122 |
+| ISOMIG016 | 56 |
+| All | 1,099 |
 <!-- end samples-baseline -->
 
 - The files that build before the fixes use no Reactor or WinUI names (the chat sample's model, for one).

@@ -14,9 +14,6 @@ namespace Isotope.UI.Core
         NavigationLifecycle,
     }
 
-    /// <summary>An icon shown with a command. The Avalonia icon records come with the element vocabulary.</summary>
-    public abstract record IconData;
-
     /// <summary>A keyboard shortcut, in Avalonia's key vocabulary.</summary>
     public record KeyboardAcceleratorData(Avalonia.Input.Key Key, Avalonia.Input.KeyModifiers Modifiers = Avalonia.Input.KeyModifiers.None);
 }

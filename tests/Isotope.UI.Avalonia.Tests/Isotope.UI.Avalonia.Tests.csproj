@@ -18,6 +18,8 @@
     <!-- The sample app's components (#16, #30), rendered headless by HostTests and SampleAppTests (the sample itself is an
          app, not referenced): every file but Program.cs, which holds the app's entry point. -->
     <Compile Include="..\..\samples\Isotope.UI.Samples\**\*.cs" Exclude="..\..\samples\Isotope.UI.Samples\Program.cs;..\..\samples\Isotope.UI.Samples\bin\**;..\..\samples\Isotope.UI.Samples\obj\**" Link="Samples\%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- And its assets (#91: the Icons page's bitmap), at the same path, so its avares URIs name this assembly. -->
+    <AvaloniaResource Include="..\..\samples\Isotope.UI.Samples\Assets\**" Link="Assets\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <!-- xunit.v3 3.2.x: the version Avalonia.Headless.XUnit 12.1.6 is built against (as in Spike D). -->

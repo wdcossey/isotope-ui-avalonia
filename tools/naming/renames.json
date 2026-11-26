@@ -54,7 +54,12 @@
     "SpanElement": "Avalonia.Controls.Documents.Span",
     "BoldElement": "Avalonia.Controls.Documents.Bold",
     "ItalicElement": "Avalonia.Controls.Documents.Italic",
-    "UnderlineElement": "Avalonia.Controls.Documents.Underline"
+    "UnderlineElement": "Avalonia.Controls.Documents.Underline",
+    "IconElement": "Avalonia.Controls.IconElement",
+    "PathIconData": "Avalonia.Controls.PathIcon",
+    "FontIconData": "Avalonia.Controls.TextBlock",
+    "BitmapIconData": "Avalonia.Controls.IconElement",
+    "ImageIconData": "Avalonia.Controls.Image"
   },
   "members": [
     {"record": "TextBlockElement", "reactor": "Content", "avalonia": "Text", "kind": "rename"},
@@ -120,7 +125,12 @@
     {"record": "RichTextInline", "reactor": "FontFamily", "avalonia": "FontFamily", "kind": "shape", "note": "Now Avalonia's FontFamily (it was a string), which a string converts to."},
     {"record": "RichTextRun", "reactor": "IsBold", "avalonia": "FontWeight", "kind": "shape", "note": "Avalonia has FontWeight only: IsBold = true is FontWeight = FontWeight.Bold, or .Bold()."},
     {"record": "RichTextRun", "reactor": "IsItalic", "avalonia": "FontStyle", "kind": "shape", "note": "Avalonia has FontStyle only: IsItalic = true is FontStyle = FontStyle.Italic, or .Italic()."},
-    {"record": "RichTextRun", "reactor": "IsStrikethrough", "avalonia": "TextDecorations", "kind": "shape", "note": "Avalonia has TextDecorations only: IsStrikethrough = true is TextDecorations = Avalonia.Media.TextDecorations.Strikethrough, or .Strikethrough()."}
+    {"record": "RichTextRun", "reactor": "IsStrikethrough", "avalonia": "TextDecorations", "kind": "shape", "note": "Avalonia has TextDecorations only: IsStrikethrough = true is TextDecorations = Avalonia.Media.TextDecorations.Strikethrough, or .Strikethrough()."},
+    {"record": "IconElement", "reactor": "Data", "avalonia": "Data", "kind": "kept", "note": "No member of Avalonia's IconElement: the icon's data, whose kind chooses the control (a PathIcon, a TextBlock, a bitmap icon or an Image) (#91)."},
+    {"record": "FontIconData", "reactor": "Glyph", "avalonia": "Glyph", "kind": "kept", "note": "No Avalonia counterpart: Avalonia's core has no glyph icon. The glyph is the TextBlock's Text (#91)."},
+    {"record": "FontIconData", "reactor": "FontFamily", "avalonia": "FontFamily", "kind": "shape", "note": "Now Avalonia's FontFamily (it was a string). FontIcon(...) and the record's other constructor still take a font's name, where null is the default (#91)."},
+    {"record": "BitmapIconData", "reactor": "Source", "avalonia": "Source", "kind": "kept", "note": "No member of Avalonia's IconElement: the bitmap's URI, loaded as an Image's Source is (a file, or an avares:// resource) (#91)."},
+    {"record": "BitmapIconData", "reactor": "ShowAsMonochrome", "avalonia": "ShowAsMonochrome", "kind": "kept", "note": "No Avalonia counterpart: Avalonia's core has no BitmapIcon. Isotope's bitmap icon draws the bitmap's shape in the foreground, as WinUI's (#91)."}
   ],
   "parameters": [
     {"factory": "NumericUpDown", "reactor": "header", "avalonia": null, "position": 2, "note": "Avalonia's NumericUpDown has no header (Reactor's NumberBox took it third): put a TextBlock label beside it; PlaceholderText is the text shown while it is empty (#68)."},
@@ -206,7 +216,11 @@
     {"reactor": "RichTextRun", "avalonia": "RunElement", "status": "applied", "note": "Avalonia's Run (#65)."},
     {"reactor": "RichTextLineBreak", "avalonia": "LineBreakElement", "status": "applied", "note": "Avalonia's LineBreak (#65)."},
     {"reactor": "RichTextInlineUIContainer", "avalonia": "InlineUIContainerElement", "status": "applied", "note": "Avalonia's InlineUIContainer (#65). Its Child is an element; Reactor's Factory (a native control) has no counterpart."},
-    {"reactor": "RichTextParagraph", "avalonia": "RichTextParagraph", "status": "kept", "note": "No Avalonia counterpart: Avalonia's text has no paragraphs (blocks). A paragraph is a Span of its inlines on a line of its own (#65)."}
+    {"reactor": "RichTextParagraph", "avalonia": "RichTextParagraph", "status": "kept", "note": "No Avalonia counterpart: Avalonia's text has no paragraphs (blocks). A paragraph is a Span of its inlines on a line of its own (#65)."},
+    {"reactor": "IconElement", "avalonia": "IconElement", "status": "kept", "note": "Avalonia's IconElement is the base of its icons, as WinUI's is, and the record's control depends on its data, so Avalonia's naming would give IconElementElement (#91)."},
+    {"reactor": "FontIconData", "avalonia": "FontIconData", "status": "kept", "note": "No Avalonia counterpart: Avalonia's core has no glyph icon. A FontIconData shows as a TextBlock in its font (#91)."},
+    {"reactor": "BitmapIconData", "avalonia": "BitmapIconData", "status": "kept", "note": "No Avalonia counterpart: Avalonia's core has no BitmapIcon. Isotope draws the bitmap, or its shape in the foreground, itself (#91)."},
+    {"reactor": "ImageIconData", "avalonia": "ImageIconData", "status": "kept", "note": "Avalonia's core has no ImageIcon: an ImageIconData shows as an Image, and ImageData wouldn't say it is an icon's (#91)."}
   ],
   "factories": [
     {"reactor": "TabView", "avalonia": "TabControl", "status": "applied", "note": "Avalonia's TabControl (#46)."},
@@ -243,6 +257,10 @@
     {"reactor": "RichTextBlock", "avalonia": "SelectableTextBlock", "status": "applied", "note": "WinUI's RichTextBlock is Avalonia's SelectableTextBlock (#65): its paragraphs, or Avalonia's inlines."},
     {"reactor": "InlineUI", "avalonia": "InlineUIContainer", "status": "applied", "note": "Avalonia's InlineUIContainer (#65). Reactor's InlineUI(Func<FrameworkElement>), a native control, has no counterpart."},
     {"reactor": "Paragraph", "avalonia": "Paragraph", "status": "kept", "note": "No Avalonia counterpart: Avalonia's text has no paragraphs. It builds a RichTextParagraph, a Span of its inlines on a line of its own (#65)."},
-    {"reactor": "MenuItems", "avalonia": "MenuItems", "status": "kept", "note": "Avalonia's name, MenuFlyout, is Reactor's factory for a target with a menu (MenuFlyout(target, items), not in Isotope yet), so the migration would give it another meaning (#46)."}
+    {"reactor": "MenuItems", "avalonia": "MenuItems", "status": "kept", "note": "Avalonia's name, MenuFlyout, is Reactor's factory for a target with a menu (MenuFlyout(target, items), not in Isotope yet), so the migration would give it another meaning (#46)."},
+    {"reactor": "Icon", "avalonia": "Icon", "status": "kept", "note": "Avalonia's IconElement is the base of its icons, and the record's control depends on its data: Icon(PathIcon(...)), Icon(FontIcon(...)), Icon(BitmapIcon(...)) or Icon(ImageIcon(...)) (#91)."},
+    {"reactor": "FontIcon", "avalonia": "FontIcon", "status": "kept", "note": "No Avalonia counterpart: Avalonia's core has no glyph icon. It builds a FontIconData, shown as a TextBlock in its font (#91)."},
+    {"reactor": "BitmapIcon", "avalonia": "BitmapIcon", "status": "kept", "note": "No Avalonia counterpart: Avalonia's core has no BitmapIcon. It builds a BitmapIconData, which Isotope draws itself (#91)."},
+    {"reactor": "ImageIcon", "avalonia": "ImageIcon", "status": "kept", "note": "Avalonia's core has no ImageIcon. It builds an ImageIconData, shown as an Image; Image(...) is the image element's factory (#91)."}
   ]
 }

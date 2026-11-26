@@ -145,6 +145,35 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Icons (issue #91, 2026-11-26)
+
+- **What landed:** upstream's `IconData` union with Avalonia's value types (`PathIconData`, `FontIconData`, `BitmapIconData`,
+  `ImageIconData`) and `IconElement(IconData Data)`, with Reactor's factories `Icon`, `PathIcon`, `FontIcon`, `BitmapIcon` and
+  `ImageIcon` (kept entries in `renames.json`: Avalonia's core has no glyph, bitmap or image icon). A hand-written
+  `IElementHandler` (`[WrapPolymorphic]` is ISOTOPEGEN004) chooses the control from the data's kind: Avalonia's `PathIcon`
+  (markup parsed by `Geometry.Parse`), a text block centring the glyph, an internal bitmap icon (an Avalonia `IconElement`
+  that draws the bitmap, or with `ShowAsMonochrome` masks the foreground with its opacity) and Avalonia's `Image`. The same
+  kind is patched in place; another kind mounts a new control (`Reconciler.CanUpdate` declines it).
+- **Avalonia 12.1.6, measured:** its core's only icon controls are `IconElement` and `PathIcon`. In the Fluent theme a
+  `PathIcon` is 20 by 20 and scales its shape to its size. A glyph keeps WinUI's defaults (Segoe Fluent Icons, then Segoe
+  MDL2 Assets, at 20) under its own font and size and the modifiers'; the Segoe fonts exist on Windows only. Avalonia's
+  string-to-`FontFamily` conversion throws on null, so `FontIcon` and `FontIconData` also take a font name, where null is
+  the default.
+- **Unlike upstream's:** no `SymbolIconData`, `SymbolIcon`, `Icon(Symbol)` or `Icon(string)`: WinUI's symbols are Segoe
+  glyphs, which can't be redistributed. The migration reports them (ISOMIG005, ISOMIG011, ISOMIG010) with what to use
+  instead. **Decided** (developer, 2026-11-26): Isotope ships no symbol set or font, Fluent UI System Icons included;
+  the guide ("WinUI symbols") says how to use Segoe Fluent Icons on Windows (`FontIcon(glyph, "Segoe Fluent Icons")`)
+  or an app's own icons, and the migration's notes point there. The sample window is 820 wide, so its eight tabs fit on
+  one line on Windows (with ubuntu-latest's default font the eighth still wraps, CI run 318). A bitmap or image URI is a file or `avares://` resource;
+  a command's `Icon` takes the new records but nothing draws it yet. `IconElement` clashes with
+  `Avalonia.Controls.IconElement` where both namespaces are imported (CS0104).
+- **Measured on upstream's samples** (`measure-samples.mjs`, 36 projects, 358 files, upstream 561c5573), main `c0b2e19`
+  against #91: files that build 108 and 108; compile errors 2,936 → 2,912; diagnostics left 1,122 → 1,099; ISOMIG012
+  136 → 106 (`Icon` 14, `FontIcon` 10, `PathIcon` 1, and `SymbolIcon` 5 now ISOMIG011); ISOMIG005 116 → 118 and ISOMIG016
+  57 → 56 (WinUI's `SymbolIcon` type is listed); ISOMIG013 401 → 402 (`IconElement.AccessibilityHidden`).
+- **Tests:** library 1,259 → 1,288 on each of net9.0, net10.0 and net11.0, migration 52 → 54; every new test proven to
+  fail with its behaviour broken (31 library breaks, 14 others), on the final head.
+
 ## Writing controls guide (issue #80, 2026-11-26)
 
 - `docs/guide/writing-controls.md`, with spike J as its worked example. Its 12 C# blocks are regions of spike J's code

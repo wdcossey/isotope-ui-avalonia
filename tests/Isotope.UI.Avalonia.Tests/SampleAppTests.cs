@@ -320,6 +320,46 @@ public sealed class SampleAppTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void The_tabs_fit_on_one_line_in_the_apps_window()
+    {
+        var (host, _) = Open();
+        var tabs = Tabs(host).Items.Cast<TabItem>().ToList();
+        Assert.All(tabs, t => Assert.True(t.Bounds.Width > 20, $"{t.Header} is {t.Bounds.Width} wide: not measured"));
+        // The 820 width is chosen for Windows' UI font. With ubuntu-latest's default font the headers are wider and the eighth
+        // wraps (CI run 318), as it may in a real window on Linux, so only Windows checks the line.
+        if (!OperatingSystem.IsWindows()) return;
+        Assert.Single(tabs.Select(t => t.Bounds.Top).Distinct()); // every header on the first line: none wrapped
+        Assert.True(tabs[^1].Bounds.Right <= SampleApp.WindowWidth, $"the last header ends at {tabs[^1].Bounds.Right}");
+    }
+
+    [AvaloniaFact]
+    public void Icons_page_shows_each_kind_and_its_last_icon_changes_kind()
+    {
+        var (host, window) = Open();
+        var page = Page(host, "Icons");
+        var paths = All<global::Avalonia.Controls.PathIcon>(page);
+        Assert.Equal(4, paths.Count); // three shapes and the icon that changes kind
+        Assert.Equal([new Size(20, 20), new Size(32, 32), new Size(48, 48)], paths.Take(3).Select(p => p.Bounds.Size));
+        // The ring, an avares resource of the app, loaded by both bitmap icons and the image.
+        Assert.Equal(2, All<BitmapIconPresenter>(page).Count(b => b.Source is { PixelSize.Width: 24 }));
+        Assert.Single(All<Image>(page), i => i.Source is { Size.Width: 24 });
+        Save(window, "sample-icons.png");
+
+        var last = paths[3];
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Contains("One icon showing a glyph: another kind mounts another control.", Texts(page));
+        Assert.Equal(3, All<global::Avalonia.Controls.PathIcon>(page).Count);
+        Assert.Null(last.Parent);
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Equal(3, All<BitmapIconPresenter>(page).Count);
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Equal(2, All<Image>(page).Count);
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Equal(4, All<global::Avalonia.Controls.PathIcon>(page).Count);
+        Assert.Contains("One icon showing a shape: another kind mounts another control.", Texts(page));
+    }
+
+    [AvaloniaFact]
     public void Errors_page_throw_shows_the_fallback_retry_recovers_and_the_outside_counter_keeps_its_state()
     {
         var (host, window) = Open();
