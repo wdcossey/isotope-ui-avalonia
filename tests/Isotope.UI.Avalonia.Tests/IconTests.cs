@@ -13,6 +13,7 @@ using Xunit;
 using static Isotope.UI.Factories;
 using AvPathIcon = Avalonia.Controls.PathIcon;
 using AvImage = Avalonia.Controls.Image;
+using AvTextBlock = Avalonia.Controls.TextBlock;
 
 namespace Isotope.UI.Avalonia.Tests;
 
@@ -176,6 +177,21 @@ public class IconTests
         var centre = new Point((minX + maxX) / 2.0 - origin.X, (minY + maxY) / 2.0 - origin.Y);
         Assert.InRange(centre.X, 27, 33);
         Assert.InRange(centre.Y, 25, 35); // a line's ascent and descent aren't symmetric about the ink
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void A_style_for_text_blocks_reaches_a_glyph()
+    {
+        var host = new TestHost(() => HStack(Icon(FontIcon("A"))));
+        var window = new Window { Content = host.Root };
+        window.Styles.Add(new global::Avalonia.Styling.Style(x => global::Avalonia.Styling.Selectors.OfType<AvTextBlock>(x))
+        {
+            Setters = { new global::Avalonia.Styling.Setter(AvTextBlock.FontStyleProperty, FontStyle.Italic) },
+        });
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(FontStyle.Italic, host.All<GlyphTextBlock>().Single().FontStyle);
         window.Close();
     }
 
