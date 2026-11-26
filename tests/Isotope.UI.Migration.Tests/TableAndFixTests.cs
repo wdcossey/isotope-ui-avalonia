@@ -39,7 +39,8 @@ public class TableAndFixTests
             }
             var avalonia = compilation.GetTypeByMetadataName(type.Avalonia);
             if (avalonia is null) { missing.Add(type.Avalonia); continue; }
-            foreach (var member in type.Members.Values.OfType<string>())
+            // A combination of flags (Multiple | Toggle, #94) names each one.
+            foreach (var member in type.Members.Values.OfType<string>().SelectMany(m => m.Split('|')).Select(m => m.Trim()))
                 if (!HasMember(avalonia, member)) missing.Add(type.Avalonia + "." + member);
         }
         foreach (var ns in MigrationTables.Default.WinUI.Namespaces.Values.OfType<string>())

@@ -12,11 +12,14 @@ internal sealed class TextBoxEventPayload
 
 /// <summary>
 /// The per-control event payload of a <see cref="Avalonia.Controls.ListBox"/> (#19): the trampoline subscribed to
-/// <c>SelectionChanged</c>, which reports both the selected index and the multiple-selection snapshot.
+/// <c>SelectionChanged</c>, which reports both the selected index and the multiple-selection snapshot, and the tap and
+/// key trampolines of its item click (#94), in one payload because a control holds one.
 /// </summary>
 internal sealed class ListBoxEventPayload
 {
     public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;
+    public EventHandler<Avalonia.Input.TappedEventArgs>? TappedTrampoline;
+    public EventHandler<Avalonia.Input.KeyEventArgs>? KeyDownTrampoline;
 }
 
 /// <summary>

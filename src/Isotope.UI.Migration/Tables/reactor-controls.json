@@ -64,7 +64,6 @@
     {"factory": "LazyHStack", "status": "not-ported", "alternative": "Not in Isotope yet: use an HStack, or a ListBox for virtualisation."},
     {"factory": "LazyVStack", "status": "not-ported", "alternative": "Not in Isotope yet: use a VStack, or a ListBox for virtualisation."},
     {"factory": "Line", "status": "not-ported", "alternative": "Not in Isotope yet (Avalonia: Line)."},
-    {"factory": "ListView", "status": "not-ported", "alternative": "Not in Isotope yet: use a ListBox."},
     {"factory": "LocaleProvider", "status": "not-ported", "alternative": "Not in Isotope yet."},
     {"factory": "MenuFlyout", "status": "not-ported", "alternative": "Not in Isotope yet: use .ContextFlyout(MenuItems(...)) on the element."},
     {"factory": "NavigationHost", "status": "not-ported", "alternative": "Not in Isotope yet: render the current route from state."},

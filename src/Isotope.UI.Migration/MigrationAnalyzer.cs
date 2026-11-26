@@ -152,8 +152,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     if (type.Members.TryGetValue(member, out var mapped))
                     {
                         if (mapped is null) Report(ctx, Rules.NoAvaloniaType, nodes[k].GetLocation(), args: [name + "." + member, Note(type.Note)]);
-                        else Report(ctx, Rules.WinUIType, nodes[k].GetLocation(), replace: Prefix(nodes) + type.Avalonia + "." + mapped,
-                            args: [name + "." + member, type.Avalonia + "." + mapped]);
+                        else Report(ctx, Rules.WinUIType, nodes[k].GetLocation(), replace: Flags(Prefix(nodes) + type.Avalonia + ".", mapped),
+                            args: [name + "." + member, Flags(type.Avalonia + ".", mapped)]);
                         return;
                     }
                     if (!MemberExists(type, member))
@@ -239,8 +239,8 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     if (mapped is null)
                         Report(ctx, Rules.NoAvaloniaType, ma.GetLocation(), args: [type.Name + "." + member, Note(type.Note)]);
                     else if (mapped != member || type.AvaloniaName != type.Name)
-                        Report(ctx, Rules.WinUIType, ma.GetLocation(), replace: type.AvaloniaName + "." + mapped, usings: usings,
-                            args: [type.FullName + "." + member, type.Avalonia + "." + mapped]);
+                        Report(ctx, Rules.WinUIType, ma.GetLocation(), replace: Flags(type.AvaloniaName + ".", mapped), usings: usings,
+                            args: [type.FullName + "." + member, Flags(type.Avalonia + ".", mapped)]);
                     return;
                 }
                 if (!MemberExists(type, member))
@@ -628,6 +628,17 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                      }))
                 if (u.Alias is null && u.StaticKeyword == default && u.Name is not null) result.Add(NameText(u.Name));
             return result;
+        }
+
+        /// <summary>
+        /// A mapped member as code: <c>SelectionMode.Single</c>, or for a combination of flags (<c>"Multiple | Toggle"</c>,
+        /// #94) each flag qualified, in parentheses, so the expression keeps its meaning wherever the member stood.
+        /// </summary>
+        static string Flags(string qualifier, string mapped)
+        {
+            var flags = mapped.Split('|');
+            if (flags.Length == 1) return qualifier + mapped;
+            return "(" + string.Join(" | ", flags.Select(f => qualifier + f.Trim())) + ")";
         }
 
         bool MemberExists(WinUIType type, string member)
