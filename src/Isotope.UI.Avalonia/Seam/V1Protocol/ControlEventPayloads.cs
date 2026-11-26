@@ -19,6 +19,7 @@ internal sealed class ListBoxEventPayload
 {
     public EventHandler<Avalonia.Controls.SelectionChangedEventArgs>? SelectionChangedTrampoline;
     public EventHandler<Avalonia.Input.TappedEventArgs>? TappedTrampoline;
+    public EventHandler<Avalonia.Input.TappedEventArgs>? DoubleTappedTrampoline;
     public EventHandler<Avalonia.Input.KeyEventArgs>? KeyDownTrampoline;
 }
 

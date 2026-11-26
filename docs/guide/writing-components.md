@@ -58,7 +58,7 @@ no counterpart, and for the stack shortcuts `VStack` and `HStack`. Factory param
 | `ToggleSwitch(isChecked, onIsCheckedChanged, onContent, offContent, content)` | `ToggleSwitchElement` | `ToggleSwitch` |
 | `RadioButton(content, isChecked, onIsCheckedChanged, groupName)` | `RadioButtonElement` | `RadioButton` |
 | `ComboBox(items, selectedIndex, onSelectedIndexChanged)` | `ComboBoxElement` | `ComboBox` |
-| `ListBox(items, selectedIndex, onSelectedIndexChanged)` | `ListBoxElement` | `ListBox` |
+| `ListBox(items, selectedIndex, onSelectedIndexChanged)` (strings), `ListBox(selectedIndex, onSelectedIndexChanged, items...)` (elements), `ListBox(items, keySelector, itemTemplate)` (data) | `ListBoxElement`, `ListBoxElement<T>` | `ListBox` (Reactor's `ListView` too; see list boxes below) |
 | `DatePicker(selectedDate, onSelectedDateChanged)` | `DatePickerElement` | `DatePicker` |
 | `TimePicker(selectedTime, onSelectedTimeChanged)` | `TimePickerElement` | `TimePicker` |
 | `ProgressBar(value)`, `ProgressIndeterminate()` | `ProgressBarElement` | `ProgressBar` |
@@ -259,6 +259,51 @@ public static Element SaveSymbol() => Icon(FontIcon("\uE74E", "Segoe Fluent Icon
 > size, 20. Its font is a name, as upstream's (null is the default), or Avalonia's `FontFamily`, and a glyph is centred in
 > a box sized with `.Width(...)` and `.Height(...)`, as WinUI's is. An `ImageIcon` or `BitmapIcon` URI is
 > a file or an `avares://` resource (WinUI's `ms-appx:///` isn't).
+
+List boxes take strings, elements or data items. `ListBox(items, selectedIndex, onSelectedIndexChanged)` lists strings;
+`ListBox(TextBlock("Apples"), TextBlock("Pears"))` lists elements, reconciled as a panel's children are (by key, else by
+position, updated in place, and a keyed one moved with its control and a component's state); and
+`ListBox(items, keySelector, itemTemplate)` builds an element per data item, keyed by the selector (items that are
+`IReactorKeyed` can leave it out). `SelectedIndex` and `OnSelectedIndexChanged` are the controlled selection, as on the
+other selecting controls; `.SelectionMode(...)` takes Avalonia's flags (`Multiple`: Ctrl and Shift add to the
+selection, `Multiple | Toggle`: each tap selects or deselects), and `OnSelectionChanged` then receives every selected
+index, or every selected item on a typed list. `OnItemClick` is called with the index or item the user taps or presses
+Enter or Space on (after the tap selects it; a tap on a button in an item is the button's):
+
+<!-- snippet: list-box -->
+```csharp
+public sealed record Person(string Id, string Name);
+
+public static Element People(RenderContext ctx, IReadOnlyList<Person> people)
+{
+    var (selected, setSelected) = ctx.UseState(-1);
+    var (opened, setOpened) = ctx.UseState("");
+    return VStack(8,
+        // Data items: the template builds each row, keyed by the person's id, so a row that moves keeps its control.
+        ListBox(people, p => p.Id, (p, i) => TextBlock($"{i + 1}. {p.Name}")) with
+        {
+            SelectedIndex = selected,
+            OnSelectedIndexChanged = setSelected,
+            OnItemClick = p => setOpened(p.Name),
+        },
+        TextBlock(opened == "" ? "Click a person" : "Opened " + opened),
+        // Elements as items, several selected with Ctrl and Shift.
+        ListBox(TextBlock("Apples"), TextBlock("Pears"), TextBlock("Plums")).SelectionMode(SelectionMode.Multiple));
+}
+```
+
+Every item's element is built and mounted, while Avalonia realises containers only for the items in view: 10,000 element
+rows realise 8 containers in a 300-high list, and mount in about 0.3 to 0.5 s headless, where 10,000 strings take a few
+milliseconds. A keyed reorder moves the item controls, so nothing remounts, but Avalonia takes a moved item out of its
+container and puts it back, so a control in it loses keyboard focus. An item the user selected stays selected when it
+moves, unless `SelectedIndex` is given: a controlled index stays an index.
+
+> **Coming from Reactor?** `ListView` is `ListBox`, and `ListView<T>` is `ListBox<T>` (the migration renames both, and
+> its `viewBuilder` is `itemTemplate`). `ListViewSelectionMode.Extended` is `SelectionMode.Multiple`,
+> `Multiple` is `SelectionMode.Multiple | SelectionMode.Toggle`, and `None` has no counterpart: an Avalonia list box
+> always lets the user select, so use `Single` and ignore it. A list box has no `Header` (put a `TextBlock` above it),
+> `ItemContainerStyle` or `IncrementalLoadingTrigger`. Upstream's `ListView` mounts only the items in view and
+> rebuilds them when the items array changes; here every item stays mounted and keeps its state.
 
 Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:
 `.Padding(top: 8)`), `.WithBorder("Gray", 2)`, `.BorderBrush(...)`, `.BorderThickness(...)`, `.CornerRadius(...)`,

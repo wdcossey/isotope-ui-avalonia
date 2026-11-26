@@ -267,7 +267,7 @@ public sealed class SampleAppTests : IDisposable
     public void Split_view_page_toggle_drives_the_pane_and_a_light_dismiss_comes_back_to_it()
     {
         var (host, window) = Open();
-        var page = Page(host, "Split view");
+        var page = Page(host, "Split");
         var view = All<AvSplitView>(page).Single();
         var toggle = Labelled<ToggleButton>(page, "Pane");
         Assert.True(view.IsPaneOpen);
@@ -301,7 +301,7 @@ public sealed class SampleAppTests : IDisposable
     public void Rich_text_page_likes_from_a_button_in_the_text_and_rotates_its_keyed_runs()
     {
         var (host, window) = Open();
-        var page = Page(host, "Rich text");
+        var page = Page(host, "Text");
         var blocks = All<TextBlock>(page);
         Assert.Contains(blocks, b => TextOf(b) == "Rich text is bold, italic, underlined, struck through and coloured, in one text block.");
 
@@ -357,6 +357,35 @@ public sealed class SampleAppTests : IDisposable
         Click(Labelled<Button>(page, "Next kind"));
         Assert.Equal(4, All<global::Avalonia.Controls.PathIcon>(page).Count);
         Assert.Contains("One icon showing a shape: another kind mounts another control.", Texts(page));
+    }
+
+    [AvaloniaFact]
+    public void Lists_page_rows_keep_their_counts_across_moves_and_report_selection_and_clicks()
+    {
+        var (host, window) = Open();
+        var page = Page(host, "Lists");
+        var lists = All<ListBox>(page);
+        Assert.Equal(2, lists.Count);
+        var fruit = lists[0];
+        string Row(int i) => All<TextBlock>((Control)fruit.Items[i]!)[0].Text!;
+        Assert.Equal(["Apple", "Banana", "Cherry", "Damson"], Enumerable.Range(0, 4).Select(Row));
+
+        Click(All<Button>((Control)fruit.Items[1]!).Single()); // Banana's +1: the button's click, not the item's
+        Assert.Contains("counted 1", Texts((Control)fruit.Items[1]!));
+        Assert.Contains("Last clicked: nothing yet", Texts(page));
+
+        Click(Labelled<Button>(page, "Reverse"));
+        Assert.Equal(["Damson", "Cherry", "Banana", "Apple"], Enumerable.Range(0, 4).Select(Row));
+        Assert.Contains("counted 1", Texts((Control)fruit.Items[2]!)); // Banana kept its count
+
+        Click(fruit.ContainerFromIndex(0)!);
+        Assert.Contains("Selected: Damson", Texts(page));
+        Assert.Contains("Last clicked: Damson", Texts(page));
+
+        var thousand = lists[1];
+        Assert.Equal(1000, thousand.Items.Count);
+        Assert.InRange(thousand.GetRealizedContainers().Count(), 1, 20);
+        Save(window, "sample-lists.png");
     }
 
     [AvaloniaFact]

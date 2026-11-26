@@ -120,8 +120,8 @@ public partial record ListBoxElement(object[] Items) : Element
     public Action<IReadOnlyList<int>>? OnSelectionChanged { get; init; }
 
     /// <summary>
-    /// Called with an item's index when the user taps it (not a button in it), or presses Enter or Space on it (Reactor's
-    /// name: Avalonia's ListBox has no item-click event). A tap selects the item first, so
+    /// Called with an item's index when the user taps it (not a button in it; each tap of a double tap), or presses Enter or
+    /// Space on it (Reactor's name: Avalonia's ListBox has no item-click event). A tap selects the item first, so
     /// <see cref="OnSelectedIndexChanged"/> comes before it.
     /// </summary>
     public Action<int>? OnItemClick { get; init; }
@@ -227,6 +227,14 @@ public partial record ListBoxElement(object[] Items) : Element
                 trampoline:      __TappedTrampoline,
                 slotIsNull:      static p => p.TappedTrampoline is null,
                 setSlot:         static (p, h) => p.TappedTrampoline = h)
+            // A second tap soon after the first is Avalonia's DoubleTapped, not a Tapped: it is a click too, as each click
+            // of a double click is WinUI's ItemClick.
+            .HandCodedEvent<ListBoxEventPayload, EventHandler<TappedEventArgs>>(
+                subscribe:       static (c, h) => c.AddHandler(InputElement.DoubleTappedEvent, h, RoutingStrategies.Bubble, handledEventsToo: true),
+                callbackPresent: static e => e.HasItemClick ? __NoOpSelectedIndexChanged : null,
+                trampoline:      __TappedTrampoline,
+                slotIsNull:      static p => p.DoubleTappedTrampoline is null,
+                setSlot:         static (p, h) => p.DoubleTappedTrampoline = h)
             .HandCodedEvent<ListBoxEventPayload, EventHandler<KeyEventArgs>>(
                 subscribe:       static (c, h) => c.AddHandler(InputElement.KeyDownEvent, h, RoutingStrategies.Bubble, handledEventsToo: true),
                 callbackPresent: static e => e.HasItemClick ? __NoOpSelectedIndexChanged : null,

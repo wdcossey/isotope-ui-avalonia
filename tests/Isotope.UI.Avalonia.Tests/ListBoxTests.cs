@@ -1,0 +1,409 @@
+using System.Collections.Specialized;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Headless.XUnit;
+using Avalonia.Input;
+using Avalonia.Threading;
+using Isotope.UI.Core;
+using Xunit;
+using static Isotope.UI.Factories;
+
+namespace Isotope.UI.Avalonia.Tests;
+
+/// <summary>
+/// The list box's element and typed items (#94, Reactor's ListView and ListView&lt;T&gt;): items mounted and reconciled as
+/// a panel's children (in place, keyed moves as one Move each, a component's state kept), the controlled and multiple
+/// selection, the item click, and a long list's realisation, in a headless window.
+/// </summary>
+public sealed class ListBoxTests : IDisposable
+{
+    private readonly List<Window> _windows = new();
+
+    public void Dispose()
+    {
+        foreach (var w in _windows) w.Close();
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    private Window Show(TestHost host, double height = 300)
+    {
+        var window = new Window { Width = 300, Height = height, Content = host.Root, SizeToContent = SizeToContent.Manual };
+        _windows.Add(window);
+        window.Show();
+        Layout(window);
+        return window;
+    }
+
+    private static void Layout(Window window)
+    {
+        Dispatcher.UIThread.RunJobs();
+        window.UpdateLayout();
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    private static ListBox List(TestHost host) => host.All<ListBox>()[0];
+
+    private static List<string?> Texts(ListBox list) => list.Items.Select(TextOf).ToList();
+
+    // An item's text: its text block's, or the first one inside it (a component's border, a stack).
+    private static string? TextOf(object? item) => item switch
+    {
+        TextBlock t => t.Text,
+        Decorator d => TextOf(d.Child),
+        Panel p => p.Children.Count > 0 ? TextOf(p.Children[0]) : null,
+        _ => null,
+    };
+
+    private static Element[] Rows(IEnumerable<string> keys) => keys.Select(k => (Element)TextBlock(k).WithKey(k)).ToArray();
+
+    // A real headless click at the centre of an item's container, through the window's input.
+    private static void ClickItem(Window window, ListBox list, int index, RawInputModifiers modifiers = RawInputModifiers.None)
+    {
+        var container = list.ContainerFromIndex(index) ?? throw new InvalidOperationException("item " + index + " isn't realised");
+        var centre = container.TranslatePoint(new Point(container.Bounds.Width / 2, container.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(centre, MouseButton.Left, modifiers);
+        window.MouseUp(centre, MouseButton.Left, modifiers);
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    [AvaloniaFact]
+    public void Element_items_mount_into_the_list_and_update_in_place()
+    {
+        var first = "one";
+        var more = true;
+        var host = new TestHost(() => more
+            ? ListBox(TextBlock(first), TextBlock("two"), null, TextBlock("three"))
+            : ListBox(TextBlock(first)));
+        var list = List(host);
+        Assert.Equal(["one", "two", "three"], Texts(list));
+        var control = list.Items[0];
+
+        first = "uno";
+        host.Render();
+        Assert.Same(list, List(host));
+        Assert.Same(control, list.Items[0]);
+        Assert.Equal(["uno", "two", "three"], Texts(list));
+
+        more = false;
+        host.Render();
+        Assert.Same(control, Assert.Single(list.Items));
+    }
+
+    [AvaloniaFact]
+    public void A_keyed_reorder_moves_each_item_control_with_one_Move_and_none_leaves_the_list()
+    {
+        string[] keys = ["a", "b", "c", "d", "e"];
+        var host = new TestHost(() => ListBox(Rows(keys)));
+        Show(host);
+        var list = List(host);
+        var before = list.Items.Cast<TextBlock>().ToDictionary(t => t.Text!);
+        var edits = new List<NotifyCollectionChangedAction>();
+        list.Items.CollectionChanged += (_, e) => edits.Add(e.Action);
+        var detached = 0;
+        foreach (var t in before.Values) t.DetachedFromLogicalTree += (_, _) => detached++;
+
+        keys = ["e", "d", "c", "b", "a"];
+        host.Render();
+        Assert.Equal(keys, Texts(list));
+        Assert.All(keys, (k, i) => Assert.Same(before[k], list.Items[i]));
+        Assert.NotEmpty(edits);
+        Assert.All(edits, a => Assert.Equal(NotifyCollectionChangedAction.Move, a));
+        Assert.Equal(0, detached);
+        Assert.All(before.Values, t => Assert.Same(list, t.Parent));
+    }
+
+    [AvaloniaFact]
+    public void A_component_in_an_item_keeps_its_state_across_moves_and_re_renders_itself_there()
+    {
+        string[] keys = ["a", "b", "c"];
+        var setters = new Dictionary<string, Action<int>>();
+        int mounts = 0, cleanups = 0;
+        Element Row(string key) => Component(ctx =>
+        {
+            var (n, setN) = ctx.UseState(0);
+            setters[key] = setN;
+            ctx.UseEffect(() =>
+            {
+                mounts++;
+                return () => cleanups++;
+            });
+            return TextBlock(key + " " + n);
+        }).WithKey(key);
+        var host = new TestHost(() => ListBox(keys.Select(Row).ToArray()));
+        Show(host);
+        var list = List(host);
+        Assert.Equal(3, mounts);
+
+        setters["b"](5);
+        host.Flush();
+        Assert.Equal(["a 0", "b 5", "c 0"], Texts(list));
+
+        keys = ["c", "b", "a"];
+        host.Render();
+        Assert.Equal(["c 0", "b 5", "a 0"], Texts(list));
+        Assert.Equal(3, mounts);
+        Assert.Equal(0, cleanups);
+
+        // The moved component re-renders itself in its new place: the dirty path goes through the list box.
+        setters["a"](7);
+        host.Flush();
+        Assert.Equal(["c 0", "b 5", "a 7"], Texts(list));
+
+        host.Unmount();
+        Assert.Equal(3, cleanups);
+    }
+
+    private static readonly Context<string> Suffix = new("-");
+
+    [AvaloniaFact]
+    public void A_component_in_an_item_hears_a_context_change_when_the_list_is_unchanged()
+    {
+        // The same items array each render: the list box element is equal, so only the context check reaches the item.
+        Element[] items = [Component(ctx => TextBlock("x" + ctx.UseContext(Suffix))).WithKey("x")];
+        var suffix = "1";
+        var host = new TestHost(() => VStack(ListBox(items)).Provide(Suffix, suffix));
+        var list = List(host);
+        Assert.Equal(["x1"], Texts(list));
+
+        suffix = "2";
+        host.Render();
+        Assert.Equal(["x2"], Texts(list));
+    }
+
+    [AvaloniaFact]
+    public void A_controlled_selection_reports_the_user_s_choice_and_the_declared_index_wins()
+    {
+        var reported = new List<int>();
+        var follow = true;
+        var host = new TestHost(() => Component(ctx =>
+        {
+            var (index, setIndex) = ctx.UseState(0);
+            return VStack(TextBlock("state " + index), ListBox(index, v =>
+            {
+                reported.Add(v);
+                if (follow) setIndex(v);
+            }, Rows(["a", "b", "c"])));
+        }));
+        var list = List(host);
+        Assert.Equal(0, list.SelectedIndex);
+        Assert.Empty(reported);
+
+        list.SelectedIndex = 2;
+        host.Flush();
+        Assert.Equal([2], reported);
+        Assert.Contains("state 2", host.Texts());
+
+        // A render whose index the control already shows writes nothing.
+        var changes = 0;
+        list.SelectionChanged += (_, _) => changes++;
+        host.Render();
+        Assert.Equal(0, changes);
+
+        // The state stays at 2 while the user picks 1: the next render writes 2 back, as upstream's controlled index does,
+        // and that write isn't reported.
+        follow = false;
+        list.SelectedIndex = 1;
+        host.Render();
+        Assert.Equal([2, 1], reported);
+        Assert.Equal(2, list.SelectedIndex);
+    }
+
+    [AvaloniaFact]
+    public void Only_the_list_s_own_selection_is_reported_not_a_combo_box_s_in_an_item()
+    {
+        var reported = new List<int>();
+        var host = new TestHost(() => ListBox(TextBlock("a"), ComboBox(["x", "y"])) with { OnSelectedIndexChanged = reported.Add });
+        Show(host);
+        var combo = host.Root.Child is ListBox l ? (ComboBox)l.Items[1]! : throw new InvalidOperationException();
+        combo.SelectedIndex = 1;
+        Assert.Empty(reported);
+
+        List(host).SelectedIndex = 0;
+        Assert.Equal([0], reported);
+    }
+
+    [AvaloniaFact]
+    public void An_uncontrolled_selection_follows_its_item_across_a_keyed_move_without_a_report()
+    {
+        string[] keys = ["a", "b", "c", "d"];
+        var reported = new List<int>();
+        var host = new TestHost(() => ListBox(Rows(keys)) with { OnSelectedIndexChanged = reported.Add });
+        var list = List(host);
+        list.SelectedIndex = 1;
+        reported.Clear();
+
+        keys = ["d", "c", "b", "a"];
+        host.Render();
+        Assert.Equal(2, list.SelectedIndex);
+        Assert.Equal("b", ((TextBlock)list.SelectedItem!).Text);
+        Assert.Empty(reported);
+    }
+
+    // Reactor's ListViewSelectionMode values, as the migration maps them (winui-types.json), measured with headless clicks.
+    [AvaloniaTheory]
+    [InlineData("Single", SelectionMode.Single, false, new[] { 2 })]
+    [InlineData("Extended, plain clicks", SelectionMode.Multiple, false, new[] { 2 })]
+    [InlineData("Extended, Ctrl on the second", SelectionMode.Multiple, true, new[] { 0, 2 })]
+    [InlineData("Multiple", SelectionMode.Multiple | SelectionMode.Toggle, false, new[] { 0, 2 })]
+    public void Each_selection_mode_selects_as_its_Reactor_value_did(string reactor, SelectionMode mode, bool control, int[] expected)
+    {
+        _ = reactor;
+        var snapshots = new List<IReadOnlyList<int>>();
+        var host = new TestHost(() => (ListBox(Rows(["a", "b", "c"])) with { OnSelectionChanged = snapshots.Add }).SelectionMode(mode));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal(mode, list.SelectionMode);
+
+        ClickItem(window, list, 0);
+        ClickItem(window, list, 2, control ? RawInputModifiers.Control : RawInputModifiers.None);
+        Assert.Equal(expected, snapshots[^1]);
+        Assert.Equal(expected, list.Selection.SelectedIndexes.Order());
+    }
+
+    [AvaloniaFact]
+    public void Toggle_deselects_a_selected_item_on_a_second_click()
+    {
+        var snapshots = new List<IReadOnlyList<int>>();
+        var host = new TestHost(() => (ListBox(Rows(["a", "b", "c"])) with { OnSelectionChanged = snapshots.Add })
+            .SelectionMode(SelectionMode.Multiple | SelectionMode.Toggle));
+        var window = Show(host);
+        var list = List(host);
+        ClickItem(window, list, 0);
+        ClickItem(window, list, 2);
+        ClickItem(window, list, 0);
+        Assert.Equal([2], snapshots[^1]);
+    }
+
+    [AvaloniaFact]
+    public void An_item_click_comes_after_the_selection_a_tap_makes_and_from_Enter_or_Space_on_an_item()
+    {
+        var events = new List<string>();
+        var host = new TestHost(() => ListBox(TextBlock("a"), HStack(TextBlock("b"), Button("go", () => events.Add("button"))), TextBlock("c")) with
+        {
+            OnSelectedIndexChanged = i => events.Add("selected " + i),
+            OnItemClick = i => events.Add("click " + i),
+        });
+        var window = Show(host);
+        var list = List(host);
+
+        ClickItem(window, list, 2);
+        Assert.Equal(["selected 2", "click 2"], events);
+
+        // Clicking the selected item again (a double tap, headless): a click and no selection change.
+        events.Clear();
+        ClickItem(window, list, 2);
+        Assert.Equal(["click 2"], events);
+
+        // A button in an item handles its own click.
+        events.Clear();
+        var button = list.Items.OfType<StackPanel>().Single().Children.OfType<Button>().Single();
+        TestHost.HoldOffRepeat(button);
+        var centre = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(centre, MouseButton.Left);
+        window.MouseUp(centre, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.DoesNotContain(events, e => e.StartsWith("click", StringComparison.Ordinal));
+        Assert.Contains("button", events);
+
+        events.Clear();
+        list.ContainerFromIndex(0)!.Focus();
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(2, events.Count(e => e == "click 0"));
+
+        // Ctrl+Space is a selection key, not a click.
+        events.Clear();
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.Control);
+        Dispatcher.UIThread.RunJobs();
+        Assert.DoesNotContain(events, e => e.StartsWith("click", StringComparison.Ordinal));
+    }
+
+    private sealed record Person(string Id, string Name);
+
+    private sealed record Fruit(string Id, string Name) : IReactorKeyed
+    {
+        string IReactorKeyed.Key => Id;
+    }
+
+    [AvaloniaFact]
+    public void Typed_items_are_keyed_by_their_selector_and_report_the_items_themselves()
+    {
+        IReadOnlyList<Person> people = [new("p1", "Ada"), new("p2", "Grace"), new("p3", "Linus")];
+        var clicked = new List<Person>();
+        var snapshots = new List<IReadOnlyList<Person>>();
+        var host = new TestHost(() => ListBox(people, p => p.Id, (p, i) => TextBlock(i + ":" + p.Name).WithKey("ignored")) with
+        {
+            OnItemClick = clicked.Add,
+            OnSelectionChanged = snapshots.Add,
+            SelectionMode = SelectionMode.Multiple | SelectionMode.Toggle,
+        });
+        var window = Show(host);
+        var list = List(host);
+        var element = Assert.IsType<ListBoxElement<Person>>(global::Isotope.UI.Core.Reconciler.GetElementTag(list));
+        Assert.Equal(["p1", "p2", "p3"], element.Items.Cast<Element>().Select(e => e.Key));
+        Assert.Same(people, element.ItemsSource);
+        Assert.Equal(["0:Ada", "1:Grace", "2:Linus"], Texts(list));
+        var grace = list.Items[1];
+
+        ClickItem(window, list, 2);
+        ClickItem(window, list, 0);
+        Assert.Equal([people[2], people[0]], clicked);
+        Assert.Equal([people[0], people[2]], snapshots[^1]);
+
+        people = [people[1], people[2], people[0]];
+        host.Render();
+        Assert.Same(grace, list.Items[0]);
+        Assert.Equal(["0:Grace", "1:Linus", "2:Ada"], Texts(list));
+    }
+
+    [AvaloniaFact]
+    public void Self_keyed_typed_items_take_their_own_keys_and_a_null_template_result_is_refused()
+    {
+        IReadOnlyList<Fruit> fruits = [new("f1", "Apple"), new("f2", "Pear")];
+        var list = ListBox(fruits, (f, _) => TextBlock(f.Name));
+        Assert.Equal(["f1", "f2"], list.Items.Cast<Element>().Select(e => e.Key));
+        Assert.Throws<InvalidOperationException>(() => ListBox(fruits, f => f.Id, (_, _) => null!));
+        Assert.Throws<ArgumentNullException>(() => ListBox((Element[])null!));
+    }
+
+    [AvaloniaFact]
+    public void The_guide_s_example_selects_and_opens_a_person()
+    {
+        IReadOnlyList<ListBoxExamples.Person> people = [new("p1", "Ada"), new("p2", "Grace")];
+        var host = new TestHost(() => Component(ctx => ListBoxExamples.People(ctx, people)));
+        var window = Show(host);
+        var lists = host.All<ListBox>();
+        Assert.Equal(["1. Ada", "2. Grace"], Texts(lists[0]));
+        Assert.Equal(SelectionMode.Multiple, lists[1].SelectionMode);
+
+        ClickItem(window, lists[0], 1);
+        host.Flush();
+        Assert.Equal(1, List(host).SelectedIndex);
+        Assert.Contains("Opened Grace", host.Texts());
+    }
+
+    [AvaloniaFact]
+    public void A_long_list_mounts_every_item_and_realises_only_the_containers_in_view()
+    {
+        var keys = Enumerable.Range(0, 10_000).Select(i => "k" + i).ToArray();
+        var host = new TestHost(() => ListBox(Rows(keys)).Height(300));
+        var window = Show(host, 400);
+        var list = List(host);
+        Assert.Equal(10_000, list.Items.Count);
+        var realised = list.GetRealizedContainers().Count();
+        Assert.InRange(realised, 1, 50); // 8 measured: 300 DIPs of 32-DIP Fluent items, plus the panel's buffer
+
+        var before = list.Items.Cast<Control>().ToArray();
+        var edits = new List<NotifyCollectionChangedAction>();
+        list.Items.CollectionChanged += (_, e) => edits.Add(e.Action);
+        keys = keys.Reverse().ToArray();
+        host.Render();
+        Layout(window);
+        Assert.True(before.Reverse().SequenceEqual(list.Items.Cast<Control>()), "every item control is kept, in the new order");
+        Assert.All(edits, a => Assert.Equal(NotifyCollectionChangedAction.Move, a));
+        Assert.InRange(list.GetRealizedContainers().Count(), 1, 50);
+        Assert.Equal("k9999", ((TextBlock)((ContentControl)list.ContainerFromIndex(0)!).Content!).Text);
+    }
+}
