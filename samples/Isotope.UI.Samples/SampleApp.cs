@@ -32,6 +32,7 @@ public static class SampleApp
         ("Numbers", NumbersPage.Render),
         ("Split view", SplitViewPage.Render),
         ("Rich text", RichTextPage.Render),
+        ("Icons", IconsPage.Render),
         ("Errors", ErrorsPage.Render),
     ];
 

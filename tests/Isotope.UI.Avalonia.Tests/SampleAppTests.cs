@@ -320,6 +320,33 @@ public sealed class SampleAppTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void Icons_page_shows_each_kind_and_its_last_icon_changes_kind()
+    {
+        var (host, window) = Open();
+        var page = Page(host, "Icons");
+        var paths = All<global::Avalonia.Controls.PathIcon>(page);
+        Assert.Equal(4, paths.Count); // three shapes and the icon that changes kind
+        Assert.Equal([new Size(20, 20), new Size(32, 32), new Size(48, 48)], paths.Take(3).Select(p => p.Bounds.Size));
+        // The ring, an avares resource of the app, loaded by both bitmap icons and the image.
+        Assert.Equal(2, All<BitmapIconPresenter>(page).Count(b => b.Source is { PixelSize.Width: 24 }));
+        Assert.Single(All<Image>(page), i => i.Source is { Size.Width: 24 });
+        Save(window, "sample-icons.png");
+
+        var last = paths[3];
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Contains("One icon showing a glyph: another kind mounts another control.", Texts(page));
+        Assert.Equal(3, All<global::Avalonia.Controls.PathIcon>(page).Count);
+        Assert.Null(last.Parent);
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Equal(3, All<BitmapIconPresenter>(page).Count);
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Equal(2, All<Image>(page).Count);
+        Click(Labelled<Button>(page, "Next kind"));
+        Assert.Equal(4, All<global::Avalonia.Controls.PathIcon>(page).Count);
+        Assert.Contains("One icon showing a shape: another kind mounts another control.", Texts(page));
+    }
+
+    [AvaloniaFact]
     public void Errors_page_throw_shows_the_fallback_retry_recovers_and_the_outside_counter_keeps_its_state()
     {
         var (host, window) = Open();

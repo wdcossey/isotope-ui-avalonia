@@ -11,7 +11,8 @@ window still has to show what they can't: hover tooltips appearing, menus opened
 keyboard input, and how the tabs and the split view look and animate. The checklist below is that run.
 
 **Last run:** 2026-11-24, Windows, at `3678918` (#34): every line passed. Linux and macOS haven't been run in a real
-window yet. The Rich text page (#65) came later: its lines, and the two that list the pages, haven't been run. Before a
+window yet. The Rich text page (#65) and the Icons page (#91) came later: their lines, and the two that list the pages,
+haven't been run. Before a
 new run, clear the ticks.
 
 ## Checklist
@@ -20,9 +21,10 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### The window and its menus
 
-- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above seven tabs on one line: Basics,
-  Buttons, Menus, Numbers, Split view, Rich text, Errors. Basics is selected.
-- [ ] Click **Go** with the mouse → its menu drops down, listing the seven pages with a radio mark on Basics.
+- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above eight tabs: Basics, Buttons,
+  Menus, Numbers, Split view, Rich text, Icons, Errors (at the window's 720 width, Errors wraps onto a second line of
+  tabs). Basics is selected.
+- [ ] Click **Go** with the mouse → its menu drops down, listing the eight pages with a radio mark on Basics.
 - [x] Choose **Go > Numbers** → the Numbers tab is selected. Click the **Buttons** tab, then open **Go** again → the
   radio mark is on Buttons.
 - [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
@@ -90,6 +92,17 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 - [ ] "Red Green Blue", each in its colour and bold. **Rotate the colours** → "Green Blue Red", then "Blue Red Green".
 - [ ] Drag over the two lines under the button → the text is selected across both lines; Ctrl+C copies it (paste it
   somewhere: two lines). The second line is smaller.
+
+### Icons
+
+- [ ] The first row: a black diamond (20 by 20), a steel-blue tick (32) and a triangle in the accent colour (48), each
+  crisp at its size. **Change the colour** → the tick turns sea green; again → steel blue.
+- [ ] The second row: "Aa" in the default font, and on Windows a star outline in steel blue (a glyph of Segoe Fluent
+  Icons). On Linux or macOS the star is missing or a box: note which.
+- [ ] The third row: a steel-blue ring (the bitmap's shape in the foreground), the same ring in its own teal and orange,
+  and a bigger teal and orange ring (an image). **Change the colour** turns the first ring sea green.
+- [ ] **Next kind** → the last icon shows a glyph ("Aa"), then the ring as a shape, then the ring in its colours, then the
+  tick again, with the line above saying which.
 
 ### Errors
 

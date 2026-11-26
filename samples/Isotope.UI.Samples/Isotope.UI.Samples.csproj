@@ -15,4 +15,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Isotope.UI.Avalonia\Isotope.UI.Avalonia.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The Icons page's bitmap (#91), drawn for this app. -->
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
 </Project>
