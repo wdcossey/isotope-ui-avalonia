@@ -9,7 +9,7 @@ using static Isotope.UI.Factories;
 namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
-/// The list box's long-list numbers in FINDINGS (#94): mount, show, an equal render and a keyed reverse of 1,000 and 10,000
+/// The list box's long-list numbers in the components guide and #94's FINDINGS section: mount, show, an equal render and a keyed reverse of 1,000 and 10,000
 /// element rows, the containers realised and reused, and 10,000 strings, three runs each, in a 300-high list in a headless
 /// window. Not a test: it runs only when ISOTOPE_MEASURE names the file to append the lines to
 /// (<c>ISOTOPE_MEASURE=&lt;file&gt; dotnet test tests/Isotope.UI.Avalonia.Tests -f net10.0 --filter ListBoxMeasurements</c>).

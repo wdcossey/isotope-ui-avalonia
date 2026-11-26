@@ -231,9 +231,16 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 return;
             }
             var usings = new[] { type.AvaloniaNamespace! };
-            if (id.Parent is MemberAccessExpressionSyntax ma && ma.Expression == id)
+            // Type.Member: a member access, or a qualified name where the member is a constant pattern (`x is Type.Member`).
+            SyntaxNode? ma = id.Parent switch
             {
-                var member = ma.Name.Identifier.ValueText;
+                MemberAccessExpressionSyntax access when access.Expression == id => access,
+                QualifiedNameSyntax qualified when qualified.Left == id => qualified,
+                _ => null,
+            };
+            if (ma is not null)
+            {
+                var member = ma is MemberAccessExpressionSyntax access ? access.Name.Identifier.ValueText : ((QualifiedNameSyntax)ma).Right.Identifier.ValueText;
                 if (type.Members.TryGetValue(member, out var mapped))
                 {
                     if (mapped is null)

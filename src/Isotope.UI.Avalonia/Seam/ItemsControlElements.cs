@@ -120,8 +120,8 @@ public partial record ListBoxElement(object[] Items) : Element
     public Action<IReadOnlyList<int>>? OnSelectionChanged { get; init; }
 
     /// <summary>
-    /// Called with an item's index when the user taps it (not a button in it; each tap of a double tap), or presses Enter or
-    /// Space on it (Reactor's name: Avalonia's ListBox has no item-click event). A tap selects the item first, so
+    /// Called with an item's index when the user taps it (not a focusable control in it, such as a button or a text box; each
+    /// tap of a double tap), or presses Enter or Space on it (Reactor's name: Avalonia's ListBox has no item-click event). A tap selects the item first, so
     /// <see cref="OnSelectedIndexChanged"/> comes before it.
     /// </summary>
     public Action<int>? OnItemClick { get; init; }
@@ -170,15 +170,16 @@ public partial record ListBoxElement(object[] Items) : Element
 
     /// <summary>
     /// The index of the item of <paramref name="list"/> an input event's source is in: -1 outside one, in a nested list's
-    /// item, or in a button (which handles its own click, as WinUI's ItemClick isn't raised for one either).
+    /// item, or in a focusable control in the item (a button, a text box, a slider: it takes its own pointer input, and
+    /// WinUI's ItemClick isn't raised for it either).
     /// </summary>
     internal static int IndexAt(ListBox list, object? source)
     {
         for (var v = source as Visual; v is not null && !ReferenceEquals(v, list); v = v.GetVisualParent())
         {
-            if (v is Button) return -1;
             if (v is ListBoxItem item)
                 return ReferenceEquals(ItemsControl.ItemsControlFromItemContainer(item), list) ? list.IndexFromContainer(item) : -1;
+            if (v is InputElement { Focusable: true }) return -1;
         }
         return -1;
     }
@@ -205,7 +206,7 @@ public partial record ListBoxElement(object[] Items) : Element
     {
         // The items, strings and elements alike, through upstream's items host (written before the other members, so a
         // first SelectedIndex lands in a populated list), edited through ListBoxItemsCollection: a keyed move is one Move
-        // and keeps its selection, and the selection changes Avalonia makes are the engine's, not the user's.
+        // and keeps its selection.
         d.Children = new ItemsHost<ListBoxElement, ListBox>(
             GetItems:      static e => e.Items,
             GetCollection: static c => new ListBoxItemsCollection(c));
@@ -261,11 +262,31 @@ public sealed record ListBoxElement<T> : ListBoxElement
     /// and its index, keyed by <paramref name="keySelector"/> (its key wins over one the element has).
     /// </summary>
     /// <exception cref="ArgumentNullException">An argument is null.</exception>
-    /// <exception cref="InvalidOperationException"><paramref name="itemTemplate"/> returned null for an item.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="itemTemplate"/> returned null or a Group for an item. An
+    /// item it returns Empty() for isn't shown.</exception>
     public ListBoxElement(IReadOnlyList<T> itemsSource, Func<T, string> keySelector, Func<T, int, Element> itemTemplate)
-        : base(Build(itemsSource, keySelector, itemTemplate))
+        : this(itemsSource, Build(itemsSource, keySelector, itemTemplate))
+    {
+    }
+
+    private ListBoxElement(IReadOnlyList<T> itemsSource, (object[] Items, int[] SourceIndexes) built) : base(built.Items)
     {
         ItemsSource = itemsSource;
+        _sourceIndexes = built.SourceIndexes;
+    }
+
+    // For each of Items, the index of its item in ItemsSource: an item whose template returned Empty() has no element.
+    private readonly int[] _sourceIndexes;
+
+    private bool TryGetItem(int index, out T item)
+    {
+        if (index >= 0 && index < _sourceIndexes.Length && _sourceIndexes[index] < ItemsSource.Count)
+        {
+            item = ItemsSource[_sourceIndexes[index]];
+            return true;
+        }
+        item = default!;
+        return false;
     }
 
     /// <summary>The data items, in order; <see cref="ListBoxElement.Items"/> holds the element built for each.</summary>
@@ -286,7 +307,7 @@ public sealed record ListBoxElement<T> : ListBoxElement
     private protected override void RaiseItemClick(int index)
     {
         base.RaiseItemClick(index);
-        if (OnItemClick is { } click && index < ItemsSource.Count) click(ItemsSource[index]);
+        if (OnItemClick is { } click && TryGetItem(index, out var item)) click(item);
     }
 
     private protected override void RaiseSelectionChanged(IReadOnlyList<int> indexes)
@@ -295,35 +316,45 @@ public sealed record ListBoxElement<T> : ListBoxElement
         if (OnSelectionChanged is not { } changed) return;
         var selected = new List<T>(indexes.Count);
         foreach (var i in indexes)
-            if (i >= 0 && i < ItemsSource.Count) selected.Add(ItemsSource[i]);
+            if (TryGetItem(i, out var item)) selected.Add(item);
         changed(selected);
     }
 
-    private static object[] Build(IReadOnlyList<T> itemsSource, Func<T, string> keySelector, Func<T, int, Element> itemTemplate)
+    private static (object[], int[]) Build(IReadOnlyList<T> itemsSource, Func<T, string> keySelector, Func<T, int, Element> itemTemplate)
     {
         ArgumentNullException.ThrowIfNull(itemsSource);
         ArgumentNullException.ThrowIfNull(keySelector);
         ArgumentNullException.ThrowIfNull(itemTemplate);
-        var items = new object[itemsSource.Count];
-        for (int i = 0; i < items.Length; i++)
+        var items = new List<object>(itemsSource.Count);
+        var sourceIndexes = new List<int>(itemsSource.Count);
+        for (int i = 0; i < itemsSource.Count; i++)
         {
             var item = itemsSource[i];
-            var element = itemTemplate(item, i)
-                ?? throw new InvalidOperationException($"The item template returned null for the item at {i}: return an element, Empty() for none.");
-            items[i] = element.WithKey(keySelector(item));
+            var element = itemTemplate(item, i);
+            switch (element)
+            {
+                case null:
+                    throw new InvalidOperationException($"The item template returned null for the item at {i}: return an element, Empty() for none.");
+                case EmptyElement:
+                    continue;
+                case GroupElement:
+                    throw new InvalidOperationException($"The item template returned a Group for the item at {i}: return one element per item (a VStack or HStack for several).");
+            }
+            items.Add(element.WithKey(keySelector(item)));
+            sourceIndexes.Add(i);
         }
-        return items;
+        return (items.ToArray(), sourceIndexes.ToArray());
     }
 }
 
 /// <summary>
-/// A list box's items as upstream's items host edits them (#94). Each edit is made in an echo-suppression scope on the
-/// list box, so the selection Avalonia moves or drops in answer to it isn't reported as the user's (a controlled index,
-/// written next, corrects the selection when it differs). A keyed move is a single Move of Avalonia's items list: the
-/// items host moves an item with <c>Move</c> only on an <see cref="ObservableCollection{T}"/>, and upstream's removal
+/// A list box's items as upstream's items host edits them (#94). A keyed move is a single Move of Avalonia's items list:
+/// the items host moves an item with <c>Move</c> only on an <see cref="ObservableCollection{T}"/>, and upstream's removal
 /// and insertion would take the item out of the list box's logical children and put it back, which costs a scan of
-/// them each time (a keyed reverse of 10,000 rows took over 2 s headless). An item selected before it moves is selected
-/// again in its new place, so an uncontrolled selection follows its item.
+/// them each time (a keyed reverse of 10,000 rows took over 2 s headless). Avalonia's selection treats a move as a
+/// removal and an insertion and drops the item's selection, so an item selected before it moves is selected again in its
+/// new place, in an echo-suppression scope: the selection follows its item, unreported. An item added or removed is
+/// reported as Avalonia changes the selection, as before #94 (a selected item removed: -1).
 /// </summary>
 /// <remarks>
 /// The base collection mirrors the list box's items, copied when the items host asks for the collection; every edit is
@@ -341,25 +372,25 @@ internal sealed class ListBoxItemsCollection(ListBox owner) : ObservableCollecti
 
     protected override void InsertItem(int index, object item)
     {
-        Scoped(() => owner.Items.Insert(index, item));
+        owner.Items.Insert(index, item);
         base.InsertItem(index, item);
     }
 
     protected override void RemoveItem(int index)
     {
-        Scoped(() => owner.Items.RemoveAt(index));
+        owner.Items.RemoveAt(index);
         base.RemoveItem(index);
     }
 
     protected override void SetItem(int index, object item)
     {
-        Scoped(() => owner.Items[index] = item);
+        owner.Items[index] = item;
         base.SetItem(index, item);
     }
 
     protected override void ClearItems()
     {
-        Scoped(owner.Items.Clear);
+        owner.Items.Clear();
         base.ClearItems();
     }
 

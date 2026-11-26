@@ -268,7 +268,8 @@ position, updated in place, and a keyed one moved with its control and a compone
 other selecting controls; `.SelectionMode(...)` takes Avalonia's flags (`Multiple`: Ctrl and Shift add to the
 selection, `Multiple | Toggle`: each tap selects or deselects), and `OnSelectionChanged` then receives every selected
 index, or every selected item on a typed list. `OnItemClick` is called with the index or item the user taps or presses
-Enter or Space on (after the tap selects it; a tap on a button in an item is the button's):
+Enter or Space on (after the tap selects it; a tap on a focusable control in an item, such as a button or a text box,
+is that control's):
 
 <!-- snippet: list-box -->
 ```csharp

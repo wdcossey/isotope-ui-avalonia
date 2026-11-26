@@ -224,7 +224,7 @@ public sealed class ListBoxTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void An_uncontrolled_selection_follows_its_item_across_a_keyed_move_without_a_report()
+    public void An_uncontrolled_selection_follows_its_item_across_a_keyed_move_and_its_removal_is_reported()
     {
         string[] keys = ["a", "b", "c", "d"];
         var reported = new List<int>();
@@ -238,6 +238,12 @@ public sealed class ListBoxTests : IDisposable
         Assert.Equal(2, list.SelectedIndex);
         Assert.Equal("b", ((TextBlock)list.SelectedItem!).Text);
         Assert.Empty(reported);
+
+        // The selected item removed: the selection is gone, and the app hears it.
+        keys = ["d", "c", "a"];
+        host.Render();
+        Assert.Equal(-1, list.SelectedIndex);
+        Assert.Equal([-1], reported);
     }
 
     // Reactor's ListViewSelectionMode values, as the migration maps them (winui-types.json), measured with headless clicks.
@@ -279,7 +285,7 @@ public sealed class ListBoxTests : IDisposable
     public void An_item_click_comes_after_the_selection_a_tap_makes_and_from_Enter_or_Space_on_an_item()
     {
         var events = new List<string>();
-        var host = new TestHost(() => ListBox(TextBlock("a"), HStack(TextBlock("b"), Button("go", () => events.Add("button"))), TextBlock("c")) with
+        var host = new TestHost(() => ListBox(TextBlock("a"), HStack(TextBlock("b"), Button("go", () => events.Add("button"))), HStack(TextBlock("c"), TextBox("note"))) with
         {
             OnSelectedIndexChanged = i => events.Add("selected " + i),
             OnItemClick = i => events.Add("click " + i),
@@ -287,17 +293,17 @@ public sealed class ListBoxTests : IDisposable
         var window = Show(host);
         var list = List(host);
 
-        ClickItem(window, list, 2);
-        Assert.Equal(["selected 2", "click 2"], events);
+        ClickItem(window, list, 0);
+        Assert.Equal(["selected 0", "click 0"], events);
 
         // Clicking the selected item again (a double tap, headless): a click and no selection change.
         events.Clear();
-        ClickItem(window, list, 2);
-        Assert.Equal(["click 2"], events);
+        ClickItem(window, list, 0);
+        Assert.Equal(["click 0"], events);
 
         // A button in an item handles its own click.
         events.Clear();
-        var button = list.Items.OfType<StackPanel>().Single().Children.OfType<Button>().Single();
+        var button = list.Items.OfType<StackPanel>().First().Children.OfType<Button>().Single();
         TestHost.HoldOffRepeat(button);
         var centre = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
         window.MouseDown(centre, MouseButton.Left);
@@ -305,6 +311,15 @@ public sealed class ListBoxTests : IDisposable
         Dispatcher.UIThread.RunJobs();
         Assert.DoesNotContain(events, e => e.StartsWith("click", StringComparison.Ordinal));
         Assert.Contains("button", events);
+
+        // Nor is a tap in a text box in an item a click on the item.
+        events.Clear();
+        var box = list.Items.OfType<StackPanel>().Last().Children.OfType<TextBox>().Single();
+        var inBox = box.TranslatePoint(new Point(box.Bounds.Width / 2, box.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(inBox, MouseButton.Left);
+        window.MouseUp(inBox, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.DoesNotContain(events, e => e.StartsWith("click", StringComparison.Ordinal));
 
         events.Clear();
         list.ContainerFromIndex(0)!.Focus();
@@ -356,6 +371,27 @@ public sealed class ListBoxTests : IDisposable
         host.Render();
         Assert.Same(grace, list.Items[0]);
         Assert.Equal(["0:Grace", "1:Linus", "2:Ada"], Texts(list));
+    }
+
+    [AvaloniaFact]
+    public void An_item_the_template_leaves_out_shifts_neither_the_clicks_nor_the_selection()
+    {
+        IReadOnlyList<Person> people = [new("p1", "Hidden"), new("p2", "Grace"), new("p3", "Linus")];
+        var clicked = new List<Person>();
+        var snapshots = new List<IReadOnlyList<Person>>();
+        var host = new TestHost(() => ListBox(people, p => p.Id, (p, _) => p.Name == "Hidden" ? Empty() : TextBlock(p.Name)) with
+        {
+            OnItemClick = clicked.Add,
+            OnSelectionChanged = snapshots.Add,
+        });
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal(["Grace", "Linus"], Texts(list));
+
+        ClickItem(window, list, 0);
+        Assert.Equal([people[1]], clicked);
+        Assert.Equal([people[1]], snapshots[^1]);
+        Assert.Throws<InvalidOperationException>(() => ListBox(people, p => p.Id, (p, _) => Group(TextBlock(p.Name))));
     }
 
     [AvaloniaFact]
