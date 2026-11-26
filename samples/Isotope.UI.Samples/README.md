@@ -13,7 +13,7 @@ keyboard input, and how the page list and the split view look and animate. The c
 
 **Last run:** 2026-11-24, Windows, at `3678918` (#34): every line passed. Linux and macOS haven't been run in a real
 window yet. The Rich text page (#65) and the Icons page (#91) came later: their lines haven't been run. The window
-and menu lines are new (#96: a list of the pages replaced the tabs) and haven't been run either. Before a new run, clear
+and menu lines are new (#96: a list of the pages replaced the tabs, #100 runs them) and haven't been run either. Before a new run, clear
 the ticks.
 
 ## Checklist
@@ -28,7 +28,7 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 - [ ] Click **Go** with the mouse → its menu drops down, listing the eight pages with a radio mark on Basics.
 - [ ] Choose **Go > Numbers** → Numbers is selected in the list and its page shows. Click **Buttons** in the list, then
   open **Go** again → the radio mark is on Buttons.
-- [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
+- [ ] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
   closes it.
 - [ ] Switch between pages → each page keeps what you did on it (a count, a typed draft, a deleted file).
 - [ ] Click a page in the list, then press Down and Up → the selection moves and its page shows. Press Tab → the focus

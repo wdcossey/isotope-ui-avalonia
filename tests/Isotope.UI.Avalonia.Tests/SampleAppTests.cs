@@ -85,9 +85,12 @@ public sealed class SampleAppTests : IDisposable
         return pages[index];
     }
 
+    // The app's menu bar: the first in the tree (every page is in the tree too, hidden or not).
+    private static Menu MenuBar(DispatcherHost host) => All<Menu>(host.Root).First();
+
     // The Go menu's items that have the radio mark.
     private static IEnumerable<string> GoMarked(DispatcherHost host) =>
-        All<AvMenuItem>(host.Root).Single(i => Equals(i.Header, "Go")).Items.Cast<AvMenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header!);
+        All<AvMenuItem>(MenuBar(host)).Single(i => Equals(i.Header, "Go")).Items.Cast<AvMenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header!);
 
     // Selects a page as the user does: a click on its item in the list.
     private static Control Page(DispatcherHost host, string name)
@@ -106,7 +109,7 @@ public sealed class SampleAppTests : IDisposable
     // Opens a menu bar's top-level menu with a click on its header, then clicks the item.
     private static void ChooseFromMenuBar(DispatcherHost host, string menu, string item)
     {
-        var top = All<AvMenuItem>(host.Root).Single(i => Equals(i.Header, menu));
+        var top = All<AvMenuItem>(MenuBar(host)).Single(i => Equals(i.Header, menu));
         Click(top);
         Assert.True(top.IsSubMenuOpen);
         Click(top.Items.Cast<AvMenuItem>().Single(i => Equals(i.Header, item)));
@@ -404,27 +407,34 @@ public sealed class SampleAppTests : IDisposable
     [AvaloniaFact]
     public void Every_page_and_the_list_fit_in_the_apps_window()
     {
-        // What each wants with no limit (its desired size measured against infinity) against the room it has: the list
-        // beside the pages, and each page in the rest of the window's width. The window is 820 wide for this (#96).
+        // Nothing is cut off on the right (#96): each page name's text gets the width it wants, and on each page, laid out
+        // beside the list in the app's window, no control reaches past the page's right edge and no one-line text is
+        // narrower than its text. Wrapping text may wrap. Run on each system: the fonts differ (CI run 318).
         var (host, _) = Open();
-        var list = PageList(host);
-        var room = Shell(host).Content is Control content ? content.Bounds.Size : default;
-        Assert.Equal(SampleApp.WindowWidth - SampleApp.PaneWidth, room.Width);
-        static Size Wanted(Control c)
+        static double Wanted(TextBlock t)
         {
-            c.Measure(Size.Infinity);
-            var size = c.DesiredSize;
-            c.InvalidateMeasure();
-            return size;
+            t.Measure(Size.Infinity);
+            var width = t.DesiredSize.Width;
+            t.InvalidateMeasure();
+            return width;
         }
+        static IEnumerable<string> CutOff(Control root) =>
+            All<Control>(root)
+                .Select(c => (c, right: c.TranslatePoint(new Point(c.Bounds.Width, 0), root)?.X ?? 0))
+                .Where(x => x.right > root.Bounds.Width + 0.5)
+                .Select(x => $"{x.c.GetType().Name} ends at {x.right} of {root.Bounds.Width}")
+                .Concat(All<TextBlock>(root)
+                    .Where(t => t.TextWrapping == TextWrapping.NoWrap && t.IsEffectivelyVisible && Wanted(t) > t.Bounds.Width + 0.5)
+                    .Select(t => $"\"{t.Text}\" wants {Wanted(t)} of {t.Bounds.Width}"));
 
-        Assert.All(All<ListBoxItem>(list), i => Assert.True(Wanted(i).Width <= SampleApp.PaneWidth, $"{i.Content} wants {Wanted(i).Width}"));
-        Assert.True(Wanted(list).Height <= list.Bounds.Height, $"the list wants {Wanted(list).Height} of {list.Bounds.Height}");
+        var list = PageList(host);
+        Assert.Equal(SampleApp.PaneWidth, list.Bounds.Width);
+        Assert.Empty(CutOff(list));
         foreach (var (name, _) in SampleApp.Pages)
         {
             var page = Page(host, name);
-            var wanted = Wanted(page);
-            Assert.True(wanted.Width <= room.Width && wanted.Height <= room.Height, $"{name} wants {wanted} of {room}");
+            Assert.Equal(SampleApp.WindowWidth - SampleApp.PaneWidth, page.Bounds.Width);
+            Assert.True(!CutOff(page).Any(), $"{name}: {string.Join("; ", CutOff(page))}");
         }
     }
 

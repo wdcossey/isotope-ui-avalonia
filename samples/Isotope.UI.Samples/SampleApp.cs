@@ -22,10 +22,13 @@ public static class SampleApp
     /// <summary>Whether the pages put tooltips on their controls (the View menu's "Show tooltips").</summary>
     public static readonly Context<bool> ShowTips = new(true);
 
-    /// <summary>The window's size, as Program opens it.</summary>
-    public const double WindowWidth = 820, WindowHeight = 680;
+    /// <summary>
+    /// The window's size, as Program opens it. 860 wide (#96): beside the list, the Icons page wants 727 with
+    /// ubuntu-latest's default font (641 on Windows, measured headless), more than 820 left it.
+    /// </summary>
+    public const double WindowWidth = 860, WindowHeight = 680;
 
-    /// <summary>The width of the page list beside the pages.</summary>
+    /// <summary>The width of the page list beside the pages: "Split view", its longest name, wants 83 on Windows.</summary>
     public const double PaneWidth = 120;
 
     /// <summary>The pages, in list order: each item of the list and of the Go menu, and each page shown, comes from this list.</summary>
@@ -56,7 +59,8 @@ public static class SampleApp
                 {
                     SelectionMode = SelectionMode.AlwaysSelected,
                 },
-                // Every page stays mounted, in one cell, and only the selected one is shown: each keeps its state.
+                // Every page stays mounted, in one cell, and only the selected one is shown: each keeps its state, and a
+                // hidden page stays live (its effects and timers run on).
                 Grid([GridSize.Star()], [GridSize.Star()],
                     Pages.Select((p, i) => (Element?)Component(p.Render).IsVisible(i == page)).ToArray()))
             with
