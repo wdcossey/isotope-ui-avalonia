@@ -8,7 +8,8 @@ namespace Isotope.UI.Samples;
 /// <summary>
 /// List boxes (#94): a typed list of fruit whose rows are components with their own counts, keyed by the fruit, so a
 /// row keeps its count when the rows move; Avalonia's selection modes, the selection as items, and the item click; and
-/// a thousand element rows, of which Avalonia realises only those in view.
+/// a thousand element rows, of which Avalonia realises only those in view. Self-contained: one function component, with
+/// no other page's helpers.
 /// </summary>
 public static class ListsPage
 {
@@ -46,7 +47,7 @@ public static class ListsPage
 
         return VStack(12,
             TextBlock("A typed list: each row is a component with its own count, keyed by its fruit, so it keeps the count when the rows move."),
-            SampleApp.Row(
+            HStack(8,
                 Button("Reverse", () => setFruits(fruits.Reverse().ToArray())),
                 Button("Rotate", () => setFruits([.. fruits.Skip(1), .. fruits.Take(1)])),
                 Button("Add", Add),
@@ -67,9 +68,9 @@ public static class ListsPage
     {
         var (count, setCount) = ctx.UseState(0);
         // The button handles its own click: the list's item click isn't raised for it.
-        return SampleApp.Row(
-            TextBlock(fruit.Name).Width(90),
-            TextBlock($"counted {count}"),
+        return HStack(8,
+            TextBlock(fruit.Name).Width(90).VerticalAlignment(global::Avalonia.Layout.VerticalAlignment.Center),
+            TextBlock($"counted {count}").VerticalAlignment(global::Avalonia.Layout.VerticalAlignment.Center),
             Button("+1", () => setCount(count + 1)));
     }
 }
