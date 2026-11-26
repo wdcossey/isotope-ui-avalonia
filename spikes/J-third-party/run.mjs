@@ -34,7 +34,7 @@ function run(cmd, argv, { cwd = HERE, env = {}, quiet = false } = {}) {
   if (r.error) throw r.error;
   const out = (r.stdout ?? '') + (r.stderr ?? '');
   if (!quiet) process.stdout.write(out);
-  return { status: r.status, out, ms: Date.now() - started };
+  return { status: r.status, signal: r.signal, out, ms: Date.now() - started };
 }
 
 const problems = [];
@@ -59,7 +59,7 @@ try {
   let testExit = 0;
   for (const framework of FRAMEWORKS) {
     r = run('dotnet', ['test', 'Vendor.Controls.Tests', '--no-build', '-f', framework, '-nologo', '-v:q', '--logger', 'console;verbosity=minimal'], { env });
-    if (r.status !== 0) testExit = r.status;
+    if (r.status !== 0) testExit = r.status ?? ('signal ' + r.signal);
     const m = new RegExp('Failed:\\s*(\\d+), Passed:\\s*(\\d+), Skipped:\\s*(\\d+), Total:\\s*(\\d+).*\\(' + framework.replace('.', '\\.') + '\\)').exec(r.out);
     if (!m) { problems.push('tests: no result for ' + framework); continue; }
     const [failed, passed, , total] = m.slice(1).map(Number);
