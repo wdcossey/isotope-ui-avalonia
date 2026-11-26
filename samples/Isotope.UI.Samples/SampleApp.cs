@@ -41,6 +41,7 @@ public static class SampleApp
         ("Split view", SplitViewPage.Render),
         ("Rich text", RichTextPage.Render),
         ("Icons", IconsPage.Render),
+        ("Lists", ListsPage.Render),
         ("Errors", ErrorsPage.Render),
     ];
 

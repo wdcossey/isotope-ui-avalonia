@@ -466,6 +466,35 @@ public sealed class SampleAppTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void Lists_page_rows_keep_their_counts_across_moves_and_report_selection_and_clicks()
+    {
+        var (host, window) = Open();
+        var page = Page(host, "Lists");
+        var lists = All<ListBox>(page);
+        Assert.Equal(2, lists.Count);
+        var fruit = lists[0];
+        string Row(int i) => All<TextBlock>((Control)fruit.Items[i]!)[0].Text!;
+        Assert.Equal(["Apple", "Banana", "Cherry", "Damson"], Enumerable.Range(0, 4).Select(Row));
+
+        Click(All<Button>((Control)fruit.Items[1]!).Single()); // Banana's +1: the button's click, not the item's
+        Assert.Contains("counted 1", Texts((Control)fruit.Items[1]!));
+        Assert.Contains("Last clicked: nothing yet", Texts(page));
+
+        Click(Labelled<Button>(page, "Reverse"));
+        Assert.Equal(["Damson", "Cherry", "Banana", "Apple"], Enumerable.Range(0, 4).Select(Row));
+        Assert.Contains("counted 1", Texts((Control)fruit.Items[2]!)); // Banana kept its count
+
+        Click(fruit.ContainerFromIndex(0)!);
+        Assert.Contains("Selected: Damson", Texts(page));
+        Assert.Contains("Last clicked: Damson", Texts(page));
+
+        var thousand = lists[1];
+        Assert.Equal(1000, thousand.Items.Count);
+        Assert.InRange(thousand.GetRealizedContainers().Count(), 1, 20);
+        Save(window, "sample-lists.png");
+    }
+
+    [AvaloniaFact]
     public void Errors_page_throw_shows_the_fallback_retry_recovers_and_the_outside_counter_keeps_its_state()
     {
         var (host, window) = Open();

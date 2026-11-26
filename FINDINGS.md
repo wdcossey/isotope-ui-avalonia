@@ -145,6 +145,34 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## ListView on a ListBox (issue #94, 2026-11-26)
+
+- **What landed:** Reactor's ListView is Avalonia's ListBox. `ListBoxElement.Items` is Avalonia's: strings, or elements
+  reconciled as a panel's children (keyed, in place, moved, a component's state kept) through upstream's items host.
+  Factories `ListBox(params Element?[])`, `ListBox(selectedIndex, onSelectedIndexChanged, items...)` (int, int?,
+  Optional<int>), typed `ListBox<T>(items, keySelector, itemTemplate)` (and the IReactorKeyed form) as `ListBoxElement<T>`
+  with typed OnItemClick and OnSelectionChanged, and `.SelectionMode(...)`.
+- **Selection:** a controlled SelectedIndex as upstream's (written when the control differs); only the list's own
+  SelectionChanged is reported (it bubbles); a keyed move keeps its items selected and reports their new indexes once the
+  items are in place; a removed selected item is reported as -1. OnItemClick (kept: Avalonia has no item-click event)
+  fires on a tap or double tap on an item (not a focusable control in it) and Enter or Space on a focused item, after the
+  tap's selection.
+- **Selection modes, measured with headless clicks:** Reactor's Single is Single, Extended is Multiple (Ctrl and Shift
+  add), Multiple is Multiple | Toggle (each tap toggles); None has no counterpart (ISOMIG005 with what to do). The
+  migration writes flag combinations in parentheses, in patterns too, and the first flag in nameof.
+- **Measured** (`ListBoxMeasurements`, 300-high list, headless, net10.0, three invocations of three runs): 10,000 element
+  rows realise 8 containers, mount in 256 to 568 ms (10,000 strings: 2.4 to 44 ms), re-render equal in 23 to 69 ms, and
+  reverse by key in 283 to 429 ms keeping every row control. Each move is one `AvaloniaList.Move` (ListBoxItemsCollection);
+  upstream's RemoveAt + Insert took 2.2 to 2.5 s, from a logical-children scan per edit. A moved row in view is detached
+  and attached again (Avalonia's VirtualizingStackPanel recycles on Move), so focus in it is lost.
+- **Unlike upstream's:** every element item is mounted (upstream mounts only the realised ones and rebuilds them when the
+  items array changes, losing their state).
+- **Samples** (`--write-baseline`): ISOMIG012 106 → 94, compile errors 2,912 → 2,896, diagnostics left 1,099 → 1,090
+  (ISOMIG005 +3 for None, ISOMIG010 +1 for Header).
+- **Tests:** 21 library tests and 3 migration tests, each proven to fail (31 deliberate breaks).
+- **Not done:** lazy mounting for long element lists; GridView (a WrapPanel items panel), ItemsView, VirtualList and
+  LazyVStack.
+
 ## Icons (issue #91, 2026-11-26)
 
 - **What landed:** upstream's `IconData` union with Avalonia's value types (`PathIconData`, `FontIconData`, `BitmapIconData`,

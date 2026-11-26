@@ -12,9 +12,9 @@ window still has to show what they can't: hover tooltips appearing, menus opened
 keyboard input, and how the page list and the split view look and animate. The checklist below is that run.
 
 **Last run:** 2026-11-26, Windows, at `cf10271` (#73, #92): the Rich text and Icons pages passed, and so did the window's
-lines as they were then (tabs). Every other line passed on 2026-11-24 at `3678918` (#34). The window and menu lines
-are new since (#96: a list of the pages replaced the tabs) and unticked, for #100. Linux and macOS haven't been run in
-a real window yet. Before a new run, clear the ticks.
+lines as they were then (eight tabs). Every other line passed on 2026-11-24 at `3678918` (#34). New since that run,
+and not run yet: the window and menu lines (#96: a list of the pages replaced the tabs; #100) and the Lists page (#94).
+Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
 
 ## Checklist
 
@@ -23,9 +23,9 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 ### The window and its menus
 
 - [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above a list of the pages on the left, each
-  name on one line and none cut off: Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons, Errors. Basics is
-  selected, and its page fills the rest of the window; no page is cut off on the right.
-- [ ] Click **Go** with the mouse → its menu drops down, listing the eight pages with a radio mark on Basics.
+  name on one line and none cut off: Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons, Lists, Errors.
+  Basics is selected, and its page fills the rest of the window; no page is cut off on the right.
+- [ ] Click **Go** with the mouse → its menu drops down, listing the nine pages with a radio mark on Basics.
 - [ ] Choose **Go > Numbers** → Numbers is selected in the list and its page shows. Click **Buttons** in the list, then
   open **Go** again → the radio mark is on Buttons.
 - [ ] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
@@ -109,6 +109,17 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
   2026-11-26: the first ring is an even colour, but its edges aren't smooth (#98).
 - [x] **Next kind** → the last icon shows a glyph ("Aa"), then the ring as a shape, then the ring in its colours, then the
   tick again, with the line above saying which. The row doesn't flicker or shift.
+
+### Lists
+
+- [ ] Four fruit rows (Apple, Banana, Cherry, Damson), each with "counted 0" and a **+1** button. **+1** on Banana →
+  "counted 1"; "Last clicked" still says "nothing yet" (the button's click isn't the item's).
+- [ ] **Reverse**, then **Rotate** → the rows move and Banana keeps "counted 1". **Add** → Elderberry joins at the end.
+- [ ] Click a row → it is highlighted, "Selected:" and "Last clicked:" name it. Reverse → the same fruit stays selected.
+- [ ] Pick **Multiple (Ctrl, Shift)** → a plain click selects one row; Ctrl+click adds one, Shift+click a range.
+  **Toggle (each tap)** → each click selects or deselects its row.
+- [ ] Focus a row (click it, then the arrow keys) and press Enter or Space → "Last clicked" names it.
+- [ ] The thousand rows scroll smoothly to "Row 1000" (Avalonia realises only the rows in view).
 
 ### Errors
 
