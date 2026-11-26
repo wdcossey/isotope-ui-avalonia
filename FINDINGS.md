@@ -960,10 +960,10 @@ Measured: 1258 library tests on each of net9.0, net10.0 and net11.0; spike J's p
   and only the selected one is shown, so each keeps its state; the window is 860 wide, since beside the list the Icons page
   wants 727 with ubuntu-latest's default font and 641 on Windows, measured headless, and the Lists page's first line
   wraps; `SampleAppTests` drive each page headless; the real-window checklist is in its README); CI builds it. Every line of the
-  checklist passed in a real window on Windows (#34, 2026-11-24; the Rich text and Icons pages and the page list on
+  checklist passed in a real window on Windows (#34, 2026-11-24; the Rich text and Icons pages and the window's lines (then tabs) on
   2026-11-26 at `cf10271`, #73 and #92: a button inside text loses focus after each press, as measured headless; the
-  single-colour bitmap icon's edges aren't smooth, #98); Linux and macOS haven't been run in a real window. The window and menu lines were rewritten for the list and wait for a
-  real-window run (#100).
+  single-colour bitmap icon's edges aren't smooth, #98); Linux and macOS haven't been run in a real window. The window and menu lines were rewritten for the list; they and the Lists
+  page passed in a real window on Windows on 2026-11-26 at `512633f` (#100).
 - **Tests:** 756 (16 new, all proven to fail). A flaky test, caused by an unobserved task exception after a dispatcher
   error, was found and fixed.
 
