@@ -47,6 +47,7 @@
     {"winui": "Microsoft.UI.Xaml.Controls.Orientation", "avalonia": "Avalonia.Layout.Orientation"},
     {"winui": "Microsoft.UI.Xaml.Controls.ScrollBarVisibility", "avalonia": "Avalonia.Controls.Primitives.ScrollBarVisibility"},
     {"winui": "Microsoft.UI.Xaml.Controls.ScrollMode", "avalonia": null, "note": "Avalonia's ScrollViewer has no scroll mode: use ScrollBarVisibility (Disabled turns scrolling off on that axis)."},
+    {"winui": "Microsoft.UI.Xaml.Controls.SymbolIcon", "avalonia": null, "note": "Avalonia has no symbol font: WinUI's symbols are glyphs of Windows' Segoe icon fonts, which can't be redistributed. Use Isotope's Icon(PathIcon(...)) with a shape, Icon(FontIcon(glyph, fontFamily)) with an icon font the app supplies, or Icon(ImageIcon(...))."},
     {"winui": "Microsoft.UI.Xaml.Controls.Symbol", "avalonia": null, "note": "Avalonia has no symbol font: WinUI's symbols are glyphs of Windows' Segoe icon fonts, which can't be redistributed. Use Icon(PathIcon(...)) with a shape, Icon(FontIcon(glyph, fontFamily)) with an icon font the app supplies, or Icon(ImageIcon(...))."},
     {"winui": "Microsoft.UI.Xaml.Controls.ContentDialogButton", "avalonia": null, "note": "Avalonia's core has no ContentDialog: use a Window shown as a dialog, or an overlay."},
     {"winui": "Microsoft.UI.Xaml.Controls.ContentDialogResult", "avalonia": null, "note": "Avalonia's core has no ContentDialog: use a Window shown as a dialog, or an overlay."},

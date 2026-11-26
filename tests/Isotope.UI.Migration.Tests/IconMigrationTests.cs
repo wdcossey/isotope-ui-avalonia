@@ -52,6 +52,8 @@ public class IconMigrationTests
                 public static Element Render() => Icon(Symbol.Home);
 
                 public static IconData Add() => SymbolIcon("Add");
+
+                public static object Native() => new Microsoft.UI.Xaml.Controls.SymbolIcon();
             }
             """;
         var left = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
@@ -59,6 +61,8 @@ public class IconMigrationTests
             && d.Contains("Icon(FontIcon(glyph, fontFamily))", StringComparison.Ordinal));
         Assert.Contains(left, d => d.StartsWith("ISOMIG011: 'SymbolIcon' is a WinUI control with no Isotope counterpart", StringComparison.Ordinal)
             && d.Contains("Icon(PathIcon(...))", StringComparison.Ordinal));
-        Assert.DoesNotContain(left, d => d.StartsWith("ISOMIG012", StringComparison.Ordinal));
+        Assert.Contains(left, d => d.StartsWith("ISOMIG005: 'Microsoft.UI.Xaml.Controls.SymbolIcon' has no Avalonia counterpart", StringComparison.Ordinal)
+            && d.Contains("Icon(PathIcon(...))", StringComparison.Ordinal));
+        Assert.DoesNotContain(left, d => d.StartsWith("ISOMIG012", StringComparison.Ordinal) || d.StartsWith("ISOMIG016", StringComparison.Ordinal));
     }
 }
