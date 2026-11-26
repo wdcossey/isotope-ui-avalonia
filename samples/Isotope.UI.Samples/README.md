@@ -19,7 +19,8 @@ keyboard input, and how the page list and the split view look and animate. The c
 
 Tick each line in a real window. "Shows" means on screen; the line after each arrow is what should happen.
 
-**How to run the checklist:** from the repository root, run
+**How to run the checklist:** ask Claude Code for a real-window run (the `real-window-run` skill launches the app,
+serves this checklist and records the results), or from the repository root run
 `node tools/real-window/checklist.mjs samples/Isotope.UI.Samples/README.md --clear` and open the page it prints
 (`http://127.0.0.1:8765/`; `--port` picks another). Fill in the system (OS, display server, version) once, then click
 **Pass**, **Fail** or **Skip** on each line, with a note when there is something to say. Each answer is saved as it is
