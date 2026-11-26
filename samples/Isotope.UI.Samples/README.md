@@ -11,8 +11,8 @@ The headless tests (`SampleAppTests`) mount every page, click through its main i
 window still has to show what they can't: hover tooltips appearing, menus opened with the mouse, right-click menus,
 keyboard input, and how the page list and the split view look and animate. The checklist below is that run.
 
-**Last run:** 2026-11-26, Windows, at `512633f` (#100): the window and menu lines (the page list, #96) and the Lists page
-(#94) passed. The Rich text and Icons pages passed earlier that day at `cf10271` (#73, #92), and every other line on
+**Last run:** 2026-11-26, Windows, at `512633f` (#100): the window and menu lines (the page list, #96), the Lists page
+(#94) and the first three Basics lines passed; only those were run at this commit, the rest beside the new list not yet. The Rich text and Icons pages passed earlier that day at `cf10271` (#73, #92), and every other line on
 2026-11-24 at `3678918` (#34). Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
 
 ## Checklist
