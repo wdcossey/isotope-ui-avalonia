@@ -133,7 +133,7 @@ public static class IsotopeTools
 
     [McpServerTool(Name = "list_guides", Title = "List Isotope's guides", ReadOnly = true, Idempotent = true, OpenWorld = false, Destructive = false)]
     [Description("Lists Isotope's guides (writing components, hooks, platform hooks, theme tokens, text styles, error boundaries, migrating " +
-        "from Reactor), each with its name, title and summary. Read one with get_guide; they are also MCP resources (isotope://guides/<name>).")]
+        "from Reactor, writing controls for a control library), each with its name, title and summary. Read one with get_guide; they are also MCP resources (isotope://guides/<name>).")]
     public static string ListGuides()
     {
         var sb = new StringBuilder();

@@ -58,7 +58,7 @@ public class DocSnippetTests
             if (name.Length == 0)
                 problems.Add("a C# block with no snippet marker: " + FirstLine(m.Groups["code"].Value));
             else if (!regions.TryGetValue(name, out var code))
-                problems.Add($"snippet '{name}': no #region {name} in the test project");
+                problems.Add($"snippet '{name}': no #region {name} in the test project or spike J");
             else if (code != m.Groups["code"].Value)
                 problems.Add($"snippet '{name}' differs from its region:\n--- region\n{code}\n--- doc\n{m.Groups["code"].Value}");
         }

@@ -9,9 +9,9 @@ built-in ones do.
 The worked example is a small library built outside this repository against Isotope's packages alone, as a third
 party's would be: a plain control, a templated control and a panel (`spikes/J-third-party/`, with its report in
 [Spike J](../spikes/J-third-party-controls.md)). Every C# block on this page is a region of that code. `run.mjs` builds
-it and runs its tests against the packed packages on `net9.0`, `net10.0` and `net11.0` (CI's packages job does this on every
-push), and `DocSnippetTests` fails if the page and the code drift apart. The names (`Vendor.Controls`, `RatingBar`…) are
-made up.
+it and runs its tests against the packed packages on `net9.0`, `net10.0` and `net11.0` (CI's packages job does this on
+every push), and `DocSnippetTests` fails if the page and the code drift apart. The names (`Vendor.Controls`,
+`RatingBar`…) are made up.
 
 ## What you ship, and what your users write
 
@@ -82,8 +82,8 @@ The card and the rating are the same control instances from one render to the ne
   assembly), and it runs in your build on every framework, so there is nothing else to reference. Everything it writes
   uses Isotope's public API: you need no `InternalsVisibleTo`.
 - **Check that it ran.** An analyzer that fails to load is only a warning (CS8032), so the example builds with
-  `TreatWarningsAsErrors`. A record's `Descriptor` exists only when the generator wrote it, so a test can assert
-  `RatingBarElement.Descriptor` isn't null.
+  `TreatWarningsAsErrors`. The generator writes each record's `Descriptor`, so code that names
+  `RatingBarElement.Descriptor` doesn't build when it didn't run (the example's first test does).
 
 ## An element record
 
@@ -122,8 +122,8 @@ public partial record RatingBarElement(
 }
 ```
 
-- **`[GenerateReactorDescriptor(typeof(RatingBar))]`** has the generator write the record's descriptor (how the engine mounts and
-  updates the control) and register it. The control can come from another assembly, as `RatingBar` does.
+- **`[GenerateReactorDescriptor(typeof(RatingBar))]`** has the generator write the record's descriptor (how the engine
+  mounts and updates the control) and register it. The control can come from another assembly, as `RatingBar` does.
 - **Members take the control's names** ([the naming rule](../../tools/naming/README.md)): a property keeps its name
   (`Maximum`, `Fill`), a callback is `On` plus the event (`OnCleared`), and a value's callback is `On` plus the property
   plus `Changed` (`OnValueChanged`). The generator maps members by these names, so nothing else needs saying. Put the
@@ -169,8 +169,8 @@ public static class VendorFactories
 
 - **A factory is named after its control,** and its parameters are the members' names in camel case, callbacks
   included (`onValueChanged`).
-- **Name the factory class after your library** (`VendorFactories`), not `Factories`, so a file that imports both namespaces
-  can still name each class. See [Name clashes](#name-clashes) for the factories themselves.
+- **Name the factory class after your library** (`VendorFactories`), not `Factories`, so a file that imports both
+  namespaces can still name each class. See [Name clashes](#name-clashes) for the factories themselves.
 
 Modifiers are extension methods that return a copy of the element, named after the property each sets:
 
@@ -307,9 +307,10 @@ writes two members into another part of the record:
   - other delegates, elements, arrays, collections (`Children`, `Setters`) and records by reference;
   - everything else by value (`Value`, `Maximum`, `Fill`, `IsReadOnly`).
 
-It writes neither, and the element is applied on every render, for a generic or nested record, and when a member can't
-be compared: a struct holding an element (`Optional<Element>`), a member hidden by a same-named one, a base record from
-another assembly, or a base record that declares either member. A new array or delegate each render (a `.Set(...)` lambda made in the render) is
+It writes neither for a generic or nested record, or one whose base record declares either member. It writes no
+`ShallowEqualsCore` (only `HasCallbacks`) when a member can't be compared: a struct holding an element
+(`Optional<Element>`), a member hidden by a same-named one, or a base record from another assembly. Either way, the
+element is applied on every render. A new array or delegate each render (a `.Set(...)` lambda made in the render) is
 never equal to the last, so that element is applied each time too, as Isotope's own are.
 
 You can write either member yourself, and the generator then leaves that one to you:

@@ -9,6 +9,7 @@ using RatingBarControl = Vendor.Controls.RatingBar;
 #endregion
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
 using CalloutCardControl = Vendor.Controls.CalloutCard;
 using SpreadPanelControl = Vendor.Controls.SpreadPanel;
 using AvaloniaButton = Avalonia.Controls.Button;
@@ -82,7 +83,9 @@ public sealed class GuideExampleTests
         var bar = m.One<RatingBarControl>();
         var card = m.One<CalloutCardControl>();
         Assert.Equal(3, bar.Value);
+        // The tokens are bound: the control's own fill is Goldenrod, and the card has no accent of its own.
         Assert.NotNull(bar.Fill);
+        Assert.NotSame(Brushes.Goldenrod, bar.Fill);
         Assert.NotNull(card.Accent);
 
         bar.Value = 4; // as a click does
