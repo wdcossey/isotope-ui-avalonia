@@ -1,6 +1,7 @@
 # The sample app
 
-One window with a tab per area, written as Isotope function components (no XAML). Run it from the repository root:
+One window with a page per area, chosen from a list on the left (#96), written as Isotope function components (no
+XAML). Run it from the repository root:
 
 ```sh
 dotnet run --project samples/Isotope.UI.Samples
@@ -8,12 +9,12 @@ dotnet run --project samples/Isotope.UI.Samples
 
 The headless tests (`SampleAppTests`) mount every page, click through its main interaction and render it to PNG. A real
 window still has to show what they can't: hover tooltips appearing, menus opened with the mouse, right-click menus,
-keyboard input, and how the tabs and the split view look and animate. The checklist below is that run.
+keyboard input, and how the page list and the split view look and animate. The checklist below is that run.
 
-**Last run:** 2026-11-26, Windows, at `cf10271` (#73, #92): the Rich text and Icons pages passed, and so did the page
-list as it was then (eight tabs). Every other line passed on 2026-11-24 at `3678918` (#34). The Lists page (#94) came
-later: its lines, and the two that list the pages (now nine tabs: #94 shortened Split view to **Split** and Rich text to
-**Text**), haven't been run. Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
+**Last run:** 2026-11-26, Windows, at `cf10271` (#73, #92): the Rich text and Icons pages passed, and so did the window's
+lines as they were then (eight tabs). Every other line passed on 2026-11-24 at `3678918` (#34). New since that run,
+and not run yet: the window and menu lines (#96: a list of the pages replaced the tabs; #100) and the Lists page (#94).
+Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
 
 ## Checklist
 
@@ -21,15 +22,17 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### The window and its menus
 
-- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above nine tabs on one line (on
-  Windows; another system's UI font may wrap the last): Basics, Buttons, Menus, Numbers, Split, Text, Icons, Lists,
-  Errors. Basics is selected.
+- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above a list of the pages on the left, each
+  name on one line and none cut off: Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons, Lists, Errors.
+  Basics is selected, and its page fills the rest of the window; no page is cut off on the right.
 - [ ] Click **Go** with the mouse → its menu drops down, listing the nine pages with a radio mark on Basics.
-- [x] Choose **Go > Numbers** → the Numbers tab is selected. Click the **Buttons** tab, then open **Go** again → the
-  radio mark is on Buttons.
-- [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
+- [ ] Choose **Go > Numbers** → Numbers is selected in the list and its page shows. Click **Buttons** in the list, then
+  open **Go** again → the radio mark is on Buttons.
+- [ ] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
   closes it.
-- [x] Switch between tabs → each page keeps what you did on it (a count, a typed draft, a deleted file).
+- [ ] Switch between pages → each page keeps what you did on it (a count, a typed draft, a deleted file).
+- [ ] Click a page in the list, then press Down and Up → the selection moves and its page shows. Press Tab → the focus
+  moves into the page shown (its first control), never into a hidden page.
 
 ### Basics
 
@@ -72,7 +75,7 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
   where they were (Avalonia's NumericUpDown refuses typed text outside its range unless ClipValueToMinMax is on).
 - [x] Empty the box and press Enter → the box stays empty; "Value:" and the slider keep the last number.
 
-### Split (the split view)
+### Split view
 
 - [x] The pane (grey, with Inbox, Sent, Archive) is open on the left beside the content; **Pane** is pressed.
 - [x] Click **Archive** → "Showing Archive".
@@ -81,7 +84,7 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
   by itself (a light dismiss) and **Pane** is released: the state followed the control.
 - [x] **Compact inline** and **Compact overlay** → a closed pane leaves a narrow strip.
 
-### Text (rich text)
+### Rich text
 
 - [x] The first line reads "Rich text is **bold**, *italic*, underlined, struck through and coloured, in one text block.",
   each word styled as it says (underlined underlined, struck through crossed out, coloured green).

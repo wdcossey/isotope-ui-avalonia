@@ -46,7 +46,8 @@ public static class ListsPage
         }
 
         return VStack(12,
-            TextBlock("A typed list: each row is a component with its own count, keyed by its fruit, so it keeps the count when the rows move."),
+            TextBlock("A typed list: each row is a component with its own count, keyed by its fruit, so it keeps the count when the rows move.")
+                .TextWrapping(),
             HStack(8,
                 Button("Reverse", () => setFruits(fruits.Reverse().ToArray())),
                 Button("Rotate", () => setFruits([.. fruits.Skip(1), .. fruits.Take(1)])),

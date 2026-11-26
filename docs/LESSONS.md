@@ -275,6 +275,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A conditional's tuple type comes from its typed arm.** `cond ? (20.0, family) : default` is `(double, FontFamily)`,
   so `default` is `(0, null)`, not two nulls: a font size of 0 then threw in unrelated text tests. Cast the arm
   (`((double?)20.0, family)`). (2026-11-26)
+- **A layout fit test that measures with `Measure(Size.Infinity)` reports wrapping text at its one-line width,** and
+  depends on the system font (ubuntu-latest's is about 13% wider than Windows'). Check what is actually cut off instead: a
+  control past its container's right edge, or one-line text narrower than it wants (#96). (2026-11-26)
 
 ## Working with the developer
 

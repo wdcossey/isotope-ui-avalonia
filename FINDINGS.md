@@ -191,8 +191,7 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   glyphs, which can't be redistributed. The migration reports them (ISOMIG005, ISOMIG011, ISOMIG010) with what to use
   instead. **Decided** (developer, 2026-11-26): Isotope ships no symbol set or font, Fluent UI System Icons included;
   the guide ("WinUI symbols") says how to use Segoe Fluent Icons on Windows (`FontIcon(glyph, "Segoe Fluent Icons")`)
-  or an app's own icons, and the migration's notes point there. The sample window is 820 wide, so its eight tabs fit on
-  one line on Windows (with ubuntu-latest's default font the eighth still wraps, CI run 318). A bitmap or image URI is a file or `avares://` resource;
+  or an app's own icons, and the migration's notes point there. The sample's tabs became a page list (#96), so the tab row no longer sets the window's width. A bitmap or image URI is a file or `avares://` resource;
   a command's `Icon` takes the new records but nothing draws it yet. `IconElement` clashes with
   `Avalonia.Controls.IconElement` where both namespaces are imported (CS0104).
 - **Measured on upstream's samples** (`measure-samples.mjs`, 36 projects, 358 files, upstream 561c5573), main `c0b2e19`
@@ -945,10 +944,14 @@ Measured: 1258 library tests on each of net9.0, net10.0 and net11.0; spike J's p
 
 - **`ReactorHostControl`** (`Isotope.UI.Hosting`) renders a root component into any Avalonia layout, coalescing re-renders
   per dispatcher pass and surfacing render errors. `ReactorApp.Run(AppBuilder, …)` runs one window. Isotope.UI.Avalonia.Desktop adds upstream's `Run<TRoot>(title, width, height)` and `Run(title, render, …)` over a default builder (#32).
-- **Sample app:** `samples/Isotope.UI.Samples` (a tab per area, #16 and #30; `SampleAppTests` drive each page headless; the real-window checklist is in its README); CI builds it. Every line of the
+- **Sample app:** `samples/Isotope.UI.Samples` (a page per area, #16 and #30, chosen from a list in an inline split view beside it, #96; every page stays mounted
+  and only the selected one is shown, so each keeps its state; the window is 860 wide, since beside the list the Icons page
+  wants 727 with ubuntu-latest's default font and 641 on Windows, measured headless, and the Lists page's first line
+  wraps; `SampleAppTests` drive each page headless; the real-window checklist is in its README); CI builds it. Every line of the
   checklist passed in a real window on Windows (#34, 2026-11-24; the Rich text and Icons pages and the page list on
   2026-11-26 at `cf10271`, #73 and #92: a button inside text loses focus after each press, as measured headless; the
-  single-colour bitmap icon's edges aren't smooth, #98); Linux and macOS haven't been run in a real window.
+  single-colour bitmap icon's edges aren't smooth, #98); Linux and macOS haven't been run in a real window. The window and menu lines were rewritten for the list and wait for a
+  real-window run (#100).
 - **Tests:** 756 (16 new, all proven to fail). A flaky test, caused by an unobserved task exception after a dispatcher
   error, was found and fixed.
 
