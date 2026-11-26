@@ -17,10 +17,11 @@ export const newToken = () => randomBytes(24).toString('hex');
 
 export const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-// A checklist line as HTML: escaped first, then **bold** and `code` (which escaping leaves alone) made into tags.
-export const inlineMarkdown = (s) => escapeHtml(s)
-  .replace(/`([^`]+)`/g, '<code>$1</code>')
-  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+// A checklist line as HTML: escaped first, then `code` spans and, outside them, **bold** made into tags (escaping
+// leaves backticks and asterisks alone).
+export const inlineMarkdown = (s) => escapeHtml(s).split(/(`[^`]+`)/).map((part, i) => (i % 2
+  ? '<code>' + part.slice(1, -1) + '</code>'
+  : part.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'))).join('');
 
 const STYLE = `body{font:14px system-ui,sans-serif;max-width:920px;margin:1.5em auto;padding:0 1em}
 h2{margin-top:1.6em;border-bottom:1px solid #ccc;font-size:1.2em}
@@ -140,12 +141,13 @@ export function createChecklistServer({ title, getItems, results, token, save, l
     const url = new URL(req.url, 'http://' + host);
     if (req.method === 'GET' && url.pathname === '/') {
       const nonce = randomBytes(16).toString('base64');
+      const page = renderPage({ title, items: getItems(), results, token, nonce });
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
         'content-security-policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
         'x-frame-options': 'DENY', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store',
       });
-      return res.end(renderPage({ title, items: getItems(), results, token, nonce }));
+      return res.end(page);
     }
     const routes = ['/answer', '/system', '/notes', '/finish'];
     if (!routes.includes(url.pathname)) throw new HttpError(404, 'not found');
@@ -176,9 +178,14 @@ export function createChecklistServer({ title, getItems, results, token, save, l
       save();
       log({ event: 'notes', at: at.toISOString(), notes: results.notes });
     } else {
+      // 'finished' goes once the reply is sent or the connection is gone (the tab closed while finish() ran), so the
+      // tool stops either way.
       finishing = true;
+      let closed = false, done = false;
+      res.once('close', () => { closed = true; if (done) server.emit('finished'); });
       try { reply = { ok: true, summary: await finish() }; } catch (e) { finishing = false; throw e; }
-      res.once('finish', () => server.emit('finished'));
+      done = true;
+      if (closed) server.emit('finished');
     }
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     res.end(JSON.stringify(reply));

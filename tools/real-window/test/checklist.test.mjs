@@ -63,7 +63,9 @@ test('serve, answer, stop, resume, finish: the checklist is written back and the
     const saved = JSON.parse(readFileSync(resultsFile, 'utf8'));
     assert.equal(saved.checklist, 'README.md');
     assert.equal(Object.keys(saved.answers).length, 2);
-    assert.ok(!JSON.stringify(saved).includes(dir), 'the results file holds a path');
+    // The temporary folder's own name, which any form of its path (escaped backslashes or not) would hold.
+    assert.ok(!readFileSync(resultsFile, 'utf8').includes(path.basename(dir)), 'the results file holds a path');
+    assert.equal(existsSync(resultsFile + '.tmp'), false, 'a temporary file is left');
     assert.deepEqual(run.events.filter((e) => e.event === 'answer').map((e) => [e.line, e.verdict, e.note]), [[14, 'pass', ''], [16, 'fail', 'it broke']]);
     run.child.kill();
     await run.exited;

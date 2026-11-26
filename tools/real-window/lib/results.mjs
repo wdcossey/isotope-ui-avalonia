@@ -1,7 +1,7 @@
 // The answers of a run, saved beside the checklist as <checklist>.results.json (git-ignored) as each is given, so a
 // closed tab or a crash loses nothing and the next run resumes (#106). It holds the checklist's file name (never its
 // path), the answers, and what the developer typed: nothing about the machine or the user.
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { VERDICTS } from './writeback.mjs';
 
@@ -38,8 +38,13 @@ export function loadResults(file, checklist) {
   return out;
 }
 
+// Written to <file>.tmp and renamed over the file, so a crash mid-write leaves the last saved answers whole. If the
+// rename is refused (a file held open on Windows), the file is written in place instead.
 export function saveResults(file, results) {
-  writeFileSync(file, JSON.stringify(results, null, 2) + '\n');
+  const text = JSON.stringify(results, null, 2) + '\n';
+  const tmp = file + '.tmp';
+  writeFileSync(tmp, text);
+  try { renameSync(tmp, file); } catch { writeFileSync(file, text); rmSync(tmp, { force: true }); }
 }
 
 export function deleteResults(file) {

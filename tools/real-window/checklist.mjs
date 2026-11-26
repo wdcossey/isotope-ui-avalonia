@@ -42,6 +42,7 @@ const opts = parseArgs(process.argv.slice(2));
 const name = path.basename(opts.file);
 const resultsFile = resultsPathFor(opts.file);
 const read = () => readFileSync(opts.file, 'utf8');
+let written = false;
 
 try {
   if (opts.clear) {
@@ -68,9 +69,11 @@ try {
       const { items: now } = parseChecklist(before);
       const { text, unmatched } = applyResults(before, results);
       if (text !== before) writeFileSync(opts.file, text);
+      written = true;
       const summary = summarize(now, results, { date: localDate(), commit: shortCommit(path.dirname(opts.file)) });
-      deleteResults(resultsFile);
       let out = formatSummary(summary);
+      // The checklist is written, so a failure here must not fail the Finish (a retry would apply the answers again).
+      try { deleteResults(resultsFile); } catch (e) { out += `\nCould not delete ${path.basename(resultsFile)} (${e.code ?? e.message}): delete it before the next run.`; }
       if (unmatched.length) out += `\n${unmatched.length} saved answers matched no line (the line's text changed) and were left out.`;
       emit({ event: 'finish', at: new Date().toISOString(), total: summary.total, bySection: summary.bySection, failed: summary.failed, sentence: summary.sentence, unmatched: unmatched.length });
       say(`Wrote the answers into ${name}.\n${out}`);
@@ -83,10 +86,13 @@ try {
   say(`${name}: ${items.length} lines in ${sections(items).length} sections${saved ? `, ${saved} answered in an earlier run` : ''}.`);
   if (stale) say(`${stale} saved answers match no line now (the line's text changed); they will be left out.`);
   say(`Open ${url} and answer each line. Answers are saved to ${path.basename(resultsFile)} as you go; Finish writes them into ${name}.`);
-  server.on('finished', () => { server.close(() => process.exit(0)); server.closeAllConnections(); });
+  // Stopping lets the process end by itself, so what was written to stderr is flushed first.
+  const stop = (code) => { process.exitCode = code; server.close(); server.closeAllConnections(); };
+  server.on('finished', () => stop(0));
   process.on('SIGINT', () => {
-    say(`\nStopped without writing ${name}. Answers are kept in ${path.basename(resultsFile)}; run the same command to resume.`);
-    process.exit(130);
+    if (written) say(`\nStopped. The answers were written into ${name}.`);
+    else say(`\nStopped without writing ${name}. Answers are kept in ${path.basename(resultsFile)}; run the same command to resume.`);
+    stop(130);
   });
 } catch (e) {
   console.error('checklist: ' + e.message);

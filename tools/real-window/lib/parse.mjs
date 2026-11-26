@@ -4,7 +4,8 @@ import { createHash } from 'node:crypto';
 
 const ITEM = /^(\s*)([-*+]) \[([ xX])\](?: (.*))?$/;
 const HEADING = /^ {0,3}#{1,6}[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/;
-const FENCE = /^ {0,3}(`{3,}|~{3,})/;
+// A code fence, at any indent so one inside a list item counts; a closing fence has nothing after its run.
+const FENCE = /^\s*(`{3,}|~{3,})(.*)$/;
 
 // Splits text into lines, each with its own ending ('\r\n', '\n', or '' for a last line with none), so that joining
 // every body and ending gives the text back byte for byte.
@@ -42,7 +43,7 @@ export function parseChecklist(text) {
   for (let i = 0; i < lines.length; i++) {
     const body = lines[i].body;
     const f = FENCE.exec(body);
-    if (fence) { if (f && f[1][0] === fence[0] && f[1].length >= fence.length) fence = null; continue; }
+    if (fence) { if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !f[2].trim()) fence = null; continue; }
     if (f) { fence = f[1]; continue; }
     const h = HEADING.exec(body);
     if (h) { section = h[1]; continue; }

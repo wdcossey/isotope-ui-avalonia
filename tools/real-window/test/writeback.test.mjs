@@ -79,14 +79,23 @@ for (const eol of ['\n', '\r\n']) {
   });
 }
 
-test('a wrapped note never starts a line with a list, quote or heading marker', () => {
-  const text = '### S\n- [ ] Line.\n';
-  const note = Array.from({ length: 60 }, (_, i) => ['-', '*', '+', '>', '#', '1.', '[x]'][i % 7] + ' w' + i).join(' ');
+test('a wrapped note never starts a line with a block marker, a fence, HTML or a table row', () => {
+  const text = '### S\n- [ ] Line.\n- [x] Later line.\n';
+  const markers = ['-', '*', '+', '#', '###', '1.', '2)', '>', '>quote', '```', '```sh', '~~~', '<div>', '|', '===', '---', '***', '___'];
+  const note = Array.from({ length: 90 }, (_, i) => markers[i % markers.length] + ' w' + i).join(' ');
   const out = applyResults(text, { answers: { [keyAt(text, 2)]: { verdict: 'fail', note, date: DATE } } }).text;
-  const lines = out.split('\n').slice(2, -1);
-  assert.ok(lines.length >= 3, 'the note did not wrap');
-  for (const l of lines) assert.doesNotMatch(l, /^\s*([-*+>#]|\d+[.)]|\[)/, 'a wrapped line starts a block: ' + l);
-  assert.equal(parseChecklist(out).items.length, 1);
+  const lines = out.split('\n').slice(2, -2);
+  assert.ok(lines.length >= 5, 'the note did not wrap');
+  for (const l of lines) assert.ok(!markers.includes(l.trim().split(' ')[0]), 'a wrapped line starts a block: ' + l);
+  assert.deepEqual(parseChecklist(out).items.map((it) => [it.line, it.ticked]), [[2, false], [lines.length + 3, true]]);
+  assert.deepEqual(clearTicks(out).cleared, 1, 'the later line was hidden');
+});
+
+test('words that only look like markers (#106, **x, -1, 3.5, [link]) may start a wrapped line, so the width holds', () => {
+  const text = '### S\n- [ ] ' + 'a'.repeat(110) + '\n';
+  const note = Array.from({ length: 30 }, (_, i) => ['#10' + i, '**x**', '-1', '3.5', '[link]'][i % 5]).join(' ');
+  const out = applyResults(text, { answers: { [keyAt(text, 2)]: { verdict: 'fail', note, date: DATE } } }).text;
+  for (const l of out.split('\n')) assert.ok(l.length <= WIDTH, 'over the width: ' + l);
 });
 
 test('a note wrapped after a last line with no ending keeps the file without a final ending', () => {
@@ -94,6 +103,18 @@ test('a note wrapped after a last line with no ending keeps the file without a f
   const note = 'x'.repeat(60) + ' ' + 'y'.repeat(60);
   const out = applyResults(text, { system: 'Fedora', answers: { [keyAt(text, 2)]: { verdict: 'pass', note, date: DATE } } }).text;
   assert.equal(out, `### S\r\n- [x] Last. (Fedora, ${DATE}: ${'x'.repeat(60)}\r\n  ${'y'.repeat(60)})`);
+});
+
+test('a fence closes only on a bare fence line, and a fence inside a list item counts', () => {
+  const text = '```\n```sh\n- [x] still code\n```\n- [x] a\n    ~~~\n    - [x] code in an item\n    ~~~\n- [x] b\n';
+  assert.deepEqual(parseChecklist(text).items.map((it) => it.text), ['a', 'b']);
+  assert.equal(clearTicks(text).cleared, 2);
+});
+
+test('the "Last run" sentence names a failure with no heading', () => {
+  const text = '- [ ] a\n';
+  const s = summarize(parseChecklist(text).items, { answers: { [keyAt(text, 1)]: { verdict: 'fail', note: '', date: DATE } } }, { date: DATE });
+  assert.match(s.sentence, /1 failed \(no heading\)\.$/);
 });
 
 test('a ticked line inside a code fence is not cleared', () => {

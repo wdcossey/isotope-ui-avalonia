@@ -9,8 +9,11 @@ export const VERDICTS = ['pass', 'fail', 'skip'];
 // A note as one line of Markdown: whitespace runs (newlines included) become one space.
 export const oneLine = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 
-// A word that would start a list, a quote or a heading if a wrapped line began with it.
-const BLOCK_START = /^([-*+>#]|\d+[.)]|\[)/;
+// Words that would start a block if a wrapped line began with them: a list marker, a heading's #s, a thematic break
+// or setext underline, a quote, a code fence, an HTML block or a table row. A wrapped line never starts with one; it
+// stays on the line before, even past WIDTH. Other words (#106, **Failed, -1, 3.5) are safe there.
+const BLOCK_STARTS = [/^[-*+=_]+$/, /^#{1,6}$/, /^\d{1,9}[.)]$/, /^>/, /^```/, /^~~~/, /^</, /^\|/];
+const startsBlock = (word) => BLOCK_STARTS.some((re) => re.test(word));
 
 function setTick(line, at, ticked) {
   const c = line.body[at];
@@ -26,7 +29,7 @@ function appendWrapped(lines, item, text, eol) {
   const out = [];
   let cur = last.body;
   for (const word of text.split(' ')) {
-    if (cur.length + 1 + word.length <= WIDTH || cur.trim() === '' || BLOCK_START.test(word)) cur += (cur === cont ? '' : ' ') + word;
+    if (cur.length + 1 + word.length <= WIDTH || cur.trim() === '' || startsBlock(word)) cur += (cur === cont ? '' : ' ') + word;
     else { out.push(cur); cur = cont + word; }
   }
   out.push(cur);
@@ -93,7 +96,7 @@ export function summarize(items, results, { date, commit } = {}) {
   const failed = items.filter((it) => verdictOf(it) === 'fail')
     .map((it) => ({ section: it.section, line: it.line, text: it.text, note: oneLine(answers[it.key].note) }));
   const system = oneLine(results.system);
-  const failedSections = bySection.filter((s) => s.fail).map((s) => s.section + (s.fail > 1 ? ` (${s.fail})` : ''));
+  const failedSections = bySection.filter((s) => s.fail).map((s) => (s.section || 'no heading') + (s.fail > 1 ? ` (${s.fail})` : ''));
   let sentence = `**Last run:** ${date}, ${system || '<system>'}, at \`${commit || '<commit>'}\`: `;
   sentence += `${total.pass} of ${items.length} lines passed`;
   if (total.fail) sentence += `, ${total.fail} failed (${failedSections.join(', ')})`;

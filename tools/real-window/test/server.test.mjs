@@ -3,20 +3,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseChecklist } from '../lib/parse.mjs';
 import { emptyResults } from '../lib/results.mjs';
-import { createChecklistServer, renderPage } from '../lib/server.mjs';
+import net from 'node:net';
+import { createChecklistServer, inlineMarkdown, renderPage } from '../lib/server.mjs';
 import { post, request, tokenOf } from './http.mjs';
 
 const TOKEN = 'ab'.repeat(24);
 const TEXT = '### Section <one>\n- [ ] First **bold** <script>alert(1)</script>\n- [x] Second & "quoted"\n';
 
 // Starts a server on a free port with a 1 KiB body cap, runs fn, and always closes it.
-async function withServer(fn) {
+async function withServer(fn, { getItems, finishDelay = 0 } = {}) {
   const items = parseChecklist(TEXT).items;
   const results = emptyResults('checklist.md');
   const calls = { save: 0, log: [], finish: 0 };
   const { server, listen } = createChecklistServer({
-    title: 'Checklist <test>', getItems: () => items, results, token: TOKEN, maxBody: 1024,
-    save: () => calls.save++, log: (e) => calls.log.push(e), finish: async () => { calls.finish++; return 'summary text'; },
+    title: 'Checklist <test>', getItems: getItems ?? (() => items), results, token: TOKEN, maxBody: 1024,
+    save: () => calls.save++, log: (e) => calls.log.push(e), finish: async () => { calls.finish++; await new Promise((r) => setTimeout(r, finishDelay)); return 'summary text'; },
   });
   const port = await listen(0);
   try { return await fn({ port, items, results, calls, server }); } finally { server.closeAllConnections(); await new Promise((r) => server.close(r)); }
@@ -131,4 +132,26 @@ test('everything the page shows is escaped', () => {
   assert.match(html, /<h2>Section &lt;one&gt;<\/h2>/);
   assert.match(html, /<title>T &lt;title&gt;<\/title>/);
   assert.match(html, /value="&quot; onmouseover=&quot;bad\(\)"/);
+});
+
+test('a page that cannot be built is a 500, not a 200 with an error in it', { timeout: 15000 }, () => withServer(async ({ port }) => {
+  const r = await request(port);
+  assert.equal(r.status, 500);
+  assert.match(r.text, /checklist moved/);
+}, { getItems: () => { throw new Error('checklist moved'); } }));
+
+test('finished is emitted even when the tab goes before the reply', { timeout: 15000 }, () => withServer(async ({ port, server }) => {
+  const finished = new Promise((r) => server.once('finished', r));
+  const body = '{}';
+  const socket = net.connect(port, '127.0.0.1', () => {
+    socket.end(`POST /finish HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/json\r\nX-Checklist-Token: ${TOKEN}\r\nContent-Length: ${body.length}\r\n\r\n${body}`);
+  });
+  socket.on('data', () => {});
+  socket.on('error', () => {});
+  const timeout = new Promise((r) => setTimeout(() => r('timed out'), 3000).unref());
+  assert.notEqual(await Promise.race([finished.then(() => 'finished'), timeout]), 'timed out');
+}, { finishDelay: 200 }));
+
+test('bold is not applied inside a code span', () => {
+  assert.equal(inlineMarkdown('Type `**hi**` then **go** <x>'), 'Type <code>**hi**</code> then <b>go</b> &lt;x&gt;');
 });
