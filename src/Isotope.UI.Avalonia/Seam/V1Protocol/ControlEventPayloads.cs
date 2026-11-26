@@ -21,6 +21,9 @@ internal sealed class ListBoxEventPayload
     public EventHandler<Avalonia.Input.TappedEventArgs>? TappedTrampoline;
     public EventHandler<Avalonia.Input.TappedEventArgs>? DoubleTappedTrampoline;
     public EventHandler<Avalonia.Input.KeyEventArgs>? KeyDownTrampoline;
+
+    /// <summary>A keyed move left the selection at new indexes, for the render to report once the items are in place.</summary>
+    public bool SelectionMovePending;
 }
 
 /// <summary>

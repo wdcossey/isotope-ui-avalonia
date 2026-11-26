@@ -38,6 +38,8 @@ public class ListViewMigrationTests
                 public static bool InPatterns(ListViewElement list) =>
                     list.SelectionMode is ListViewSelectionMode.Multiple
                     || list.SelectionMode switch { ListViewSelectionMode.Multiple => true, _ => false };
+
+                public static string Name => nameof(ListViewSelectionMode.Multiple);
             }
             """;
         var before = Migrate.Analyze(reactor).Describe();
@@ -52,6 +54,7 @@ public class ListViewMigrationTests
         Assert.Contains("IsMultiple(ListBoxElement list) => list.SelectionMode == (SelectionMode.Multiple | SelectionMode.Toggle);", fixedText);
         Assert.Contains("list.SelectionMode is (SelectionMode.Multiple | SelectionMode.Toggle)", fixedText);
         Assert.Contains("list.SelectionMode switch { (SelectionMode.Multiple | SelectionMode.Toggle) => true, _ => false }", fixedText);
+        Assert.Contains("Name => nameof(SelectionMode.Multiple);", fixedText); // a name, not a combination
         Assert.Contains("using Avalonia.Controls;", fixedText);
         Assert.Empty(Migrate.Errors(fixedText));
         Assert.Empty(Migrate.Analyze(fixedText));

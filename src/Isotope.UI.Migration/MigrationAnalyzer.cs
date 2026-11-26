@@ -152,7 +152,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     if (type.Members.TryGetValue(member, out var mapped))
                     {
                         if (mapped is null) Report(ctx, Rules.NoAvaloniaType, nodes[k].GetLocation(), args: [name + "." + member, Note(type.Note)]);
-                        else Report(ctx, Rules.WinUIType, nodes[k].GetLocation(), replace: Flags(Prefix(nodes) + type.Avalonia + ".", mapped),
+                        else Report(ctx, Rules.WinUIType, nodes[k].GetLocation(), replace: Flags(Prefix(nodes) + type.Avalonia + ".", mapped, nodes[k]),
                             args: [name + "." + member, Flags(type.Avalonia + ".", mapped)]);
                         return;
                     }
@@ -246,7 +246,7 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                     if (mapped is null)
                         Report(ctx, Rules.NoAvaloniaType, ma.GetLocation(), args: [type.Name + "." + member, Note(type.Note)]);
                     else if (mapped != member || type.AvaloniaName != type.Name)
-                        Report(ctx, Rules.WinUIType, ma.GetLocation(), replace: Flags(type.AvaloniaName + ".", mapped), usings: usings,
+                        Report(ctx, Rules.WinUIType, ma.GetLocation(), replace: Flags(type.AvaloniaName + ".", mapped, ma), usings: usings,
                             args: [type.FullName + "." + member, Flags(type.Avalonia + ".", mapped)]);
                     return;
                 }
@@ -647,10 +647,13 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
         /// A mapped member as code: <c>SelectionMode.Single</c>, or for a combination of flags (<c>"Multiple | Toggle"</c>,
         /// #94) each flag qualified, in parentheses, so the expression keeps its meaning wherever the member stood.
         /// </summary>
-        static string Flags(string qualifier, string mapped)
+        static string Flags(string qualifier, string mapped, SyntaxNode? at = null)
         {
             var flags = mapped.Split('|');
             if (flags.Length == 1) return qualifier + mapped;
+            // In nameof(...) only the name counts, and a combination isn't a name: the first flag has the same one.
+            if (at?.Ancestors().OfType<InvocationExpressionSyntax>().FirstOrDefault() is { Expression: IdentifierNameSyntax { Identifier.ValueText: "nameof" } })
+                return qualifier + flags[0].Trim();
             return "(" + string.Join(" | ", flags.Select(f => qualifier + f.Trim())) + ")";
         }
 

@@ -138,9 +138,27 @@ public partial record ListBoxElement(object[] Items) : Element
 
     private protected virtual bool HasSelectionCallback => OnSelectionChanged is not null;
 
-    private protected virtual void RaiseItemClick(int index) => OnItemClick?.Invoke(index);
+    private protected virtual void RaiseItemClick(ListBox list, int index) => OnItemClick?.Invoke(index);
 
-    private protected virtual void RaiseSelectionChanged(IReadOnlyList<int> indexes) => OnSelectionChanged?.Invoke(indexes);
+    private protected virtual void RaiseSelectionChanged(ListBox list, IReadOnlyList<int> indexes) => OnSelectionChanged?.Invoke(indexes);
+
+    /// <summary>
+    /// Reports <paramref name="list"/>'s selection to <paramref name="el"/>'s callbacks: the selected index and, when asked
+    /// for, every selected index. The trampoline calls it for Avalonia's SelectionChanged, and the render after a keyed
+    /// move for the selection the move carried to new indexes.
+    /// </summary>
+    internal static void ReportSelection(ListBox list, ListBoxElement el)
+    {
+        el.OnSelectedIndexChanged?.Invoke(list.SelectedIndex);
+        // Unlike upstream's, which maps each selected item back with IndexOf, the indexes come from the selection model,
+        // so equal strings at two positions are told apart.
+        if (el.HasSelectionCallback)
+        {
+            var snapshot = list.Selection.SelectedIndexes.ToList();
+            snapshot.Sort();
+            el.RaiseSelectionChanged(list, snapshot);
+        }
+    }
 
     // As upstream's: one trampoline on SelectionChanged reports the selected index and, when asked for, every selected
     // index. SelectionChanged bubbles on Avalonia, so a combo box or list box in an item raises it on this list too:
@@ -151,21 +169,12 @@ public partial record ListBoxElement(object[] Items) : Element
         if (!ReferenceEquals(args.Source, lb)) return;
         if (!Reconciler.TryGetReactorState(lb, out var state)) return;
         if (ChangeEchoSuppressor.ShouldSuppress(state)) return;
-        if (state.Element is not ListBoxElement el) return;
-        el.OnSelectedIndexChanged?.Invoke(lb.SelectedIndex);
-        // Unlike upstream's, which maps each selected item back with IndexOf, the indexes come from the selection model,
-        // so equal strings at two positions are told apart.
-        if (el.HasSelectionCallback)
-        {
-            var snapshot = lb.Selection.SelectedIndexes.ToList();
-            snapshot.Sort();
-            el.RaiseSelectionChanged(snapshot);
-        }
+        if (state.Element is ListBoxElement el) ReportSelection(lb, el);
     };
 
     private static void ItemClicked(ListBox list, int index)
     {
-        if (index >= 0 && Reconciler.GetElementTag(list) is ListBoxElement el) el.RaiseItemClick(index);
+        if (index >= 0 && Reconciler.GetElementTag(list) is ListBoxElement el) el.RaiseItemClick(list, index);
     }
 
     /// <summary>
@@ -210,7 +219,17 @@ public partial record ListBoxElement(object[] Items) : Element
         d.Children = new ItemsHost<ListBoxElement, ListBox>(
             GetItems:      static e => e.Items,
             GetCollection: static c => new ListBoxItemsCollection(c));
-        return d.HandCodedControlled<ListBoxEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
+        // A keyed move keeps its items selected at new indexes (ListBoxItemsCollection): once the items are in place, the
+        // new element's callbacks hear them, before the controlled index is written.
+        return d.Imperative(
+                mount:  static (_, _) => { },
+                update: static (c, _, n) =>
+                {
+                    if (Reconciler.TryGetControlEventPayload<ListBoxEventPayload>(c) is not { SelectionMovePending: true } payload) return;
+                    payload.SelectionMovePending = false;
+                    ReportSelection(c, n);
+                })
+            .HandCodedControlled<ListBoxEventPayload, int, EventHandler<SelectionChangedEventArgs>>(
                 get:         static e => e.SelectedIndex,
                 set:         static (c, v) => c.SelectedIndex = v,
                 readBack:    static c => c.SelectedIndex,
@@ -269,20 +288,33 @@ public sealed record ListBoxElement<T> : ListBoxElement
     {
     }
 
-    private ListBoxElement(IReadOnlyList<T> itemsSource, (object[] Items, int[] SourceIndexes) built) : base(built.Items)
+    private ListBoxElement(IReadOnlyList<T> itemsSource, (object[] Items, Dictionary<string, int> SourceIndexes) built) : base(built.Items)
     {
         ItemsSource = itemsSource;
         _sourceIndexes = built.SourceIndexes;
     }
 
-    // For each of Items, the index of its item in ItemsSource: an item whose template returned Empty() has no element.
-    private readonly int[] _sourceIndexes;
+    // Each item's key and its index in ItemsSource. An item is found by the key of the element its control shows, not by
+    // its position: an item whose template returned Empty() has no control, and while the engine edits the items a
+    // selection change comes from controls that are moving.
+    private readonly Dictionary<string, int> _sourceIndexes;
 
-    private bool TryGetItem(int index, out T item)
+    // The key of each item control the list box shows, from the items host's record of the elements it mounted.
+    private static Dictionary<object, string> KeysByControl(ListBox list)
     {
-        if (index >= 0 && index < _sourceIndexes.Length && _sourceIndexes[index] < ItemsSource.Count)
+        var keys = new Dictionary<object, string>(ReferenceEqualityComparer.Instance);
+        if (Reconciler.TryGetReactorState(list, out var state) && state.ItemsHostState is { } host)
+            foreach (var item in host.Items)
+                if (item is { Source: Element { Key: { } key }, Value: { } control }) keys.TryAdd(control, key);
+        return keys;
+    }
+
+    private bool TryGetItem(ListBox list, Dictionary<object, string> keys, int index, out T item)
+    {
+        if (index >= 0 && index < list.Items.Count && list.Items[index] is { } control
+            && keys.TryGetValue(control, out var key) && _sourceIndexes.TryGetValue(key, out var i) && i < ItemsSource.Count)
         {
-            item = ItemsSource[_sourceIndexes[index]];
+            item = ItemsSource[i];
             return true;
         }
         item = default!;
@@ -304,29 +336,30 @@ public sealed record ListBoxElement<T> : ListBoxElement
 
     private protected override bool HasSelectionCallback => OnSelectionChanged is not null || base.HasSelectionCallback;
 
-    private protected override void RaiseItemClick(int index)
+    private protected override void RaiseItemClick(ListBox list, int index)
     {
-        base.RaiseItemClick(index);
-        if (OnItemClick is { } click && TryGetItem(index, out var item)) click(item);
+        base.RaiseItemClick(list, index);
+        if (OnItemClick is { } click && TryGetItem(list, KeysByControl(list), index, out var item)) click(item);
     }
 
-    private protected override void RaiseSelectionChanged(IReadOnlyList<int> indexes)
+    private protected override void RaiseSelectionChanged(ListBox list, IReadOnlyList<int> indexes)
     {
-        base.RaiseSelectionChanged(indexes);
+        base.RaiseSelectionChanged(list, indexes);
         if (OnSelectionChanged is not { } changed) return;
+        var keys = KeysByControl(list);
         var selected = new List<T>(indexes.Count);
         foreach (var i in indexes)
-            if (TryGetItem(i, out var item)) selected.Add(item);
+            if (TryGetItem(list, keys, i, out var item)) selected.Add(item);
         changed(selected);
     }
 
-    private static (object[], int[]) Build(IReadOnlyList<T> itemsSource, Func<T, string> keySelector, Func<T, int, Element> itemTemplate)
+    private static (object[], Dictionary<string, int>) Build(IReadOnlyList<T> itemsSource, Func<T, string> keySelector, Func<T, int, Element> itemTemplate)
     {
         ArgumentNullException.ThrowIfNull(itemsSource);
         ArgumentNullException.ThrowIfNull(keySelector);
         ArgumentNullException.ThrowIfNull(itemTemplate);
         var items = new List<object>(itemsSource.Count);
-        var sourceIndexes = new List<int>(itemsSource.Count);
+        var sourceIndexes = new Dictionary<string, int>(itemsSource.Count, StringComparer.Ordinal);
         for (int i = 0; i < itemsSource.Count; i++)
         {
             var item = itemsSource[i];
@@ -340,10 +373,11 @@ public sealed record ListBoxElement<T> : ListBoxElement
                 case GroupElement:
                     throw new InvalidOperationException($"The item template returned a Group for the item at {i}: return one element per item (a VStack or HStack for several).");
             }
-            items.Add(element.WithKey(keySelector(item)));
-            sourceIndexes.Add(i);
+            var key = keySelector(item);
+            items.Add(element.WithKey(key));
+            sourceIndexes.TryAdd(key, i);
         }
-        return (items.ToArray(), sourceIndexes.ToArray());
+        return (items.ToArray(), sourceIndexes);
     }
 }
 
@@ -352,9 +386,10 @@ public sealed record ListBoxElement<T> : ListBoxElement
 /// the items host moves an item with <c>Move</c> only on an <see cref="ObservableCollection{T}"/>, and upstream's removal
 /// and insertion would take the item out of the list box's logical children and put it back, which costs a scan of
 /// them each time (a keyed reverse of 10,000 rows took over 2 s headless). Avalonia's selection treats a move as a
-/// removal and an insertion and drops the item's selection, so an item selected before it moves is selected again in its
-/// new place, in an echo-suppression scope: the selection follows its item, unreported. An item added or removed is
-/// reported as Avalonia changes the selection, as before #94 (a selected item removed: -1).
+/// removal and an insertion and drops the item's selection, so the selection before a move is put back with each index
+/// where its item went, in an echo-suppression scope, and reported once the items are in place when an index changed: the
+/// selection follows its items, and the app hears their new indexes. An item added or removed is reported as Avalonia changes the selection, as
+/// before #94 (a selected item removed: -1).
 /// </summary>
 /// <remarks>
 /// The base collection mirrors the list box's items, copied when the items host asks for the collection; every edit is
@@ -396,9 +431,14 @@ internal sealed class ListBoxItemsCollection(ListBox owner) : ObservableCollecti
 
     protected override void MoveItem(int oldIndex, int newIndex)
     {
+        // The selection the move should leave: each selected index where its item goes (the move shifts those between).
+        var before = owner.Selection.SelectedIndexes.ToList();
+        var expected = before.Select(i => i == oldIndex ? newIndex
+            : oldIndex < newIndex && i > oldIndex && i <= newIndex ? i - 1
+            : newIndex < oldIndex && i >= newIndex && i < oldIndex ? i + 1
+            : i).ToHashSet();
         Scoped(() =>
         {
-            var selected = owner.Selection.IsSelected(oldIndex);
             if (owner.Items.Source is AvaloniaList<object?> source) source.Move(oldIndex, newIndex);
             else
             {
@@ -406,8 +446,18 @@ internal sealed class ListBoxItemsCollection(ListBox owner) : ObservableCollecti
                 owner.Items.RemoveAt(oldIndex);
                 owner.Items.Insert(newIndex, item);
             }
-            if (selected) owner.Selection.Select(newIndex);
+            // Put back exactly that selection: Avalonia dropped the moved item's, and AlwaysSelected may have picked another.
+            if (!expected.SetEquals(owner.Selection.SelectedIndexes))
+            {
+                owner.Selection.BeginBatchUpdate();
+                owner.Selection.Clear();
+                foreach (var i in expected) owner.Selection.Select(i);
+                owner.Selection.EndBatchUpdate();
+            }
         });
         base.MoveItem(oldIndex, newIndex);
+        // The same items are selected, at new indexes: the app hears them once the items are in place (ListBoxElement's
+        // descriptor), as it hears an item added or removed.
+        if (!expected.SetEquals(before)) Reconciler.GetOrCreateControlEventPayload<ListBoxEventPayload>(owner).SelectionMovePending = true;
     }
 }

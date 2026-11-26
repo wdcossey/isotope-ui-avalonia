@@ -224,7 +224,7 @@ public sealed class ListBoxTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void An_uncontrolled_selection_follows_its_item_across_a_keyed_move_and_its_removal_is_reported()
+    public void An_uncontrolled_selection_follows_its_item_across_a_keyed_move_and_the_app_hears_its_index()
     {
         string[] keys = ["a", "b", "c", "d"];
         var reported = new List<int>();
@@ -237,13 +237,41 @@ public sealed class ListBoxTests : IDisposable
         host.Render();
         Assert.Equal(2, list.SelectedIndex);
         Assert.Equal("b", ((TextBlock)list.SelectedItem!).Text);
-        Assert.Empty(reported);
+        Assert.Equal([2], reported);
+        reported.Clear();
 
         // The selected item removed: the selection is gone, and the app hears it.
         keys = ["d", "c", "a"];
         host.Render();
         Assert.Equal(-1, list.SelectedIndex);
         Assert.Equal([-1], reported);
+    }
+
+    [AvaloniaFact]
+    public void A_move_keeps_exactly_the_selection_with_AlwaysSelected_and_a_typed_list_reports_the_items_left()
+    {
+        IReadOnlyList<Person> people = [new("a", "A"), new("b", "B"), new("c", "C"), new("d", "D")];
+        var snapshots = new List<IReadOnlyList<Person>>();
+        var host = new TestHost(() => (ListBox(people, p => p.Id, (p, _) => TextBlock(p.Name)) with { OnSelectionChanged = snapshots.Add })
+            .SelectionMode(SelectionMode.Multiple | SelectionMode.AlwaysSelected));
+        var list = List(host);
+        list.Selection.Select(3);
+        list.Selection.Deselect(0);
+        Assert.Equal([3], list.Selection.SelectedIndexes);
+
+        // D moves to the front: it alone stays selected (AlwaysSelected picks no other item), and the app hears it there.
+        people = [people[3], people[0], people[1], people[2]];
+        host.Render();
+        Assert.Equal([0], list.Selection.SelectedIndexes);
+        Assert.Equal(["D"], snapshots[^1].Select(p => p.Name));
+
+        // B and D selected, then B removed: the items reported are those still selected, D.
+        list.Selection.Select(2);
+        Assert.Equal(["D", "B"], snapshots[^1].Select(p => p.Name));
+        people = [people[0], people[1], people[3]];
+        host.Render();
+        Assert.Equal(["D"], snapshots[^1].Select(p => p.Name));
+        Assert.Equal([0], list.Selection.SelectedIndexes);
     }
 
     // Reactor's ListViewSelectionMode values, as the migration maps them (winui-types.json), measured with headless clicks.
