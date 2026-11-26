@@ -31,13 +31,14 @@ export const STYLE = readFileSync(new URL('./checklist.css', import.meta.url), '
 // The page's script: one click per line sends its verdict and note; changing a note resends the line's verdict.
 // Posts go one at a time, in order, so a note's resend (on blur) can't land after the click that caused the blur.
 // P, F and S answer the focused line (the line itself or a button in it) and move to the next line; never from a
-// field, with Ctrl, Alt or Meta held, on a key held down, or once Finish is confirmed (no answer is sent after it).
+// field, with Ctrl, Alt or Meta held, on a key held down, or once Finish is confirmed. Once it is, nothing more is
+// sent: a change made then says "not saved: finishing".
 export const SCRIPT = `const token = document.querySelector('meta[name="checklist-token"]').content;
 let queue = Promise.resolve();
 function post(path, body) {
   const send = async () => {
     const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', '${TOKEN_HEADER}': token }, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()));
+    if (!r.ok) { const err = new Error(r.status + ' ' + (await r.text())); err.status = r.status; throw err; }
     return r.json();
   };
   const p = queue.then(send);
@@ -64,9 +65,10 @@ function sectionCount(it) {
   c.textContent = done + ' of ' + lines.length;
   c.classList.toggle('badge-default', done === lines.length); c.classList.toggle('badge-outline', done !== lines.length);
 }
+function notSaved(s) { s.textContent = 'not saved: finishing'; s.classList.add('err'); }
 async function answer(it, verdict) {
   const s = it.querySelector('.s');
-  if (finished) return false;
+  if (finished) { notSaved(s); return false; }
   try {
     progress(await post('/answer', { key: it.dataset.key, verdict, note: it.querySelector('.note').value }));
     it.dataset.verdict = verdict; s.textContent = verdict; s.classList.remove('err');
@@ -87,9 +89,10 @@ document.addEventListener('keydown', async (e) => {
   const k = shortcut(e);
   if (!k) return;
   e.preventDefault();
+  // Focus moves at once, so a quick second key answers the next line; this line's answer still posts, in order.
   const lines = [...document.querySelectorAll('.it')];
-  const next = lines[lines.indexOf(k.it) + 1] || document.getElementById('finish');
-  if (await answer(k.it, k.verdict) && k.it.contains(document.activeElement)) show(next);
+  show(lines[lines.indexOf(k.it) + 1] || document.getElementById('finish'));
+  await answer(k.it, k.verdict);
 });
 document.addEventListener('click', async (e) => {
   const b = e.target.closest('button[data-verdict]');
@@ -98,15 +101,32 @@ document.addEventListener('click', async (e) => {
   if (e.target.id === 'finish') {
     if (finished || !confirm('Write the answers into the checklist and stop the tool?')) return;
     finished = true;
+    const fields = ['sys', 'free'].map((id) => document.getElementById(id)), summary = document.getElementById('summary');
+    for (const f of fields) f.disabled = true;
     try {
-      const r = await post('/finish', {});
-      document.getElementById('summary').textContent = r.summary;
+      summary.textContent = (await post('/finish', {})).summary;
       for (const x of document.querySelectorAll('button, input, textarea')) x.disabled = true;
-    } catch (err) { finished = false; document.getElementById('summary').textContent = 'error: ' + err.message; }
+    } catch (err) {
+      if (err.status) {
+        // The tool answered with an error, so nothing was written: the page unlocks for another try.
+        finished = false;
+        for (const f of fields) f.disabled = false;
+        summary.textContent = 'error: ' + err.message;
+      } else {
+        // No reply: the tool may have written the checklist and stopped. Stay locked, so nothing is answered twice.
+        for (const x of document.querySelectorAll('button, input, textarea')) x.disabled = true;
+        summary.textContent = 'No reply from the tool (' + err.message + '). It may have written the checklist and stopped: check the checklist file before running it again.';
+      }
+    }
   }
 });
 document.addEventListener('change', async (e) => {
   const t = e.target, st = document.getElementById(t.id + 's');
+  if (finished) {
+    if (t.classList.contains('note')) notSaved(t.closest('.it').querySelector('.s'));
+    else if (st) st.textContent = 'not saved: finishing';
+    return;
+  }
   try {
     if (t.classList.contains('note')) { const it = t.closest('.it'); if (it.dataset.verdict) await answer(it, it.dataset.verdict); }
     else if (t.id === 'sys') { await post('/system', { system: t.value }); st.textContent = 'saved'; }
@@ -132,7 +152,7 @@ export function renderPage({ title, items, results, token, nonce }) {
       if (i) body += '<div class="sep" role="none"></div>';
       // A line takes focus from a click or the keys (tabindex -1), not as an extra Tab stop: Tab reaches its buttons.
       body += `<div class="it" role="group" aria-labelledby="${id}" tabindex="-1" data-key="${escapeHtml(it.key)}" data-verdict="${escapeHtml(a?.verdict ?? '')}">`
-        + `<div class="t" id="${id}">${it.ticked ? '<span class="badge badge-outline was">ticked before</span> ' : ''}${inlineMarkdown(it.text)}</div><div class="b">`
+        + `<div class="t">${it.ticked ? '<span class="badge badge-outline was">ticked before</span> ' : ''}<span id="${id}">${inlineMarkdown(it.text)}</span></div><div class="b">`
         + VERDICTS.map((v) => `<button class="btn btn-sm btn-${VARIANT[v]}" data-verdict="${v}" aria-pressed="${a?.verdict === v}">${label(v)}</button>`).join('')
         + `<input class="input input-sm note" aria-label="Note" placeholder="note (optional)" value="${escapeHtml(a?.note ?? '')}"><span class="badge s">${escapeHtml(a?.verdict ?? '')}</span></div></div>`;
     });

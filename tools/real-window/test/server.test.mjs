@@ -273,3 +273,94 @@ test('once Finish is confirmed, the page sends no more answers, even before the 
   assert.equal(context.shortcut({ key: 'p', target: { tagName: 'DIV', closest: () => line } }), null);
   assert.deepEqual(sent, ['/answer', '/finish']);
 });
+
+// The page's script in a sandbox with stand-ins for the elements it touches: the fields by id, and lines in one section.
+function stubEl(more = {}) {
+  const cls = new Set();
+  return {
+    textContent: '', value: '', disabled: false, focused: 0, focus() { this.focused++; },
+    classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), toggle: (c, on) => (on ? cls.add(c) : cls.delete(c)), contains: (c) => cls.has(c) },
+    getBoundingClientRect: () => ({ top: 500, bottom: 520 }), ...more,
+  };
+}
+function pageScript(fetch, keys = ['a', 'b']) {
+  const listeners = {}, ids = {};
+  const section = { querySelector: () => stubEl() };
+  const lines = keys.map((key) => {
+    const line = stubEl({ dataset: { key, verdict: '' }, querySelectorAll: () => [] });
+    line.s = stubEl();
+    line.note = stubEl();
+    line.note.classList.add('note');
+    line.note.closest = () => line;
+    line.querySelector = (sel) => (sel === '.s' ? line.s : line.note);
+    line.closest = (sel) => (sel === '.it' ? line : sel === 'section' ? section : null);
+    return line;
+  });
+  section.querySelectorAll = () => lines;
+  const byId = (id) => (ids[id] ??= stubEl({ id }));
+  const document = {
+    querySelector: () => ({ content: TOKEN }), addEventListener: (type, fn) => { listeners[type] = fn; },
+    getElementById: byId, querySelectorAll: (sel) => (sel === '.it' ? lines : []),
+  };
+  const window = { innerHeight: 1000, scrollBy() {} };
+  const context = vm.createContext({ document, window, fetch, confirm: () => true, setTimeout, Promise, JSON, Error, String });
+  vm.runInContext(SCRIPT, context);
+  return { context, listeners, byId, lines };
+}
+const settle = () => new Promise((r) => setTimeout(r, 20));
+const reply = (json) => ({ ok: true, json: async () => json });
+
+test('a key moves to the next line at once, and the answer for the line it left still posts', { timeout: 15000 }, async () => {
+  const sent = [], waiting = [];
+  const fetch = (path, init) => { sent.push([path, JSON.parse(init.body).key]); return new Promise((r) => waiting.push(() => r(reply({ answered: 1, total: 2 })))); };
+  const { listeners, lines } = pageScript(fetch);
+  listeners.keydown({ key: 'p', target: lines[0], preventDefault() {} });
+  assert.equal(lines[1].focused, 1, 'the focus waited for the reply');
+  // A quick second key answers the next line, not the first again; both post, in order.
+  listeners.keydown({ key: 'f', target: lines[1], preventDefault() {} });
+  await settle();
+  assert.deepEqual(sent, [['/answer', 'a']]);
+  waiting.shift()();
+  await settle();
+  waiting.shift()();
+  await settle();
+  assert.deepEqual(sent, [['/answer', 'a'], ['/answer', 'b']]);
+  assert.deepEqual([lines[0].dataset.verdict, lines[1].dataset.verdict], ['pass', 'fail']);
+});
+
+test('once Finish is confirmed, the system and notes fields lock and post nothing, and a note says it was not saved', { timeout: 15000 }, async () => {
+  const sent = [];
+  const fetch = (path) => { sent.push(path); return path === '/finish' ? new Promise(() => {}) : Promise.resolve(reply({})); };
+  const { listeners, byId, lines } = pageScript(fetch);
+  lines[0].dataset.verdict = 'pass';
+  listeners.click({ target: { id: 'finish', closest: () => null } });
+  assert.deepEqual([byId('sys').disabled, byId('free').disabled], [true, true], 'locked before the reply');
+  for (const id of ['sys', 'free']) await listeners.change({ target: byId(id) });
+  await listeners.change({ target: lines[0].note });
+  await settle();
+  assert.deepEqual(sent, ['/finish']);
+  assert.equal(lines[0].s.textContent, 'not saved: finishing');
+  assert.equal(byId('syss').textContent, 'not saved: finishing');
+});
+
+test('a Finish refused by the tool unlocks the page; a Finish with no reply stays locked and says to check the file', { timeout: 15000 }, async () => {
+  for (const [name, finish, locked, says] of [
+    ['refused', () => Promise.resolve({ ok: false, status: 500, text: async () => 'internal error: disk full' }), false, /^error: 500 internal error: disk full$/],
+    ['no reply', () => Promise.reject(new TypeError('Failed to fetch')), true, /No reply from the tool .*check the checklist file/],
+  ]) {
+    const { context, listeners, byId, lines } = pageScript((path) => (path === '/finish' ? finish() : Promise.resolve(reply({}))));
+    await listeners.click({ target: { id: 'finish', closest: () => null } });
+    await settle();
+    assert.match(byId('summary').textContent, says, name);
+    assert.deepEqual([byId('sys').disabled, byId('free').disabled], [locked, locked], name);
+    assert.equal(context.shortcut({ key: 'p', target: lines[0] }) === null, locked, name);
+  }
+});
+
+test('a line is named by its text alone, not its "ticked before" badge', () => {
+  const items = parseChecklist('### S\n- [x] Ticked **line**\n').items;
+  const html = renderPage({ title: 'T', items, results: emptyResults('c.md'), token: TOKEN, nonce: 'n' });
+  const id = /class="it" role="group" aria-labelledby="([^"]+)"/.exec(html)?.[1];
+  assert.ok(id);
+  assert.equal(new RegExp(`<span id="${id}">(.*?)</span></div>`).exec(html)?.[1], 'Ticked <b>line</b>');
+});
