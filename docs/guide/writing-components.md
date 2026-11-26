@@ -293,8 +293,8 @@ public static Element People(RenderContext ctx, IReadOnlyList<Person> people)
 ```
 
 Every item's element is built and mounted, while Avalonia realises containers only for the items in view: 10,000 element
-rows realise 8 containers in a 300-high list, and mount in about 0.3 to 0.5 s headless, where 10,000 strings take a few
-milliseconds. A keyed reorder moves the item controls, so nothing remounts, but Avalonia takes a moved item out of its
+rows realise 8 containers in a 300-high list and mount in 0.26 to 0.57 s headless (six runs of
+`ListBoxMeasurements`), where 10,000 strings take 3 to 44 ms. A keyed reorder moves the item controls, so nothing remounts, but Avalonia takes a moved item out of its
 container and puts it back, so a control in it loses keyboard focus. An item the user selected stays selected when it
 moves, unless `SelectedIndex` is given: a controlled index stays an index.
 
