@@ -33,7 +33,10 @@ public partial record RatingBarElement(
     /// <summary>Called after <c>RatingBar.Clear()</c> with the value it cleared: a plain .NET event, so [WrapEvent].</summary>
     public Action<int>? OnCleared { get; init; }
 
-    /// <summary>A rating the pointer can't change. The control has no such property, so Customize writes it.</summary>
+    /// <summary>
+    /// A rating the pointer can't change. The control has no such property, so Customize writes it: hit testing off, which
+    /// also keeps a tooltip from showing.
+    /// </summary>
     public bool IsReadOnly { get; init; }
 
     internal Action<RatingBar>[] Setters { get; init; } = [];

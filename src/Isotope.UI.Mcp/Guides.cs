@@ -69,16 +69,21 @@ internal static partial class Guides
         return string.Join(" ", lines.Select(l => l.Trim()));
     }
 
+    // Guides whose snippets use a made-up control library (writing-controls: spike J's RatingBar, CalloutCard…), which
+    // an app doesn't have, so they aren't examples of Isotope's own API (#80).
+    static readonly HashSet<string> NotApiExamples = new(StringComparer.Ordinal) { "writing-controls" };
+
     /// <summary>
     /// The tested snippets that use a name, best first: the one named after it (<c>use-state</c> for <c>UseState</c>),
-    /// then those that call it or name it. With an owner, a snippet must name the owner too (a member's type).
+    /// then those that call it or name it. With an owner, a snippet must name the owner too (a member's type). The
+    /// guides whose code uses a made-up library (<see cref="NotApiExamples"/>) are left out.
     /// </summary>
     public static IEnumerable<Snippet> Using(string name, string? owner = null)
     {
         var kebab = Kebab().Replace(name, "$1-$2").ToLowerInvariant();
         var word = Word(name);
         var ownerWord = owner is null ? null : Word(owner);
-        return Snippets.Where(s => word.IsMatch(s.Code) && (ownerWord is null || ownerWord.IsMatch(s.Code))).OrderBy(s => s.Name == kebab ? 0 : 1);
+        return Snippets.Where(s => !NotApiExamples.Contains(s.Guide) && word.IsMatch(s.Code) && (ownerWord is null || ownerWord.IsMatch(s.Code))).OrderBy(s => s.Name == kebab ? 0 : 1);
 
         static Regex Word(string w) => new(@"(?<![\w])" + Regex.Escape(w) + @"(?![\w])");
     }

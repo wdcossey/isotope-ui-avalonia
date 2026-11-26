@@ -53,6 +53,17 @@ public class GuideTests
     }
 
     [Fact]
+    public void The_control_guides_snippets_are_not_examples_of_isotopes_api()
+    {
+        // Its code uses spike J's made-up library (SpreadPanel, CalloutCard…), which an app doesn't have (#80).
+        Assert.Contains(Guides.Snippets, s => s.Guide == "writing-controls" && s.Code.Contains("Group("));
+        Assert.DoesNotContain(Guides.Using("Group"), s => s.Guide == "writing-controls");
+        Assert.DoesNotContain(Guides.Using("Margin"), s => s.Guide == "writing-controls");
+        Assert.DoesNotContain("SpreadPanel", IsotopeTools.GetApi("Group"));
+        Assert.DoesNotContain("CalloutCard", IsotopeTools.GetApi("Margin"));
+    }
+
+    [Fact]
     public void Each_guide_is_a_resource()
     {
         var resources = Guides.Resources().ToList();

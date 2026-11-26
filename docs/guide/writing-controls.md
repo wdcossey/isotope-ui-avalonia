@@ -54,8 +54,10 @@ public static Element Review(RenderContext ctx)
 ```
 
 The card and the rating are the same control instances from one render to the next. A click on the rating calls
-`setStars`, and the next render writes nothing back that the control already has. Isotope's own modifiers
-(`Margin`, `Width`, `ToolTip`, `Padding`, `FontSize` and the brushes) work on your elements with no code of yours.
+`setStars`, and the next render writes nothing back that the control already has. Isotope's own modifiers work on
+your elements with no code of yours: the layout ones (`Margin`, `Width`…) and `ToolTip` on any control, and `Padding`,
+`FontSize` and the brushes where the control has the property (`CalloutCard` does; `RatingBar`, a plain `Control`,
+doesn't).
 
 ## The project
 
@@ -111,7 +113,10 @@ public partial record RatingBarElement(
     /// <summary>Called after <c>RatingBar.Clear()</c> with the value it cleared: a plain .NET event, so [WrapEvent].</summary>
     public Action<int>? OnCleared { get; init; }
 
-    /// <summary>A rating the pointer can't change. The control has no such property, so Customize writes it.</summary>
+    /// <summary>
+    /// A rating the pointer can't change. The control has no such property, so Customize writes it: hit testing off, which
+    /// also keeps a tooltip from showing.
+    /// </summary>
     public bool IsReadOnly { get; init; }
 
     internal Action<RatingBar>[] Setters { get; init; } = [];
@@ -193,7 +198,8 @@ public static partial class VendorElementExtensions
 }
 ```
 
-Don't write the ones Isotope has: its layout, text and brush modifiers already take any element. `Set` is the escape
+Don't write the ones Isotope has: its layout, text and brush modifiers already take any element, and apply where the
+control has the property. `Set` is the escape
 hatch, for a property the record doesn't cover, and it runs on every mount and update.
 
 ## Callbacks
@@ -228,7 +234,7 @@ public static Element ClearableRating(RenderContext ctx)
 
 - **`[WrapManual("Member")]`** takes a member over: the generator leaves it alone, and you write it in `Customize`, which
   is then required (`IsReadOnly` in the record above: the control has no such property, so `Customize` sets
-  `IsHitTestVisible`). `Customize` adds entries to the `ControlDescriptor` it is given and returns it. On a callback,
+  `IsHitTestVisible`, which also keeps its tooltip from showing). `Customize` adds entries to the `ControlDescriptor` it is given and returns it. On a callback,
   `[WrapManual("OnX")]` says that you wire it yourself in `Customize`, as Isotope's own records do for events that need
   more than a call. The worked example doesn't do that, so use `[WrapEvent]` when it fits.
 
