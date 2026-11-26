@@ -17,7 +17,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
 const FRAMEWORKS = ['net9.0', 'net10.0', 'net11.0'];
 // The tests each framework must run (and pass): a changed count is a changed spike.
-const EXPECTED_TESTS = 34;
+const EXPECTED_TESTS = 39;
 
 const args = process.argv.slice(2);
 let packages;

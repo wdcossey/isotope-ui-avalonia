@@ -45,6 +45,17 @@ public class RatingBar : Control
     /// <summary>Raised after <see cref="Value"/> changes.</summary>
     public event EventHandler<RatingChangedEventArgs>? ValueChanged;
 
+    /// <summary>Raised by <see cref="Clear"/>, after the value goes back to 0: a plain .NET event, not a routed one.</summary>
+    public event EventHandler<RatingChangedEventArgs>? Cleared;
+
+    /// <summary>Sets <see cref="Value"/> back to 0 and raises <see cref="Cleared"/> with the value it had.</summary>
+    public void Clear()
+    {
+        var old = Value;
+        Value = 0;
+        Cleared?.Invoke(this, new RatingChangedEventArgs(old, 0));
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);

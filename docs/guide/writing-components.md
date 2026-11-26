@@ -83,6 +83,9 @@ no counterpart, and for the stack shortcuts `VStack` and `HStack`. Factory param
 | `When(condition, then)`, `If(condition, then, otherwise)`, `Expr(render)`, `ForEach(items, render)` | the element they choose, `EmptyElement` or a `GroupElement` | none (helpers: `ForEach` keys each element from an `IReactorKeyed` item) |
 | `ErrorBoundary(child, fallback)` | `ErrorBoundaryElement` | a `Border` holding the child, or the fallback when the child throws ([Error boundaries](error-boundaries.md)) |
 
+A control library can add its own controls to this vocabulary, with factories and elements of the same kind in its own
+namespace: see [Writing controls for Isotope](writing-controls.md).
+
 > **Coming from Reactor?** `Component(render)` is an Isotope addition: it wraps an inline function as a component, the
 > same element upstream's `RenderEachTime(render)` builds. Both exist here, and `RenderEachTime` works as it does in
 > Reactor. Factories, elements and modifiers take Avalonia's names where Reactor's differ: `TabControl` and `TabItem`

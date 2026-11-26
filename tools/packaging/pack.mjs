@@ -145,7 +145,7 @@ if (opts.smoke) {
   const nugetPackages = mkdtempSync(path.join(tmpdir(), 'isotope-smoke-'));
   // ISOTOPE_PACKAGES is the smoke nuget.config's only source for Isotope.*.
   const env = { IsotopeVersion: version, NUGET_PACKAGES: nugetPackages, ISOTOPE_PACKAGES: opts.out };
-  let failure, toolPath;
+  let failure, toolPath, guides;
   // A failing step throws, so the packages folder is deleted before the run fails.
   const check = (ok, message) => { if (!ok) throw new Error(message); };
   try {
@@ -195,13 +195,15 @@ if (opts.smoke) {
       check(mapped.includes('NumericUpDownElement.Minimum'), 'map_reactor_name NumberBoxElement.Minimum did not find NumericUpDownElement.Minimum:\n' + mapped.slice(0, 500));
       const run = await call('get_api', { name: 'ReactorApp.Run' });
       check(run.includes('ReactorApp.Run') && run.includes('overloads'), 'get_api ReactorApp.Run did not give the desktop startup:\n' + run.slice(0, 500));
-      const resources = (await server.request('resources/list')).resources;
-      check(resources.length > 0 && resources.every((x) => x.uri.startsWith('isotope://guides/')), 'the MCP server lists no guides as resources');
+      // Every page of docs/guide, and nothing else: the tool embeds them when it is built.
+      const resources = (await server.request('resources/list')).resources.map((x) => x.uri).sort();
+      guides = readdirSync(path.join(REPO, 'docs', 'guide')).filter((n) => n.endsWith('.md')).map((n) => 'isotope://guides/' + n.slice(0, -3)).sort();
+      check(JSON.stringify(resources) === JSON.stringify(guides), 'the MCP server lists the guides ' + resources.join(', ') + ', not ' + guides.join(', '));
     } finally {
       await server.close();
     }
     timings.push(['smoke tool run', Date.now() - started]);
-    console.log('smoke: the MCP tool from its package listed its 6 tools, gave the docs of UseState and ReactorApp.Run, migrated a NumberBox, mapped a member and listed the guides');
+    console.log('smoke: the MCP tool from its package listed its 6 tools, gave the docs of UseState and ReactorApp.Run, migrated a NumberBox, mapped a member and listed the ' + guides.length + ' guides');
   } catch (e) {
     failure = e;
   } finally {

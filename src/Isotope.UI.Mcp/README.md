@@ -11,7 +11,7 @@ command `isotope-mcp`, and it talks MCP over stdio. It helps with writing code a
 | `get_api(name)` | Every overload of one name (`Button`, `UseState`, `ButtonElement`, `ReactorApp.Run`), with its doc comment and an example from the guides' tested code |
 | `map_reactor_name(name)` | Isotope's name for a Reactor type, factory, modifier, member, parameter, namespace or WinUI type, or why it has none and what to use instead |
 | `migrate_code(code)` | Runs the Reactor → Isotope migration (`Isotope.UI.Migration`'s analyzer and code fixes) on a C# file in memory, and returns the rewritten code, what is left for a hand fix and the compiler errors |
-| `list_guides()`, `get_guide(name)` | The guides (writing components, hooks, platform hooks, theme tokens, text styles, error boundaries, migrating from Reactor), also MCP resources at `isotope://guides/<name>` |
+| `list_guides()`, `get_guide(name)` | The guides (writing components, hooks, platform hooks, theme tokens, text styles, error boundaries, migrating from Reactor, writing controls for a control library), also MCP resources at `isotope://guides/<name>` |
 
 Its answers come from what it ships with: the Isotope DLLs of its own version and their XML docs, read by reflection,
 the migration's own tables, and the guides as they were when it was built. Use the version of the tool that matches
