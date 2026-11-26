@@ -11,9 +11,10 @@ namespace Isotope.UI.Core;
 // with Avalonia's value types. Upstream's record is [WrapPolymorphic], which Isotope's generator doesn't support
 // (ISOTOPEGEN004), so the handler is hand-written: the control is chosen from the data's kind, patched in place while the
 // kind stays the same, and mounted afresh when it changes (Reconciler.CanUpdate declines the update). Upstream's
-// SymbolIconData isn't here: WinUI's symbols are glyphs of the Segoe icon fonts, which Avalonia doesn't ship and which
-// can't be redistributed, so the migration reports Symbol and WinUI's SymbolIcon type (ISOMIG005) and the SymbolIcon
-// factory (ISOMIG011). A command's Icon takes this data too, but nothing draws it yet (menu items have no icons).
+// SymbolIconData isn't here: WinUI's symbols are glyphs of the Segoe icon fonts, which Isotope doesn't ship (they may not
+// be shipped to other platforms; developer, 2026-11-26). The guide's "WinUI symbols" (docs/guide/writing-components.md)
+// shows FontIcon(glyph, "Segoe Fluent Icons") on Windows, or an app's own icons, and the migration points there for
+// Symbol and WinUI's SymbolIcon type (ISOMIG005), the SymbolIcon factory (ISOMIG011) and Icon(string) (ISOMIG010). A command's Icon takes this data too, but nothing draws it yet (menu items have no icons).
 
 /// <summary>
 /// What an icon shows (upstream's union): a shape (<see cref="PathIconData"/>), a glyph of a font

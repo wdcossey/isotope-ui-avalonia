@@ -513,7 +513,8 @@ public class IconTests
     public void The_guides_Segoe_example_is_a_glyph_in_Segoe_Fluent_Icons()
     {
         var text = Assert.IsType<GlyphTextBlock>(Mounted(new TestHost(IconExamples.SaveSymbol)));
-        Assert.Equal(("\uE74E", "Segoe Fluent Icons", 20.0), (text.Text, text.FontFamily.Name, text.FontSize));
+        Assert.Equal(("\uE74E", new FontFamily("Segoe Fluent Icons"), 20.0), (text.Text, text.FontFamily, text.FontSize));
+        Assert.NotEqual(Isotope.UI.Core.IconElement.SymbolFontFamily, text.FontFamily); // the guide's font, not the default stack
     }
 
     private sealed record UnknownIconData : IconData;

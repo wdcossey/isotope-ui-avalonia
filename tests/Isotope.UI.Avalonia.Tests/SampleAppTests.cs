@@ -323,8 +323,10 @@ public sealed class SampleAppTests : IDisposable
     public void The_tabs_fit_on_one_line_in_the_apps_window()
     {
         var (host, _) = Open();
-        var tops = Tabs(host).Items.Cast<TabItem>().Select(t => t.Bounds.Top).Distinct().ToList();
-        Assert.Single(tops); // every header on the first line: none wrapped
+        var tabs = Tabs(host).Items.Cast<TabItem>().ToList();
+        Assert.All(tabs, t => Assert.True(t.Bounds.Width > 20, $"{t.Header} is {t.Bounds.Width} wide: not measured"));
+        Assert.Single(tabs.Select(t => t.Bounds.Top).Distinct()); // every header on the first line: none wrapped
+        Assert.True(tabs[^1].Bounds.Right <= SampleApp.WindowWidth, $"the last header ends at {tabs[^1].Bounds.Right}");
     }
 
     [AvaloniaFact]

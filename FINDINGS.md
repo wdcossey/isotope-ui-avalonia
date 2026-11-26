@@ -171,8 +171,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   against #91: files that build 108 and 108; compile errors 2,936 → 2,912; diagnostics left 1,122 → 1,099; ISOMIG012
   136 → 106 (`Icon` 14, `FontIcon` 10, `PathIcon` 1, and `SymbolIcon` 5 now ISOMIG011); ISOMIG005 116 → 118 and ISOMIG016
   57 → 56 (WinUI's `SymbolIcon` type is listed); ISOMIG013 401 → 402 (`IconElement.AccessibilityHidden`).
-- **Tests:** library 1,259 → 1,286 on each of net9.0, net10.0 and net11.0, migration 52 → 54; every new test proven to
-  fail with its behaviour broken (29 library breaks, 11 others), on the final head.
+- **Tests:** library 1,259 → 1,288 on each of net9.0, net10.0 and net11.0, migration 52 → 54; every new test proven to
+  fail with its behaviour broken (31 library breaks, 14 others), on the final head.
 
 ## Writing controls guide (issue #80, 2026-11-26)
 

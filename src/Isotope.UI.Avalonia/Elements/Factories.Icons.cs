@@ -5,7 +5,8 @@ namespace Isotope.UI;
 
 // The icon factories (#91), as part of our own version (tier 3) of upstream's src/Reactor/Elements/Dsl.cs: upstream's
 // names, with Avalonia's value types. Upstream's SymbolIcon, Icon(Symbol) and Icon(string symbol) aren't here: WinUI's
-// symbols are glyphs of the Segoe icon fonts, which Avalonia doesn't ship (the migration reports them).
+// symbols are glyphs of the Segoe icon fonts, which Isotope doesn't ship: the guide's "WinUI symbols" shows
+// FontIcon(glyph, "Segoe Fluent Icons") on Windows, or an app's own icons (the migration points there).
 
 public static partial class Factories
 {
