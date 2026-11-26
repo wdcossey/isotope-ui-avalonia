@@ -68,7 +68,7 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A reorder test must move the row it checks:** a 3-item reverse leaves the middle row in place, so a positional diff
   passed it. (2026-11-23)
 - **Plain `[Fact]` and `[AvaloniaFact]` tests share process-wide engine state** (`ReactorApp.UIDispatcher`); tests that
-  set it run in a non-parallel collection. (2026-11-23)
+  set it run in a non-parallel collection. (2026-11-23) The whole assembly now runs one test at a time (#105).
 
 - **An exception escaping an Avalonia dispatcher job also faults the job's task, which nothing observes.** Collected
   later, it failed upstream's `UseResourceThreadingTests`, which count unobserved task exceptions. A test that lets one
@@ -281,6 +281,12 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A test that spawns a process must stop it when an assertion fails.** A failing check before the `kill` left the
   child running, and `node --test` waited on it without end (#106). Keep the children in a set and stop them in
   `finally`; give server tests a timeout. (2026-11-26)
+- **Avalonia's statics expect one thread, and plain `[Fact]`s touch them.** Making an element record builds its
+  descriptor, which registers its control's properties from an unlocked id counter, so two properties got one id. Making a
+  control binds a dispatcher. Run beside the headless session, these broke unrelated tests. The library tests run one at
+  a time (`CollectionBehavior(DisableTestParallelization = true)` in TestApp.cs; #105). (2026-11-26)
+- **Reproduce a rare cross-thread race by repeating its trigger in a temporary test.** A plain `[Fact]` that made controls
+  on new threads for 10 s failed 16 of 16 full runs, against 1 failure in 256 plain runs (#105). (2026-11-26)
 
 ## Working with the developer
 

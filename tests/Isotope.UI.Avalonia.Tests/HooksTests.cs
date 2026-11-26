@@ -391,7 +391,10 @@ public class ThreadingTests
     }
 }
 
-/// <summary>Tests that change <see cref="ReactorApp"/>'s process-wide state run alone, outside the parallel tests.</summary>
+/// <summary>
+/// Tests that change <see cref="ReactorApp"/>'s process-wide state, which must run alone. The assembly runs one test at a
+/// time anyway, and must (#105, TestApp.cs): this collection only marks the tests that share that state.
+/// </summary>
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class ReactorAppGlobals
 {

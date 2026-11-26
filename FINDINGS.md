@@ -145,6 +145,18 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Library tests one at a time (issue #105, 2026-11-26)
+
+- **Cause:** Avalonia 12's property registration and UI-dispatcher binding aren't thread-safe. Plain `[Fact]`s on xUnit
+  worker threads made element records (whose descriptors register their controls' properties: `TextBlock("a")` alone
+  registered 73) and controls (which bind a dispatcher), beside the headless session. Two properties then shared an id
+  (`InvalidCastException` bursts on ubuntu), and a dispatcher was stolen (`VerifyAccess` in the headless setup). 131 of
+  706 plain test cases registered properties, in 16 classes, 11 of them vendored upstream tests.
+- **Fix:** the library test assembly runs one test at a time (`DisableTestParallelization`), and the one test that made a
+  control off the session is an `[AvaloniaFact]`. An amplifier (a temporary plain test making controls on new threads)
+  failed 16 of 16 full runs before and 0 of 16 after; plain net11.0 runs, 1 failure in 256 before and 0 in 128 after.
+  Cost on ubuntu CI: 22–29 s per framework before, 24–49 s after. #85 and #89 stay open: they didn't reproduce.
+
 ## Real-window checklist tool (issue #106, 2026-11-26)
 
 - `node tools/real-window/checklist.mjs <checklist.md> [--clear] [--port N]` serves a `- [ ]` checklist as a local page
