@@ -102,6 +102,13 @@ run('dotnet', ['build', path.join(repo, 'tools', 'migration', 'MigrationReport')
 run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Avalonia.Desktop'), '-nologo', '-v:q'], repo, true);
 run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Migration'), '-nologo', '-v:q'], repo, true);
 const reporter = path.join(repo, 'tools', 'migration', 'MigrationReport', 'bin', 'Release', 'net10.0', 'MigrationReport.dll');
+// Every sample restored at once (#87), so no report restores its project again: one restore of the whole graph instead of
+// two per project. A restore that fails fails the run, as a report's own -restore did.
+const solution = path.join(out, 'samples.slnx');
+fs.writeFileSync(solution, ['<Solution>', ...converted.map(p => `  <Project Path="${path.relative(out, p.file).replace(/\\/g, '/')}" />`), '</Solution>', ''].join('\n'));
+let started = Date.now();
+run('dotnet', ['restore', solution, '-nologo', '-v:q'], out, true);
+const restoreMs = Date.now() - started;
 // At most --jobs workers, since each phase runs at most --jobs projects at once; each is started when first needed.
 let workerCount = 0;
 const workers = pool(() => {
@@ -116,8 +123,8 @@ const workers = pool(() => {
 // phase runs up to --jobs projects at once, a project only after those it references (its build reads their output)
 // and those nested in its folder; results stay in the order above, so the output doesn't depend on the timing.
 const timings = new Map(converted.map(p => [p.file, { project: rel(p.file), beforeMs: 0, formatMs: [], afterMs: 0 }]));
-const phaseMs = {};
-let started = Date.now();
+const phaseMs = { restore: restoreMs };
+started = Date.now();
 const befores = new Map();
 await inOrder(converted, p => workers.use(async worker => {
   process.stderr.write(`before: ${rel(p.file)}\n`);
@@ -160,7 +167,7 @@ const projectTimings = [...timings.values()];
 fs.writeFileSync(path.join(out, 'timings.json'), JSON.stringify({ jobs, fixer, workers: workerCount, phaseMs, projects: projectTimings }, null, 2));
 const total = key => projectTimings.reduce((a, t) => a + (Array.isArray(t[key]) ? t[key].reduce((x, y) => x + y, 0) : t[key]), 0);
 const formatCount = projectTimings.reduce((a, t) => a + t.formatMs.length, 0);
-process.stderr.write(`time (${jobs} at once, ${workerCount} workers): before phase ${s1(phaseMs.before)}, migrate phase ${s1(phaseMs.migrate)}; summed over projects: ` +
+process.stderr.write(`time (${jobs} at once, ${workerCount} workers): restore ${s1(phaseMs.restore)}, before phase ${s1(phaseMs.before)}, migrate phase ${s1(phaseMs.migrate)}; summed over projects: ` +
   `before builds ${s1(total('beforeMs'))}, ${formatCount} ${fixer === 'in-process' ? 'passes of the fixes' : 'dotnet format runs'} ${s1(total('formatMs'))}, after builds ${s1(total('afterMs'))}\n`);
 
 const summary = summarise(results);
@@ -315,7 +322,7 @@ function order(list) {
 // The report of a project, from a worker; the run fails when there is none.
 async function report(worker, project) {
   let answer;
-  try { answer = await worker.request({ op: 'report', project }); }
+  try { answer = await worker.request({ op: 'report', project, restore: false }); }
   catch (e) { fail(`MigrationReport failed on ${rel(project)}: ${e.message}`); }
   if (!answer.ok) fail(`MigrationReport failed on ${rel(project)}: ${answer.error}`);
   return answer.report;
@@ -333,7 +340,7 @@ async function fixPass(worker, project, dir) {
     const answer = await worker.request({ op: 'fix', project, diagnostics: fixable });
     return answer.ok ? undefined : 'the fixes failed' + (answer.error ? ': ' + answer.error : '') + (answer.log?.trim() ? '\n' + answer.log.trim().slice(-4000) : '');
   } catch (e) {
-    // A worker that ended: the pool starts another for the next project, as a dotnet format run that crashed.
+    // A worker that ended counts as a dotnet format run that crashed; the lease starts another for the next request.
     return 'the fixes failed: ' + e.message;
   }
 }

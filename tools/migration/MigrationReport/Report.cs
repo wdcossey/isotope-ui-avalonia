@@ -3,6 +3,7 @@
 // the analyzer, as dotnet format does.
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text;
 using System.Text.Json.Nodes;
 using Isotope.UI.Migration;
@@ -21,9 +22,10 @@ static class Report
     /// <summary>
     /// The report of one project: per source file under the project (relative path), its compile errors and migration
     /// diagnostics by ID, and the commonest messages (Json, which tools/migration/measure-samples.mjs reads); Text is the
-    /// same as lines for a reader.
+    /// same as lines for a reader. Without restore, the project must have been restored already (measure-samples.mjs
+    /// restores every sample at once).
     /// </summary>
-    public static async Task<(JsonObject Json, string Text)> RunAsync(string projectFile)
+    public static async Task<(JsonObject Json, string Text)> RunAsync(string projectFile, bool restore = true)
     {
         var project = Path.GetFullPath(projectFile);
         // The project's compile inputs, after a build of the project itself (its project references aren't built: one that
@@ -34,10 +36,11 @@ static class Report
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        foreach (var a in new[] { "msbuild", project, "-nologo", "-v:q", "-restore", "-t:Build", "-p:BuildProjectReferences=false",
+        foreach (var a in new[] { "msbuild", project, "-nologo", "-v:q", "-t:Build", "-p:BuildProjectReferences=false",
                      "-getItem:Compile", "-getItem:ReferencePathWithRefAssemblies", "-getItem:Analyzer", "-getProperty:LangVersion", "-getProperty:Nullable",
                      "-getProperty:OutputType", "-getProperty:DefineConstants", "-getProperty:AllowUnsafeBlocks", "-getProperty:AssemblyName" })
             msbuild.ArgumentList.Add(a);
+        if (restore) msbuild.ArgumentList.Add("-restore");
         using var process = Process.Start(msbuild)!;
         var stderr = process.StandardError.ReadToEndAsync();
         var text = await process.StandardOutput.ReadToEndAsync();
@@ -45,7 +48,12 @@ static class Report
         await stderr;
         // msbuild prints the build's own output first; the JSON is the last top-level object.
         var start = text.LastIndexOf("\n{", StringComparison.Ordinal);
-        var json = JsonNode.Parse(start >= 0 ? text[(start + 1)..] : text)!;
+        JsonNode json;
+        try { json = JsonNode.Parse(start >= 0 ? text[(start + 1)..] : text)!; }
+        catch (Exception e) when (e is System.Text.Json.JsonException or InvalidOperationException)
+        {
+            throw new ReportException($"msbuild exited {process.ExitCode} without the project's items:\n{Tail(text + await stderr)}", 1);
+        }
         var props = json["Properties"]!;
         var items = json["Items"]!;
         string Prop(string name) => props[name]?.GetValue<string>() ?? "";
@@ -63,6 +71,7 @@ static class Report
             allowUnsafe: Prop("AllowUnsafeBlocks") == "true");
         Compilation compilation = CSharpCompilation.Create(Prop("AssemblyName"), trees, references, options);
         // The project's source generators (System.Text.Json's, LibraryImport…), as a build runs them; not the migration analyzer.
+        // Each report loads them afresh, as when every report was a process of its own.
         var loader = new Loader();
         var generators = new List<ISourceGenerator>();
         foreach (var path in Paths("Analyzer").Where(File.Exists).Where(p => !Path.GetFileName(p).StartsWith("Isotope.UI.Migration", StringComparison.Ordinal)))
@@ -70,7 +79,8 @@ static class Report
             try { generators.AddRange(new AnalyzerFileReference(path, loader).GetGenerators(LanguageNames.CSharp)); }
             catch (Exception e) { Console.Error.WriteLine($"generator not loaded: {Path.GetFileName(path)}: {e.GetType().Name}"); }
         }
-        CSharpGeneratorDriver.Create(generators, parseOptions: parse).RunGeneratorsAndUpdateCompilation(compilation, out compilation, out _);
+        try { CSharpGeneratorDriver.Create(generators, parseOptions: parse).RunGeneratorsAndUpdateCompilation(compilation, out compilation, out _); }
+        finally { generators.Clear(); loader.Unload(); }
         var sourceTrees = new HashSet<SyntaxTree>(trees);
         // The analyzer reports nothing without Isotope among the references (an unbuilt reference has no output to read).
         if (!references.Any(r => Path.GetFileName(r.Display ?? "") == "Isotope.UI.Avalonia.dll"))
@@ -137,10 +147,27 @@ static class Report
         return d.Id + " " + (quoted.Success ? quoted.Groups[1].Value : message);
     }
 
-    /// <summary>Loads generator assemblies into this process (Roslyn's own are already loaded).</summary>
-    sealed class Loader : IAnalyzerAssemblyLoader
+    static string Tail(string text) => text.Length <= 4000 ? text.Trim() : text[^4000..].Trim();
+
+    /// <summary>
+    /// Loads one report's generator assemblies, and unloads them after it. Their dependencies resolve as
+    /// Assembly.LoadFrom's did: from this process first (Roslyn, the runtime), then from the generators' folders.
+    /// </summary>
+    sealed class Loader : AssemblyLoadContext, IAnalyzerAssemblyLoader
     {
+        readonly List<string> _folders = [];
+
+        public Loader() : base("report generators", isCollectible: true) =>
+            Resolving += (_, name) => _folders.Select(f => Path.Combine(f, name.Name + ".dll")).Where(File.Exists).Select(LoadFromAssemblyPath).FirstOrDefault();
+
         public void AddDependencyLocation(string fullPath) { }
-        public Assembly LoadFromPath(string fullPath) => Assembly.LoadFrom(fullPath);
+
+        public Assembly LoadFromPath(string fullPath)
+        {
+            _folders.Add(Path.GetDirectoryName(fullPath)!);
+            return LoadFromAssemblyPath(fullPath);
+        }
+
+        protected override Assembly? Load(AssemblyName name) => null;
     }
 }

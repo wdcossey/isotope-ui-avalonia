@@ -54,6 +54,9 @@ sealed class Fixer : IDisposable
                 // dotnet format's workspace (MSBuildWorkspaceLoader).
                 _workspace = MSBuildWorkspace.Create(new Dictionary<string, string>(StringComparer.Ordinal) { ["AlwaysCompileMarkupFilesInSeparateDomain"] = bool.FalseString });
                 await _workspace.OpenProjectAsync(Project, cancellationToken: ct).ConfigureAwait(false);
+                // Warnings, as in dotnet format: a project that loads in part is still fixed.
+                foreach (var d in _workspace.Diagnostics)
+                    log.WriteLine($"fix: {Path.GetFileName(Project)}: loading the workspace: {d.Kind}: {d.Message}");
             }
             var original = _workspace.CurrentSolution;
             var fixedSolution = await FixAsync(original, ct).ConfigureAwait(false);

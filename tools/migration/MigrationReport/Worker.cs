@@ -2,7 +2,9 @@
 // Roslyn and MSBuild's workspace once per worker rather than once per report and per dotnet format run.
 //
 // Each request is one JSON object on a line of stdin, and each answer one line of stdout, in order:
-//   {"op":"report","project":"<path>"}  -> {"ok":true,"report":{...}}  the report, as --json prints it
+//   {"op":"report","project":"<path>","restore":false}
+//                                       -> {"ok":true,"report":{...}}  the report, as --json prints it (restore, default
+//                                                                      true: msbuild -restore)
 //   {"op":"fix","project":"<path>","diagnostics":["ISOMIG001",...]}
 //                                       -> {"ok":true|false,"log":""}  one pass of the fixes (Fixer), as one dotnet format
 //                                                                      run, and the warnings it would print
@@ -46,7 +48,8 @@ static class Worker
                         fixer?.Dispose();
                         fixer = null;
                         if (op != "report") throw new FormatException("unknown op " + (op ?? "(none)"));
-                        answer = new JsonObject { ["ok"] = true, ["report"] = (await Report.RunAsync(project)).Json };
+                        var restore = request["restore"]?.GetValue<bool>() ?? true;
+                        answer = new JsonObject { ["ok"] = true, ["report"] = (await Report.RunAsync(project, restore)).Json };
                     }
                 }
                 catch (Exception e)

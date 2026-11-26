@@ -1,4 +1,4 @@
-// Tests of the MigrationReport workers (#87): node --test tools/migration/test/. A stand-in worker written in node
+// Tests of the MigrationReport workers (#87): node --test tools/migration/test/*.test.mjs. A stand-in worker written in node
 // answers as MigrationReport --serve does, so no dotnet is needed.
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
