@@ -31,7 +31,7 @@ export const STYLE = readFileSync(new URL('./checklist.css', import.meta.url), '
 // The page's script: one click per line sends its verdict and note; changing a note resends the line's verdict.
 // Posts go one at a time, in order, so a note's resend (on blur) can't land after the click that caused the blur.
 // P, F and S answer the focused line (the line itself or a button in it) and move to the next line; never from a
-// field, with Ctrl, Alt or Meta held, on a key held down, or after Finish.
+// field, with Ctrl, Alt or Meta held, on a key held down, or once Finish is confirmed (no answer is sent after it).
 export const SCRIPT = `const token = document.querySelector('meta[name="checklist-token"]').content;
 let queue = Promise.resolve();
 function post(path, body) {
@@ -66,6 +66,7 @@ function sectionCount(it) {
 }
 async function answer(it, verdict) {
   const s = it.querySelector('.s');
+  if (finished) return false;
   try {
     progress(await post('/answer', { key: it.dataset.key, verdict, note: it.querySelector('.note').value }));
     it.dataset.verdict = verdict; s.textContent = verdict; s.classList.remove('err');
@@ -74,7 +75,14 @@ async function answer(it, verdict) {
     return true;
   } catch (e) { s.textContent = 'error: ' + e.message; s.classList.add('err'); return false; }
 }
-function show(el) { if (el) { el.focus(); el.scrollIntoView({ block: 'nearest' }); } }
+// Focuses el and scrolls it into view below the sticky header, whatever height the header has wrapped to.
+function show(el) {
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  const top = document.getElementById('top').getBoundingClientRect().bottom + 8, r = el.getBoundingClientRect();
+  if (r.top < top) window.scrollBy(0, r.top - top);
+  else if (r.bottom > window.innerHeight - 8) window.scrollBy(0, Math.min(r.bottom - window.innerHeight + 8, r.top - top));
+}
 document.addEventListener('keydown', async (e) => {
   const k = shortcut(e);
   if (!k) return;
@@ -88,13 +96,13 @@ document.addEventListener('click', async (e) => {
   if (b) return answer(b.closest('.it'), b.dataset.verdict);
   if (e.target.id === 'next') return show(document.querySelector('.it[data-verdict=""]') || document.getElementById('finish'));
   if (e.target.id === 'finish') {
-    if (!confirm('Write the answers into the checklist and stop the tool?')) return;
+    if (finished || !confirm('Write the answers into the checklist and stop the tool?')) return;
+    finished = true;
     try {
       const r = await post('/finish', {});
-      finished = true;
       document.getElementById('summary').textContent = r.summary;
       for (const x of document.querySelectorAll('button, input, textarea')) x.disabled = true;
-    } catch (err) { document.getElementById('summary').textContent = 'error: ' + err.message; }
+    } catch (err) { finished = false; document.getElementById('summary').textContent = 'error: ' + err.message; }
   }
 });
 document.addEventListener('change', async (e) => {
@@ -114,16 +122,17 @@ export function renderPage({ title, items, results, token, nonce }) {
   const answers = results.answers ?? {};
   const done = (list) => list.filter((it) => answers[it.key]).length;
   const answered = done(items);
-  let body = '';
+  let body = '', line = 0;
   for (const s of sections(items)) {
     const n = done(s.items);
     body += `<section class="card"><div class="card-header"><h2>${escapeHtml(s.name || '(no heading)')}</h2>`
       + `<span class="badge ${n === s.items.length ? 'badge-default' : 'badge-outline'} count">${n} of ${s.items.length}</span></div><div class="card-content lines">`;
     s.items.forEach((it, i) => {
-      const a = answers[it.key];
+      const a = answers[it.key], id = 't' + line++;
       if (i) body += '<div class="sep" role="none"></div>';
-      body += `<div class="it" tabindex="0" data-key="${escapeHtml(it.key)}" data-verdict="${escapeHtml(a?.verdict ?? '')}">`
-        + `<div class="t">${it.ticked ? '<span class="badge badge-outline was">ticked before</span> ' : ''}${inlineMarkdown(it.text)}</div><div class="b">`
+      // A line takes focus from a click or the keys (tabindex -1), not as an extra Tab stop: Tab reaches its buttons.
+      body += `<div class="it" role="group" aria-labelledby="${id}" tabindex="-1" data-key="${escapeHtml(it.key)}" data-verdict="${escapeHtml(a?.verdict ?? '')}">`
+        + `<div class="t" id="${id}">${it.ticked ? '<span class="badge badge-outline was">ticked before</span> ' : ''}${inlineMarkdown(it.text)}</div><div class="b">`
         + VERDICTS.map((v) => `<button class="btn btn-sm btn-${VARIANT[v]}" data-verdict="${v}" aria-pressed="${a?.verdict === v}">${label(v)}</button>`).join('')
         + `<input class="input input-sm note" aria-label="Note" placeholder="note (optional)" value="${escapeHtml(a?.note ?? '')}"><span class="badge s">${escapeHtml(a?.verdict ?? '')}</span></div></div>`;
     });

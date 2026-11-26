@@ -195,7 +195,7 @@ test('the page carries its stylesheet under the same CSP, by the response\'s non
 
 test('the stylesheet carries shadcn/ui\'s copyright and MIT notice', () => {
   const header = /^\/\*([\s\S]*?)\*\//.exec(STYLE)?.[1] ?? '';
-  assert.match(header, /Copyright \(c\) 2023 shadcn/);
+  assert.match(header, /shadcn\/ui's licence:\s+MIT License\s+Copyright \(c\) \d{4} \S+/);
   assert.match(header, /Permission is hereby granted, free of charge/);
   assert.match(header, /THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND/);
 });
@@ -248,4 +248,27 @@ test('P, F and S answer the focused line, but never from a field, with a modifie
   assert.equal(verdict('p', null), null, 'no target');
   vm.runInContext('finished = true;', context);
   assert.equal(verdict('p', on('DIV')), null, 'after Finish');
+});
+
+test('once Finish is confirmed, the page sends no more answers, even before the finish is answered', async () => {
+  const listeners = {}, sent = [];
+  const el = () => ({ textContent: '', value: '', max: 0, disabled: false, classList: { add() {}, remove() {}, toggle() {} } });
+  const document = {
+    querySelector: () => ({ content: TOKEN }), addEventListener: (type, fn) => { listeners[type] = fn; },
+    getElementById: () => el(), querySelectorAll: () => [],
+  };
+  // /finish never answers, as during the round trip; an answer answers at once.
+  const fetch = (path) => { sent.push(path); return path === '/finish' ? new Promise(() => {}) : Promise.resolve({ ok: true, json: async () => ({ answered: 1, total: 1 }) }); };
+  const context = vm.createContext({ document, fetch, confirm: () => true, setTimeout, Promise, JSON, Error, String });
+  vm.runInContext(SCRIPT + ';globalThis.answer = answer;', context);
+  const section = { querySelectorAll: () => [], querySelector: () => el() };
+  const line = { dataset: { key: 'k', verdict: '' }, querySelector: () => el(), querySelectorAll: () => [], closest: () => section };
+  assert.equal(await context.answer(line, 'pass'), true);
+  assert.deepEqual(sent, ['/answer']);
+  listeners.click({ target: { id: 'finish', closest: () => null } });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(sent, ['/answer', '/finish']);
+  assert.equal(await context.answer(line, 'fail'), false);
+  assert.equal(context.shortcut({ key: 'p', target: { tagName: 'DIV', closest: () => line } }), null);
+  assert.deepEqual(sent, ['/answer', '/finish']);
 });

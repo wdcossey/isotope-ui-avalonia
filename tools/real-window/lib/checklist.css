@@ -179,11 +179,13 @@ main { padding-block: 1.5rem 4rem; display: grid; gap: 1.5rem; }
   scroll-margin-block: 10rem 2rem;
   transition: background-color 0.15s, box-shadow 0.15s;
 }
-.it:focus-within { background: color-mix(in oklab, var(--accent) 70%, transparent); }
-.it:focus-visible { box-shadow: var(--focus-ring); }
 .it[data-verdict="pass"] { border-left-color: var(--primary); }
 .it[data-verdict="fail"] { border-left-color: var(--destructive); background: color-mix(in oklab, var(--destructive) 6%, transparent); }
 .it[data-verdict="skip"] { border-left-color: var(--muted-foreground); }
+/* After the verdicts, and as specific, so a failed line shows its focus too. */
+.it[data-verdict]:focus-within { background: color-mix(in oklab, var(--accent) 70%, transparent); }
+.it[data-verdict="fail"]:focus-within { background: color-mix(in oklab, var(--destructive) 12%, transparent); }
+.it:focus-visible { box-shadow: var(--focus-ring); }
 .t { font-size: 0.875rem; line-height: 1.5; }
 .b { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.625rem; }
 .b .note { flex: 1 1 12rem; width: auto; }
@@ -245,7 +247,8 @@ main { padding-block: 1.5rem 4rem; display: grid; gap: 1.5rem; }
 }
 .input { height: 2.25rem; padding: 0.25rem 0.75rem; }
 .input-sm { height: 2rem; }
-.textarea { display: flex; min-height: 4rem; padding: 0.5rem 0.75rem; resize: vertical; field-sizing: content; }
+/* No field-sizing: content (shadcn's), so the textarea keeps the rows the page gives it. */
+.textarea { display: flex; min-height: 4rem; padding: 0.5rem 0.75rem; resize: vertical; }
 .input::placeholder, .textarea::placeholder { color: var(--muted-foreground); }
 .input::selection, .textarea::selection { background: var(--primary); color: var(--primary-foreground); }
 .input:focus-visible, .textarea:focus-visible { border-color: var(--ring); box-shadow: var(--focus-ring); }
