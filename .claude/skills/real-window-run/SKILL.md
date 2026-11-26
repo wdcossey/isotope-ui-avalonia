@@ -15,6 +15,8 @@ branch the developer names).
 ## 1. Prepare
 
 - `git pull` (or check out the branch), then note the commit: `git rev-parse --short HEAD`.
+- Give every command an explicit working directory, the repository root (`cd <repo> && …` or `.cwd(<repo>)`): the shell's
+  directory drifts into `upstream/` (CLAUDE.md).
 - Build first, so a build error isn't mistaken for a failed check: `dotnet build samples/Isotope.UI.Samples -nologo -v:q`.
 - Ask for the system in one line if you don't know it (for example "Fedora 43, Wayland, GNOME" or "Windows 11"), and
   which issue the run is for (`#61` Linux, `#62` macOS, or a page's hands-on issue). The page asks for the system too.
@@ -24,14 +26,18 @@ branch the developer names).
 Start both in the background (each as its own shell command that moves to the background), checklist first:
 
 - **The checklist page:** `node tools/real-window/checklist.mjs samples/Isotope.UI.Samples/README.md --clear`.
-  Leave out `--clear` if `samples/Isotope.UI.Samples/README.md.results.json` exists: that is an unfinished run,
-  and the page resumes it. Its first stdout line is a `{"event":"ready","url":...}` JSON line: give the developer that
+  If `samples/Isotope.UI.Samples/README.md.results.json` exists, an earlier run is unfinished: ask the developer
+  whether to resume it (leave out `--clear`) or start again (delete the file, then use `--clear`). Its answers may
+  be from another commit; the `ready` line's `saved` count says how many there are. Its first stdout line is a `{"event":"ready","url":...}` JSON line: give the developer that
   URL.
-- **The app:** if `~/.claude/device-lease/lease.js` exists, launch through it so no other agent takes the screen:
-  `node ~/.claude/device-lease/lease.js run desktop --who Isotope --for "sample app at <commit>, real-window run" --
-  dotnet run --no-build --project samples/Isotope.UI.Samples`. If it doesn't exist (another machine), run
-  `dotnet run --no-build --project samples/Isotope.UI.Samples` directly. Don't pass `--idle-seconds`: the developer
-  is at the machine and waiting. Don't drive the window: no clicks, keys or screenshots.
+- **The app:** if the `device-lease` skill is available, launch through its `run desktop` command (that skill gives
+  the script's path) so no other agent takes the screen, with `--who Isotope`, `--for "sample app at <commit>,
+  real-window run"`, `--wait-minutes 0` (don't wait for a busy desktop: exit 75 means another agent holds it; say who,
+  from its `status`, and stop) and `--max-minutes 240` (a run with breaks can pass the default two hours), then `--
+  dotnet run --no-build --project samples/Isotope.UI.Samples`. Without that skill (another machine), run the `dotnet
+  run` directly. Don't pass `--idle-seconds`: the developer is at the machine and waiting. Check the window opened
+  (the launch command is still running and printed no error) before saying so. Don't drive the window: no clicks,
+  keys or screenshots.
 
 Tell the developer the page's URL, that the app is open, and that you're following their answers.
 
@@ -46,8 +52,8 @@ If they close the app or stop partway, the answers are saved; the next run of th
 
 ## 4. Record the run
 
-After Finish, the checklist file has the ticks and notes, and the tool has printed a summary with a suggested "Last run"
-sentence. Then:
+After Finish, the checklist file has the ticks and notes. The stdout `finish` line carries the suggested "Last run"
+sentence (`sentence`) and the failed lines (`failed`); use those (the human-readable summary goes to stderr). Then:
 
 1. **Branch:** `docs/<issue>-real-window-<system-slug>` from `origin/main` (carry the changed README over).
 2. **README:** rewrite the "Last run" paragraph from the suggestion: date, system, commit, issue, what passed and what
@@ -57,10 +63,13 @@ sentence. Then:
 4. **Failures:** file one issue per failed line (`bug`, P2 unless the developer says otherwise, `self-drive` if it can
    be fixed headless, otherwise `hands-on`), quoting the line, the developer's note, the system and the commit. Link
    them from the README note.
-5. **PR:** `Closes` the run's issue only if every line it covers passed; otherwise link it. Follow PROCESS for the
+5. **PR:** `Closes` the run's issue only if every line it covers passed: a failed, skipped or unanswered line means the
+   PR links the issue instead. Follow PROCESS for the
    rest: one `code-review` pass at `medium main...<branch> --max-findings all`, the required checks, a squash merge
    with the review and checks in the message.
-6. Stop the checklist tool and the app if they are still running.
+6. Stop the checklist tool, and ask the developer to close the app window if it is still open: stopping the
+   background launch command may leave the app running (its process tree isn't always killed). Then check the desktop
+   lease is released (the device-lease skill's `status`).
 
 ## Rules
 
