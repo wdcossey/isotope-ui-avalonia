@@ -278,6 +278,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
 - **A layout fit test that measures with `Measure(Size.Infinity)` reports wrapping text at its one-line width,** and
   depends on the system font (ubuntu-latest's is about 13% wider than Windows'). Check what is actually cut off instead: a
   control past its container's right edge, or one-line text narrower than it wants (#96). (2026-11-26)
+- **A test that spawns a process must stop it when an assertion fails.** A failing check before the `kill` left the
+  child running, and `node --test` waited on it without end (#106). Keep the children in a set and stop them in
+  `finally`; give server tests a timeout. (2026-11-26)
 
 ## Working with the developer
 

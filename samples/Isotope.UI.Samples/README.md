@@ -11,27 +11,37 @@ The headless tests (`SampleAppTests`) mount every page, click through its main i
 window still has to show what they can't: hover tooltips appearing, menus opened with the mouse, right-click menus,
 keyboard input, and how the page list and the split view look and animate. The checklist below is that run.
 
-**Last run:** 2026-11-26, Windows, at `cf10271` (#73, #92): the Rich text and Icons pages passed, and so did the window's
-lines as they were then (eight tabs). Every other line passed on 2026-11-24 at `3678918` (#34). New since that run,
-and not run yet: the window and menu lines (#96: a list of the pages replaced the tabs; #100) and the Lists page (#94).
-Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
+**Last run:** 2026-11-26, Windows, at `512633f` (#100): the window and menu lines (the page list, #96), the Lists page
+(#94) and the first three Basics lines passed; only those were run at this commit, the rest beside the new list not yet. The Rich text and Icons pages passed earlier that day at `cf10271` (#73, #92), and every other line on
+2026-11-24 at `3678918` (#34). Linux and macOS haven't been run in a real window yet. Before a new run, clear the ticks.
 
 ## Checklist
 
 Tick each line in a real window. "Shows" means on screen; the line after each arrow is what should happen.
 
+**How to run the checklist:** ask Claude Code for a real-window run (the `real-window-run` skill launches the app,
+serves this checklist and records the results), or from the repository root run
+`node tools/real-window/checklist.mjs samples/Isotope.UI.Samples/README.md --clear` and open the page it prints
+(`http://127.0.0.1:8765/`; `--port` picks another). Fill in the system (OS, display server, version) once, then click
+**Pass**, **Fail** or **Skip** on each line, with a note when there is something to say. Each answer is saved as it is
+given, to `README.md.results.json` beside this file (git-ignored), so a closed tab or a stopped tool loses nothing: run
+the command again to resume. **Finish** ticks the passed lines and unticks the failed ones, appends each note to its
+line (`**Failed (<system>, <date>):** <note>` for a failure, `(<system>, <date>: <note>)` for a pass), leaves skipped
+lines as they were, and prints a summary with a suggested "Last run" sentence for the paragraph above, which it
+doesn't write. `--clear` unticks every line, as a new run needs; notes from earlier runs stay until removed by hand.
+
 ### The window and its menus
 
-- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above a list of the pages on the left, each
+- [x] The window opens titled "Isotope samples", with a menu bar (Go, View) above a list of the pages on the left, each
   name on one line and none cut off: Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons, Lists, Errors.
   Basics is selected, and its page fills the rest of the window; no page is cut off on the right.
-- [ ] Click **Go** with the mouse → its menu drops down, listing the nine pages with a radio mark on Basics.
-- [ ] Choose **Go > Numbers** → Numbers is selected in the list and its page shows. Click **Buttons** in the list, then
+- [x] Click **Go** with the mouse → its menu drops down, listing the nine pages with a radio mark on Basics.
+- [x] Choose **Go > Numbers** → Numbers is selected in the list and its page shows. Click **Buttons** in the list, then
   open **Go** again → the radio mark is on Buttons.
-- [ ] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
+- [x] Hover over the menu bar with Go open, then over View → the open menu follows the pointer. Esc or a click outside
   closes it.
-- [ ] Switch between pages → each page keeps what you did on it (a count, a typed draft, a deleted file).
-- [ ] Click a page in the list, then press Down and Up → the selection moves and its page shows. Press Tab → the focus
+- [x] Switch between pages → each page keeps what you did on it (a count, a typed draft, a deleted file).
+- [x] Click a page in the list, then press Down and Up → the selection moves and its page shows. Press Tab → the focus
   moves into the page shown (its first control), never into a hidden page.
 
 ### Basics
@@ -112,14 +122,14 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### Lists
 
-- [ ] Four fruit rows (Apple, Banana, Cherry, Damson), each with "counted 0" and a **+1** button. **+1** on Banana →
+- [x] Four fruit rows (Apple, Banana, Cherry, Damson), each with "counted 0" and a **+1** button. **+1** on Banana →
   "counted 1"; "Last clicked" still says "nothing yet" (the button's click isn't the item's).
-- [ ] **Reverse**, then **Rotate** → the rows move and Banana keeps "counted 1". **Add** → Elderberry joins at the end.
-- [ ] Click a row → it is highlighted, "Selected:" and "Last clicked:" name it. Reverse → the same fruit stays selected.
-- [ ] Pick **Multiple (Ctrl, Shift)** → a plain click selects one row; Ctrl+click adds one, Shift+click a range.
+- [x] **Reverse**, then **Rotate** → the rows move and Banana keeps "counted 1". **Add** → Elderberry joins at the end.
+- [x] Click a row → it is highlighted, "Selected:" and "Last clicked:" name it. Reverse → the same fruit stays selected.
+- [x] Pick **Multiple (Ctrl, Shift)** → a plain click selects one row; Ctrl+click adds one, Shift+click a range.
   **Toggle (each tap)** → each click selects or deselects its row.
-- [ ] Focus a row (click it, then the arrow keys) and press Enter or Space → "Last clicked" names it.
-- [ ] The thousand rows scroll smoothly to "Row 1000" (Avalonia realises only the rows in view).
+- [x] Focus a row (click it, then the arrow keys) and press Enter or Space → "Last clicked" names it.
+- [x] The thousand rows scroll smoothly to "Row 1000" (Avalonia realises only the rows in view).
 
 ### Errors
 
