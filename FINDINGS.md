@@ -173,11 +173,16 @@ Measured: 1258 library tests on each of net9.0, net10.0 and net11.0; spike J's p
 - **Measured** on main `bfa57e1`: 108 of 358 files build, 2,936 compile errors, 2 of 36 projects build, 1,122 migration
   diagnostics left. These are identical on Windows (local and `windows-latest`) and `ubuntu-latest`; the "before" build
   needs no Windows (the converted projects drop `UseWinUI`).
-- **Run time:** 15.6 to 17.0 min on Ubuntu one project at a time, 22.2 min on Windows (4 Ubuntu runs, 1 Windows run).
-  Measuring up to 4 projects at once (`--jobs`, default the processor count) gives 8.1 to 14.7 min on Ubuntu (runs 274,
-  275, 278, 283, 289) and 235 s against 804 s locally; the 4-vCPU runner is CPU-bound, so each `dotnet format` run slows
-  from about 5 s to 10–19 s when four run at once. Locally, one at a time, the 96 `dotnet format` runs took 494 s (4.2 s
-  to 7.5 s each, mostly start-up), the before builds 157 s and the after builds 143 s.
+- **Run time:** 3.2 to 5.0 min on `ubuntu-latest` (runs 304, 305, 306 on one commit; 3.6 min in run 303), from 8.1 to
+  14.7 min with `dotnet format` (runs 274, 275, 278, 283, 289) and 15.6 to 17.0 min one project at a time before that.
+  Since #87 the fixes run in MigrationReport's workers (`--serve`: MSBuildWorkspace, what one `dotnet format analyzers`
+  run does), every sample is restored once, and `--jobs` defaults to half the processors (on 4 processors locally, 2 at
+  once took 207 s, 3 took 237 s, 4 took 306 s). Locally one at a time, the before phase took 66 s (was 148 s) and the
+  migrate phase 147 s (was 588 s; 94 passes of the fixes took 85 s against 456 s for 97 `dotnet format` runs); most of
+  the fix time is each project's first pass, which loads the workspace. `--fixer dotnet-format` still runs `dotnet
+  format`, with the baseline's counts. dotnet format fixes the rules in a hash set's order, which changes per run:
+  against one of its runs, 8 files had their added usings in another order and 3 projects took one pass fewer, nothing
+  else.
 - **Docs-only skip:** a branch push whose changes since its merge base with main are all under `docs/` or `*.md` skips
   the measurement; the job still reports and its tests still run (run 276 skipped, run 278 measured).
 - **Not gated:** per-message counts and compile errors per ID: each names a member or type, so they move with every
