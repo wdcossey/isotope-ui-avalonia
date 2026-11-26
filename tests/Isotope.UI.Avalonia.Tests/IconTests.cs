@@ -509,6 +509,13 @@ public class IconTests
         Assert.Equal(2, host.All<AvPathIcon>().Count);
     }
 
+    [AvaloniaFact]
+    public void The_guides_Segoe_example_is_a_glyph_in_Segoe_Fluent_Icons()
+    {
+        var text = Assert.IsType<GlyphTextBlock>(Mounted(new TestHost(IconExamples.SaveSymbol)));
+        Assert.Equal(("\uE74E", "Segoe Fluent Icons", 20.0), (text.Text, text.FontFamily.Name, text.FontSize));
+    }
+
     private sealed record UnknownIconData : IconData;
 
     [AvaloniaFact]

@@ -239,9 +239,22 @@ public static Element SaveButton(RenderContext ctx)
 }
 ```
 
+**WinUI symbols.** On Windows, `FontIcon(glyph, "Segoe Fluent Icons")` shows a WinUI symbol from the font Windows
+installs: give the glyph as its code point, `"\uE74E"` for Save, and find the others on Microsoft's
+[Segoe Fluent Icons page](https://learn.microsoft.com/windows/apps/design/style/segoe-fluent-icons-font). An app that runs
+elsewhere brings its own icons: a `PathIcon` with path data from an icon set whose licence lets it ship them, or a
+`FontIcon` in a font it ships. Isotope ships neither a symbol set nor a font: the Segoe fonts may not be shipped to other
+platforms, and which icons an app uses is its own choice.
+
+<!-- snippet: icons-segoe -->
+```csharp
+// Windows only: WinUI's Save symbol, from the Segoe Fluent Icons font that Windows installs.
+public static Element SaveSymbol() => Icon(FontIcon("\uE74E", "Segoe Fluent Icons"));
+```
+
 > **Coming from Reactor?** WinUI's symbols aren't here: `Icon(Symbol.Home)`, `Icon("Home")` and `SymbolIcon(...)` show
-> glyphs of Windows' Segoe icon fonts, which Avalonia doesn't ship and which can't be redistributed. Use a `PathIcon`
-> with a shape, or a `FontIcon` in an icon font the app supplies (`FontIcon(glyph, "avares://MyApp/Assets/Fonts#My Icons")`).
+> glyphs of Windows' Segoe icon fonts, which Isotope doesn't ship (see WinUI symbols above).
+> A font the app ships is named by its resource: `FontIcon(glyph, "avares://MyApp/Assets/Fonts#My Icons")`.
 > A `FontIcon` with no font uses WinUI's, Segoe Fluent Icons then Segoe MDL2 Assets, which only Windows has, at WinUI's
 > size, 20. Its font is a name, as upstream's (null is the default), or Avalonia's `FontFamily`, and a glyph is centred in
 > a box sized with `.Width(...)` and `.Height(...)`, as WinUI's is. An `ImageIcon` or `BitmapIcon` URI is

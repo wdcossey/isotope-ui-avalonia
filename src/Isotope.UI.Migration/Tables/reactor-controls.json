@@ -37,7 +37,7 @@
     {"factory": "SelectorBarItem", "status": "winui-only", "alternative": "Avalonia's core has no counterpart. Use a TabControl or a ListBox."},
     {"factory": "SemanticZoom", "status": "winui-only", "alternative": "Avalonia's core has no counterpart."},
     {"factory": "SwipeControl", "status": "winui-only", "alternative": "Avalonia's core has no counterpart."},
-    {"factory": "SymbolIcon", "status": "winui-only", "alternative": "Avalonia has no symbol font: WinUI's symbols are glyphs of Windows' Segoe icon fonts, which can't be redistributed. Use Icon(PathIcon(...)) with a shape, Icon(FontIcon(glyph, fontFamily)) with an icon font the app supplies, or Icon(ImageIcon(...))."},
+    {"factory": "SymbolIcon", "status": "winui-only", "alternative": "WinUI's symbols are glyphs of Windows' Segoe fonts, which Isotope doesn't ship: on Windows use Icon(FontIcon(glyph, \"Segoe Fluent Icons\")) with the symbol's code point, elsewhere the app's own Icon(PathIcon(...)) (\"WinUI symbols\" in docs/guide/writing-components.md)."},
     {"factory": "TeachingTip", "status": "winui-only", "alternative": "Avalonia's core has no counterpart. Use a tooltip (.WithToolTip) or a flyout."},
     {"factory": "TitleBar", "status": "winui-only", "alternative": "Avalonia's core has no TitleBar element: the window title comes from ReactorApp.Run's title."},
     {"factory": "WebView2", "status": "winui-only", "alternative": "Avalonia's core has no counterpart. (A web view needs a third-party package.)"},

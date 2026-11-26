@@ -161,7 +161,10 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   the default.
 - **Unlike upstream's:** no `SymbolIconData`, `SymbolIcon`, `Icon(Symbol)` or `Icon(string)`: WinUI's symbols are Segoe
   glyphs, which can't be redistributed. The migration reports them (ISOMIG005, ISOMIG011, ISOMIG010) with what to use
-  instead; the options are measured on #91, awaiting a decision. A bitmap or image URI is a file or `avares://` resource;
+  instead. **Decided** (developer, 2026-11-26): Isotope ships no symbol set or font, Fluent UI System Icons included;
+  the guide ("WinUI symbols") says how to use Segoe Fluent Icons on Windows (`FontIcon(glyph, "Segoe Fluent Icons")`)
+  or an app's own icons, and the migration's notes point there. The sample window is 820 wide, so its eight tabs fit on
+  one line. A bitmap or image URI is a file or `avares://` resource;
   a command's `Icon` takes the new records but nothing draws it yet. `IconElement` clashes with
   `Avalonia.Controls.IconElement` where both namespaces are imported (CS0104).
 - **Measured on upstream's samples** (`measure-samples.mjs`, 36 projects, 358 files, upstream 561c5573), main `c0b2e19`

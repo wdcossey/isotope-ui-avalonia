@@ -320,6 +320,14 @@ public sealed class SampleAppTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void The_tabs_fit_on_one_line_in_the_apps_window()
+    {
+        var (host, _) = Open();
+        var tops = Tabs(host).Items.Cast<TabItem>().Select(t => t.Bounds.Top).Distinct().ToList();
+        Assert.Single(tops); // every header on the first line: none wrapped
+    }
+
+    [AvaloniaFact]
     public void Icons_page_shows_each_kind_and_its_last_icon_changes_kind()
     {
         var (host, window) = Open();

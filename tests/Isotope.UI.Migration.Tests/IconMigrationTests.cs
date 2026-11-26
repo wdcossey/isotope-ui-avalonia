@@ -59,13 +59,14 @@ public class IconMigrationTests
             }
             """;
         var left = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
-        Assert.Contains(left, d => d.StartsWith("ISOMIG005: 'Microsoft.UI.Xaml.Controls.Symbol' has no Avalonia counterpart", StringComparison.Ordinal)
-            && d.Contains("Icon(FontIcon(glyph, fontFamily))", StringComparison.Ordinal));
-        Assert.Contains(left, d => d.StartsWith("ISOMIG011: 'SymbolIcon' is a WinUI control with no Isotope counterpart", StringComparison.Ordinal)
-            && d.Contains("Icon(PathIcon(...))", StringComparison.Ordinal));
-        Assert.Contains(left, d => d.StartsWith("ISOMIG005: 'Microsoft.UI.Xaml.Controls.SymbolIcon' has no Avalonia counterpart", StringComparison.Ordinal)
-            && d.Contains("Icon(PathIcon(...))", StringComparison.Ordinal));
-        Assert.Contains(left, d => d.StartsWith("ISOMIG010: Factory 'Icon(string symbol)' is gone in Isotope: Avalonia has no symbol font", StringComparison.Ordinal));
+        // One note for all four: the Segoe glyph on Windows, or the app's own shape, and the guide's section.
+        const string Note = "WinUI's symbols are glyphs of Windows' Segoe fonts, which Isotope doesn't ship: on Windows use " +
+            "Icon(FontIcon(glyph, \"Segoe Fluent Icons\")) with the symbol's code point, elsewhere the app's own Icon(PathIcon(...)) " +
+            "(\"WinUI symbols\" in docs/guide/writing-components.md).";
+        Assert.Contains("ISOMIG005: 'Microsoft.UI.Xaml.Controls.Symbol' has no Avalonia counterpart: " + Note, left);
+        Assert.Contains("ISOMIG011: 'SymbolIcon' is a WinUI control with no Isotope counterpart: " + Note, left);
+        Assert.Contains("ISOMIG005: 'Microsoft.UI.Xaml.Controls.SymbolIcon' has no Avalonia counterpart: " + Note, left);
+        Assert.Contains("ISOMIG010: Factory 'Icon(string symbol)' is gone in Isotope: " + Note, left);
         Assert.DoesNotContain(left, d => d.StartsWith("ISOMIG012", StringComparison.Ordinal) || d.StartsWith("ISOMIG016", StringComparison.Ordinal));
     }
 }

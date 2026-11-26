@@ -20,4 +20,9 @@ internal static class IconExamples
             Icon(ImageIcon(new Uri("avares://MyApp/Assets/logo.png"))).Width(24).Height(24));
     }
     #endregion
+
+    #region icons-segoe
+    // Windows only: WinUI's Save symbol, from the Segoe Fluent Icons font that Windows installs.
+    public static Element SaveSymbol() => Icon(FontIcon("\uE74E", "Segoe Fluent Icons"));
+    #endregion
 }
