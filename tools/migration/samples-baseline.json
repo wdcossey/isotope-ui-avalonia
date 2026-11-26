@@ -9,21 +9,21 @@
     "filesBuildBefore": 51,
     "filesBuildAfter": 108,
     "errorsBefore": 13699,
-    "errorsAfter": 2936,
+    "errorsAfter": 2912,
     "brokenByMigration": 0,
     "brokenFiles": [],
     "formatFailures": 0,
-    "migrationLeftTotal": 1122,
+    "migrationLeftTotal": 1099,
     "migrationLeft": {
       "ISOMIG002": 199,
-      "ISOMIG005": 116,
+      "ISOMIG005": 118,
       "ISOMIG007": 14,
       "ISOMIG010": 15,
-      "ISOMIG011": 171,
-      "ISOMIG012": 136,
-      "ISOMIG013": 401,
+      "ISOMIG011": 176,
+      "ISOMIG012": 106,
+      "ISOMIG013": 402,
       "ISOMIG015": 13,
-      "ISOMIG016": 57
+      "ISOMIG016": 56
     }
   }
 }
