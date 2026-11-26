@@ -1,0 +1,9 @@
+root = true
+
+# A file the fixes leave alone: dotnet format skips files marked generated here.
+[Skipped.cs]
+generated_code = true
+
+# Below the --severity warn the fixes run with, so neither dotnet format nor the in-process fixes apply it here.
+[Quiet.cs]
+dotnet_diagnostic.ISOMIG001.severity = suggestion
