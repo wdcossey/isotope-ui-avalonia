@@ -52,7 +52,7 @@ static class Report
         try { json = JsonNode.Parse(start >= 0 ? text[(start + 1)..] : text)!; }
         catch (Exception e) when (e is System.Text.Json.JsonException or InvalidOperationException)
         {
-            throw new ReportException($"msbuild exited {process.ExitCode} without the project's items:\n{Tail(text + await stderr)}", 1);
+            throw new ReportException($"msbuild exited {process.ExitCode} without the project's items:\n{Tail(text)}\n{Tail(await stderr)}", 1);
         }
         var props = json["Properties"]!;
         var items = json["Items"]!;
@@ -147,7 +147,7 @@ static class Report
         return d.Id + " " + (quoted.Success ? quoted.Groups[1].Value : message);
     }
 
-    static string Tail(string text) => text.Length <= 4000 ? text.Trim() : text[^4000..].Trim();
+    static string Tail(string text) => text.Length <= 3000 ? text.Trim() : text[^3000..].Trim();
 
     /// <summary>
     /// Loads one report's generator assemblies, and unloads them after it. Their dependencies resolve as

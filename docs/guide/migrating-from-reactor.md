@@ -98,7 +98,8 @@ the commit in `UPSTREAM.lock`.
 - It compiles every project first, with the project's source generators, as a build does.
 - It runs the fixes until nothing changes, then compiles each project again. The fixes run in process: what
   `dotnet format analyzers` does with the command above, without starting it for each pass (#87).
-  `--fixer dotnet-format` runs `dotnet format` itself instead; the counts are the same.
+  `--fixer dotnet-format` runs `dotnet format` itself instead. The gated counts are the same; dotnet format fixes the rules
+  in an order that changes from run to run, so it can put added usings in another order and take another number of passes.
 - A file counts as building when the compiler reports no error in it.
 - It also prints the commonest diagnostics and errors left.
 

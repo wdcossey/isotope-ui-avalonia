@@ -10,7 +10,13 @@
 // --serve: a worker that keeps one process for many requests, one JSON object per line on stdin, each answered by one
 // line on stdout (Worker.cs; measure-samples.mjs is its client).
 if (args is ["--serve"])
-    return await Worker.ServeAsync(Console.In, Console.Out, Console.Error);
+{
+    // UTF-8 both ways, as node writes and reads them: Console.In and Console.Out use the console's code page on Windows.
+    var utf8 = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+    using var input = new StreamReader(Console.OpenStandardInput(), utf8);
+    using var output = new StreamWriter(Console.OpenStandardOutput(), utf8);
+    return await Worker.ServeAsync(input, output, Console.Error);
+}
 
 if (args.Length is < 1 or > 2 || (args.Length == 2 && args[1] != "--json") || args[0].StartsWith("--", StringComparison.Ordinal))
     return Usage();

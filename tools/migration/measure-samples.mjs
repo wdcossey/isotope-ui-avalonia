@@ -107,7 +107,8 @@ const reporter = path.join(repo, 'tools', 'migration', 'MigrationReport', 'bin',
 // Every sample restored at once (#87), so no report restores its project again: one restore of the whole graph instead of
 // two per project. A restore that fails fails the run, as a report's own -restore did.
 const solution = path.join(out, 'samples.slnx');
-fs.writeFileSync(solution, ['<Solution>', ...converted.map(p => `  <Project Path="${path.relative(out, p.file).replace(/\\/g, '/')}" />`), '</Solution>', ''].join('\n'));
+const escapeXml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+fs.writeFileSync(solution, ['<Solution>', ...converted.map(p => `  <Project Path="${escapeXml(path.relative(out, p.file).replace(/\\/g, '/'))}" />`), '</Solution>', ''].join('\n'));
 let started = Date.now();
 run('dotnet', ['restore', solution, '-nologo', '-v:q'], out, true);
 const restoreMs = Date.now() - started;
