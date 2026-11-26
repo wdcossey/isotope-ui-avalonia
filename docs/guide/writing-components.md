@@ -243,7 +243,8 @@ public static Element SaveButton(RenderContext ctx)
 > glyphs of Windows' Segoe icon fonts, which Avalonia doesn't ship and which can't be redistributed. Use a `PathIcon`
 > with a shape, or a `FontIcon` in an icon font the app supplies (`FontIcon(glyph, "avares://MyApp/Assets/Fonts#My Icons")`).
 > A `FontIcon` with no font uses WinUI's, Segoe Fluent Icons then Segoe MDL2 Assets, which only Windows has, at WinUI's
-> size, 20. Its `FontFamily` is Avalonia's `FontFamily`, which a string converts to. An `ImageIcon` or `BitmapIcon` URI is
+> size, 20. Its font is a name, as upstream's (null is the default), or Avalonia's `FontFamily`, and a glyph is centred in
+> a box sized with `.Width(...)` and `.Height(...)`, as WinUI's is. An `ImageIcon` or `BitmapIcon` URI is
 > a file or an `avares://` resource (WinUI's `ms-appx:///` isn't).
 
 Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:

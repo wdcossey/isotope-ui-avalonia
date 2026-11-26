@@ -36,7 +36,15 @@ public record PathIconData(string Data) : IconData;
 /// icon fonts that ship with Windows (<c>"Segoe Fluent Icons, Segoe MDL2 Assets"</c>), which other systems lack, and 20.
 /// A <c>.FontFamily(...)</c> or <c>.FontSize(...)</c> modifier is used when the member is null.
 /// </summary>
-public record FontIconData(string Glyph, FontFamily? FontFamily = null, double? FontSize = null) : IconData;
+public record FontIconData(string Glyph, FontFamily? FontFamily = null, double? FontSize = null) : IconData
+{
+    /// <summary>
+    /// Upstream's form: the font by name, or null for the default. A null string doesn't reach Avalonia's conversion of a
+    /// string to a <see cref="Avalonia.Media.FontFamily"/>, which throws on null.
+    /// </summary>
+    public FontIconData(string Glyph, string? FontFamily, double? FontSize = null)
+        : this(Glyph, FontFamily is null ? null : global::Avalonia.Media.FontFamily.Parse(FontFamily), FontSize) { }
+}
 
 /// <summary>
 /// A bitmap at <see cref="Source"/> (a file path or <c>file://</c> URI, or an <c>avares://</c> resource), scaled
@@ -61,6 +69,8 @@ public record ImageIconData(Uri Source) : IconData;
 /// </summary>
 public record IconElement(IconData Data) : Element
 {
+    // No Setters, unlike upstream's: nothing public writes them, so the skip arm compares Data alone (Element.cs).
+
     // Registers the hand-written handler on first use, as a generated descriptor registers from its record's static
     // constructor (Reconciler.TryGetV1Handler runs it).
     static IconElement() => ControlRegistry.Register<IconElement, Control>(static () => new IconHandler());
@@ -70,6 +80,20 @@ public record IconElement(IconData Data) : Element
 
     /// <summary>WinUI's FontIcon size; the glyph's when neither it nor a modifier gives one.</summary>
     internal const double FontIconSize = 20;
+
+    /// <summary>
+    /// Whether two icons' data show the same thing: record equality, and a bitmap's or image's URI as written, since
+    /// <see cref="Uri"/>'s equality ignores a fragment (<c>#v2</c>) that names another resource to load.
+    /// </summary>
+    internal static bool SameData(IconData? a, IconData? b) => Equals(a, b) && SourceOf(a) == SourceOf(b);
+
+    // A bitmap's or image's URI as written, which the bitmap is loaded from.
+    internal static string? SourceOf(IconData? data) => data switch
+    {
+        BitmapIconData b => b.Source?.OriginalString,
+        ImageIconData i => i.Source?.OriginalString,
+        _ => null,
+    };
 
     /// <summary>The kind of control an icon's data mounts; a change of kind mounts a new control.</summary>
     internal static IconKind KindOf(IconData? data) => data switch
@@ -95,7 +119,7 @@ internal sealed class IconHandler : IElementHandler<IconElement, Control>
         Control control = IconElement.KindOf(element.Data) switch
         {
             IconKind.Path => new PathIcon(),
-            IconKind.Font => new TextBlock(),
+            IconKind.Font => new GlyphTextBlock(),
             IconKind.Bitmap => new BitmapIconPresenter(),
             IconKind.Image => new Image(),
             _ => throw new NotSupportedException(
@@ -127,16 +151,16 @@ internal sealed class IconHandler : IElementHandler<IconElement, Control>
             case (PathIconData path, PathIcon icon):
                 if (old is not PathIconData oldPath || oldPath.Data != path.Data) icon.Data = ParsePath(path.Data);
                 break;
-            case (FontIconData font, TextBlock text):
+            case (FontIconData font, GlyphTextBlock text):
                 if (old is not FontIconData oldFont || oldFont.Glyph != font.Glyph) text.Text = font.Glyph;
                 break;
             case (BitmapIconData bitmap, BitmapIconPresenter presenter):
-                if (old is not BitmapIconData oldBitmap || oldBitmap.Source != bitmap.Source)
+                if (old is not BitmapIconData || IconElement.SourceOf(old) != IconElement.SourceOf(bitmap))
                     presenter.Replace(ImageElement.Load(bitmap.Source.OriginalString));
                 presenter.ShowAsMonochrome = bitmap.ShowAsMonochrome;
                 break;
             case (ImageIconData image, Image img):
-                if (old is not ImageIconData oldImage || oldImage.Source != image.Source)
+                if (old is not ImageIconData || IconElement.SourceOf(old) != IconElement.SourceOf(image))
                     ImageElement.Replace(img, ImageElement.Load(image.Source.OriginalString));
                 break;
             default:
@@ -147,6 +171,25 @@ internal sealed class IconHandler : IElementHandler<IconElement, Control>
 
     // Avalonia's path markup parser, as a path's Data is parsed; blank markup is no geometry, as upstream's PathMarkup.
     private static Geometry? ParsePath(string? data) => string.IsNullOrWhiteSpace(data) ? null : Geometry.Parse(data);
+}
+
+/// <summary>
+/// A font icon's glyph (Avalonia's core has no glyph icon): a text block whose text is centred in its box, across and
+/// down, as WinUI's FontIcon centres its glyph, so a glyph sized with .Width and .Height sits where a shape would.
+/// </summary>
+internal sealed class GlyphTextBlock : TextBlock
+{
+    static GlyphTextBlock() => TextAlignmentProperty.OverrideDefaultValue<GlyphTextBlock>(TextAlignment.Center);
+
+    // Styled as a text block: a style or theme for TextBlock reaches the glyph too.
+    protected override Type StyleKeyOverride => typeof(TextBlock);
+
+    // A TextBlock draws its text at the top of a box taller than the text: move it down to the middle.
+    protected override void RenderTextLayout(DrawingContext context, Point origin)
+    {
+        var spare = Bounds.Height - Padding.Top - Padding.Bottom - TextLayout.Height;
+        base.RenderTextLayout(context, spare > 0 ? new Point(origin.X, origin.Y + spare / 2) : origin);
+    }
 }
 
 /// <summary>

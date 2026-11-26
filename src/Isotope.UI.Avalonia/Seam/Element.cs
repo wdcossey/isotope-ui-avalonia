@@ -145,8 +145,8 @@ public abstract record Element
             (ProgressBarElement x, ProgressBarElement y) => x.Value == y.Value && x.Minimum == y.Minimum && x.Maximum == y.Maximum
                 && ReferenceEquals(x.Setters, y.Setters),
             (ImageElement x, ImageElement y) => x.Source == y.Source && x.Stretch == y.Stretch && ReferenceEquals(x.Setters, y.Setters),
-            // #91: an icon's data is a value (a record of strings, a URI, a font family and numbers).
-            (IconElement x, IconElement y) => Equals(x.Data, y.Data),
+            // #91: an icon's data is a value (a record of strings, a URI as written, a font family and numbers).
+            (IconElement x, IconElement y) => IconElement.SameData(x.Data, y.Data),
             (BorderElement x, BorderElement y) => Equals(x.Background, y.Background) && Equals(x.BorderBrush, y.BorderBrush)
                 && x.CornerRadius == y.CornerRadius && x.BorderThickness == y.BorderThickness && x.Padding == y.Padding
                 && ReferenceEquals(x.Child, y.Child) && ReferenceEquals(x.Setters, y.Setters),

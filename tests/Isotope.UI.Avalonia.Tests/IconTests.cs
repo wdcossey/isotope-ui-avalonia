@@ -125,7 +125,7 @@ public class IconTests
     public void A_font_icon_mounts_a_text_block_of_its_glyph_in_WinUIs_icon_fonts_at_20_when_it_names_neither()
     {
         var host = new TestHost(() => Icon(FontIcon(Glyph)));
-        var text = Assert.IsType<TextBlock>(Mounted(host));
+        var text = Assert.IsType<GlyphTextBlock>(Mounted(host));
         Assert.Equal((Glyph, 20.0), (text.Text, text.FontSize));
         Assert.Equal(new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), text.FontFamily);
     }
@@ -136,7 +136,7 @@ public class IconTests
         FontFamily? family = "Consolas";
         double? size = 16;
         var host = new TestHost(() => Icon(FontIcon("A", family, size)).FontFamily("Arial").FontSize(30));
-        var text = Assert.IsType<TextBlock>(Mounted(host));
+        var text = Assert.IsType<GlyphTextBlock>(Mounted(host));
         Assert.Equal(("Consolas", 16.0), (text.FontFamily.Name, text.FontSize));
 
         family = null;
@@ -147,12 +147,45 @@ public class IconTests
     }
 
     [AvaloniaFact]
+    public void A_font_icon_takes_upstreams_font_name_where_null_is_the_default()
+    {
+        string? none = null;
+        var host = new TestHost(() => VStack(Icon(FontIcon("A", none)), Icon(new FontIconData("B", none, 12)), Icon(FontIcon("C", "Consolas"))));
+        var texts = host.All<GlyphTextBlock>();
+        Assert.Equal(new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), texts[0].FontFamily);
+        Assert.Equal((new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), 12.0), (texts[1].FontFamily, texts[1].FontSize));
+        Assert.Equal("Consolas", texts[2].FontFamily.Name);
+    }
+
+    [AvaloniaFact]
+    public void A_font_icons_glyph_is_centred_in_a_box_bigger_than_it()
+    {
+        var host = new TestHost(() => HStack(Icon(FontIcon("MM", "Inter", 12)).Width(60).Height(60).Foreground(Brushes.Red)));
+        var window = Show(host);
+        var text = host.All<GlyphTextBlock>().Single();
+        var origin = At(text, window, 0, 0);
+        // The box of the glyph's ink: every pixel that isn't the white background.
+        var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("no frame");
+        using var fb = frame.Lock();
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = -1, maxY = -1;
+        for (int y = (int)origin.Y; y < (int)origin.Y + 60; y++)
+            for (int x = (int)origin.X; x < (int)origin.X + 60; x++)
+                if ((uint)Marshal.ReadInt32(fb.Address + y * fb.RowBytes + x * 4) != 0xFFFFFFFF)
+                    (minX, minY, maxX, maxY) = (Math.Min(minX, x), Math.Min(minY, y), Math.Max(maxX, x), Math.Max(maxY, y));
+        Assert.True(maxX >= 0, "no ink");
+        var centre = new Point((minX + maxX) / 2.0 - origin.X, (minY + maxY) / 2.0 - origin.Y);
+        Assert.InRange(centre.X, 27, 33);
+        Assert.InRange(centre.Y, 25, 35); // a line's ascent and descent aren't symmetric about the ink
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void A_font_icon_is_updated_in_place()
     {
         var glyph = "A";
         double? size = null;
         var host = new TestHost(() => Icon(FontIcon(glyph, fontSize: size)));
-        var text = Assert.IsType<TextBlock>(Mounted(host));
+        var text = Assert.IsType<GlyphTextBlock>(Mounted(host));
 
         glyph = "B";
         size = 32;
@@ -240,6 +273,28 @@ public class IconTests
     }
 
     [AvaloniaFact]
+    public void A_bitmap_or_image_URI_that_changes_only_in_its_fragment_loads_again()
+    {
+        var png = Png(2, 2);
+        try
+        {
+            var tag = "v1";
+            var host = new TestHost(() => VStack(Icon(BitmapIcon(new Uri(png.AbsoluteUri + "#" + tag))), Icon(ImageIcon(new Uri(png.AbsoluteUri + "#" + tag)))));
+            var bitmap = host.All<BitmapIconPresenter>().Single();
+            var image = host.All<AvImage>().Single();
+            var (first, firstImage) = (bitmap.Source, image.Source);
+            Assert.NotNull(first);
+            Assert.NotNull(firstImage);
+
+            tag = "v2"; // Uri's equality ignores the fragment; the URI as written doesn't
+            host.Render();
+            Assert.NotSame(first, bitmap.Source);
+            Assert.NotSame(firstImage, image.Source);
+        }
+        finally { Delete(png); }
+    }
+
+    [AvaloniaFact]
     public void An_icon_whose_bitmap_cant_be_loaded_is_empty()
     {
         var missing = new Uri(Path.Combine(Path.GetTempPath(), "isotope-missing-" + Guid.NewGuid().ToString("N") + ".png"));
@@ -263,7 +318,7 @@ public class IconTests
 
             data = FontIcon("A");
             host.Render();
-            var text = Assert.IsType<TextBlock>(Slot());
+            var text = Assert.IsType<GlyphTextBlock>(Slot());
             Assert.Equal("A", text.Text);
             Assert.Null(path.Parent); // the path icon left the panel
 
@@ -299,7 +354,7 @@ public class IconTests
 
         data = FontIcon("A"); // a new control gets the modifiers too
         host.Render();
-        var text = Assert.IsType<TextBlock>(Mounted(host));
+        var text = Assert.IsType<GlyphTextBlock>(Mounted(host));
         Assert.Equal((40.0, (IBrush)Brushes.Red), (text.Width, text.Foreground!));
     }
 

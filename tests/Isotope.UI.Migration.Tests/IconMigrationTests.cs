@@ -54,6 +54,8 @@ public class IconMigrationTests
                 public static IconData Add() => SymbolIcon("Add");
 
                 public static object Native() => new Microsoft.UI.Xaml.Controls.SymbolIcon();
+
+                public static Element ByName() => Icon("Home");
             }
             """;
         var left = Migrate.Analyze(Migrate.Fix(reactor)).Describe();
@@ -63,6 +65,7 @@ public class IconMigrationTests
             && d.Contains("Icon(PathIcon(...))", StringComparison.Ordinal));
         Assert.Contains(left, d => d.StartsWith("ISOMIG005: 'Microsoft.UI.Xaml.Controls.SymbolIcon' has no Avalonia counterpart", StringComparison.Ordinal)
             && d.Contains("Icon(PathIcon(...))", StringComparison.Ordinal));
+        Assert.Contains(left, d => d.StartsWith("ISOMIG010: Factory 'Icon(string symbol)' is gone in Isotope: Avalonia has no symbol font", StringComparison.Ordinal));
         Assert.DoesNotContain(left, d => d.StartsWith("ISOMIG012", StringComparison.Ordinal) || d.StartsWith("ISOMIG016", StringComparison.Ordinal));
     }
 }

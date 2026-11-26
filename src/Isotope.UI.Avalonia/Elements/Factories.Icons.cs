@@ -29,6 +29,13 @@ public static partial class Factories
     public static FontIconData FontIcon(string glyph, FontFamily? fontFamily = null, double? fontSize = null) =>
         new(glyph, fontFamily, fontSize);
 
+    /// <summary>
+    /// A glyph of a font, by the font's name (upstream's form): null is the default, as with no font, where Avalonia's
+    /// conversion of a null string to a font family would throw.
+    /// </summary>
+    public static FontIconData FontIcon(string glyph, string? fontFamily, double? fontSize = null) =>
+        new(glyph, fontFamily, fontSize);
+
     /// <summary>A bitmap, by default only its shape in the icon's foreground (<paramref name="showAsMonochrome"/>).</summary>
     public static BitmapIconData BitmapIcon(Uri source, bool showAsMonochrome = true) => new(source, showAsMonochrome);
 
