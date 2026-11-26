@@ -446,14 +446,9 @@ internal sealed class ListBoxItemsCollection(ListBox owner) : ObservableCollecti
                 owner.Items.RemoveAt(oldIndex);
                 owner.Items.Insert(newIndex, item);
             }
-            // Put back exactly that selection: Avalonia dropped the moved item's, and AlwaysSelected may have picked another.
-            if (!expected.SetEquals(owner.Selection.SelectedIndexes))
-            {
-                owner.Selection.BeginBatchUpdate();
-                owner.Selection.Clear();
-                foreach (var i in expected) owner.Selection.Select(i);
-                owner.Selection.EndBatchUpdate();
-            }
+            // Avalonia dropped the moved item's selection and shifted the others' (with AlwaysSelected too, measured: it picks
+            // no other item meanwhile).
+            if (before.Contains(oldIndex)) owner.Selection.Select(newIndex);
         });
         base.MoveItem(oldIndex, newIndex);
         // The same items are selected, at new indexes: the app hears them once the items are in place (ListBoxElement's

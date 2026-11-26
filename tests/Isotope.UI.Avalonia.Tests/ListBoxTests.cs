@@ -259,7 +259,8 @@ public sealed class ListBoxTests : IDisposable
         list.Selection.Deselect(0);
         Assert.Equal([3], list.Selection.SelectedIndexes);
 
-        // D moves to the front: it alone stays selected (AlwaysSelected picks no other item), and the app hears it there.
+        // D moves to the front: it alone stays selected (AlwaysSelected picks no other item while it moves), and the app
+        // hears it there.
         people = [people[3], people[0], people[1], people[2]];
         host.Render();
         Assert.Equal([0], list.Selection.SelectedIndexes);
