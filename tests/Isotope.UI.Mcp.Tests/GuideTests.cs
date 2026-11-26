@@ -24,6 +24,7 @@ public class GuideTests
         foreach (var g in Guides.All)
             Assert.Contains($"- `{g.Name}`: **{g.Title}**. {g.Summary} (isotope://guides/{g.Name})", text);
         Assert.Contains("**Writing components**", text);
+        Assert.Contains("**Writing controls for Isotope**", text);
     }
 
     [Fact]
@@ -47,6 +48,8 @@ public class GuideTests
         Assert.Contains(Guides.Snippets, s => s.Guide == "writing-components" && s.Name == "use-state" && s.Code.Contains("ctx.UseState(false)"));
         Assert.True(Guides.Snippets.Count >= 20, Guides.Snippets.Count + " snippets");
         Assert.Equal("use-state", Guides.Using("UseState").First().Name);
+        // The guide to writing controls shows spike J's code (#80).
+        Assert.Contains(Guides.Snippets, s => s.Guide == "writing-controls" && s.Name == "controls-rating-record" && s.Code.Contains("[GenerateReactorDescriptor(typeof(RatingBar))]"));
     }
 
     [Fact]

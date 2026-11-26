@@ -46,6 +46,8 @@ Avalonia, so the same model reaches Windows, macOS, Linux, the browser and mobil
   box, combo box, list box, slider, progress; date and time pickers; tabs, menus, context menus and tooltips; split view,
   expander, border, scroll viewer, separator, tree view, viewbox; and stack, grid, wrap and flexbox layouts (`FlexPanel`,
   over Reactor's port of Yoga).
+- **Controls from other libraries:** an Avalonia control library adds element records, factories and modifiers for its
+  own controls, and the generator in Isotope's package does the rest ([guide](docs/guide/writing-controls.md)).
 - **Function and class components**, keyed lists (reorders move controls instead of rebuilding them), and **error
   boundaries** ([guide](docs/guide/error-boundaries.md)).
 - **A one-line app startup**, `ReactorApp.Run<TRoot>(title, width, height)`, and a sample app
@@ -115,7 +117,7 @@ Upstream gets several commits a day. The approach, measured in four spikes (see 
 | `tests/Isotope.UI.Avalonia.Tests/` | Headless tests of the library, upstream's engine tests, and every C# block in the docs |
 | `tests/Isotope.UI.Migration.Tests/` | Tests of the migration's rules, compiled against the library |
 | `tests/Isotope.UI.Mcp.Tests/` | Tests of each MCP tool in process, and of the built tool over stdio with the SDK's client |
-| `docs/guide/` | Writing components, platform hooks, theme tokens, text styles, error boundaries, migrating from Reactor: all from tested code |
+| `docs/guide/` | Writing components, writing controls, platform hooks, theme tokens, text styles, error boundaries, migrating from Reactor: all from tested code |
 | `FINDINGS.md`, `docs/spikes/`, `spikes/` | Research notes and the spikes behind the design |
 | `docs/sync/` | Sync reports (what changed upstream, and the tier 3 PRs to port) |
 | `tools/sync/` | Vendor and regenerate (`node tools/sync/sync.mjs --help`), and the weekly sync job's glue |

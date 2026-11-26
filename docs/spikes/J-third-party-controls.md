@@ -13,7 +13,10 @@ for a library's control with no new API (gap 6). The spike's two `Gap_vendor_...
 callback it never wires (`ISOTOPEGEN002`), a callback that can't take what its event passes (`ISOTOPEGEN003`) and
 `[WrapDecorator]` / `[WrapPolymorphic]` (`ISOTOPEGEN004`) at the record, with nothing wrong left in a generated file, and
 a record without `Setters` builds. The `NoSetters`, `UnwiredCallback`, `WrapEventMismatch` and `Decorator` probes were
-updated. The measurements below are the spike's own, from before #77, except where marked.
+updated. Since #80 the spike is the worked example of [Writing controls for Isotope](../guide/writing-controls.md): its
+C# blocks are regions of this code, and `RatingBar` gained a plain .NET event (`Cleared`, wired with `[WrapEvent]`) and
+its record a `[WrapManual]` member, with 5 tests of the guide's examples (39 on each framework). The measurements below
+are the spike's own, from before #77, except where marked.
 
 ## Answer
 

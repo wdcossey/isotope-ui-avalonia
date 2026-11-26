@@ -6,7 +6,9 @@ namespace Isotope.UI.Avalonia.Tests;
 /// <summary>
 /// The docs show only compiled, tested code (#17): every C# block in the README, the guide and the package READMEs follows a
 /// <c>&lt;!-- snippet: name --&gt;</c> marker, and its text equals the <c>#region name</c> of that name in this test
-/// project (Examples, GuideExamples), which the tests compile and run.
+/// project (Examples, GuideExamples), which the tests compile and run, or in spike J (#80: the worked example of the
+/// guide to writing controls, a library built outside the repo, which <c>spikes/J-third-party/run.mjs</c> builds and
+/// tests against the packed packages on each framework).
 /// </summary>
 public class DocSnippetTests
 {
@@ -27,7 +29,7 @@ public class DocSnippetTests
     public void Every_csharp_block_is_a_tested_region(string doc)
     {
         var root = RepoRoot();
-        var regions = Regions(Path.Combine(root, "tests", "Isotope.UI.Avalonia.Tests"));
+        var regions = Regions(SnippetSources(root));
         var problems = Check(Normalize(File.ReadAllText(Path.Combine(root, doc))), regions);
         Assert.True(problems.Count == 0, doc + ":\n" + string.Join("\n", problems));
     }
@@ -63,11 +65,21 @@ public class DocSnippetTests
         return problems;
     }
 
-    // #region name … #endregion in the test project's own sources, dedented.
-    private static Dictionary<string, string> Regions(string dir)
+    // The sources whose regions the docs show: this test project's own, and spike J's (its build output left out).
+    private static IEnumerable<string> SnippetSources(string root)
+    {
+        var spike = Path.Combine(root, "spikes", "J-third-party");
+        return Directory.EnumerateFiles(Path.Combine(root, "tests", "Isotope.UI.Avalonia.Tests"), "*.cs", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.EnumerateFiles(spike, "*.cs", SearchOption.AllDirectories)
+                .Where(f => !Path.GetRelativePath(spike, f).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    .Any(part => part is "bin" or "obj")));
+    }
+
+    // #region name … #endregion in those sources, dedented. A name is used once across them all.
+    private static Dictionary<string, string> Regions(IEnumerable<string> files)
     {
         var regions = new Dictionary<string, string>();
-        foreach (var file in Directory.EnumerateFiles(dir, "*.cs", SearchOption.TopDirectoryOnly))
+        foreach (var file in files)
         {
             var lines = Normalize(File.ReadAllText(file)).Split('\n');
             for (int i = 0; i < lines.Length; i++)
@@ -76,7 +88,8 @@ public class DocSnippetTests
                 if (!start.Success) continue;
                 int end = Array.FindIndex(lines, i + 1, l => l.Trim() == "#endregion");
                 if (end < 0) throw new InvalidOperationException($"{file}: #region {start.Groups["name"].Value} has no #endregion");
-                regions.Add(start.Groups["name"].Value, Dedent(lines[(i + 1)..end]));
+                if (!regions.TryAdd(start.Groups["name"].Value, Dedent(lines[(i + 1)..end])))
+                    throw new InvalidOperationException($"{file}: a second #region {start.Groups["name"].Value}");
                 i = end;
             }
         }
