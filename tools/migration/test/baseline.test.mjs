@@ -228,6 +228,16 @@ test('a flag where a value belongs is refused, and --summary with measuring opti
   assert.match(r.stdout + r.stderr, /not both/);
 });
 
+test('--fixer is in-process or dotnet-format, and --summary refuses it', () => {
+  const script = path.join(repo, 'tools', 'migration', 'measure-samples.mjs');
+  let r = spawnSync(process.execPath, [script, '--out', path.join(os.tmpdir(), 'unused'), '--fixer', 'format'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /--fixer is in-process or dotnet-format/);
+  r = spawnSync(process.execPath, [script, '--summary', 'x.json', '--check', '--fixer', 'dotnet-format'], { encoding: 'utf8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout + r.stderr, /--summary measures nothing, so --fixer does nothing/);
+});
+
 test('an unreadable summary.json, or a guide without its markers, fails with a message and writes nothing', () => {
   const script = path.join(repo, 'tools', 'migration', 'measure-samples.mjs');
   let r = spawnSync(process.execPath, [script, '--summary', path.join(os.tmpdir(), 'no-such-summary.json'), '--check'], { encoding: 'utf8' });

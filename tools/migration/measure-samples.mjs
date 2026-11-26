@@ -2,18 +2,22 @@
 // Measures the Reactor -> Isotope migration (#33) on upstream's samples, read-only input from the upstream cache.
 //
 //   node tools/migration/measure-samples.mjs --out <empty folder outside the repo> [--samples <dir>] [--passes 4] [--only <name>]
-//       [--jobs <n>] [--check | --write-baseline]
+//       [--jobs <n>] [--fixer in-process|dotnet-format] [--check | --write-baseline]
 //   node tools/migration/measure-samples.mjs --summary <summary.json of an earlier run> (--check | --write-baseline)
 //
 // For each sample project it:
 //   1. copies the project's folder from <samples> (default: upstream/samples) to <out>, and writes an Isotope project
 //      file in place of Reactor's (the project-file step: net10.0, no UseWinUI, Isotope's library, desktop startup and
 //      the migration analyzer instead of Reactor; other upstream projects and NuGet packages are dropped and listed);
-//   2. compiles it as it is ("before"), then runs `dotnet format analyzers` with the fixable migration rules until no
-//      file changes, then compiles it again ("after");
+//   2. compiles it as it is ("before"), then applies the fixable migration rules' code fixes until no file changes (at
+//      most --passes times), then compiles it again ("after");
 //   3. counts, per file, compile errors and the migration diagnostics left (tools/migration/MigrationReport).
-// Up to --jobs projects (default: the processor count) are measured at once, each after the projects it references; the
-// output doesn't depend on it, and <out>/timings.json says where the time went.
+// The fixes run in MigrationReport's workers (#87, lib/workers.mjs), each one process that loads the project with
+// MSBuild's workspace and does what one `dotnet format analyzers --severity warn --diagnostics <fixable>` run does
+// (MigrationReport/Fixer.cs). --fixer dotnet-format runs dotnet format itself instead, as before #87: the counts are the
+// same, and it is how to show they still are.
+// Up to --jobs projects (default: half the processor count, at least 1) are measured at once, each after the projects it references; the
+// output doesn't depend on it, and <out>/timings.json says where the time went (formatMs: each pass of the fixes).
 // A file "builds" when the compiler reports no error in it. Prints a summary (no local paths) and writes
 // <out>/summary.json. The repo and the upstream cache are only read; the script checks git status is unchanged.
 //
@@ -31,6 +35,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { baselineOf, compare, countsOf, withGuideTable } from './lib/baseline.mjs';
+import { pool, startReporter } from './lib/workers.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const args = parseArgs(process.argv.slice(2));
@@ -47,9 +52,12 @@ const lockCommit = fs.readFileSync(path.join(repo, 'UPSTREAM.lock'), 'utf8').mat
 const gating = args.check || args['write-baseline'];
 if (args.check && args['write-baseline']) fail('give --check or --write-baseline, not both');
 if (gating && !lockCommit) fail("UPSTREAM.lock has no valid 'baseline=<40 hex>' line");
+// What applies the fixes: MigrationReport's workers, or dotnet format as before #87.
+const fixer = args.fixer ?? 'in-process';
+if (fixer !== 'in-process' && fixer !== 'dotnet-format') fail('--fixer is in-process or dotnet-format');
 if (args.summary) {
   if (!gating) fail('--summary needs --check or --write-baseline');
-  for (const o of ['out', 'samples', 'passes', 'only', 'jobs']) if (args[o] !== undefined) fail(`--summary measures nothing, so --${o} does nothing`);
+  for (const o of ['out', 'samples', 'passes', 'only', 'jobs', 'fixer']) if (args[o] !== undefined) fail(`--summary measures nothing, so --${o} does nothing`);
   let earlier;
   try { earlier = JSON.parse(fs.readFileSync(path.resolve(args.summary), 'utf8')); }
   catch (e) { fail('cannot read that summary.json (' + (e.code ?? e.message) + ')'); }
@@ -62,7 +70,9 @@ const samples = path.resolve(args.samples ?? path.join(repo, 'upstream', 'sample
 const out = args.out ? path.resolve(args.out) : fail('--out <folder> is required');
 const passes = Number(args.passes ?? 4);
 // Projects measured at once. The counts don't depend on it: a project starts only after the projects it references.
-const jobs = Math.max(1, Math.floor(Number(args.jobs ?? os.availableParallelism())) || 1);
+// Half the processors by default (#87): each project's build and compile use more than one, so on 4 processors 2 at once
+// took 207 s, 3 took 237 s and 4 took 306 s.
+const jobs = Math.max(1, Math.floor(Number(args.jobs ?? os.availableParallelism() / 2)) || 1);
 // How this run measures, saved in summary.json: the baseline is of the whole upstream sample set, at UPSTREAM.lock's
 // commit, with the default passes, so a run measured otherwise is refused before it starts (and --summary refuses its file).
 const measured = { upstream: upstreamCommit(), samples: samples === path.resolve(repo, 'upstream', 'samples') ? 'upstream' : 'other', passes, only: args.only ?? null };
@@ -94,23 +104,40 @@ run('dotnet', ['build', path.join(repo, 'tools', 'migration', 'MigrationReport')
 run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Avalonia.Desktop'), '-nologo', '-v:q'], repo, true);
 run('dotnet', ['build', path.join(repo, 'src', 'Isotope.UI.Migration'), '-nologo', '-v:q'], repo, true);
 const reporter = path.join(repo, 'tools', 'migration', 'MigrationReport', 'bin', 'Release', 'net10.0', 'MigrationReport.dll');
+// Every sample restored at once (#87), so no report restores its project again: one restore of the whole graph instead of
+// two per project. A restore that fails fails the run, as a report's own -restore did.
+const solution = path.join(out, 'samples.slnx');
+const escapeXml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+fs.writeFileSync(solution, ['<Solution>', ...converted.map(p => `  <Project Path="${escapeXml(path.relative(out, p.file).replace(/\\/g, '/'))}" />`), '</Solution>', ''].join('\n'));
+let started = Date.now();
+run('dotnet', ['restore', solution, '-nologo', '-v:q'], out, true);
+const restoreMs = Date.now() - started;
+// At most --jobs workers, since each phase runs at most --jobs projects at once; each is started when first needed.
+let workerCount = 0;
+const workers = pool(() => {
+  workerCount++;
+  const w = startReporter(reporter, { cwd: out, env: childEnv });
+  children.add(w.child);
+  w.child.on('close', () => children.delete(w.child));
+  return w;
+});
 
 // Every project's "before" first, so a sample that uses another is measured against the other's unmigrated code. Each
 // phase runs up to --jobs projects at once, a project only after those it references (its build reads their output)
 // and those nested in its folder; results stay in the order above, so the output doesn't depend on the timing.
 const timings = new Map(converted.map(p => [p.file, { project: rel(p.file), beforeMs: 0, formatMs: [], afterMs: 0 }]));
-const phaseMs = {};
-let started = Date.now();
+const phaseMs = { restore: restoreMs };
+started = Date.now();
 const befores = new Map();
-await inOrder(converted, async p => {
+await inOrder(converted, p => workers.use(async worker => {
   process.stderr.write(`before: ${rel(p.file)}\n`);
   const t = Date.now();
-  befores.set(p.file, await report(p.file));
+  befores.set(p.file, await report(worker, p.file));
   timings.get(p.file).beforeMs = Date.now() - t;
-});
+}));
 phaseMs.before = Date.now() - started;
 started = Date.now();
-const results = await inOrder(converted, async p => {
+const results = await inOrder(converted, p => workers.use(async worker => {
   const dir = path.dirname(p.file);
   const name = rel(p.file);
   const time = timings.get(p.file);
@@ -119,31 +146,32 @@ const results = await inOrder(converted, async p => {
   let formatFailures = 0;
   for (let i = 0; i < passes; i++) {
     const hash = hashTree(dir);
-    // dotnet format skips referenced projects, so only this project's files change.
+    // Like dotnet format, the fixes skip referenced projects, so only this project's files change.
     let t = Date.now();
-    const f = await runAsync('dotnet', ['format', 'analyzers', p.file, '--no-restore', '--severity', 'warn', '--diagnostics', ...fixable], dir, false);
+    const failure = await fixPass(worker, p.file, dir);
     time.formatMs.push(Date.now() - t);
     formatRuns++;
-    if (f.status !== 0) {
+    if (failure) {
       formatFailures++;
-      process.stderr.write(`  ${name}: dotnet format exited ${f.status}\n`);
+      process.stderr.write(`  ${name}: ${failure}\n`);
     }
     if (hashTree(dir) === hash) break;
   }
   const before = befores.get(p.file);
   const t = Date.now();
-  const after = await report(p.file);
+  const after = await report(worker, p.file);
   time.afterMs = Date.now() - t;
   return { project: name, dropped: p.dropped, formatRuns, formatFailures, projectBuildsBefore: before.builds, projectBuilds: after.builds, before, after };
-});
+}));
+await workers.closeAll();
 phaseMs.migrate = Date.now() - started;
 // Where the time went (timings.json, not summary.json, which holds only what is measured about the migration).
 const projectTimings = [...timings.values()];
-fs.writeFileSync(path.join(out, 'timings.json'), JSON.stringify({ jobs, phaseMs, projects: projectTimings }, null, 2));
+fs.writeFileSync(path.join(out, 'timings.json'), JSON.stringify({ jobs, fixer, workers: workerCount, phaseMs, projects: projectTimings }, null, 2));
 const total = key => projectTimings.reduce((a, t) => a + (Array.isArray(t[key]) ? t[key].reduce((x, y) => x + y, 0) : t[key]), 0);
 const formatCount = projectTimings.reduce((a, t) => a + t.formatMs.length, 0);
-process.stderr.write(`time (${jobs} at once): before phase ${s1(phaseMs.before)}, migrate phase ${s1(phaseMs.migrate)}; summed over projects: ` +
-  `before builds ${s1(total('beforeMs'))}, ${formatCount} dotnet format runs ${s1(total('formatMs'))}, after builds ${s1(total('afterMs'))}\n`);
+process.stderr.write(`time (${jobs} at once, ${workerCount} workers): restore ${s1(phaseMs.restore)}, before phase ${s1(phaseMs.before)}, migrate phase ${s1(phaseMs.migrate)}; summed over projects: ` +
+  `before builds ${s1(total('beforeMs'))}, ${formatCount} ${fixer === 'in-process' ? 'passes of the fixes' : 'dotnet format runs'} ${s1(total('formatMs'))}, after builds ${s1(total('afterMs'))}\n`);
 
 const summary = summarise(results);
 fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ measured, results, summary }, null, 2));
@@ -294,9 +322,30 @@ function order(list) {
 
 // ── measuring ──────────────────────────────────────────────────────────────────────────────────────
 
-async function report(project) {
-  const rep = await runAsync('dotnet', [reporter, project, '--json'], path.dirname(project), true);
-  return JSON.parse(rep.stdout.trim().split('\n').pop());
+// The report of a project, from a worker; the run fails when there is none.
+async function report(worker, project) {
+  let answer;
+  try { answer = await worker.request({ op: 'report', project, restore: false }); }
+  catch (e) { fail(`MigrationReport failed on ${rel(project)}: ${e.message}`); }
+  if (!answer.ok) fail(`MigrationReport failed on ${rel(project)}: ${answer.error}`);
+  return answer.report;
+}
+
+// One pass of the fixes on a project: in a worker, or a dotnet format run (--fixer dotnet-format). Resolves to why it
+// failed, or undefined.
+async function fixPass(worker, project, dir) {
+  if (fixer === 'dotnet-format') {
+    const f = await runAsync('dotnet', ['format', 'analyzers', project, '--no-restore', '--severity', 'warn', '--diagnostics', ...fixable], dir, false);
+    return f.status === 0 ? undefined : 'dotnet format exited ' + f.status;
+  }
+  try {
+    // The answer's log: the warnings dotnet format would print (a fix that threw, a project that didn't load).
+    const answer = await worker.request({ op: 'fix', project, diagnostics: fixable });
+    return answer.ok ? undefined : 'the fixes failed' + (answer.error ? ': ' + answer.error : '') + (answer.log?.trim() ? '\n' + answer.log.trim().slice(-4000) : '');
+  } catch (e) {
+    // A worker that ended counts as a dotnet format run that crashed; the lease starts another for the next request.
+    return 'the fixes failed: ' + e.message;
+  }
 }
 
 // Runs work(p) for each project, at most `jobs` at once, each after the projects it depends on (its references, and
@@ -364,7 +413,7 @@ function print(results, s) {
   console.log(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
   console.log(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
   console.log(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
-  console.log(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
+  console.log(`${fixer === 'in-process' ? 'passes of the fixes' : 'dotnet format runs'} that failed: ${s.formatFailures ?? 0}`);
   console.log(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
   console.log('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
   console.log('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));

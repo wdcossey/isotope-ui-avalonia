@@ -191,6 +191,13 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   props and targets aren't imported. Check for a result per framework, never only the exit code. (2026-11-25)
 - **In a break-it loop, check the build's exit before reading the tests.** A break that also fails the build (CS0067
   under warnings-as-errors) leaves the previous binaries to pass. (2026-11-25)
+- **dotnet format fixes the rules in a different order each run.** It takes the reported IDs from a hash set of strings,
+  whose order follows the per-process string hash. Two runs on one project can add usings in another order and take a
+  different number of passes. Compare runs by their counts, or with using directives sorted. (2026-11-26)
+- **Don't build the worktree while `measure-samples.mjs` runs.** A worker holds DLLs it has loaded, and a build failed to
+  copy `Isotope.UI.Avalonia.Generators.dll` over one. (2026-11-26)
+- **A CPU-bound machine measures faster with fewer projects at once.** Each msbuild build and compile already uses more
+  than one processor; on 4, 2 at once beat 4 by a third. (2026-11-26)
 
 ## Git, GitHub and merging
 

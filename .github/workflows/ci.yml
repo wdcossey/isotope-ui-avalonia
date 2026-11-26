@@ -298,7 +298,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Baseline and skip tests (the comparison, the guide's table against the baseline, the docs-only decision)
+      - name: Baseline, skip and worker tests (the comparison, the guide's table against the baseline, the docs-only decision, MigrationReport's workers)
         shell: bash
         run: node --test tools/migration/test/*.test.mjs
 

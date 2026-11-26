@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Counts compile errors and migration diagnostics per file for tools/migration/measure-samples.mjs (#33). A build
        stops before analyzers when a file has declaration errors, so this compiles the project's inputs (from MSBuild's
-       -getItem) with Roslyn and runs the analyzer itself, as dotnet format does. -->
+       -getItem) with Roslyn and runs the analyzer itself, as dotnet format does. It also applies the migration's code
+       fixes in process, as dotnet format analyzers does (#87), and serves both to measure-samples.mjs as a worker. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -12,6 +13,9 @@
   <ItemGroup>
     <!-- The pinned SDK's compiler version, as the migration tests. -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    <!-- The code fixes in process (#87): the workspace and MSBuildWorkspace dotnet format uses, at the same version. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.12.0" />
     <ProjectReference Include="..\..\..\src\Isotope.UI.Migration\Isotope.UI.Migration.csproj" />
   </ItemGroup>
 </Project>
