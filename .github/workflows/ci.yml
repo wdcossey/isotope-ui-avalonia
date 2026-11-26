@@ -207,7 +207,8 @@ jobs:
     # packed packages alone, and installs the tool into a temporary folder and lists its tools over stdio
     # (#52; tools/packaging/pack.mjs), so packaging can't silently break. Then spike J builds a third-party control
     # library against the same packages (#75). Publishing is release.yml's, on a v* tag only.
-    # Like the library job, it needs no upstream/ checkout. GitHub-hosted runners only.
+    # Like the library job, it needs no upstream/ checkout. GitHub-hosted runners only. It also runs the real-window
+    # checklist tool's node tests (#106), since node is set up here.
     name: packages (${{ matrix.os }})
     strategy:
       fail-fast: false
@@ -238,6 +239,10 @@ jobs:
       - name: Package check tests
         shell: bash
         run: node --test tools/packaging/test/*.test.mjs
+
+      - name: Real-window checklist tool tests (parsing, write-back, the server's checks, the command end to end)
+        shell: bash
+        run: node --test tools/real-window/test/*.test.mjs
 
       - name: Pack, check the packages, and run the consumer smoke test against them
         shell: bash

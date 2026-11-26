@@ -1,0 +1,32 @@
+// Checklists for the tests, built with the line ending asked for, so a checkout's own endings can't change them.
+export const LINES = [
+  '# A sample',
+  '',
+  'Some prose with a - [ ] that is not at the start of a line.',
+  '',
+  '```sh',
+  '- [ ] inside a fence, not an item',
+  '# not a heading either',
+  '```',
+  '',
+  '## Checklist',
+  '',
+  '### First section',
+  '',
+  '- [ ] Click **Go** → its menu drops down, listing the pages with a radio mark on',
+  '  Basics, and none cut off.',
+  '- [x] A ticked line.',
+  '- [ ] A line with `code` and <angle> & "quotes".',
+  '',
+  '### Second section',
+  '',
+  '- [ ] A line.',
+  '- [ ] A line.',
+  '  - [ ] A nested line.',
+  '- [X] Another ticked line, with a capital X,',
+  '  over two lines.',
+  '',
+  'Trailing prose.',
+];
+
+export const fixture = (eol, { finalEol = true } = {}) => LINES.join(eol) + (finalEol ? eol : '');

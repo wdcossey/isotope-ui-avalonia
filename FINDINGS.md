@@ -145,6 +145,18 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Real-window checklist tool (issue #106, 2026-11-26)
+
+- `node tools/real-window/checklist.mjs <checklist.md> [--clear] [--port N]` serves a `- [ ]` checklist as a local page
+  (127.0.0.1): Pass, Fail or Skip and a note per line, the system once, free notes. Answers are saved as given (a
+  git-ignored `*.results.json` beside the checklist; a second run resumes) and streamed to stdout as JSON lines, so an
+  agent can follow a run. Finish ticks passed lines, appends a dated note to failed ones (with the system), leaves
+  skipped ones, prints a summary and a suggested "Last run" sentence, and deletes the results file.
+- Local only: Host and Origin checked, a per-run token on every POST, JSON bodies capped at 64 KiB, everything escaped
+  (and a CSP), lines named by parsed key only. Line endings are kept; everything that isn't a checklist line is kept
+  byte for byte. 43 node tests (in the packages job), 51 deliberate breaks each turning the suite red. It replaced the
+  throwaway page the developer used for #100's run.
+
 ## ListView on a ListBox (issue #94, 2026-11-26)
 
 - **What landed:** Reactor's ListView is Avalonia's ListBox. `ListBoxElement.Items` is Avalonia's: strings, or elements
