@@ -16,7 +16,7 @@
 // MSBuild's workspace and does what one `dotnet format analyzers --severity warn --diagnostics <fixable>` run does
 // (MigrationReport/Fixer.cs). --fixer dotnet-format runs dotnet format itself instead, as before #87: the counts are the
 // same, and it is how to show they still are.
-// Up to --jobs projects (default: the processor count) are measured at once, each after the projects it references; the
+// Up to --jobs projects (default: half the processor count, at least 1) are measured at once, each after the projects it references; the
 // output doesn't depend on it, and <out>/timings.json says where the time went (formatMs: each pass of the fixes).
 // A file "builds" when the compiler reports no error in it. Prints a summary (no local paths) and writes
 // <out>/summary.json. The repo and the upstream cache are only read; the script checks git status is unchanged.
@@ -70,7 +70,9 @@ const samples = path.resolve(args.samples ?? path.join(repo, 'upstream', 'sample
 const out = args.out ? path.resolve(args.out) : fail('--out <folder> is required');
 const passes = Number(args.passes ?? 4);
 // Projects measured at once. The counts don't depend on it: a project starts only after the projects it references.
-const jobs = Math.max(1, Math.floor(Number(args.jobs ?? os.availableParallelism())) || 1);
+// Half the processors by default (#87): each project's build and compile use more than one, so on 4 processors 2 at once
+// took 207 s, 3 took 237 s and 4 took 306 s.
+const jobs = Math.max(1, Math.floor(Number(args.jobs ?? os.availableParallelism() / 2)) || 1);
 // How this run measures, saved in summary.json: the baseline is of the whole upstream sample set, at UPSTREAM.lock's
 // commit, with the default passes, so a run measured otherwise is refused before it starts (and --summary refuses its file).
 const measured = { upstream: upstreamCommit(), samples: samples === path.resolve(repo, 'upstream', 'samples') ? 'upstream' : 'other', passes, only: args.only ?? null };
