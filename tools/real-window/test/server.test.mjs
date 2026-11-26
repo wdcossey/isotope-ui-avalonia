@@ -3,9 +3,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseChecklist } from '../lib/parse.mjs';
 import { emptyResults } from '../lib/results.mjs';
+import { readFileSync } from 'node:fs';
 import net from 'node:net';
 import vm from 'node:vm';
-import { SCRIPT, createChecklistServer, inlineMarkdown, renderPage } from '../lib/server.mjs';
+import { SCRIPT, STYLE, createChecklistServer, escapeHtml, inlineMarkdown, renderPage } from '../lib/server.mjs';
 import { post, request, tokenOf } from './http.mjs';
 
 const TOKEN = 'ab'.repeat(24);
@@ -171,4 +172,196 @@ test('the page sends its posts one at a time, in order', async () => {
   await Promise.all([context.post('/answer', { n: 1 }), context.post('/answer', { n: 2 })]);
   assert.deepEqual(finished, [1, 2]);
   assert.deepEqual(started, [1, 2]);
+});
+
+test('the page carries its stylesheet under the same CSP, by the response\'s nonce, and fetches nothing', { timeout: 15000 }, () => withServer(async ({ port }) => {
+  const r = await request(port);
+  const csp = r.headers['content-security-policy'];
+  const nonce = /style-src 'nonce-([^']+)'/.exec(csp)?.[1];
+  assert.ok(nonce, csp);
+  assert.equal(csp, `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+  // One stylesheet, inline, under the nonce, and it is the tool's own file (#109).
+  const styles = [...r.text.matchAll(/<style([^>]*)>([\s\S]*?)<\/style>/g)];
+  assert.equal(styles.length, 1);
+  assert.equal(styles[0][1], ` nonce="${nonce}"`);
+  assert.equal(styles[0][2], readFileSync(new URL('../lib/checklist.css', import.meta.url), 'utf8'));
+  assert.match(STYLE, /--background:/);
+  // Nothing the CSP would block or that would fetch: no style attribute, link, src or href; no url(), @import or web
+  // font; no address at all outside comments.
+  assert.doesNotMatch(r.text, /\sstyle=|<link|\s(src|srcset|href|action|formaction|poster|data)=/i);
+  const code = r.text.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(code, /url\(|@import|@font-face|https?:|\/\/[a-z0-9]/i);
+}));
+
+// The palette is our own (developer, 2026-11-26): nothing is copied from a third party, so the stylesheet needs no
+// licence notice, and none may creep in (a notice names its author, which the repo's no-names rule forbids).
+test('the stylesheet is our own: no third-party licence notice', () => {
+  const header = /^\/\*([\s\S]*?)\*\//.exec(STYLE)?.[1] ?? '';
+  assert.match(header, /our own palette and values/);
+  assert.doesNotMatch(STYLE, /copyright|\(c\) \d{4}|permission is hereby granted|licen[cs]e/i);
+});
+
+test('escaping holds in every element the page adds: header, cards, badges, buttons and fields', () => {
+  const BAD = '"><script>bad()</script><img src=x onerror=bad()>\'';
+  const items = parseChecklist(`### ${BAD}\n- [x] ${BAD}\n- [ ] Plain\n`).items;
+  const results = emptyResults('c.md');
+  results.system = BAD;
+  results.notes = BAD;
+  // A verdict loadResults would refuse, so the page's escaping is tested on its own.
+  results.answers[items[0].key] = { verdict: BAD, note: BAD, date: '2026-11-26' };
+  const html = renderPage({ title: BAD, items, results, token: TOKEN, nonce: 'n' });
+  const body = html.replace(/<style nonce="n">[\s\S]*?<\/style>/, '').replace(/<script nonce="n">[\s\S]*?<\/script>/, '');
+  // Every tag left is the page's own, with quoted attribute values and no event handler.
+  for (const [tag, name, attrs] of body.matchAll(/<([a-z][a-z0-9]*)([^>]*)>/gi)) {
+    assert.doesNotMatch(name, /^(script|img|iframe|object|embed|svg|link)$/i, tag);
+    assert.match(attrs, /^(?:\s+[a-z-]+(?:="[^"<>]*")?)*$/i, tag);
+    for (const [, attr] of attrs.matchAll(/\s([a-z-]+)(?:="[^"]*")?/gi)) assert.doesNotMatch(attr, /^on/i, tag);
+  }
+  const e = escapeHtml(BAD);
+  for (const part of [`<h1>${e}</h1>`, `<h2>${e}</h2>`, `data-key="${escapeHtml(items[0].key)}"`, `data-verdict="${e}"`,
+    `<span class="badge s">${e}</span>`, `id="sys" class="input" placeholder="OS, display server, version" value="${e}"`,
+    `placeholder="note (optional)" value="${e}"`, `aria-label="Anything else">${e}</textarea>`, '<span class="badge badge-outline was">ticked before</span>']) {
+    assert.ok(html.includes(part), part);
+  }
+  // An unknown verdict presses no button.
+  assert.equal((body.match(/aria-pressed="true"/g) ?? []).length, 0);
+});
+
+test('P, F and S answer the focused line, but never from a field, with a modifier, or after Finish', () => {
+  const document = { querySelector: () => ({ content: TOKEN }), addEventListener: () => {} };
+  const context = vm.createContext({ document, fetch: () => {}, setTimeout, Promise, JSON, Error });
+  vm.runInContext(SCRIPT + ';globalThis.shortcut = shortcut;', context);
+  const line = { line: 1 };
+  const on = (tagName, more = {}) => ({ tagName, closest: (sel) => (sel === '.it' ? line : null), ...more });
+  const verdict = (key, target, mods = {}) => {
+    const r = context.shortcut({ key, target, ...mods });
+    if (r) assert.equal(r.it, line);
+    return r?.verdict ?? null;
+  };
+  assert.deepEqual(['p', 'f', 's', 'P', 'S'].map((k) => verdict(k, on('DIV'))), ['pass', 'fail', 'skip', 'pass', 'skip']);
+  assert.equal(verdict('f', on('BUTTON')), 'fail');
+  for (const field of [on('INPUT'), on('TEXTAREA'), on('SELECT'), on('input'), on('DIV', { isContentEditable: true })]) {
+    assert.equal(verdict('p', field), null, field.tagName);
+  }
+  for (const mod of ['ctrlKey', 'altKey', 'metaKey', 'repeat', 'defaultPrevented']) assert.equal(verdict('p', on('DIV'), { [mod]: true }), null, mod);
+  assert.equal(verdict('x', on('DIV')), null);
+  assert.equal(verdict('p', { tagName: 'DIV', closest: () => null }), null, 'outside a line');
+  assert.equal(verdict('p', null), null, 'no target');
+  vm.runInContext('finished = true;', context);
+  assert.equal(verdict('p', on('DIV')), null, 'after Finish');
+});
+
+test('once Finish is confirmed, the page sends no more answers, even before the finish is answered', { timeout: 15000 }, async () => {
+  const listeners = {}, sent = [];
+  const el = () => ({ textContent: '', value: '', max: 0, disabled: false, classList: { add() {}, remove() {}, toggle() {} } });
+  const document = {
+    querySelector: () => ({ content: TOKEN }), addEventListener: (type, fn) => { listeners[type] = fn; },
+    getElementById: () => el(), querySelectorAll: () => [],
+  };
+  // /finish never answers, as during the round trip; an answer answers at once.
+  const fetch = (path) => { sent.push(path); return path === '/finish' ? new Promise(() => {}) : Promise.resolve({ ok: true, json: async () => ({ answered: 1, total: 1 }) }); };
+  const context = vm.createContext({ document, fetch, confirm: () => true, setTimeout, Promise, JSON, Error, String });
+  vm.runInContext(SCRIPT + ';globalThis.answer = answer;', context);
+  const section = { querySelectorAll: () => [], querySelector: () => el() };
+  const line = { dataset: { key: 'k', verdict: '' }, querySelector: () => el(), querySelectorAll: () => [], closest: () => section };
+  assert.equal(await context.answer(line, 'pass'), true);
+  assert.deepEqual(sent, ['/answer']);
+  listeners.click({ target: { id: 'finish', closest: () => null } });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(sent, ['/answer', '/finish']);
+  // Refused at once; an answer queued behind the finish would still be waiting.
+  assert.equal(await Promise.race([context.answer(line, 'fail'), new Promise((r) => setTimeout(() => r('queued'), 200))]), false);
+  assert.equal(context.shortcut({ key: 'p', target: { tagName: 'DIV', closest: () => line } }), null);
+  assert.deepEqual(sent, ['/answer', '/finish']);
+});
+
+// The page's script in a sandbox with stand-ins for the elements it touches: the fields by id, and lines in one section.
+function stubEl(more = {}) {
+  const cls = new Set();
+  return {
+    textContent: '', value: '', disabled: false, focused: 0, focus() { this.focused++; },
+    classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), toggle: (c, on) => (on ? cls.add(c) : cls.delete(c)), contains: (c) => cls.has(c) },
+    getBoundingClientRect: () => ({ top: 500, bottom: 520 }), ...more,
+  };
+}
+function pageScript(fetch, keys = ['a', 'b']) {
+  const listeners = {}, ids = {};
+  const section = { querySelector: () => stubEl() };
+  const lines = keys.map((key) => {
+    const line = stubEl({ dataset: { key, verdict: '' }, querySelectorAll: () => [] });
+    line.s = stubEl();
+    line.note = stubEl();
+    line.note.classList.add('note');
+    line.note.closest = () => line;
+    line.querySelector = (sel) => (sel === '.s' ? line.s : line.note);
+    line.closest = (sel) => (sel === '.it' ? line : sel === 'section' ? section : null);
+    return line;
+  });
+  section.querySelectorAll = () => lines;
+  const byId = (id) => (ids[id] ??= stubEl({ id }));
+  const document = {
+    querySelector: () => ({ content: TOKEN }), addEventListener: (type, fn) => { listeners[type] = fn; },
+    getElementById: byId, querySelectorAll: (sel) => (sel === '.it' ? lines : []),
+  };
+  const window = { innerHeight: 1000, scrollBy() {} };
+  const context = vm.createContext({ document, window, fetch, confirm: () => true, setTimeout, Promise, JSON, Error, String });
+  vm.runInContext(SCRIPT, context);
+  return { context, listeners, byId, lines };
+}
+const settle = () => new Promise((r) => setTimeout(r, 20));
+const reply = (json) => ({ ok: true, json: async () => json });
+
+test('a key moves to the next line at once, and the answer for the line it left still posts', { timeout: 15000 }, async () => {
+  const sent = [], waiting = [];
+  const fetch = (path, init) => { sent.push([path, JSON.parse(init.body).key]); return new Promise((r) => waiting.push(() => r(reply({ answered: 1, total: 2 })))); };
+  const { listeners, lines } = pageScript(fetch);
+  listeners.keydown({ key: 'p', target: lines[0], preventDefault() {} });
+  assert.equal(lines[1].focused, 1, 'the focus waited for the reply');
+  // A quick second key answers the next line, not the first again; both post, in order.
+  listeners.keydown({ key: 'f', target: lines[1], preventDefault() {} });
+  await settle();
+  assert.deepEqual(sent, [['/answer', 'a']]);
+  waiting.shift()();
+  await settle();
+  waiting.shift()();
+  await settle();
+  assert.deepEqual(sent, [['/answer', 'a'], ['/answer', 'b']]);
+  assert.deepEqual([lines[0].dataset.verdict, lines[1].dataset.verdict], ['pass', 'fail']);
+});
+
+test('once Finish is confirmed, the system and notes fields lock and post nothing, and a note says it was not saved', { timeout: 15000 }, async () => {
+  const sent = [];
+  const fetch = (path) => { sent.push(path); return path === '/finish' ? new Promise(() => {}) : Promise.resolve(reply({})); };
+  const { listeners, byId, lines } = pageScript(fetch);
+  lines[0].dataset.verdict = 'pass';
+  listeners.click({ target: { id: 'finish', closest: () => null } });
+  assert.deepEqual([byId('sys').disabled, byId('free').disabled], [true, true], 'locked before the reply');
+  for (const id of ['sys', 'free']) await listeners.change({ target: byId(id) });
+  await listeners.change({ target: lines[0].note });
+  await settle();
+  assert.deepEqual(sent, ['/finish']);
+  assert.equal(lines[0].s.textContent, 'not saved: finishing');
+  assert.equal(byId('syss').textContent, 'not saved: finishing');
+});
+
+test('a Finish refused by the tool unlocks the page; a Finish with no reply stays locked and says to check the file', { timeout: 15000 }, async () => {
+  for (const [name, finish, locked, says] of [
+    ['refused', () => Promise.resolve({ ok: false, status: 500, text: async () => 'internal error: disk full' }), false, /^error: 500 internal error: disk full$/],
+    ['no reply', () => Promise.reject(new TypeError('Failed to fetch')), true, /No reply from the tool .*check the checklist file/],
+  ]) {
+    const { context, listeners, byId, lines } = pageScript((path) => (path === '/finish' ? finish() : Promise.resolve(reply({}))));
+    await listeners.click({ target: { id: 'finish', closest: () => null } });
+    await settle();
+    assert.match(byId('summary').textContent, says, name);
+    assert.deepEqual([byId('sys').disabled, byId('free').disabled], [locked, locked], name);
+    assert.equal(context.shortcut({ key: 'p', target: lines[0] }) === null, locked, name);
+  }
+});
+
+test('a line is named by its text alone, not its "ticked before" badge', () => {
+  const items = parseChecklist('### S\n- [x] Ticked **line**\n').items;
+  const html = renderPage({ title: 'T', items, results: emptyResults('c.md'), token: TOKEN, nonce: 'n' });
+  const id = /class="it" role="group" aria-labelledby="([^"]+)"/.exec(html)?.[1];
+  assert.ok(id);
+  assert.equal(new RegExp(`<span id="${id}">(.*?)</span></div>`).exec(html)?.[1], 'Ticked <b>line</b>');
 });
