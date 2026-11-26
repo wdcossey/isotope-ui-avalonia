@@ -58,7 +58,7 @@
     "IconElement": "Avalonia.Controls.IconElement",
     "PathIconData": "Avalonia.Controls.PathIcon",
     "FontIconData": "Avalonia.Controls.TextBlock",
-    "BitmapIconData": "Avalonia.Controls.Image",
+    "BitmapIconData": "Avalonia.Controls.IconElement",
     "ImageIconData": "Avalonia.Controls.Image"
   },
   "members": [
@@ -129,6 +129,7 @@
     {"record": "IconElement", "reactor": "Data", "avalonia": "Data", "kind": "kept", "note": "No member of Avalonia's IconElement: the icon's data, whose kind chooses the control (a PathIcon, a TextBlock, a bitmap icon or an Image) (#91)."},
     {"record": "FontIconData", "reactor": "Glyph", "avalonia": "Glyph", "kind": "kept", "note": "No Avalonia counterpart: Avalonia's core has no glyph icon. The glyph is the TextBlock's Text (#91)."},
     {"record": "FontIconData", "reactor": "FontFamily", "avalonia": "FontFamily", "kind": "shape", "note": "Now Avalonia's FontFamily (it was a string), which a string converts to."},
+    {"record": "BitmapIconData", "reactor": "Source", "avalonia": "Source", "kind": "kept", "note": "No member of Avalonia's IconElement: the bitmap's URI, loaded as an Image's Source is (a file, or an avares:// resource) (#91)."},
     {"record": "BitmapIconData", "reactor": "ShowAsMonochrome", "avalonia": "ShowAsMonochrome", "kind": "kept", "note": "No Avalonia counterpart: Avalonia's core has no BitmapIcon. Isotope's bitmap icon draws the bitmap's shape in the foreground, as WinUI's (#91)."}
   ],
   "parameters": [

@@ -12,7 +12,8 @@ namespace Isotope.UI.Core;
 // (ISOTOPEGEN004), so the handler is hand-written: the control is chosen from the data's kind, patched in place while the
 // kind stays the same, and mounted afresh when it changes (Reconciler.CanUpdate declines the update). Upstream's
 // SymbolIconData isn't here: WinUI's symbols are glyphs of the Segoe icon fonts, which Avalonia doesn't ship and which
-// can't be redistributed, so the migration reports Symbol (ISOMIG005) and SymbolIcon (ISOMIG012).
+// can't be redistributed, so the migration reports Symbol and WinUI's SymbolIcon type (ISOMIG005) and the SymbolIcon
+// factory (ISOMIG011). A command's Icon takes this data too, but nothing draws it yet (menu items have no icons).
 
 /// <summary>
 /// What an icon shows (upstream's union): a shape (<see cref="PathIconData"/>), a glyph of a font
@@ -161,10 +162,19 @@ internal sealed class BitmapIconPresenter : AvIconElement
     public static readonly StyledProperty<bool> ShowAsMonochromeProperty =
         AvaloniaProperty.Register<BitmapIconPresenter, bool>(nameof(ShowAsMonochrome), defaultValue: true);
 
+    // The monochrome mask, made once per bitmap rather than on every render.
+    private ImageBrush? _mask;
+
     static BitmapIconPresenter()
     {
         AffectsRender<BitmapIconPresenter>(SourceProperty, ShowAsMonochromeProperty, ForegroundProperty);
         AffectsMeasure<BitmapIconPresenter>(SourceProperty);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == SourceProperty) _mask = null;
     }
 
     public Bitmap? Source
@@ -206,7 +216,8 @@ internal sealed class BitmapIconPresenter : AvIconElement
             return;
         }
         if (Foreground is not { } foreground) return;
-        using (context.PushOpacityMask(new ImageBrush(source) { Stretch = Stretch.Fill }, target))
+        _mask ??= new ImageBrush(source) { Stretch = Stretch.Fill };
+        using (context.PushOpacityMask(_mask, target))
             context.FillRectangle(foreground, target);
     }
 }

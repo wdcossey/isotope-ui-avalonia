@@ -162,7 +162,8 @@ A menu item's `KeyboardAccelerators` and `Description` are its shortcut and tool
 `MenuItem("Save", save) with { KeyboardAccelerators = [new(Key.S, KeyModifiers.Control)] }`.
 
 > **Coming from Reactor?** `AutoCompleteBox` (Reactor's `AutoSuggestBox`) has no `Header` or `QueryIcon` here, a command's `AccessKey` isn't written
-> (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet. A click on a
+> (Avalonia's access keys come from an underscore in the content), and menu items have no icons yet: a command's `Icon`
+> isn't drawn, on a menu item or a button. A click on a
 > suggestion doesn't submit the query.
 
 Text is styled with upstream's modifiers, which take Avalonia's value types: `.FontSize(20)`, `.Bold()`,

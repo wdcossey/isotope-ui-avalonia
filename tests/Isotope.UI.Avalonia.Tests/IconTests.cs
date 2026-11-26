@@ -28,8 +28,8 @@ public class IconTests
 
     private static Control Mounted(TestHost host) => Assert.IsAssignableFrom<Control>(host.Root.Child);
 
-    // A PNG of w by h pixels, opaque red in its left half and transparent in its right half.
-    private static Uri Png(int w = 4, int h = 4)
+    // A PNG of w by h pixels, opaque red in its left half and transparent in its right half (or the other way round).
+    private static Uri Png(int w = 4, int h = 4, bool left = true)
     {
         var path = Path.Combine(Path.GetTempPath(), "isotope-icon-" + Guid.NewGuid().ToString("N") + ".png");
         using (var bitmap = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul))
@@ -37,7 +37,7 @@ public class IconTests
             using (var fb = bitmap.Lock())
                 for (int y = 0; y < h; y++)
                     for (int x = 0; x < w; x++)
-                        Marshal.WriteInt32(fb.Address + y * fb.RowBytes + x * 4, x < w / 2 ? unchecked((int)0xFFFF0000) : 0);
+                        Marshal.WriteInt32(fb.Address + y * fb.RowBytes + x * 4, (x < w / 2) == left ? unchecked((int)0xFFFF0000) : 0);
             bitmap.Save(path, new PngBitmapEncoderOptions());
         }
         return new Uri(path);
@@ -378,6 +378,29 @@ public class IconTests
             window.Close();
         }
         finally { Delete(png); }
+    }
+
+    [AvaloniaFact]
+    public void A_monochrome_bitmap_icon_draws_the_new_bitmaps_shape_when_its_source_changes()
+    {
+        var (leftHalf, rightHalf) = (Png(4, 4), Png(4, 4, left: false));
+        try
+        {
+            var source = leftHalf;
+            var host = new TestHost(() => HStack(Icon(BitmapIcon(source)).Width(40).Height(40).Foreground(Brushes.Blue)));
+            var window = Show(host);
+            var icon = host.All<BitmapIconPresenter>().Single();
+            var left = At(icon, window, 10, 20);
+            var right = At(icon, window, 30, 20);
+            Assert.Equal((Colors.Blue, Colors.White), (Pixel(window, left.X, left.Y), Pixel(window, right.X, right.Y)));
+
+            source = rightHalf;
+            host.Render();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal((Colors.White, Colors.Blue), (Pixel(window, left.X, left.Y), Pixel(window, right.X, right.Y)));
+            window.Close();
+        }
+        finally { Delete(leftHalf, rightHalf); }
     }
 
     [AvaloniaFact]
