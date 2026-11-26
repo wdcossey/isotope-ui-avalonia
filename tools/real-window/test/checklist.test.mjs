@@ -13,10 +13,16 @@ import { fixture } from './fixture.mjs';
 
 const TOOL = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'checklist.mjs');
 
+// Every tool started, so a failing test still stops them (a running child would keep the test process alive).
+const children = new Set();
+const stopAll = () => { for (const c of children) c.kill(); children.clear(); };
+
 // Starts the tool; resolves once it prints its ready line, with the port, the JSON events so far and a way to wait
 // for its exit.
 function start(args) {
   const child = spawn(process.execPath, [TOOL, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+  children.add(child);
+  child.on('exit', () => children.delete(child));
   const events = [];
   let out = '', err = '';
   const exited = new Promise((resolve) => child.on('exit', (code) => resolve(code)));
@@ -86,6 +92,7 @@ test('serve, answer, stop, resume, finish: the checklist is written back and the
     assert.equal(existsSync(resultsFile), false, 'the results file is left');
     assert.equal(run.events.at(-1).event, 'finish');
   } finally {
+    stopAll();
     rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -104,6 +111,7 @@ test('a file with no checklist lines, or a results file that is not one, stops w
     await assert.rejects(start([file, '--port', '0']), /exited \(1\).*not a results file/s);
     assert.equal(readFileSync(file + '.results.json', 'utf8'), '{"something": "else"}');
   } finally {
+    stopAll();
     rmSync(dir, { recursive: true, force: true });
   }
 });

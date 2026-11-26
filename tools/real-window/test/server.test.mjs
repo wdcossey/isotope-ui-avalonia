@@ -22,11 +22,11 @@ async function withServer(fn) {
   try { return await fn({ port, items, results, calls, server }); } finally { server.closeAllConnections(); await new Promise((r) => server.close(r)); }
 }
 
-test('it listens on 127.0.0.1 only', () => withServer(async ({ server }) => {
+test('it listens on 127.0.0.1 only', { timeout: 15000 }, () => withServer(async ({ server }) => {
   assert.equal(server.address().address, '127.0.0.1');
 }));
 
-test('the page is served for Host 127.0.0.1:<port> and localhost:<port>, with a strict CSP and the token', () => withServer(async ({ port }) => {
+test('the page is served for Host 127.0.0.1:<port> and localhost:<port>, with a strict CSP and the token', { timeout: 15000 }, () => withServer(async ({ port }) => {
   for (const host of [`127.0.0.1:${port}`, `localhost:${port}`, `LOCALHOST:${port}`]) {
     const r = await request(port, { headers: { host } });
     assert.equal(r.status, 200, host);
@@ -36,7 +36,7 @@ test('the page is served for Host 127.0.0.1:<port> and localhost:<port>, with a 
   }
 }));
 
-test('a bad Host is refused, on GET and POST', () => withServer(async ({ port, calls }) => {
+test('a bad Host is refused, on GET and POST', { timeout: 15000 }, () => withServer(async ({ port, calls }) => {
   for (const host of ['evil.example', `evil.example:${port}`, `127.0.0.1:${port + 1}`, `127.0.0.1.evil.example:${port}`, '127.0.0.1']) {
     assert.equal((await request(port, { headers: { host } })).status, 403, 'GET ' + host);
     assert.equal((await post(port, '/system', { system: 'x' }, TOKEN, { host })).status, 403, 'POST ' + host);
@@ -44,7 +44,7 @@ test('a bad Host is refused, on GET and POST', () => withServer(async ({ port, c
   assert.equal(calls.save, 0);
 }));
 
-test('a cross-site Origin is refused; the page\'s own origin is allowed', () => withServer(async ({ port, items, calls }) => {
+test('a cross-site Origin is refused; the page\'s own origin is allowed', { timeout: 15000 }, () => withServer(async ({ port, items, calls }) => {
   for (const origin of ['http://evil.example', 'null', `https://127.0.0.1:${port}`, `http://127.0.0.1:${port + 1}`]) {
     assert.equal((await request(port, { headers: { origin } })).status, 403, 'GET ' + origin);
     assert.equal((await post(port, '/answer', { key: items[0].key, verdict: 'pass' }, TOKEN, { origin })).status, 403, 'POST ' + origin);
@@ -53,7 +53,7 @@ test('a cross-site Origin is refused; the page\'s own origin is allowed', () => 
   assert.equal((await post(port, '/answer', { key: items[0].key, verdict: 'pass' }, TOKEN, { origin: `http://localhost:${port}` })).status, 200);
 }));
 
-test('a POST without the token, or with another, is refused', () => withServer(async ({ port, items, results, calls }) => {
+test('a POST without the token, or with another, is refused', { timeout: 15000 }, () => withServer(async ({ port, items, results, calls }) => {
   const body = { key: items[0].key, verdict: 'pass' };
   assert.equal((await post(port, '/answer', body)).status, 403);
   assert.equal((await post(port, '/answer', body, 'cd'.repeat(24))).status, 403);
@@ -63,7 +63,7 @@ test('a POST without the token, or with another, is refused', () => withServer(a
   assert.deepEqual([calls.save, calls.finish], [0, 0]);
 }));
 
-test('a body over the cap is refused, declared or streamed', () => withServer(async ({ port, results }) => {
+test('a body over the cap is refused, declared or streamed', { timeout: 15000 }, () => withServer(async ({ port, results }) => {
   const big = { system: 'x'.repeat(2000) };
   assert.equal((await post(port, '/system', big, TOKEN)).status, 413);
   const streamed = await request(port, {
@@ -74,7 +74,7 @@ test('a body over the cap is refused, declared or streamed', () => withServer(as
   assert.equal(results.system, '');
 }));
 
-test('a POST must be JSON, name a line of the checklist, and give a known verdict', () => withServer(async ({ port, items, results }) => {
+test('a POST must be JSON, name a line of the checklist, and give a known verdict', { timeout: 15000 }, () => withServer(async ({ port, items, results }) => {
   const r = await request(port, { method: 'POST', path: '/answer', body: 'key=x', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-checklist-token': TOKEN } });
   assert.equal(r.status, 415);
   assert.equal((await post(port, '/answer', { key: '../../etc/passwd', verdict: 'pass' }, TOKEN)).status, 400);
@@ -86,7 +86,7 @@ test('a POST must be JSON, name a line of the checklist, and give a known verdic
   assert.equal((await request(port, { path: '/README.md' })).status, 404);
 }));
 
-test('an answer is saved, logged and counted; system and notes are saved', () => withServer(async ({ port, items, results, calls }) => {
+test('an answer is saved, logged and counted; system and notes are saved', { timeout: 15000 }, () => withServer(async ({ port, items, results, calls }) => {
   const r = await post(port, '/answer', { key: items[1].key, verdict: 'fail', note: 'broken' }, TOKEN);
   assert.equal(r.status, 200);
   assert.deepEqual(JSON.parse(r.text), { ok: true, answered: 1, total: 2 });
@@ -99,7 +99,7 @@ test('an answer is saved, logged and counted; system and notes are saved', () =>
   assert.deepEqual([results.system, results.notes, calls.save], ['Fedora 43, Wayland', 'all good', 3]);
 }));
 
-test('finish answers the summary, emits finished once, and refuses answers after', () => withServer(async ({ port, items, server, calls }) => {
+test('finish answers the summary, emits finished once, and refuses answers after', { timeout: 15000 }, () => withServer(async ({ port, items, server, calls }) => {
   let finished = 0;
   server.on('finished', () => finished++);
   const r = await post(port, '/finish', {}, TOKEN);
