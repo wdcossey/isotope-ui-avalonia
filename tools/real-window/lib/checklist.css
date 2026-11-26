@@ -1,66 +1,42 @@
-/* The checklist page's stylesheet (#109): shadcn/ui's look as plain, hand-written CSS, with no build step. The tool
-   (lib/server.mjs) inlines it in the page under the page's content security policy, by the request's nonce, so it
-   names no URL: no @import, no url(), no web font (system fonts only).
-
-   The theme tokens (shadcn/ui's "neutral" theme, light and dark) and the component styles (card, button, input,
-   textarea, badge, separator, progress, kbd, the focus ring and the radius scale) are taken from shadcn/ui
-   (the new-york-v4 registry) and rewritten from its Tailwind classes as CSS. shadcn/ui's licence:
-
-   MIT License
-
-   Copyright (c) 2023 shadcn
-
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to deal
-   in the Software without restriction, including without limitation the rights
-   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-   copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included in all
-   copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-   SOFTWARE.
+/* The checklist page's stylesheet (#109): plain, hand-written CSS with no build step, in the style of shadcn/ui (cards,
+   default/outline/destructive/ghost buttons, badges, a soft focus ring) but with our own palette and values: no code or
+   theme values are copied from it, so no third-party notice is needed. The tool (lib/server.mjs) inlines it in the page
+   under the page's content security policy, by the request's nonce, so it names no URL: no @import, no url(), no web
+   font (system fonts only).
 */
 
 /* Theme tokens: light, and dark when the system asks for it. */
 :root {
   color-scheme: light;
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #17191c;
+  --card: #ffffff;
+  --card-foreground: #17191c;
+  --primary: #22262b;
+  --primary-foreground: #f8f9fa;
+  --secondary: #f1f3f5;
+  --secondary-foreground: #22262b;
+  --muted: #f1f3f5;
+  --muted-foreground: #6a717a;
+  --accent: #eef0f3;
+  --accent-foreground: #22262b;
+  --destructive: #d33a2c;
+  --border: #e3e6ea;
+  --input: #dcdfe4;
+  --ring: #9aa1aa;
 
-  /* Tailwind's values behind shadcn's classes. */
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  /* Radius steps and shadows. */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --shadow-xs: 0 1px 1px 0 rgb(16 24 32 / 0.06);
+  --shadow-sm: 0 1px 2px 0 rgb(16 24 32 / 0.08), 0 2px 6px -2px rgb(16 24 32 / 0.08);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* shadcn's focus ring: the ring colour at half strength, 3px wide. */
+  /* The focus ring: the ring colour at half strength, 3px wide. */
   --focus-ring: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
   --focus-ring-destructive: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent);
   --destructive-fill: var(--destructive);
@@ -70,22 +46,22 @@
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: #121417;
+    --foreground: #f2f3f5;
+    --card: #1b1e22;
+    --card-foreground: #f2f3f5;
+    --primary: #e6e8eb;
+    --primary-foreground: #1b1e22;
+    --secondary: #2a2e34;
+    --secondary-foreground: #f2f3f5;
+    --muted: #2a2e34;
+    --muted-foreground: #a1a7af;
+    --accent: #2a2e34;
+    --accent-foreground: #f2f3f5;
+    --destructive: #f06a5c;
+    --border: rgb(255 255 255 / 0.1);
+    --input: rgb(255 255 255 / 0.16);
+    --ring: #7d848d;
     --focus-ring-destructive: 0 0 0 3px color-mix(in oklab, var(--destructive) 40%, transparent);
     --destructive-fill: color-mix(in oklab, var(--destructive) 60%, transparent);
     --field-fill: color-mix(in oklab, var(--input) 30%, transparent);
@@ -247,7 +223,7 @@ main { padding-block: 1.5rem 4rem; display: grid; gap: 1.5rem; }
 }
 .input { height: 2.25rem; padding: 0.25rem 0.75rem; }
 .input-sm { height: 2rem; }
-/* No field-sizing: content (shadcn's), so the textarea keeps the rows the page gives it. */
+/* No field-sizing: content, so the textarea keeps the rows the page gives it. */
 .textarea { display: flex; min-height: 4rem; padding: 0.5rem 0.75rem; resize: vertical; }
 .input::placeholder, .textarea::placeholder { color: var(--muted-foreground); }
 .input::selection, .textarea::selection { background: var(--primary); color: var(--primary-foreground); }

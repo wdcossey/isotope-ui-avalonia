@@ -187,17 +187,18 @@ test('the page carries its stylesheet under the same CSP, by the response\'s non
   assert.equal(styles[0][2], readFileSync(new URL('../lib/checklist.css', import.meta.url), 'utf8'));
   assert.match(STYLE, /--background:/);
   // Nothing the CSP would block or that would fetch: no style attribute, link, src or href; no url(), @import or web
-  // font; no address at all outside the stylesheet's licence comment.
+  // font; no address at all outside comments.
   assert.doesNotMatch(r.text, /\sstyle=|<link|\s(src|srcset|href|action|formaction|poster|data)=/i);
   const code = r.text.replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(code, /url\(|@import|@font-face|https?:|\/\/[a-z0-9]/i);
 }));
 
-test('the stylesheet carries shadcn/ui\'s copyright and MIT notice', () => {
+// The palette is our own (developer, 2026-11-26): nothing is copied from a third party, so the stylesheet needs no
+// licence notice, and none may creep in (a notice names its author, which the repo's no-names rule forbids).
+test('the stylesheet is our own: no third-party licence notice', () => {
   const header = /^\/\*([\s\S]*?)\*\//.exec(STYLE)?.[1] ?? '';
-  assert.match(header, /shadcn\/ui's licence:\s+MIT License\s+Copyright \(c\) \d{4} \S+/);
-  assert.match(header, /Permission is hereby granted, free of charge/);
-  assert.match(header, /THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND/);
+  assert.match(header, /our own palette and values/);
+  assert.doesNotMatch(STYLE, /copyright|\(c\) \d{4}|permission is hereby granted|licen[cs]e/i);
 });
 
 test('escaping holds in every element the page adds: header, cards, badges, buttons and fields', () => {

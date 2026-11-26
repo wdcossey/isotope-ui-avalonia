@@ -156,8 +156,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   (and a CSP), lines named by parsed key only. Line endings are kept; everything that isn't a checklist line is kept
   byte for byte. 52 node tests (in the packages job), 51 deliberate breaks each turning the suite red. It replaced the
   throwaway page the developer used for #100's run.
-- The page has a static shadcn/ui look (#109): one hand-written stylesheet (`tools/real-window/lib/checklist.css`;
-  shadcn/ui's neutral tokens, light and dark by `prefers-color-scheme`, its MIT notice in the header), inlined by the
+- The page has a static shadcn/ui-style look (#109): one hand-written stylesheet (`tools/real-window/lib/checklist.css`;
+  our own palette, light and dark by `prefers-color-scheme`, so no third-party notice: developer, 2026-11-26), inlined by the
   request's nonce so the CSP is unchanged. A sticky header holds the system field and the progress, there is a card per
   section with its count, and P, F and S answer the focused line (focus moves on at once). Once Finish is confirmed the
   page locks; a lost reply keeps it locked. 9 new node tests, each turned red by deliberate breaks.

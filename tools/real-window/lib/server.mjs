@@ -24,7 +24,7 @@ export const inlineMarkdown = (s) => escapeHtml(s).split(/(`[^`]+`)/).map((part,
   ? '<code>' + part.slice(1, -1) + '</code>'
   : part.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'))).join('');
 
-// The page's stylesheet (#109): shadcn/ui's look in plain CSS, read once and inlined in the page by the request's nonce,
+// The page's stylesheet (#109): a shadcn/ui-style look in plain CSS, with our own palette, read once and inlined in the page by the request's nonce,
 // so the CSP stays as it is. It names no URL (no @import, url() or web font).
 export const STYLE = readFileSync(new URL('./checklist.css', import.meta.url), 'utf8');
 
@@ -134,7 +134,7 @@ document.addEventListener('change', async (e) => {
   } catch (err) { if (st) st.textContent = 'error: ' + err.message; }
 });`;
 
-// Each verdict's button, in shadcn/ui's variants: Pass the default, Fail destructive, Skip outline.
+// Each verdict's button, in shadcn/ui-style variants: Pass the default, Fail destructive, Skip outline.
 const VARIANT = { pass: 'default', fail: 'destructive', skip: 'outline' };
 const label = (v) => v[0].toUpperCase() + v.slice(1);
 
