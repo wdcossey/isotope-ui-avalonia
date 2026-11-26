@@ -111,6 +111,26 @@ test('a fence closes only on a bare fence line, and a fence inside a list item c
   assert.equal(clearTicks(text).cleared, 2);
 });
 
+test('a nested plain bullet ends the line above it, so a note is appended to the line itself', () => {
+  const text = '### S\n- [ ] Open the menu\n  - check the Go item\n  1. and the View item\n- [ ] Next.\n';
+  assert.deepEqual(parseChecklist(text).items.map((it) => it.text), ['Open the menu', 'Next.']);
+  const out = applyResults(text, { system: 'OS', answers: { [keyAt(text, 2)]: { verdict: 'fail', note: 'no menu', date: DATE } } }).text;
+  assert.equal(out, `### S\n- [ ] Open the menu **Failed (OS, ${DATE}):** no menu\n  - check the Go item\n  1. and the View item\n- [ ] Next.\n`);
+});
+
+test('the summary gives each failed line\'s number in the written file, after notes above it wrapped', () => {
+  const text = '### S\n- [ ] First.\n- [ ] Second.\n';
+  const results = { answers: {
+    [keyAt(text, 2)]: { verdict: 'fail', note: 'long '.repeat(60), date: DATE },
+    [keyAt(text, 3)]: { verdict: 'fail', note: 'short', date: DATE },
+  } };
+  const { text: out, lineOf } = applyResults(text, results);
+  const s = summarize(parseChecklist(text).items, results, { date: DATE, lineOf });
+  const written = out.split('\n');
+  assert.ok(written.length > 4, 'the first note did not wrap');
+  assert.deepEqual(s.failed.map((f) => written[f.line - 1].slice(0, 13)), ['- [ ] First. ', '- [ ] Second.']);
+});
+
 test('the "Last run" sentence names a failure with no heading', () => {
   const text = '- [ ] a\n';
   const s = summarize(parseChecklist(text).items, { answers: { [keyAt(text, 1)]: { verdict: 'fail', note: '', date: DATE } } }, { date: DATE });

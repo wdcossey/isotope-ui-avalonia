@@ -60,15 +60,17 @@ export function clearTicks(text) {
 
 // Applies results ({ system, answers: { key: { verdict, note, date } } }) to the text: a pass ticks its line, a fail
 // unticks it and appends the failure, a skip leaves it. Answers whose key matches no line are left out; they are
-// returned as unmatched. Applying the same results twice changes nothing more, since an annotated line's key changes.
+// returned as unmatched. lineOf gives each line's number in the new text, which wrapped notes can move down. Applying the same results twice changes nothing more, since an annotated line's key changes.
 export function applyResults(text, results) {
   const { lines, items } = parseChecklist(text);
   const eol = dominantEol(lines);
   const answers = results.answers ?? {};
   const known = new Set(items.map((it) => it.key));
   const applied = { pass: 0, fail: 0, skip: 0 };
+  const lineOf = {};
   let shift = 0;
   for (const item of items) {
+    lineOf[item.key] = item.line + shift;
     const a = answers[item.key];
     if (!a || !VERDICTS.includes(a.verdict)) continue;
     applied[a.verdict]++;
@@ -79,12 +81,13 @@ export function applyResults(text, results) {
     if (extra) shift += appendWrapped(lines, at, extra, eol);
   }
   const unmatched = Object.keys(answers).filter((k) => !known.has(k));
-  return { text: joinLines(lines), applied, unmatched };
+  return { text: joinLines(lines), applied, unmatched, lineOf };
 }
 
 // Counts per section, the failed lines, and a suggested "Last run" sentence for the checklist's prose (which the
-// tool doesn't write). items are the lines as they were before the write-back.
-export function summarize(items, results, { date, commit } = {}) {
+// tool doesn't write). items are the lines as they were before the write-back; lineOf (from applyResults) gives their
+// numbers after it.
+export function summarize(items, results, { date, commit, lineOf = {} } = {}) {
   const answers = results.answers ?? {};
   const verdictOf = (it) => answers[it.key]?.verdict ?? 'none';
   const total = { pass: 0, fail: 0, skip: 0, none: 0 };
@@ -94,7 +97,7 @@ export function summarize(items, results, { date, commit } = {}) {
     return { section: s.name, ...counts };
   });
   const failed = items.filter((it) => verdictOf(it) === 'fail')
-    .map((it) => ({ section: it.section, line: it.line, text: it.text, note: oneLine(answers[it.key].note) }));
+    .map((it) => ({ section: it.section, line: lineOf[it.key] ?? it.line, text: it.text, note: oneLine(answers[it.key].note) }));
   const system = oneLine(results.system);
   const failedSections = bySection.filter((s) => s.fail).map((s) => (s.section || 'no heading') + (s.fail > 1 ? ` (${s.fail})` : ''));
   let sentence = `**Last run:** ${date}, ${system || '<system>'}, at \`${commit || '<commit>'}\`: `;

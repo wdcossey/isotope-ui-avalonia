@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { parseChecklist } from '../lib/parse.mjs';
 import { emptyResults } from '../lib/results.mjs';
 import net from 'node:net';
-import { createChecklistServer, inlineMarkdown, renderPage } from '../lib/server.mjs';
+import vm from 'node:vm';
+import { SCRIPT, createChecklistServer, inlineMarkdown, renderPage } from '../lib/server.mjs';
 import { post, request, tokenOf } from './http.mjs';
 
 const TOKEN = 'ab'.repeat(24);
@@ -154,4 +155,20 @@ test('finished is emitted even when the tab goes before the reply', { timeout: 1
 
 test('bold is not applied inside a code span', () => {
   assert.equal(inlineMarkdown('Type `**hi**` then **go** <x>'), 'Type <code>**hi**</code> then <b>go</b> &lt;x&gt;');
+});
+
+test('the page sends its posts one at a time, in order', async () => {
+  // The page's script in a sandbox, with a fetch whose first call answers last if nothing waits for it.
+  const started = [], finished = [];
+  const fetch = (path, init) => {
+    const body = JSON.parse(init.body);
+    started.push(body.n);
+    return new Promise((resolve) => setTimeout(() => { finished.push(body.n); resolve({ ok: true, json: async () => ({}) }); }, body.n === 1 ? 60 : 5));
+  };
+  const document = { querySelector: () => ({ content: TOKEN }), addEventListener: () => {} };
+  const context = vm.createContext({ document, fetch, setTimeout, Promise, JSON, Error });
+  vm.runInContext(SCRIPT + ';globalThis.post = post;', context);
+  await Promise.all([context.post('/answer', { n: 1 }), context.post('/answer', { n: 2 })]);
+  assert.deepEqual(finished, [1, 2]);
+  assert.deepEqual(started, [1, 2]);
 });

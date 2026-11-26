@@ -67,10 +67,10 @@ try {
     finish: () => {
       const before = read();
       const { items: now } = parseChecklist(before);
-      const { text, unmatched } = applyResults(before, results);
+      const { text, unmatched, lineOf } = applyResults(before, results);
       if (text !== before) writeFileSync(opts.file, text);
       written = true;
-      const summary = summarize(now, results, { date: localDate(), commit: shortCommit(path.dirname(opts.file)) });
+      const summary = summarize(now, results, { date: localDate(), commit: shortCommit(path.dirname(opts.file)), lineOf });
       let out = formatSummary(summary);
       // The checklist is written, so a failure here must not fail the Finish (a retry would apply the answers again).
       try { deleteResults(resultsFile); } catch (e) { out += `\nCould not delete ${path.basename(resultsFile)} (${e.code ?? e.message}): delete it before the next run.`; }

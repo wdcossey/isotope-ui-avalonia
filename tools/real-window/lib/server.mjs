@@ -33,11 +33,18 @@ button{padding:2px 10px}.v-pass{background:#eefbea}.v-fail{background:#fdecec}.v
 #top input{width:22em;padding:3px}textarea{width:100%;box-sizing:border-box}pre{white-space:pre-wrap;background:#f6f6f6;padding:.8em}`;
 
 // The page's script: one click per line sends its verdict and note; changing a note resends the line's verdict.
-const SCRIPT = `const token = document.querySelector('meta[name="checklist-token"]').content;
-async function post(path, body) {
-  const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', '${TOKEN_HEADER}': token }, body: JSON.stringify(body) });
-  if (!r.ok) throw new Error(r.status + ' ' + (await r.text()));
-  return r.json();
+// Posts go one at a time, in order, so a note's resend (on blur) can't land after the click that caused the blur.
+export const SCRIPT = `const token = document.querySelector('meta[name="checklist-token"]').content;
+let queue = Promise.resolve();
+function post(path, body) {
+  const send = async () => {
+    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', '${TOKEN_HEADER}': token }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.status + ' ' + (await r.text()));
+    return r.json();
+  };
+  const p = queue.then(send);
+  queue = p.catch(() => {});
+  return p;
 }
 function progress(r) { if (r && r.total != null) document.getElementById('progress').textContent = r.answered + ' of ' + r.total + ' answered'; }
 async function answer(it, verdict) {

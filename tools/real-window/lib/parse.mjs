@@ -31,10 +31,13 @@ export function dominantEol(lines) {
 }
 
 const indentOf = (s) => /^\s*/.exec(s)[0].length;
+// Any list item, checklist or not: a nested one ends the item above it, so a note is never appended to it.
+const LIST_ITEM = /^\s*([-*+]|\d{1,9}[.)])(\s|$)/;
 
 // The checklist's items, in order. Each has a key (a hash of its section and text, numbered if the same line appears
 // twice in a section), its 1-based line number, its first and last line indexes, its section, whether it is ticked,
-// and its text with the continuation lines joined by spaces. Lines inside code fences are not items or headings.
+// and its text with the continuation lines joined by spaces. Lines inside code fences are not items or headings;
+// indented (four-space) code blocks are not recognised, so a checklist line shown in one would count as an item.
 export function parseChecklist(text) {
   const lines = splitLines(text);
   const items = [];
@@ -54,7 +57,7 @@ export function parseChecklist(text) {
     let last = i;
     while (last + 1 < lines.length) {
       const next = lines[last + 1].body;
-      if (!next.trim() || indentOf(next) <= indent || ITEM.test(next) || HEADING.test(next) || FENCE.test(next)) break;
+      if (!next.trim() || indentOf(next) <= indent || LIST_ITEM.test(next) || HEADING.test(next) || FENCE.test(next)) break;
       text += ' ' + next.trim();
       last++;
     }
