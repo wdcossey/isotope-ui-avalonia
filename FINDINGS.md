@@ -145,6 +145,19 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Writing controls guide (issue #80, 2026-11-26)
+
+- `docs/guide/writing-controls.md`, with spike J as its worked example. Its 12 C# blocks are regions of spike J's code
+  (`controls-*`): `DocSnippetTests` also reads regions from `spikes/J-third-party/` (`bin` and `obj` left out; a region
+  name used twice fails), and `run.mjs` builds and tests that code against the packed packages on each framework.
+- Spike J: `RatingBar` gained a plain .NET event (`Cleared`, `[WrapEvent("Cleared", Arg = "OldValue")]`), its record a
+  `[WrapManual]` member (`IsReadOnly`, written in `Customize`), and `GuideExamples.cs` 5 tests of the guide's examples:
+  39 of 39 tests and 8 of 8 probes on each framework (`run.mjs`, packed `0.1.0-preview.0.82`).
+- Read from the generated source: the descriptor adds `Customize`'s entries before the generated ones.
+- MCP: the tool serves the guide (the pack smoke now checks the resources equal `docs/guide`'s 7 pages); `get_api` leaves
+  its snippets out of examples, since they use a made-up library.
+- Measured: library 1259 on each of net9.0, net10.0 and net11.0, MCP 53, migration 52, from a fresh clone.
+
 ## Generator diagnostics for library records (issue #78, 2026-11-25)
 
 Spike J's gaps 2 and 3 are closed in our generator partial (`WrapperGenerator.Avalonia.cs`, five `gen-*` transform rules).
