@@ -272,6 +272,9 @@ when a new trap is hit, with the date. Never name people, other projects or clie
   one-item case.
 - **A proof helper that restores with `git checkout --` wipes uncommitted edits to that file.** Commit before proving,
   every time, even for a quick one. (2026-11-25)
+- **A conditional's tuple type comes from its typed arm.** `cond ? (20.0, family) : default` is `(double, FontFamily)`,
+  so `default` is `(0, null)`, not two nulls: a font size of 0 then threw in unrelated text tests. Cast the arm
+  (`((double?)20.0, family)`). (2026-11-26)
 
 ## Working with the developer
 

@@ -14,13 +14,17 @@ public sealed partial class Reconciler
     {
         var oldText = FontMembers(oldEl);
         var newText = FontMembers(newEl);
+        var oldDefault = FontDefaults(oldEl);
+        var newDefault = FontDefaults(newEl);
         switch (control)
         {
             case TextBlock:
                 SetRef(control, TextBlock.ForegroundProperty, oldM?.Foreground, newM?.Foreground);
-                Set(control, TextBlock.FontSizeProperty, oldText.Size ?? oldM?.FontSize, newText.Size ?? newM?.FontSize);
+                Set(control, TextBlock.FontSizeProperty, oldText.Size ?? oldM?.FontSize ?? oldDefault.Size,
+                    newText.Size ?? newM?.FontSize ?? newDefault.Size);
                 Set(control, TextBlock.FontWeightProperty, oldText.Weight ?? oldM?.FontWeight, newText.Weight ?? newM?.FontWeight);
-                SetRef(control, TextBlock.FontFamilyProperty, oldText.Family ?? oldM?.FontFamily, newText.Family ?? newM?.FontFamily);
+                SetRef(control, TextBlock.FontFamilyProperty, oldText.Family ?? oldM?.FontFamily ?? oldDefault.Family,
+                    newText.Family ?? newM?.FontFamily ?? newDefault.Family);
                 break;
             case TemplatedControl when oldM is not null || newM is not null:
                 SetRef(control, TemplatedControl.ForegroundProperty, oldM?.Foreground, newM?.Foreground);
@@ -37,6 +41,13 @@ public sealed partial class Reconciler
         {
             TextBlockElement t => (t.FontSize, t.FontWeight, t.FontFamily),
             SelectableTextBlockElement s => (s.FontSize, s.FontWeight, s.FontFamily),
+            // #91: a font icon's glyph is a text block in the icon's font.
+            IconElement { Data: FontIconData f } => (f.FontSize, null, f.FontFamily),
             _ => default,
         };
+
+    // A font icon's size and font when neither it nor a modifier gives one: WinUI's FontIcon's, 20 and the Segoe icon
+    // fonts (#91).
+    private static (double? Size, Avalonia.Media.FontFamily? Family) FontDefaults(Element? element)
+        => element is IconElement { Data: FontIconData } ? ((double?)IconElement.FontIconSize, IconElement.SymbolFontFamily) : default;
 }

@@ -562,6 +562,12 @@ public sealed class MigrationAnalyzer : DiagnosticAnalyzer
                 if (at < arguments.Count && arguments[at].NameColon is null && methods.All(m => m.Parameters.Length <= at && !m.Parameters.Any(p => p.IsParams)))
                     Report(ctx, Rules.NameRemoved, arguments[at].GetLocation(), args: ["Parameter", factory + "(" + gone.Reactor + ": …)", gone.Note ?? ""]);
             }
+            // #91: Reactor's Icon(string symbol) names a WinUI symbol, which Isotope has no font for: what to use instead is
+            // the Symbol type's note.
+            if (factory == "Icon" && arguments.Count == 1 && arguments[0].NameColon is null
+                && ctx.SemanticModel.GetTypeInfo(arguments[0].Expression, ctx.CancellationToken).Type?.SpecialType == SpecialType.System_String
+                && _t.WinUI.ByFullName.TryGetValue("Microsoft.UI.Xaml.Controls.Symbol", out var symbol))
+                Report(ctx, Rules.NameRemoved, arguments[0].GetLocation(), args: ["Factory", "Icon(string symbol)", symbol.Note ?? ""]);
         }
 
         void Hosting(SyntaxNodeAnalysisContext ctx, InvocationExpressionSyntax inv, string name, SymbolInfo info)

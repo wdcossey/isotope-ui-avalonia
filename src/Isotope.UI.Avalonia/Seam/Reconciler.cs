@@ -244,6 +244,10 @@ public sealed partial class Reconciler
         if (oldEl.Key != newEl.Key) return false;
         // #49: a panel mounted inside a chrome border, or no longer, is a different control in the slot.
         if (NeedsPanelChrome(oldEl, oldModifiers) != NeedsPanelChrome(newEl, newModifiers)) return false;
+        // #91: an icon's data chooses its control (a path icon, a text block, a bitmap icon, an image): another kind is
+        // another control in the slot, mounted afresh, as upstream's polymorphic descriptor rebuilds it.
+        if (oldEl is IconElement oldIcon && newEl is IconElement newIcon
+            && IconElement.KindOf(oldIcon.Data) != IconElement.KindOf(newIcon.Data)) return false;
         if (oldEl is ComponentElement oldComp && newEl is ComponentElement newComp)
             return oldComp.ComponentType == newComp.ComponentType;
         return true;

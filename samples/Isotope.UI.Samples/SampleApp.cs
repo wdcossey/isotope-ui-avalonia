@@ -21,7 +21,7 @@ public static class SampleApp
     public static readonly Context<bool> ShowTips = new(true);
 
     /// <summary>The window's size, as Program opens it.</summary>
-    public const double WindowWidth = 720, WindowHeight = 680;
+    public const double WindowWidth = 820, WindowHeight = 680;
 
     /// <summary>The pages, in tab order: each tab and each item of the Go menu comes from this list.</summary>
     public static readonly (string Name, Func<RenderContext, Element> Render)[] Pages =
@@ -32,6 +32,7 @@ public static class SampleApp
         ("Numbers", NumbersPage.Render),
         ("Split view", SplitViewPage.Render),
         ("Rich text", RichTextPage.Render),
+        ("Icons", IconsPage.Render),
         ("Errors", ErrorsPage.Render),
     ];
 
