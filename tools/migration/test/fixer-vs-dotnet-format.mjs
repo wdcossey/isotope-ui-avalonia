@@ -1,5 +1,6 @@
 // The in-process fixes against dotnet format (#87): node --test tools/migration/test/fixer-vs-dotnet-format.mjs.
-// Needs dotnet, so it isn't one of the *.test.mjs files CI runs without it; CI's samples job runs it before measuring.
+// Needs dotnet and takes about a minute (most of it dotnet format), so it isn't one of the *.test.mjs files CI's samples
+// job runs: run it when Fixer.cs, the migration's code fix or the SDK (global.json) changes.
 // measure-samples.mjs migrates the fixture (test/fixture: a library and an app that uses it, with files the fixes must
 // leave alone) once with MigrationReport's in-process fixes and once with dotnet format, and the two must give the same
 // files and the same summary. Up to the order of using directives and the number of passes: dotnet format fixes the

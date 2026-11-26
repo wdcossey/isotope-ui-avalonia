@@ -35,10 +35,14 @@ sealed class Fixer : IDisposable
 
     public string Project { get; }
 
+    /// <summary>Whether this is the fixer for the project and IDs (so its open workspace can serve another pass).</summary>
+    public bool Fixes(string project, IEnumerable<string> ids) => Project == Path.GetFullPath(project) && _ids.SetEquals(ids);
+
     /// <summary>
     /// One pass: analyses the project, applies the fixes and saves the files. False when dotnet format would exit with an
-    /// error: the project doesn't load, or the changes can't be saved. A fix that throws is skipped with a warning, as there.
-    /// Warnings and errors go to log.
+    /// error: the project can't be opened, the changes can't be saved, or something else throws. As there, a fix that
+    /// throws, or references that didn't load, are warnings: the pass fixes less and still succeeds. Warnings and errors
+    /// go to log.
     /// </summary>
     public async Task<bool> PassAsync(TextWriter log, CancellationToken ct = default)
     {
@@ -83,7 +87,8 @@ sealed class Fixer : IDisposable
         // An analysis is reused while the solution is the one it analysed: the analyzer gives the same diagnostics.
         var analysed = solution;
         var diagnostics = await AnalyzeAsync(project, paths, ct).ConfigureAwait(false);
-        var reported = diagnostics.Select(d => d.Id).Distinct().OrderBy(id => id, StringComparer.Ordinal).ToList();        foreach (var id in reported)
+        var reported = diagnostics.Select(d => d.Id).Distinct().OrderBy(id => id, StringComparer.Ordinal).ToList();
+        foreach (var id in reported)
         {
             if (!Fix.FixableDiagnosticIds.Contains(id))
             {
@@ -117,6 +122,8 @@ sealed class Fixer : IDisposable
             if (!File.Exists(document.FilePath) || !document.SupportsSyntaxTree) continue;
             var tree = (await document.GetSyntaxTreeAsync(ct).ConfigureAwait(false))!;
             if (IsGeneratedCode(tree, ct)) continue;
+            // As in dotnet format: the provider gives empty options to a file no .editorconfig covers, so in practice every
+            // file counts as covered.
             var options = project.AnalyzerOptions.AnalyzerConfigOptionsProvider.GetOptions(tree);
             if (options is null) notCovered.Add(document.FilePath);
             else if (!(options.TryGetValue("generated_code", out var value) && bool.TryParse(value, out var generated) && generated))
@@ -179,6 +186,7 @@ sealed class Fixer : IDisposable
         {
             var fixAll = Fix.GetFixAllProvider();
             if (fixAll?.GetSupportedFixAllScopes()?.Contains(FixAllScope.Solution) != true) return solution;
+            // The first diagnostic of any ID starts the Fix All, as in dotnet format; FixAllContext keeps only the ID's own.
             var diagnostic = diagnostics.FirstOrDefault(d => d.Location.SourceTree is not null);
             if (diagnostic is null || solution.GetDocument(diagnostic.Location.SourceTree) is not { } document) return solution;
             CodeAction? action = null;

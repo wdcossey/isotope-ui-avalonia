@@ -403,7 +403,7 @@ function print(results, s) {
   console.log(`\nprojects ${s.projects}, projects that build: before ${s.projectsBuildBefore}, after ${s.projectsBuild}`);
   console.log(`files ${s.files}, files that build: before ${s.filesBuildBefore}, after ${s.filesBuildAfter}`);
   console.log(`compile errors: before ${s.errorsBefore}, after ${s.errorsAfter}`);
-  console.log(`dotnet format runs that failed: ${s.formatFailures ?? 0}`);
+  console.log(`${fixer === 'in-process' ? 'passes of the fixes' : 'dotnet format runs'} that failed: ${s.formatFailures ?? 0}`);
   console.log(`files that built before and not after: ${s.brokenByMigration.length} ${s.brokenByMigration.join(', ')}`);
   console.log('migration diagnostics before: ' + JSON.stringify(sorted(s.migrationBefore)));
   console.log('migration diagnostics left: ' + JSON.stringify(sorted(s.migrationLeft)));

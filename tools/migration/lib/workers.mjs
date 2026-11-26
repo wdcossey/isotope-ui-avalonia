@@ -8,7 +8,8 @@ import { spawn } from 'node:child_process';
 const KEEP = 64 * 1024;
 
 // A started worker. request(object) sends one request and resolves to its answer (the parsed line). It rejects when the
-// worker ends before it answers (with the end of its stderr), or answers with a line that isn't JSON.
+// worker ends before it answers (with the end of its stderr), or answers with a line that isn't JSON: then the worker is
+// stopped, since its later answers could belong to other requests.
 export class Worker {
   constructor(child) {
     this.child = child;
@@ -27,6 +28,7 @@ export class Worker {
       this.exited = why;
       for (const p of this.pending.splice(0)) p.reject(new Error('the worker ' + why + ' before it answered' + this.#tail()));
     };
+    this.end = end;
     child.on('error', e => end('failed to start (' + (e.code ?? e.message) + ')'));
     child.on('close', (code, signal) => end(signal ? 'was stopped (' + signal + ')' : 'exited (' + code + ')'));
   }
@@ -45,7 +47,7 @@ export class Worker {
     return new Promise(resolve => { this.child.once('close', () => resolve()); this.child.stdin.end(); });
   }
 
-  kill() { if (!this.exited) this.child.kill(); }
+  kill() { if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill(); }
 
   #read(chunk) {
     this.out += chunk;
@@ -56,8 +58,15 @@ export class Worker {
       if (!line.trim()) continue;
       const p = this.pending.shift();
       if (!p) continue;
-      try { p.resolve(JSON.parse(line)); }
-      catch { p.reject(new Error('the worker answered with a line that is not JSON: ' + line.slice(0, 200))); }
+      let answer;
+      try { answer = JSON.parse(line); }
+      catch {
+        p.reject(new Error('the worker answered with a line that is not JSON: ' + line.slice(0, 200)));
+        this.end('answered with a line that is not JSON');
+        this.kill();
+        return;
+      }
+      p.resolve(answer);
     }
   }
 

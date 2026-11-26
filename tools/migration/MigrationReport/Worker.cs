@@ -32,7 +32,7 @@ static class Worker
                     if (op == "fix")
                     {
                         var ids = request["diagnostics"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? throw new FormatException("fix needs diagnostics");
-                        if (fixer is null || fixer.Project != Path.GetFullPath(project))
+                        if (fixer is null || !fixer.Fixes(project, ids))
                         {
                             fixer?.Dispose();
                             fixer = new Fixer(project, ids);

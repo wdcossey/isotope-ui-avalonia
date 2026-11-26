@@ -54,10 +54,13 @@ test('a worker that exits before answering fails its request, and every later on
   await assert.rejects(w.request({ op: 'one' }), /the worker exited \(3\)/);
 });
 
-test('an answer that is not JSON fails the request', async () => {
+test('an answer that is not JSON fails the request and stops the worker, so no later answer goes to the wrong request', async () => {
   const w = start();
-  await assert.rejects(w.request({ op: 'garbage' }), /not JSON: not json/);
-  await w.close();
+  const [garbage, next] = await Promise.allSettled([w.request({ op: 'garbage' }), w.request({ op: 'one' })]);
+  assert.match(garbage.reason.message, /not JSON: not json/);
+  assert.match(next.reason.message, /answered with a line that is not JSON/);
+  assert.ok(w.exited);
+  await assert.rejects(w.request({ op: 'two' }), /answered with a line that is not JSON/);
 });
 
 test('a worker that cannot start fails its request instead of the run', async () => {
