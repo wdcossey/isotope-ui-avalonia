@@ -77,8 +77,8 @@ must hold on any machine; machine-specific notes go in a git-ignored `CLAUDE.loc
 - **Element factories and modifiers** are our own tier 3 version of upstream's `Dsl.cs`/`ElementExtensions.cs` (#17),
   with Avalonia's names where they differ from Reactor's (2026-11-24; recorded `applied` in `tools/naming/renames.json`;
   existing Reactor names are renamed by #46), callbacks keeping the `On` prefix and `VStack`/`HStack` kept as Reactor's
-  shortcuts for `StackPanel`; add a factory when its control arrives. Doc C# blocks must be `#region`s of the test project, or of spike J
-  (`spikes/J-third-party`) for the guide to writing controls (`DocSnippetTests`).
+  shortcuts for `StackPanel`; add a factory when its control arrives. Doc C# blocks must be `#region`s of the test project,
+  or of spike J (`spikes/J-third-party`) for the guide to writing controls (`DocSnippetTests`).
 - **Member drops stay text-based** (the lexer in `tools/sync/lib/csharp.mjs`; #4, 2026-11-24). A `roslyn` rule kind
   (drop-member, retarget-type, drop-attribute; `tools/sync/roslyn`, run before the text rules) complements them for new
   rules, and `syntaxCheck` makes every C# file a rule changes still parse. `tools/sync` therefore needs dotnet.
