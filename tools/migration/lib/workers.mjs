@@ -51,7 +51,7 @@ export class Worker {
     this.out += chunk;
     let at;
     while ((at = this.out.indexOf('\n')) >= 0) {
-      const line = this.out.slice(0, at).replace(/\r$/, '');
+      const line = this.out.slice(0, at);
       this.out = this.out.slice(at + 1);
       if (!line.trim()) continue;
       const p = this.pending.shift();
