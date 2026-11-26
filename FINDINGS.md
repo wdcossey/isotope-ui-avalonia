@@ -344,7 +344,7 @@ Measured: 1258 library tests on each of net9.0, net10.0 and net11.0; spike J's p
     into a run. The reconciler writes one or the other.
   - Any change to a text block's inlines (a run's text, a brush, a move) lays the text out again and takes each inline
     UI child out of the visual tree and back: the control and its state survive, its keyboard focus doesn't. Upstream's
-    demo of a slider dragged inside text whose numbers change may lose the drag on Avalonia (real-window check: #73).
+    demo of a slider dragged inside text whose numbers change may lose the drag on Avalonia (not checked in #73's real-window run: #99).
   - `TextDecorations.Underline` and `.Strikethrough` are shared static collections; the `Underline` span is underlined
     by default.
 - **Not done:** `Hyperlink` (no hyperlink inline in Avalonia; the migration points to `InlineUIContainer(HyperlinkButton(...))`),
@@ -946,7 +946,9 @@ Measured: 1258 library tests on each of net9.0, net10.0 and net11.0; spike J's p
 - **`ReactorHostControl`** (`Isotope.UI.Hosting`) renders a root component into any Avalonia layout, coalescing re-renders
   per dispatcher pass and surfacing render errors. `ReactorApp.Run(AppBuilder, …)` runs one window. Isotope.UI.Avalonia.Desktop adds upstream's `Run<TRoot>(title, width, height)` and `Run(title, render, …)` over a default builder (#32).
 - **Sample app:** `samples/Isotope.UI.Samples` (a tab per area, #16 and #30; `SampleAppTests` drive each page headless; the real-window checklist is in its README); CI builds it. Every line of the
-  checklist passed in a real window on Windows (#34, 2026-11-24); Linux and macOS haven't been run in a real window.
+  checklist passed in a real window on Windows (#34, 2026-11-24; the Rich text and Icons pages and the page list on
+  2026-11-26 at `cf10271`, #73 and #92: a button inside text loses focus after each press, as measured headless; the
+  single-colour bitmap icon's edges aren't smooth, #98); Linux and macOS haven't been run in a real window.
 - **Tests:** 756 (16 new, all proven to fail). A flaky test, caused by an unobserved task exception after a dispatcher
   error, was found and fixed.
 

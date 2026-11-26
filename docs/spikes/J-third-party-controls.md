@@ -63,7 +63,8 @@ all build]. Unlike an app calling `ReactorApp.Run` (a C# 14 extension member), a
 
 `node spikes/J-third-party/run.mjs --packages <packed folder>`, 3 invocations in a row on the same machine, on the final
 spike: 55 to 56 s each (`dotnet build` with `--no-incremental`, then `dotnet test`, then 8 probe builds), all three
-exit 0 with the same results. A fresh clone of the branch, packing its own packages (`run.mjs` with no `--packages`,
+exit 0 with the same results. Since 2026-11-26 it runs one `dotnet test -f` per framework (their output interleaved on
+ubuntu-latest when run together); one run then took 54 s on the same machine. A fresh clone of the branch, packing its own packages (`run.mjs` with no `--packages`,
 version `0.1.0-preview.0.75`), took 65 s with the same results:
 
 | | net9.0 | net10.0 | net11.0 |
