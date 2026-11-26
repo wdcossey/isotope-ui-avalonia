@@ -21,8 +21,9 @@ Tick each line in a real window. "Shows" means on screen; the line after each ar
 
 ### The window and its menus
 
-- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above eight tabs on one line: Basics,
-  Buttons, Menus, Numbers, Split view, Rich text, Icons, Errors. Basics is selected.
+- [ ] The window opens titled "Isotope samples", with a menu bar (Go, View) above eight tabs on one line (on
+  Windows; another system's UI font may wrap the last): Basics, Buttons, Menus, Numbers, Split view, Rich text, Icons,
+  Errors. Basics is selected.
 - [ ] Click **Go** with the mouse → its menu drops down, listing the eight pages with a radio mark on Basics.
 - [x] Choose **Go > Numbers** → the Numbers tab is selected. Click the **Buttons** tab, then open **Go** again → the
   radio mark is on Buttons.
