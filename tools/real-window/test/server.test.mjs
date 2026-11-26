@@ -250,7 +250,7 @@ test('P, F and S answer the focused line, but never from a field, with a modifie
   assert.equal(verdict('p', on('DIV')), null, 'after Finish');
 });
 
-test('once Finish is confirmed, the page sends no more answers, even before the finish is answered', async () => {
+test('once Finish is confirmed, the page sends no more answers, even before the finish is answered', { timeout: 15000 }, async () => {
   const listeners = {}, sent = [];
   const el = () => ({ textContent: '', value: '', max: 0, disabled: false, classList: { add() {}, remove() {}, toggle() {} } });
   const document = {
@@ -268,7 +268,8 @@ test('once Finish is confirmed, the page sends no more answers, even before the 
   listeners.click({ target: { id: 'finish', closest: () => null } });
   await new Promise((r) => setTimeout(r, 20));
   assert.deepEqual(sent, ['/answer', '/finish']);
-  assert.equal(await context.answer(line, 'fail'), false);
+  // Refused at once; an answer queued behind the finish would still be waiting.
+  assert.equal(await Promise.race([context.answer(line, 'fail'), new Promise((r) => setTimeout(() => r('queued'), 200))]), false);
   assert.equal(context.shortcut({ key: 'p', target: { tagName: 'DIV', closest: () => line } }), null);
   assert.deepEqual(sent, ['/answer', '/finish']);
 });
