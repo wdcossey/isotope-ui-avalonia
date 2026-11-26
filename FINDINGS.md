@@ -145,6 +145,25 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Generator diagnostics for library records (issue #78, 2026-11-25)
+
+Spike J's gaps 2 and 3 are closed in our generator partial (`WrapperGenerator.Avalonia.cs`, five `gen-*` transform rules).
+In descriptor-only mode:
+- `ISOTOPEGEN002` (error, at the member): an `On{X}` callback the descriptor never wires (no routed event, `[WrapEvent]`
+  event or controlled value). A callback the author wires isn't reported: `[WrapManual]` on it, or its event or value
+  `[WrapManual]` or `Exclude`d, as Isotope's own records do (`AutoCompleteBoxElement` marks its two Reactor-named callbacks).
+  The record's own members are checked as the generator's event filter matches them (any accessibility, property or
+  field); a delegate callback a base record declares, which the descriptor never wires, is reported too.
+- `ISOTOPEGEN003` (error, at the member): a wired callback whose delegate can't take what the event passes (nothing for a
+  routed event; the args or the `[WrapEvent]` Arg/Args). The event is then left unwired, so no error lands in the `.g.cs`.
+- `ISOTOPEGEN004` (error, at the attribute): `[WrapDecorator]` and `[WrapPolymorphic]` aren't supported on Isotope yet
+  (their handler needs engine members left out in Spike F); nothing is generated.
+- A record without a `Setters` it can reach (a property or field, not another assembly's internal or a base's private one)
+  of a type that converts to `Action<TControl>[]` gets a descriptor that doesn't read them, as upstream's polymorphic
+  path already checks for the member; no diagnostic.
+Not covered: a controlled value's `On{P}Changed` with the wrong delegate type still errors inside the generated file.
+Measured: 1258 library tests on each of net9.0, net10.0 and net11.0; spike J's probes as expected on each framework.
+
 ## Samples migration gate (issue #71, 2026-11-25)
 
 - **CI's `samples migration` job** (ubuntu-latest) runs `measure-samples.mjs --check` against
@@ -219,8 +238,8 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
   can clash (CS0121, CS0119). 8 probes pin them (`Probes/probes.json`).
 - **Recommendation:** public-surface and generator changes first, then a "Writing controls for Isotope" guide. The
   migration tool takes no library rename table; that can wait.
-- **In CI:** the `packages` job runs it on the packages it just packed, on Ubuntu and Windows. Follow-ups: #77 (skip
-  parity; closed) and #79 (groups in a vendor's panel; closed), #78 (generator diagnostics), then the guide (#80).
+- **In CI:** the `packages` job runs it on the packages it just packed, on Ubuntu and Windows. Follow-ups, all closed: #77 (skip
+  parity), #79 (groups in a vendor's panel) and #78 (generator diagnostics); next, the guide (#80).
 - Report: `docs/spikes/J-third-party-controls.md`.
 
 ## Rich text (issue #65, 2026-11-25)
