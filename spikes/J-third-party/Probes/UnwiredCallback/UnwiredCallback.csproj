@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- An On{Event} callback for a plain EventHandler event: the build passes with no diagnostic, and the generated descriptor never wires it. Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <!-- An On{Event} callback for a plain EventHandler event, which the descriptor never wires: since #78, ISOTOPEGEN002 at the member (before, a clean build and a silently dropped callback). Built by run.mjs, which checks the outcome in Probes/probes.json. -->
   <ItemGroup>
     <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
   </ItemGroup>

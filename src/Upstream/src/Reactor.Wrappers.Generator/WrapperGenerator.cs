@@ -1,4 +1,4 @@
-// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Generator/WrapperGenerator.cs, last changed upstream in df815e2ce697; transforms: gen-target-base, gen-target-message, gen-uielement, gen-member-walk-cutoff, gen-full-wrapper-cutoffs, gen-routed-event-handler, gen-routed-event-args, gen-panel-children, gen-template-exclusions, gen-polymorphic-textblock, gen-avalonia-property-lookup, gen-avalonia-content-attribute, gen-obsolete-filter, gen-items-host-ilist, gen-items-host-adapter, gen-panel-children-flatten, gen-missing-counterpart-check, gen-missing-counterpart-report, gen-drop-try-register-assembly, gen-reference-clear-channel-of, gen-skip-members, gen-manual-content-slot, namespace-isotope. Do not edit: change the tools/sync rules.
+// Vendored by tools/sync from microsoft/microsoft-ui-reactor (MIT): src/Reactor.Wrappers.Generator/WrapperGenerator.cs, last changed upstream in df815e2ce697; transforms: gen-target-base, gen-target-message, gen-uielement, gen-member-walk-cutoff, gen-full-wrapper-cutoffs, gen-routed-event-handler, gen-routed-event-args, gen-panel-children, gen-template-exclusions, gen-polymorphic-textblock, gen-avalonia-property-lookup, gen-avalonia-content-attribute, gen-obsolete-filter, gen-items-host-ilist, gen-items-host-adapter, gen-panel-children-flatten, gen-missing-counterpart-check, gen-missing-counterpart-report, gen-drop-try-register-assembly, gen-reference-clear-channel-of, gen-skip-members, gen-unsupported-handler, gen-callback-check, gen-setters-if-declared, gen-more-diagnostics-member, gen-more-diagnostics-report, gen-manual-content-slot, namespace-isotope. Do not edit: change the tools/sync rules.
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -92,6 +92,7 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(descriptorModels, static (spc, model) =>
         {
             if (model!.Diagnostic is { } d) spc.ReportDiagnostic(d);
+            if (!model.MoreDiagnostics.IsDefault) foreach (var more in model.MoreDiagnostics) spc.ReportDiagnostic(more); // Isotope (#78)
             if (model.Source is { } src) spc.AddSource(model.HintName!, SourceText.From(src, Encoding.UTF8));
         });
 
@@ -108,6 +109,7 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
         var compilation = ctx.SemanticModel.Compilation;
         var elementName = element.Name;
 
+        if (UnsupportedHandler(element, compilation) is { } unsupportedHandler) return WrapperModel.Error(unsupportedHandler); // Isotope (#78)
         // [WrapPolymorphic(resolve, Reconcile=, EmptySentinel=)] — decorator-style
         // emission (spec 058 §15 / P5.27): the concrete control type is resolved at
         // runtime, so emit an IDecoratorElementHandler that calls the author's
@@ -502,6 +504,8 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
         }
 
         var missingCounterpart = descriptorOnly ? MissingCounterparts(element, control, props, contentProp is null ? null : contentElementName, panelChildren, items, exclude) : null;
+        var callbackCheck = descriptorOnly ? CheckCallbacks(element, control, props, events, exclude, compilation) : default; // Isotope (#78)
+        if (descriptorOnly) events = callbackCheck.Wired;
         var ns = element.ContainingNamespace.IsGlobalNamespace
             ? null
             : element.ContainingNamespace.ToDisplayString();
@@ -541,9 +545,10 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
                 factoryParameters.ToImmutableArray());
 
         if (descriptorOnly) source += SkipMembers(element, compilation); // Isotope (#77): a library's record skips like a built-in
+        if (descriptorOnly) source = WithSettersIfDeclared(element, control, compilation, source); // Isotope (#78)
         var hint = descriptorOnly ? $"{elementName}.Descriptor.g.cs" : $"{elementName}.Wrapper.g.cs";
 
-        return WrapperModel.Ok(hint, source) with { Factory = factory, MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart };
+        return WrapperModel.Ok(hint, source) with { Factory = factory, MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart, MoreDiagnostics = callbackCheck.Diagnostics };
     }
 
     private static ImmutableHashSet<string> ToStringSet(TypedConstant tc)
@@ -1914,6 +1919,8 @@ public sealed partial class WrapperGenerator : IIncrementalGenerator
         public WrapperFactory? Factory { get; init; }
 
         public Diagnostic? MetadataRegistrationDiagnostic { get; init; }
+
+        public ImmutableArray<Diagnostic> MoreDiagnostics { get; init; } // Isotope (#78): the callback checks
 
         public static WrapperModel Ok(string hint, string source) => new(hint, source, null);
         public static WrapperModel OkWithDiagnostic(string hint, string source, Diagnostic d) => new(hint, source, d);

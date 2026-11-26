@@ -10,8 +10,8 @@ public class Chip : ContentControl
     public void Close() => Closed?.Invoke(this, EventArgs.Empty);
 }
 
-// [WrapEvent] passes the whole args (Action<EventArgs>); the record declares Action, so the generated trampoline
-// doesn't compile.
+// [WrapEvent] passes the whole args (Action<EventArgs>); the record declares Action: ISOTOPEGEN003 at OnClosed (#78),
+// where the generated trampoline didn't compile before.
 [GenerateReactorDescriptor(typeof(Chip))]
 [WrapEvent("Closed")]
 public partial record ChipElement(Element Content) : Element

@@ -34,6 +34,8 @@ namespace Isotope.UI.Core;
 [WrapManual("Text")]
 [WrapManual("ItemsSource")]
 [WrapManual("FilterMode")]
+[WrapManual("OnQuerySubmitted")] // wired in Customize: no Avalonia event matches (ISOTOPEGEN002)
+[WrapManual("OnSuggestionChosen")]
 public partial record AutoCompleteBoxElement(
     Optional<string> Text = default,
     Action<string>? OnTextChanged = null,

@@ -1,5 +1,5 @@
 {
-  "$comment": "Spike J's probes (#75): what each must do when run.mjs builds it, on each framework. 'fail': the build must report each of 'diagnostics' (as errors; 'inGenerated': in a generated file). 'pass': it must build with no warning or error, the generated sources must hold the descriptor of 'record', and must not hold 'generatedLacks'.",
+  "$comment": "Spike J's probes (#75): what each must do when run.mjs builds it, on each framework. 'fail': the build must report each of 'diagnostics' (as errors; 'inGenerated': in a generated file; 'atRecord': no error in a generated file, #78). 'pass': it must build with no warning or error, the generated sources must hold the descriptor of 'record', and must not hold 'generatedLacks'.",
   "probes": [
     {
       "name": "Gen001",
@@ -10,33 +10,33 @@
     },
     {
       "name": "NoSetters",
-      "expect": "fail",
-      "diagnostics": [
-        "CS1061"
-      ],
-      "inGenerated": true
+      "expect": "pass",
+      "generatedLacks": "GetSetters",
+      "record": "PlainRatingElement"
     },
     {
       "name": "UnwiredCallback",
-      "expect": "pass",
-      "generatedLacks": "el.OnClosed",
-      "record": "ChipElement"
+      "expect": "fail",
+      "diagnostics": [
+        "ISOTOPEGEN002"
+      ],
+      "atRecord": true
     },
     {
       "name": "WrapEventMismatch",
       "expect": "fail",
       "diagnostics": [
-        "CS1501"
+        "ISOTOPEGEN003"
       ],
-      "inGenerated": true
+      "atRecord": true
     },
     {
       "name": "Decorator",
       "expect": "fail",
       "diagnostics": [
-        "CS0117"
+        "ISOTOPEGEN004"
       ],
-      "inGenerated": true
+      "atRecord": true
     },
     {
       "name": "InternalOverride",

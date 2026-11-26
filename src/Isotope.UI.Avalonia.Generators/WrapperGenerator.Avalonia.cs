@@ -214,6 +214,213 @@ public sealed partial class WrapperGenerator
         return sb.ToString();
     }
 
+    private static readonly DiagnosticDescriptor UnwiredCallback = new(
+        id: "ISOTOPEGEN002",
+        title: "Record callback is never wired",
+        messageFormat: "'{0}' declares callback '{1}', but {2}, so the descriptor would never call it. {3}",
+        category: "Isotope.Wrappers",
+        defaultSeverity: DiagnosticSeverity.Error, // as ISOTOPEGEN001: a silent drop is what this catches
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor CallbackMismatch = new(
+        id: "ISOTOPEGEN003",
+        title: "Record callback doesn't take what its event passes",
+        messageFormat: "'{0}' declares '{1}' as '{2}', but the descriptor calls it with {3} when '{4}' fires. Declare it as '{5}'{6}.",
+        category: "Isotope.Wrappers",
+        defaultSeverity: DiagnosticSeverity.Error, // the generated call wouldn't compile
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnsupportedHandlerAttribute = new(
+        id: "ISOTOPEGEN004",
+        title: "Decorator records aren't supported on Isotope yet",
+        messageFormat: "'{0}' has [{1}], which Isotope doesn't support yet: the handler it generates needs engine members Isotope doesn't have. Remove it and map the control's properties with [GenerateReactorDescriptor] (writing the rest in Setters or Customize), or wrap the control in a component.",
+        category: "Isotope.Wrappers",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Our rule (#78): <c>[WrapDecorator]</c> and <c>[WrapPolymorphic]</c> generate a handler that calls engine members
+    /// Isotope left out (Spike F, tier 3), so the error was reported inside the generated file. Reported at the attribute
+    /// instead, and nothing is generated. Null when the record has neither.
+    /// </summary>
+    private static Diagnostic? UnsupportedHandler(INamedTypeSymbol element, Compilation compilation)
+    {
+        foreach (var name in new[] { "WrapDecorator", "WrapPolymorphic" })
+        {
+            if (compilation.GetTypeByMetadataName("Isotope.UI.Wrappers." + name + "Attribute") is not { } symbol) continue;
+            var attr = element.GetAttributes().FirstOrDefault(a => SymbolEqualityComparer.Default.Equals(a.AttributeClass, symbol));
+            if (attr is null) continue;
+            var location = attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? element.Locations.FirstOrDefault();
+            return Diagnostic.Create(UnsupportedHandlerAttribute, location, element.Name, name);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Our rule (#78), descriptor-only mode: checks the record's <c>On{X}</c> delegate members against what the
+    /// descriptor wires. A wired event whose callback can't take what the generated trampoline passes is reported at the
+    /// member (ISOTOPEGEN003) and left unwired, so the error isn't inside the generated file. A callback the descriptor
+    /// wires to nothing (a plain <c>EventHandler</c> event, a name the control lacks) is reported (ISOTOPEGEN002):
+    /// upstream drops it silently, as it does a callback a base record declares. A callback the author took over isn't
+    /// reported (<see cref="TakenOver"/>). The record's own members are checked as the generator's event filter matches
+    /// them: any accessibility, a property or a field.
+    /// </summary>
+    private static (ImmutableArray<EventInfo> Wired, ImmutableArray<Diagnostic> Diagnostics) CheckCallbacks(
+        INamedTypeSymbol element, INamedTypeSymbol control, ImmutableArray<PropInfo> props, ImmutableArray<EventInfo> events,
+        ImmutableHashSet<string> exclude, Compilation compilation)
+    {
+        // The record's own On{X} members, as the generator's event filter matches them (any accessibility, a property or a
+        // field), then the delegate callbacks its base records below Element declare, which the descriptor never wires.
+        var callbacks = new Dictionary<string, (ISymbol Member, ITypeSymbol Type, bool Own)>(System.StringComparer.Ordinal);
+        for (INamedTypeSymbol? t = element; t is not null && t.SpecialType != SpecialType.System_Object
+            && t.ToDisplayString(Fqn) != "global::Isotope.UI.Core.Element"; t = t.BaseType)
+        {
+            var own = SymbolEqualityComparer.Default.Equals(t, element);
+            foreach (var m in t.GetMembers())
+            {
+                if (m.IsStatic || m.IsImplicitlyDeclared || !IsCallbackName(m.Name) || callbacks.ContainsKey(m.Name)) continue;
+                var type = m switch { IPropertySymbol { IsIndexer: false } p => p.Type, IFieldSymbol f => f.Type, _ => null };
+                if (type is null) continue;
+                if (!own && (type.TypeKind != TypeKind.Delegate || !compilation.IsSymbolAccessibleWithin(m, element))) continue;
+                callbacks[m.Name] = (m, type, own);
+            }
+        }
+
+        Location? At(ISymbol m) => m.Locations.FirstOrDefault(l => l.IsInSource && l.SourceTree is { } tree && compilation.ContainsSyntaxTree(tree))
+            ?? element.Locations.FirstOrDefault();
+
+        var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+        var wired = ImmutableArray.CreateBuilder<EventInfo>();
+        var handled = new HashSet<string>(props.Where(p => p.Controlled).Select(p => "On" + p.Name + "Changed"), System.StringComparer.Ordinal);
+        foreach (var e in events)
+        {
+            var name = "On" + e.Name;
+            handled.Add(name);
+            // Checked even when the author takes the callback over: the generated trampoline still calls it.
+            if (!callbacks.TryGetValue(name, out var cb) || !cb.Own
+                || PassedTypes(control, e) is not { } passed || Accepts(cb.Type, passed, compilation))
+            {
+                wired.Add(e);
+                continue;
+            }
+            var args = passed.Length == 0
+                ? "no arguments"
+                : "(" + string.Join(", ", passed.Select(t => t.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat))) + ")";
+            var expected = passed.Length == 0
+                ? "Action"
+                : "Action<" + string.Join(", ", passed.Select(t => t.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat))) + ">";
+            diagnostics.Add(Diagnostic.Create(CallbackMismatch, At(cb.Member),
+                element.Name, name, cb.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), args,
+                control.Name + "." + e.Name, expected, e.Typed ? ", or give [WrapEvent] the Arg or Args to pass" : ""));
+        }
+
+        var controlName = control.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+        foreach (var entry in callbacks.OrderBy(c => c.Key, System.StringComparer.Ordinal))
+        {
+            var (name, cb) = (entry.Key, entry.Value);
+            if (cb.Type.TypeKind != TypeKind.Delegate || handled.Contains(name) || TakenOver(name, exclude)) continue;
+            var x = name.Substring(2);
+            string reason, advice;
+            if (!cb.Own)
+            {
+                reason = $"it is declared on the base record '{cb.Member.ContainingType.Name}', and the descriptor wires only the record's own members";
+                advice = $"Declare it on '{element.Name}' itself, or mark it [WrapManual(\"{name}\")] and wire it in Customize.";
+            }
+            else if (FindEvent(control, x) is { } argsType)
+            {
+                reason = $"'{controlName}.{x}' passes {argsType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}, not RoutedEventArgs, so it isn't wired without [WrapEvent]";
+                advice = $"Add [WrapEvent(\"{x}\")] (the callback then takes the event's args, or the ones Arg or Args name), or mark it [WrapManual(\"{name}\")] and wire it in Customize.";
+            }
+            else
+            {
+                reason = $"'{controlName}' has no routed event, [WrapEvent] event or controlled property it maps to";
+                advice = $"Name it after a routed event of the control, add [WrapEvent(\"{x}\")] for a plain .NET event (the callback then takes the event's args), or mark it [WrapManual(\"{name}\")] and wire it in Customize.";
+            }
+            diagnostics.Add(Diagnostic.Create(UnwiredCallback, At(cb.Member), element.Name, name, reason, advice));
+        }
+        return (wired.ToImmutable(), diagnostics.ToImmutable());
+    }
+
+    // The args type of the control's public event of that name, when its args aren't RoutedEventArgs (which the generator
+    // wires with no [WrapEvent]); null when there is no such event.
+    private static ITypeSymbol? FindEvent(INamedTypeSymbol control, string name)
+    {
+        for (INamedTypeSymbol? t = control; t is not null; t = t.BaseType)
+            foreach (var evt in t.GetMembers(name).OfType<IEventSymbol>())
+                if (!evt.IsStatic && evt.DeclaredAccessibility == Accessibility.Public
+                    && (evt.Type as INamedTypeSymbol)?.DelegateInvokeMethod?.Parameters is { Length: 2 } ps
+                    && ps[1].Type.ToDisplayString(Fqn) != "global::Avalonia.Interactivity.RoutedEventArgs")
+                    return ps[1].Type;
+        return null;
+    }
+
+    // A callback the author wires: the member itself, its event On{X} or its value On{P}Changed is [WrapManual] or
+    // Exclude'd (Isotope's own records exclude the event they wire in Customize, or take the value over).
+    private static bool TakenOver(string name, ImmutableHashSet<string> exclude)
+    {
+        var x = name.Substring(2);
+        return exclude.Contains(name) || exclude.Contains(x)
+            || (x.Length > 7 && x.EndsWith("Changed", System.StringComparison.Ordinal) && exclude.Contains(x.Substring(0, x.Length - 7)));
+    }
+
+    // The types the generated trampoline passes to the callback (Emit: none for an untyped event, else the whole args or
+    // the [WrapEvent] Arg/Args projections). Null when they can't be resolved (upstream's WrapEventAnalyzer reports those).
+    private static ITypeSymbol[]? PassedTypes(INamedTypeSymbol control, EventInfo e)
+    {
+        if (!e.Typed) return [];
+        IEventSymbol? evt = null;
+        for (INamedTypeSymbol? t = control; t is not null && evt is null; t = t.BaseType)
+            evt = t.GetMembers(e.Name).OfType<IEventSymbol>().FirstOrDefault();
+        if ((evt?.Type as INamedTypeSymbol)?.DelegateInvokeMethod?.Parameters is not { Length: 2 } ps) return null;
+        var argsType = ps[1].Type;
+        if (e.ArgProperties.IsDefaultOrEmpty) return [argsType];
+        var types = new ITypeSymbol[e.ArgProperties.Length];
+        for (int i = 0; i < types.Length; i++)
+        {
+            IPropertySymbol? prop = null;
+            for (ITypeSymbol? t = argsType; t is not null && prop is null; t = t.BaseType)
+                prop = t.GetMembers(e.ArgProperties[i]).OfType<IPropertySymbol>().FirstOrDefault(p => !p.IsStatic);
+            if (prop is null) return null;
+            types[i] = prop.Type;
+        }
+        return types;
+    }
+
+    // The callback's delegate takes the passed values, in order, by implicit conversion (as the C# call would).
+    private static bool Accepts(ITypeSymbol callback, ITypeSymbol[] passed, Compilation compilation)
+    {
+        if (callback is not INamedTypeSymbol { TypeKind: TypeKind.Delegate, DelegateInvokeMethod: { } invoke }) return false;
+        if (invoke.Parameters.Length != passed.Length) return false;
+        for (int i = 0; i < passed.Length; i++)
+            if (invoke.Parameters[i].RefKind != RefKind.None || !compilation.ClassifyCommonConversion(passed[i], invoke.Parameters[i].Type).IsImplicit)
+                return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Our rule (#78), descriptor-only mode: the descriptor reads <c>e.Setters</c> only when the record (or a base
+    /// record) declares one it can reach, a property (as upstream's polymorphic path checks) or a field, of type
+    /// <c>Action&lt;TControl&gt;[]</c>. A record without it built with an error
+    /// inside the generated file; <c>GetSetters</c> is optional on the descriptor.
+    /// </summary>
+    private static string WithSettersIfDeclared(INamedTypeSymbol element, INamedTypeSymbol control, Compilation compilation, string source)
+    {
+        var strip = source.Replace("            GetSetters = static e => e.Setters," + System.Environment.NewLine, "");
+        var expected = compilation.GetTypeByMetadataName("System.Action`1") is { } action
+            ? compilation.CreateArrayTypeSymbol(action.Construct(control))
+            : null;
+        // The member e.Setters binds to: the most derived one the record can reach (another assembly's internal one isn't).
+        for (INamedTypeSymbol? t = element; t is not null && t.SpecialType != SpecialType.System_Object; t = t.BaseType)
+            foreach (var m in t.GetMembers("Setters"))
+            {
+                if (m.IsStatic || !compilation.IsSymbolAccessibleWithin(m, element)) continue;
+                var type = m switch { IPropertySymbol p => p.Type, IFieldSymbol f => f.Type, _ => null };
+                if (type is null) continue;
+                return expected is not null && compilation.ClassifyCommonConversion(type, expected).IsImplicit ? source : strip;
+            }
+        return strip;
+    }
+
     // On{X}, the callbacks' names (tools/naming/README.md).
     private static bool IsCallbackName(string name) => name.Length > 2 && name.StartsWith("On", System.StringComparison.Ordinal) && char.IsUpper(name[2]);
 

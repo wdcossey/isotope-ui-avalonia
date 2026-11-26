@@ -324,8 +324,8 @@
     {
       "id": "gen-missing-counterpart-report",
       "find": "MetadataRegistrationDiagnostic = metadataDiagnostic \\};",
-      "replace": "MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart };",
-      "why": "Our rule: the descriptor-only output reports the missing-counterpart diagnostic with its source.",
+      "replace": "MetadataRegistrationDiagnostic = metadataDiagnostic, Diagnostic = missingCounterpart, MoreDiagnostics = callbackCheck.Diagnostics };",
+      "why": "Our rule: the descriptor-only output reports the missing-counterpart diagnostic with its source, and (#78) the callback diagnostics as MoreDiagnostics (gen-more-diagnostics-member), from the callbackCheck variable gen-callback-check declares, so it depends on that rule.",
       "files": [
         "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
       ]
@@ -353,6 +353,51 @@
       "find": "(\\r?\\n)(        var hint = descriptorOnly \\? )",
       "replace": "$1        if (descriptorOnly) source += SkipMembers(element, compilation); // Isotope (#77): a library's record skips like a built-in$1$2",
       "why": "Our rule (#77): in descriptor-only mode a record outside the library that declares Element gets ShallowEqualsCore and HasCallbacks (WrapperGenerator.Avalonia.cs), so it is skipped when it equals the last render's, as a built-in record is (upstream's rule). The library's own records get nothing: their Element.ShallowEquals arms decide.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-unsupported-handler",
+      "find": "(\\r?\\n)(        // \\[WrapPolymorphic\\(resolve, Reconcile=, EmptySentinel=\\)\\] — decorator-style)",
+      "replace": "$1        if (UnsupportedHandler(element, compilation) is { } unsupportedHandler) return WrapperModel.Error(unsupportedHandler); // Isotope (#78)$1$2",
+      "why": "Our rule (#78): [WrapDecorator] and [WrapPolymorphic] generate a handler that calls engine members Isotope left out (Spike F, tier 3), so the author saw CS0117 inside the generated file. Now it's ISOTOPEGEN004 at the attribute, and nothing is generated (WrapperGenerator.Avalonia.cs).",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-callback-check",
+      "find": "(\\r?\\n)(        var ns = element\\.ContainingNamespace\\.IsGlobalNamespace)",
+      "replace": "$1        var callbackCheck = descriptorOnly ? CheckCallbacks(element, control, props, events, exclude, compilation) : default; // Isotope (#78)$1        if (descriptorOnly) events = callbackCheck.Wired;$1$2",
+      "why": "Our rule (#78), descriptor-only mode: an On{X} callback the descriptor wires to nothing was dropped silently (ISOTOPEGEN002), and one whose delegate can't take what its event passes gave CS1501 inside the generated file (ISOTOPEGEN003, and the event is left unwired). Both are reported at the member (WrapperGenerator.Avalonia.cs). Applied after gen-missing-counterpart-check, so it follows that line.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-setters-if-declared",
+      "find": "(\\r?\\n)(        var hint = descriptorOnly \\? )",
+      "replace": "$1        if (descriptorOnly) source = WithSettersIfDeclared(element, control, compilation, source); // Isotope (#78)$1$2",
+      "why": "Our rule (#78), descriptor-only mode: the descriptor reads e.Setters only when the record declares it, as upstream's polymorphic path already checks; a record without it gave CS1061 inside the generated file. GetSetters is optional on the descriptor (WrapperGenerator.Avalonia.cs). Applied after gen-skip-members, so it follows that line.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-more-diagnostics-member",
+      "find": "(\\r?\\n)(        public Diagnostic\\? MetadataRegistrationDiagnostic \\{ get; init; \\})",
+      "replace": "$1$2$1$1        public ImmutableArray<Diagnostic> MoreDiagnostics { get; init; } // Isotope (#78): the callback checks",
+      "why": "Our rule (#78): a model can carry more than one of our diagnostics (each callback the check reports), beside upstream's single Diagnostic.",
+      "files": [
+        "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
+      ]
+    },
+    {
+      "id": "gen-more-diagnostics-report",
+      "find": "(            if \\(model!\\.Diagnostic is \\{ \\} d\\) spc\\.ReportDiagnostic\\(d\\);)(\\r?\\n)(            if \\(model\\.Source is)",
+      "replace": "$1$2            if (!model.MoreDiagnostics.IsDefault) foreach (var more in model.MoreDiagnostics) spc.ReportDiagnostic(more); // Isotope (#78)$2$3",
+      "why": "Our rule (#78): the descriptor-only output reports the model's MoreDiagnostics (gen-more-diagnostics-member).",
       "files": [
         "src/Reactor.Wrappers.Generator/WrapperGenerator.cs"
       ]

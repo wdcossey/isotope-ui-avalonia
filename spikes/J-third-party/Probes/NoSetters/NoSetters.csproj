@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- A record without the Setters member the generated descriptor reads: the error is reported inside the generated file. Built by run.mjs, which checks the outcome in Probes/probes.json. -->
+  <!-- A record without a Setters member: since #78 the descriptor reads Setters only when the record declares them, so it builds clean (before, CS1061 inside the generated file). Built by run.mjs, which checks the outcome in Probes/probes.json. -->
   <ItemGroup>
     <PackageReference Include="Isotope.UI.Avalonia" Version="$(IsotopeVersion)" />
     <ProjectReference Include="..\..\Vendor.Controls\Vendor.Controls.csproj" />

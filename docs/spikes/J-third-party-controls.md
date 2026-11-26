@@ -9,7 +9,11 @@ judgements are marked [J].
 through `Element.ShallowEqualsCore` and `HasCallbacks`, which the bundled generator writes (gap 1). A token is resolved
 for a library's control with no new API (gap 6). The spike's two `Gap_vendor_...` tests became
 `Vendor_a_rejected_edit_stays_...` and `Vendor_an_unchanged_element_is_skipped`, and the `InternalOverride` and
-`InternalEquality` probes were updated. The measurements below are the spike's own, from before #77, except where marked.
+`InternalEquality` probes were updated. Gaps 2 and 3 are closed by #78 (2026-11-25): the bundled generator reports a
+callback it never wires (`ISOTOPEGEN002`), a callback that can't take what its event passes (`ISOTOPEGEN003`) and
+`[WrapDecorator]` / `[WrapPolymorphic]` (`ISOTOPEGEN004`) at the record, with nothing wrong left in a generated file, and
+a record without `Setters` builds. The `NoSetters`, `UnwiredCallback`, `WrapEventMismatch` and `Decorator` probes were
+updated. The measurements below are the spike's own, from before #77, except where marked.
 
 ## Answer
 
@@ -99,10 +103,10 @@ Proven to fail with the behaviour broken (on the committed spike, net10.0, each 
 | Probe | What it is | Result |
 |---|---|---|
 | `Gen001` | A record member with no counterpart on the control | **ISOTOPEGEN001**, an error at the record, as inside the repo |
-| `NoSetters` | A record with no `Setters` member | CS1061 **inside the generated file**: the descriptor reads `e.Setters` unconditionally |
-| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never wires `OnClosed`: the callback is silently dropped (since #77 the generated skip members name it, so the probe looks for the descriptor's wiring, `el.OnClosed`) |
-| `WrapEventMismatch` | The same with `[WrapEvent("Closed")]` | CS1501 inside the generated file: `[WrapEvent]` passes the args, so the callback must be `Action<EventArgs>` |
-| `Decorator` | `[WrapDecorator]` (a control made and changed by the author's own methods) | CS0117 inside the generated file: `Reconciler.SetElementTag`, `DetachReactorState` and `ControlRegistry.RegisterDecorator` don't exist (decorators were left out in Spike F, tier 3) |
+| `NoSetters` | A record with no `Setters` member | CS1061 **inside the generated file**: the descriptor reads `e.Setters` unconditionally. **Since #78:** builds clean, and the descriptor has no `GetSetters` |
+| `UnwiredCallback` | `Action? OnClosed` for a plain `EventHandler Closed` event | **builds clean**, and the generated descriptor never wires `OnClosed`: the callback is silently dropped (since #77 the generated skip members name it, so the probe looks for the descriptor's wiring, `el.OnClosed`). **Since #78:** **ISOTOPEGEN002**, an error at `OnClosed` |
+| `WrapEventMismatch` | The same with `[WrapEvent("Closed")]` | CS1501 inside the generated file: `[WrapEvent]` passes the args, so the callback must be `Action<EventArgs>`. **Since #78:** **ISOTOPEGEN003** at `OnClosed`, saying so, and the event isn't wired |
+| `Decorator` | `[WrapDecorator]` (a control made and changed by the author's own methods) | CS0117 inside the generated file: `Reconciler.SetElementTag`, `DetachReactorState` and `ControlRegistry.RegisterDecorator` don't exist (decorators were left out in Spike F, tier 3). **Since #78:** **ISOTOPEGEN004** at the attribute, and nothing is generated |
 | `InternalOverride` | `override HasCallbacks`, as built-in records do | CS0115: internal. **Since #77:** the record overrides the protected `HasCallbacks` and `ShallowEqualsCore` and builds clean, and the generator writes neither |
 | `InternalEquality` | Calling `Element.ShallowEquals` | CS0117: internal. **Since #77:** still CS0117, and CS0122 for a call to the protected `ShallowEqualsCore` from outside the record |
 | `NameClash` | A second `Card(Element)` factory beside Isotope's, and `RatingBar.ValueProperty` with the factory imported | CS0121 (ambiguous call) and CS0119 (the factory hides the control type) |
@@ -124,16 +128,21 @@ error: in one project only CS0115 was reported.
      with the generator emitting both in descriptor-only mode (the record's mapped members, `Setters` by reference, and
      which callbacks are present). Library: `Seam/Element.cs`; generator: `WrapperGenerator.Avalonia.cs`. [J: the
      generator already knows the mapped members, so a record author writes nothing.]
-2. **A callback silently never wired.** In descriptor-only mode an `On{Event}` member is wired only for a routed event
+2. **Closed by #78.** **A callback silently never wired.** In descriptor-only mode an `On{Event}` member is wired only for a routed event
    (`EventHandler<RoutedEventArgs>`), a `[WrapEvent]`, or a controlled value's change event. A plain `EventHandler` or
    another delegate gets nothing, and `ISOTOPEGEN001` skips delegate members (`UnwiredCallback`).
    - **Change:** `ISOTOPEGEN001` (or a new ID) also reports an `On{X}` delegate member that the descriptor doesn't wire,
      saying to use a routed event or `[WrapEvent]`. Our partial, `WrapperGenerator.Avalonia.cs`.
-3. **Errors reported inside generated files** (`NoSetters`, `WrapEventMismatch`, `Decorator`): the author sees a
+   - **#78:** `ISOTOPEGEN002`, an error at the member. A callback the author wires (`[WrapManual]` on it, or its event or
+     value `[WrapManual]` or `Exclude`d, as Isotope's own records do) isn't reported.
+3. **Closed by #78.** **Errors reported inside generated files** (`NoSetters`, `WrapEventMismatch`, `Decorator`): the author sees a
    CS error in a `.g.cs` they didn't write.
    - **Change:** diagnostics at the record: a missing `Setters` (or emit `GetSetters` only when the member exists, as
      the polymorphic path already checks), a callback type that doesn't match the event, and `[WrapDecorator]` /
      `[WrapPolymorphic]` not supported on Isotope yet. Our partial.
+   - **#78:** the descriptor reads `Setters` only when the record declares them (no diagnostic: `Setters` is optional, as
+     on the polymorphic path); `ISOTOPEGEN003` at a callback whose delegate can't take what its event passes, which is
+     then left unwired; `ISOTOPEGEN004` at `[WrapDecorator]` or `[WrapPolymorphic]`, with nothing generated.
 4. **Closed by #79: the generated `Panel` children strategy flattens groups** (`PanelChildren.Of`, a
    public helper beside `ItemsList`; `Reconciler.Flatten` stays internal), and the test now asserts the children mount.
    As found: **a `Group` inside a third party's panel throws** `NotSupportedException` ("A GroupElement is flattened into its
@@ -180,7 +189,7 @@ porting to Isotope would need its own record, member and factory renames applied
 
 1. Public surface and generator first, as four follow-up issues:
    - Gap 1, the skip for a third party's element: `Element` and the generator;
-   - Gaps 2 and 3, diagnostics at the record: the generator partial only;
+   - Gaps 2 and 3, diagnostics at the record: the generator partial only (done, #78);
    - Gap 4, flattening in the generated panel strategy (done, #79);
    - Gap 6, the public `ThemeRef.Resolve` overload (or fold it into the guide's issue if you'd rather not widen the API).
 2. Then the guide, "Writing controls for Isotope", with the spike's library as its worked example: the record rules

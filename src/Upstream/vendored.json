@@ -163,10 +163,15 @@
         "gen-drop-try-register-assembly",
         "gen-reference-clear-channel-of",
         "gen-skip-members",
+        "gen-unsupported-handler",
+        "gen-callback-check",
+        "gen-setters-if-declared",
+        "gen-more-diagnostics-member",
+        "gen-more-diagnostics-report",
         "gen-manual-content-slot",
         "namespace-isotope"
       ],
-      "sha256": "b229d6eee91c484483d09edc72ed3587e74158504012bfaf5988f693a27a6cc8"
+      "sha256": "f1733e25735e099a89d9366a07591117626670505597cebf8edc9867ad71b912"
     },
     {
       "path": "src/Reactor.Wrappers.Generator/WrapperIncludeExcludeAnalyzer.cs",
