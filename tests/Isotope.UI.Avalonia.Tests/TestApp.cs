@@ -12,8 +12,8 @@ using Xunit;
 // record builds its descriptor, which registers its control's properties (here and in upstream's vendored tests), and
 // a test that makes a control gets a dispatcher of its own. Run beside the session, those gave two properties one id
 // (an InvalidCastException in Button.OnPropertyChanged, then failures in unrelated tests) and a setup that failed
-// Dispatcher.VerifyAccess. The session runs every headless test on its one thread anyway: only the plain tests lose
-// their overlap with it.
+// Dispatcher.VerifyAccess. The session already ran the headless tests one at a time on its one thread; now the plain
+// tests run one at a time too, between them.
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace Isotope.UI.Avalonia.Tests;
