@@ -13,7 +13,9 @@ using Xunit;
 // a test that makes a control gets a dispatcher of its own. Run beside the session, those gave two properties one id
 // (an InvalidCastException in Button.OnPropertyChanged, then failures in unrelated tests) and a setup that failed
 // Dispatcher.VerifyAccess. The session already ran the headless tests one at a time on its one thread; now the plain
-// tests run one at a time too, between them.
+// tests run one at a time too, between them. Their order doesn't matter: a headless test's setup first clears the
+// dispatcher binding a plain test may have left (Dispatcher.ResetBeforeUnitTests). Running tests in parallel again
+// brings #105 back.
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace Isotope.UI.Avalonia.Tests;
