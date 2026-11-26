@@ -54,15 +54,19 @@ try {
   // 1. The tests, on each framework. No build servers: one kept alive would hold DLLs in the packages folder.
   let r = run('dotnet', ['build', 'Vendor.Controls.Tests', '--no-incremental', '--disable-build-servers', '-nologo', '-v:q'], { env });
   if (r.status !== 0) throw new Error('the vendor library or its tests did not build (exit ' + r.status + ')');
-  r = run('dotnet', ['test', 'Vendor.Controls.Tests', '--no-build', '-nologo', '-v:q', '--logger', 'console;verbosity=minimal'], { env });
+  // One framework at a time: run together, the three test hosts write to one stdout and can interleave their summary
+  // lines, so a result goes missing (seen on ubuntu-latest).
+  let testExit = 0;
   for (const framework of FRAMEWORKS) {
+    r = run('dotnet', ['test', 'Vendor.Controls.Tests', '--no-build', '-f', framework, '-nologo', '-v:q', '--logger', 'console;verbosity=minimal'], { env });
+    if (r.status !== 0) testExit = r.status;
     const m = new RegExp('Failed:\\s*(\\d+), Passed:\\s*(\\d+), Skipped:\\s*(\\d+), Total:\\s*(\\d+).*\\(' + framework.replace('.', '\\.') + '\\)').exec(r.out);
     if (!m) { problems.push('tests: no result for ' + framework); continue; }
     const [failed, passed, , total] = m.slice(1).map(Number);
     lines.push('tests ' + framework + ': ' + passed + ' of ' + total + ' passed');
     if (failed !== 0 || total !== EXPECTED_TESTS) problems.push('tests ' + framework + ': ' + failed + ' failed, ' + total + ' run (' + EXPECTED_TESTS + ' expected)');
   }
-  if (r.status !== 0 && !problems.length) problems.push('dotnet test exited ' + r.status);
+  if (testExit !== 0 && !problems.length) problems.push('dotnet test exited ' + testExit);
 
   // 2. The probes, each built on its own, with the generated sources kept for inspection.
   const spec = JSON.parse(readFileSync(path.join(HERE, 'Probes', 'probes.json'), 'utf8'));
