@@ -63,6 +63,7 @@ no counterpart, and for the stack shortcuts `VStack` and `HStack`. Factory param
 | `TimePicker(selectedTime, onSelectedTimeChanged)` | `TimePickerElement` | `TimePicker` |
 | `ProgressBar(value)`, `ProgressIndeterminate()` | `ProgressBarElement` | `ProgressBar` |
 | `Image(source)` | `ImageElement` | `Image` (a file path, `file://` or `avares://` URI) |
+| `Icon(PathIcon(data))`, `Icon(FontIcon(glyph))`, `Icon(BitmapIcon(source))`, `Icon(ImageIcon(source))` | `IconElement` | `PathIcon`, a `TextBlock`, a bitmap icon or an `Image`, from the data (see icons below) |
 | `Border(child)` | `BorderElement` | `Border` |
 | `ScrollViewer(content)` | `ScrollViewerElement` | `ScrollViewer` (Reactor's `ScrollView` is one with `HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled`, content as wide as the view; the migration writes it) |
 | `Viewbox(child)` | `ViewboxElement` | `Viewbox` |
@@ -213,6 +214,36 @@ public static Element ReleaseNote(RenderContext ctx)
 > line of its own, with no `Margin`, `TextIndent`, `TextAlignment` or `LineHeight`. There is no `Hyperlink` inline: put a
 > `HyperlinkButton` in an `InlineUIContainer`. Avalonia lays the text out again whenever one of its inlines changes, and
 > an element inside keeps its state but loses focus.
+
+Icons are `Icon(data)`, where the data says what the icon shows: `PathIcon("M 0,0 L 24,0 L 12,20 Z")` a shape, an
+Avalonia `PathIcon` filled with the foreground and scaled to the icon's size (20 by 20 in the Fluent theme);
+`FontIcon(glyph, fontFamily, fontSize)` a glyph of a font, as a text block; `ImageIcon(uri)` an image in its own
+colours, as an `Image`; and `BitmapIcon(uri)` a bitmap's shape in the foreground (`showAsMonochrome: false` draws its
+colours). Size an icon with `.Width(...)` and `.Height(...)` (a glyph with its font size), and colour it with
+`.Foreground(...)` or a theme token. A render with data of the same kind updates the icon's control in place; data of
+another kind mounts a new control:
+
+<!-- snippet: icons -->
+```csharp
+const string Tick = "M 2,13 L 5,10 L 9,14 L 19,4 L 22,7 L 9,20 Z";
+
+public static Element SaveButton(RenderContext ctx)
+{
+    var (saved, setSaved) = ctx.UseState(false);
+    return HStack(8,
+        Button(Icon(PathIcon(Tick)).Foreground(saved ? "SeaGreen" : "Gray"), () => setSaved(true)),
+        // A glyph while unsaved, a shape once saved: another kind of data mounts another control.
+        Icon(saved ? PathIcon(Tick) : FontIcon("!", fontSize: 16)).Width(24).Height(24),
+        Icon(ImageIcon(new Uri("avares://MyApp/Assets/logo.png"))).Width(24).Height(24));
+}
+```
+
+> **Coming from Reactor?** WinUI's symbols aren't here: `Icon(Symbol.Home)`, `Icon("Home")` and `SymbolIcon(...)` show
+> glyphs of Windows' Segoe icon fonts, which Avalonia doesn't ship and which can't be redistributed. Use a `PathIcon`
+> with a shape, or a `FontIcon` in an icon font the app supplies (`FontIcon(glyph, "avares://MyApp/Assets/Fonts#My Icons")`).
+> A `FontIcon` with no font uses WinUI's, Segoe Fluent Icons then Segoe MDL2 Assets, which only Windows has, at WinUI's
+> size, 20. Its `FontFamily` is Avalonia's `FontFamily`, which a string converts to. An `ImageIcon` or `BitmapIcon` URI is
+> a file or an `avares://` resource (WinUI's `ms-appx:///` isn't).
 
 Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:
 `.Padding(top: 8)`), `.WithBorder("Gray", 2)`, `.BorderBrush(...)`, `.BorderThickness(...)`, `.CornerRadius(...)`,

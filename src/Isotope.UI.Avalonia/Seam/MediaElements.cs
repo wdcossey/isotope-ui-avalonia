@@ -55,10 +55,19 @@ public partial record ImageElement(string Source) : Element
 
     // Unlike upstream's (a WinUI BitmapImage is collected with the control), a decoded Avalonia bitmap holds native memory
     // until it is disposed, so the one this element loaded is disposed when it is replaced.
-    private static void Replace(Image c, Bitmap? next)
+    internal static void Replace(Image c, Bitmap? next)
     {
         var previous = c.Source as Bitmap;
         c.Source = next;
+        Swap(previous, next);
+    }
+
+    /// <summary>
+    /// Records <paramref name="next"/> as loaded here, and disposes <paramref name="previous"/> when this element (or an
+    /// icon, #91) loaded it and it is not shown any more.
+    /// </summary>
+    internal static void Swap(Bitmap? previous, Bitmap? next)
+    {
         if (next is not null) s_loaded.AddOrUpdate(next, Loaded);
         if (previous is not null && !ReferenceEquals(previous, next) && s_loaded.Remove(previous)) previous.Dispose();
     }
