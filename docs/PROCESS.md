@@ -41,7 +41,9 @@ Never without the developer's go-ahead in the conversation:
 
 - **Anything that takes over the machine:** launching an Avalonia app in a real window, UI automation, screen
   capture of real windows (use the `device-lease` skill). Screenshots come from Avalonia.Headless rendering instead.
-  A real-window run, once agreed, works through a checklist (the sample app's is in its README):
+  A real-window run, once agreed, works through a checklist (the sample app's is in its README; the
+  `real-window-run` skill in `.claude/skills/` does the whole run: it builds and launches the app, serves the page,
+  follows the answers and records the run):
   `node tools/real-window/checklist.mjs <checklist.md> --clear` serves it as a local page, saves each answer as it is
   given, prints each as a JSON line on stdout, and on Finish writes the ticks and failure notes back (#106).
 - **Tools that need a human:** debugger MCPs (x64dbg/x32dbg), Rider/WebStorm MCPs driving the IDE.
