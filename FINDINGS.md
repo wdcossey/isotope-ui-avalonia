@@ -13,18 +13,6 @@ Detailed reports:
 | `docs/spikes/C-uno-and-upstream-openness.md` | how Uno did it; how open upstream is |
 | `docs/spikes/D-flex-slice.md` | FlexPanel on Avalonia over upstream's Yoga |
 
-## Library tests one at a time (issue #105, 2026-11-26)
-
-- **Cause:** Avalonia 12's property registration and UI-dispatcher binding aren't thread-safe. Plain `[Fact]`s on xUnit
-  worker threads made element records (whose descriptors register their controls' properties: `TextBlock("a")` alone
-  registered 73) and controls (which bind a dispatcher), beside the headless session. Two properties then shared an id
-  (`InvalidCastException` bursts on ubuntu), and a dispatcher was stolen (`VerifyAccess` in the headless setup). 131 of
-  706 plain test cases registered properties, in 16 classes, 11 of them vendored upstream tests.
-- **Fix:** the library test assembly runs one test at a time (`DisableTestParallelization`), and the one test that made a
-  control off the session is an `[AvaloniaFact]`. An amplifier (a temporary plain test making controls on new threads)
-  failed 16 of 16 full runs before and 0 of 16 after; plain net11.0 runs, 1 failure in 256 before and 0 in 128 after.
-  Cost on ubuntu CI: 22–29 s per framework before, 24–49 s after. #85 and #89 stay open: they didn't reproduce.
-
 ## Recommendation: how to stay in sync
 
 **A separate repo that imports upstream files through a scripted, deterministic pipeline, sorted into three tiers, pulled weekly with a per-PR report.** Not a git-merge fork, not a hard fork, and not a core/platform split proposed upstream.
@@ -156,6 +144,18 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Everything is merged into `main` (this file included); no other branches or worktrees were left. The clean run above is of `7f5670f`, the commit before this file.
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
+
+## Library tests one at a time (issue #105, 2026-11-26)
+
+- **Cause:** Avalonia 12's property registration and UI-dispatcher binding aren't thread-safe. Plain `[Fact]`s on xUnit
+  worker threads made element records (whose descriptors register their controls' properties: `TextBlock("a")` alone
+  registered 73) and controls (which bind a dispatcher), beside the headless session. Two properties then shared an id
+  (`InvalidCastException` bursts on ubuntu), and a dispatcher was stolen (`VerifyAccess` in the headless setup). 131 of
+  706 plain test cases registered properties, in 16 classes, 11 of them vendored upstream tests.
+- **Fix:** the library test assembly runs one test at a time (`DisableTestParallelization`), and the one test that made a
+  control off the session is an `[AvaloniaFact]`. An amplifier (a temporary plain test making controls on new threads)
+  failed 16 of 16 full runs before and 0 of 16 after; plain net11.0 runs, 1 failure in 256 before and 0 in 128 after.
+  Cost on ubuntu CI: 22–29 s per framework before, 24–49 s after. #85 and #89 stay open: they didn't reproduce.
 
 ## Real-window checklist tool (issue #106, 2026-11-26)
 
