@@ -71,6 +71,14 @@ test('a body over the cap is refused, declared or streamed', { timeout: 15000 },
     body: (req) => { req.write('{"system":"'); for (let i = 0; i < 8; i++) req.write('y'.repeat(512)); req.end('"}'); },
   });
   assert.ok([413, 'reset'].includes(streamed.status), String(streamed.status));
+  // A declared length over the cap is refused before any of the body is sent.
+  let sent;
+  const declared = await Promise.race([
+    request(port, { method: 'POST', path: '/system', headers: { 'content-type': 'application/json', 'x-checklist-token': TOKEN, 'content-length': '1000000' }, body: (req) => { sent = req; req.flushHeaders(); } }),
+    new Promise((r) => setTimeout(() => r({ status: 'no answer' }), 3000).unref()),
+  ]);
+  sent.destroy();
+  assert.equal(declared.status, 413);
   assert.equal(results.system, '');
 }));
 

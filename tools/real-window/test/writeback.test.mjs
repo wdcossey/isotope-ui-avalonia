@@ -12,15 +12,15 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const DATE = '2026-11-26';
 const keyAt = (text, line) => parseChecklist(text).items.find((it) => it.line === line).key;
 
-// Answers for the fixture: a multi-line pass with a note, a fail with a note on a ticked line, a skip, a pass and a
-// fail with no note, and a pass on a line ticked already.
+// Answers for the fixture: a multi-line pass with a note, a skip on a ticked line, a fail with a note, a pass, and a
+// fail with no note on a ticked multi-line line.
 function answersFor(text) {
   const a = (line, verdict, note = '') => [keyAt(text, line), { verdict, note, date: DATE }];
   return {
     system: 'Win 11',
     answers: Object.fromEntries([
-      a(14, 'pass', 'fine on a 4K display'), a(16, 'fail', 'menu\nlags'), a(17, 'skip', 'not tried'),
-      a(21, 'pass'), a(22, 'fail'), a(24, 'pass'),
+      a(14, 'pass', 'fine on a 4K display'), a(16, 'skip', 'not tried'), a(17, 'fail', 'menu\nlags'),
+      a(21, 'pass'), a(24, 'fail'),
     ]),
   };
 }
@@ -29,9 +29,10 @@ const expected = (eol) => {
   const lines = [...LINES];
   lines[13] = lines[13].replace('- [ ]', '- [x]');
   lines[14] += ' (Win 11, 2026-11-26: fine on a 4K display)';
-  lines[15] = '- [ ] A ticked line. **Failed (Win 11, 2026-11-26):** menu lags';
+  lines[16] += ' **Failed (Win 11, 2026-11-26):** menu lags';
   lines[20] = '- [x] A line.';
-  lines[21] = '- [ ] A line. **Failed (Win 11, 2026-11-26).**';
+  lines[23] = '- [ ] Another ticked line, with a capital X,';
+  lines[24] += ' **Failed (Win 11, 2026-11-26).**';
   return lines.join(eol) + eol;
 };
 
@@ -42,7 +43,7 @@ for (const eol of ['\n', '\r\n']) {
     const text = fixture(eol);
     const { text: out, applied, unmatched } = applyResults(text, answersFor(text));
     assert.equal(out, expected(eol));
-    assert.deepEqual(applied, { pass: 3, fail: 2, skip: 1 });
+    assert.deepEqual(applied, { pass: 2, fail: 2, skip: 1 });
     assert.deepEqual(unmatched, []);
   });
 
@@ -113,13 +114,13 @@ test('the summary counts each section, lists the failures and suggests a "Last r
   const s = summarize(parseChecklist(text).items, results, { date: DATE, commit: 'abc1234' });
   assert.deepEqual(s.bySection, [
     { section: 'First section', pass: 1, fail: 1, skip: 1, none: 0 },
-    { section: 'Second section', pass: 2, fail: 1, skip: 0, none: 1 },
+    { section: 'Second section', pass: 1, fail: 1, skip: 0, none: 2 },
   ]);
-  assert.deepEqual(s.failed.map((f) => [f.line, f.note]), [[16, 'menu lags'], [22, '']]);
-  assert.equal(s.sentence, '**Last run:** 2026-11-26, Win 11, at `abc1234`: 3 of 7 lines passed, 2 failed (First section, Second section), 1 skipped, 1 not run.');
+  assert.deepEqual(s.failed.map((f) => [f.line, f.note]), [[17, 'menu lags'], [24, '']]);
+  assert.equal(s.sentence, '**Last run:** 2026-11-26, Win 11, at `abc1234`: 2 of 7 lines passed, 2 failed (First section, Second section), 1 skipped, 2 not run.');
   const out = formatSummary(s);
   assert.match(out, /First section: 1 passed, 1 failed, 1 skipped/);
-  assert.match(out, /line 16 \(First section\): A ticked line\.\n {4}note: menu lags/);
+  assert.match(out, /line 17 \(First section\): A line with `code` and <angle> & "quotes"\.\n {4}note: menu lags/);
   assert.match(out, /Anything else:\n {2}Looked fine overall\./);
 });
 
