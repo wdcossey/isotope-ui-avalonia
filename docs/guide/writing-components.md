@@ -297,7 +297,7 @@ Every item's element is built on each render, but an element is mounted only whe
 (realises a container for it), from the item's latest element. From then on it is reconciled by key as above, and it
 stays mounted while it is scrolled out of view, keeping its controls and a component's state, until it leaves the items
 or the list box goes: scrolling never loses state, and an item never shown is never mounted. 10,000 element rows realise 8
-containers in a 300-high list and mount in 15 to 24 ms headless (three invocations of `ListBoxMeasurements`, three runs
+containers in a 300-high list and mount in 14 to 36 ms headless (three invocations of `ListBoxMeasurements`, three runs
 each; 0.33 to 0.52 s when every item was mounted), and an item mounted while the list is laid out reads the context values
 the list box was rendered under. A keyed reorder moves the items, so nothing remounts, but Avalonia recycles a moved
 item's container, as it does an item's scrolled out of view, so a control in it loses keyboard focus. An item that throws
