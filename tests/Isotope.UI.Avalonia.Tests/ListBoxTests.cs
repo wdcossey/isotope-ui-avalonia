@@ -529,7 +529,9 @@ public sealed class ListBoxTests : IDisposable
             ctx.UseEffect(() => () => cleanups++);
             return TextBlock(key + " " + n);
         }).WithKey(key);
-        var host = new TestHost(() => ListBox(keys.Select(Row).ToArray()).Height(300));
+        // One element for every render: a row's own re-render reaches it only through the dirty path.
+        var rows = ListBox(keys.Select(Row).ToArray()).Height(300);
+        var host = new TestHost(() => rows);
         var window = Show(host);
         var list = List(host);
         setters["k1"](5);
