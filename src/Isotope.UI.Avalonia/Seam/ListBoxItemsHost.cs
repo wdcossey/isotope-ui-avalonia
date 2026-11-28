@@ -81,6 +81,15 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
         Realise(list, items, slot, container);
     };
 
+    // Avalonia makes a container's item its data context once PreparingContainer has run: an element's row keeps the list
+    // box's, as the item control did before #102, and a value's is the value, as a value item's is.
+    private static readonly EventHandler<ContainerPreparedEventArgs> s_prepared = static (sender, e) =>
+    {
+        if (e.Container.DataContext is not ListBoxItemSlot slot) return;
+        if (slot.Source is Element) e.Container.ClearValue(global::Avalonia.StyledElement.DataContextProperty);
+        else e.Container.DataContext = slot.Source;
+    };
+
     private static readonly EventHandler<ContainerClearingEventArgs> s_clearing = static (sender, e) =>
     {
         var list = (ListBox)sender!;
@@ -99,6 +108,7 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
         if (isMount)
         {
             list.PreparingContainer += s_preparing;
+            list.ContainerPrepared += s_prepared;
             list.ContainerClearing += s_clearing;
         }
         if (!HasElement(el.Items))
@@ -123,6 +133,9 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
     void IItemsBinderStrategy.Unbind(FrameworkElement control, Reconciler reconciler)
     {
         var list = (ListBox)control;
+        list.PreparingContainer -= s_preparing;
+        list.ContainerPrepared -= s_prepared;
+        list.ContainerClearing -= s_clearing;
         var state = Reconciler.GetOrCreateReactorState(list);
         if (state.ListBoxItems is not null)
         {
@@ -155,9 +168,16 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
         }
         if (!slot.Mounted)
         {
-            using (items.Reconciler.EnterRealization(items.Context))
-                slot.Control = items.Reconciler.Mount(element, items.RequestRerender);
-            slot.Mounted = true;
+            // Mounted once, whatever happens: an item whose mount leaves (propagated) isn't tried again on every layout pass.
+            try
+            {
+                using (items.Reconciler.EnterRealization(items.Context))
+                    slot.Control = items.Reconciler.MountItem(element, items.RequestRerender);
+            }
+            finally
+            {
+                slot.Mounted = true;
+            }
             slot.Control?.SetValue(Reconciler.ItemsOwnerProperty, list);
         }
         // Another container still showing the control (never seen; a control has one parent) gives it up first.

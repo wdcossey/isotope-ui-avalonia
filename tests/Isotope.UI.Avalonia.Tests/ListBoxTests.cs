@@ -681,4 +681,49 @@ public sealed class ListBoxTests : IDisposable
         Assert.Equal("value", ((ContentControl)list.ContainerFromIndex(0)!).Content);
         Assert.Equal("element", TextOf(((ContentControl)list.ContainerFromIndex(1)!).Content));
     }
+
+    [AvaloniaFact]
+    public void An_element_item_keeps_the_list_box_s_data_context_and_a_value_item_has_its_value()
+    {
+        var host = new TestHost(() => new ListBoxElement(["value", TextBlock("element")]));
+        Show(host);
+        var list = List(host);
+        list.DataContext = "outer";
+        Assert.Equal("outer", ItemControl(list, 1)!.DataContext);
+        Assert.Equal("value", list.ContainerFromIndex(0)!.DataContext);
+    }
+
+    [AvaloniaFact]
+    public void An_item_whose_control_fails_to_mount_shows_the_fallback_and_layout_goes_on()
+    {
+        var host = new TestHost(() => ListBox(
+            TextBlock("a").WithKey("a"),
+            (TextBlock("b") with { Setters = [static _ => throw new InvalidOperationException("setter b failed")] }).WithKey("b")));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal("a", TextOf(ItemControl(list, 0)));
+        Assert.Contains(AllTexts(ItemControl(list, 1)), t => t.Contains("setter b failed", StringComparison.Ordinal));
+        var fallback = ItemControl(list, 1);
+        Layout(window);
+        Assert.Same(fallback, ItemControl(list, 1));
+    }
+
+    [AvaloniaFact]
+    public void A_list_box_whose_element_is_reused_still_hears_a_provider_change_for_its_items()
+    {
+        var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();
+        // The same list box element for every render: only the context check reaches it.
+        var rows = ListBox(keys.Select(k => (Element)Component(ctx => TextBlock(k + ctx.UseContext(Suffix))).WithKey(k)).ToArray()).Height(300);
+        var suffix = "1";
+        var host = new TestHost(() => VStack(rows).Provide(Suffix, suffix));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal("k01", TextOf(ItemControl(list, 0)));
+
+        suffix = "2";
+        host.Render();
+        Assert.Equal("k02", TextOf(ItemControl(list, 0))); // mounted: re-rendered
+        ScrollTo(window, list, 900);
+        Assert.Equal("k9002", TextOf(ItemControl(list, 900))); // mounted afterwards, under the new value
+    }
 }

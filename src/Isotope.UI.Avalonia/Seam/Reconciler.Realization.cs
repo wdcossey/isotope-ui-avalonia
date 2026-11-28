@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Microsoft.Extensions.Logging;
 
 namespace Isotope.UI.Core;
 
@@ -26,6 +27,24 @@ public sealed partial class Reconciler
     /// state is set aside. A null capture leaves the provider stack as it is.
     /// </summary>
     internal RealizationFrame EnterRealization(ContextCapture? capture) => new(this, capture);
+
+    /// <summary>
+    /// Mounts an item outside the traversal (in a realization frame): a mount that throws, outside a component's render
+    /// too (a handler, a setter), gets the in-tree fallback in the item's place, as a component's render does, rather than
+    /// leaving the layout pass. An exception the app's handler asked to propagate (or a fatal one) still leaves.
+    /// </summary>
+    internal UIElement? MountItem(Element element, Action requestRerender)
+    {
+        try
+        {
+            return Mount(element, requestRerender);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException && !IsPropagating(ex))
+        {
+            _logger?.LogError(ex, "A list item threw when it was mounted: {ElementType}", element.GetType().Name);
+            return Mount(BuildInTreeFallback(ex, inEffects: false, componentName: null), requestRerender);
+        }
+    }
 
     internal readonly struct RealizationFrame : IDisposable
     {
