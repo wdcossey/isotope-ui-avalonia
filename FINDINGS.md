@@ -145,6 +145,31 @@ A `net10.0` library links upstream files, never copies them. The WinUI-heavy lay
 - Merged: the repo setup, Spike A (plus review fixes), the Spike B and C reports, the .NET 11 SDK pin, and Spike D (plus two review rounds).
 - `upstream/` is still at `28a87225` with a clean status. Its `origin/main` has been fetched to `14172dce`.
 
+## Lazy list box items (issue #102, 2026-11-28)
+
+- **What landed:** a list box's element items are mounted as Avalonia realises their containers (`ListBoxItemsHost`): the
+  list box's `Items` hold one slot per item, and `ItemsControl.PreparingContainer` mounts the slot's latest element and
+  makes its control the container's content. Mounted items are reconciled by key as before (#94); unmounted ones only take
+  their new element. A layout-time mount replays the providers the list box was reconciled under and sets aside the pass's
+  error-boundary state (`Reconciler.EnterRealization`, as upstream's); one that throws, even part-way, is torn down and
+  gets the in-tree fallback. Strings keep upstream's items host.
+- **Scrolled out of view (chosen, conservative):** a mounted item stays mounted, with its state, until it leaves the items
+  or the list box is unmounted, so scrolling never loses state; mounted items grow with what the user has seen, up to
+  every item, as before #102. Upstream unmounts a recycled row.
+- **Measured** (`ListBoxMeasurements`, 300-high list, headless, net10.0, three invocations of three runs; before is main
+  `0b3bbbe`): 10,000 element rows mount in 14 to 36 ms (before 330 to 525 ms), show in 5 to 9 ms (68 to 154 ms), re-render
+  equal in 5 to 23 ms (24 to 80 ms) and reverse by key in 48 to 80 ms (311 to 536 ms; the slot search now looks from both
+  ends). 10,000 component rows mount 8 when shown (before 10,000); a keyed reverse and a scroll away and back keep a
+  row's state and control, mounting only the rows that come into view (25 after both). 10,000 strings: 4 to 23 ms
+  (before 2 to 38 ms; the same code).
+- **Focus** (a text box in a row, the same before and after): kept across an equal render; lost when the row scrolls out of
+  view and when it moves by key, because Avalonia recycles its container (the text box itself is kept).
+- **Unlike before:** an item that throws when first shown gets the in-tree fallback, not an error boundary around the list
+  (once mounted, its errors go to the nearest boundary); the Avalonia list box's `Items` and `SelectedItem` hold slots,
+  not the item controls.
+- **Tests:** library 1,311 → 1,327 (14 new, 2 measurements); 19 deliberate breaks each turned a new test red.
+- **Not done:** `VirtualList` and `LazyVStack`; the realisation hook and frame are what they need.
+
 ## Library tests one at a time (issue #105, 2026-11-26)
 
 - **Cause:** Avalonia 12's property registration and UI-dispatcher binding aren't thread-safe. Plain `[Fact]`s on xUnit
