@@ -33,17 +33,31 @@ public sealed partial class Reconciler
     /// too (a handler, a setter), gets the in-tree fallback in the item's place, as a component's render does, rather than
     /// leaving the layout pass. An exception the app's handler asked to propagate (or a fatal one) still leaves.
     /// </summary>
+    /// <remarks>
+    /// The mount is recorded as a boundary records its child's (in the frame, which set the pass's lists aside), so what a
+    /// mount that throws part-way left behind is torn down: the subtrees it completed, and the cleanups of components whose
+    /// mount failed.
+    /// </remarks>
     internal UIElement? MountItem(Element element, Action requestRerender)
     {
+        Exception failure;
+        var record = BeginBoundaryMount();
         try
         {
             return Mount(element, requestRerender);
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException && !IsPropagating(ex))
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            _logger?.LogError(ex, "A list item threw when it was mounted: {ElementType}", element.GetType().Name);
-            return Mount(BuildInTreeFallback(ex, inEffects: false, componentName: null), requestRerender);
+            RollBackBoundaryMount(record, attachedChild: null);
+            if (IsPropagating(ex)) throw;
+            failure = ex;
         }
+        finally
+        {
+            EndBoundaryMount(record);
+        }
+        _logger?.LogError(failure, "A list item threw when it was mounted: {ElementType}", element.GetType().Name);
+        return Mount(BuildInTreeFallback(failure, inEffects: false, componentName: null), requestRerender);
     }
 
     internal readonly struct RealizationFrame : IDisposable

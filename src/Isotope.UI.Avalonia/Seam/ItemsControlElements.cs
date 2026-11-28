@@ -106,6 +106,11 @@ public partial record ComboBoxElement(
 /// an item never shown is never mounted. <see cref="SelectedIndex"/> defaults to <see cref="Optional{T}.Unset"/>, so the
 /// control owns its selection until one is given; -1 selects nothing.
 /// </summary>
+/// <remarks>
+/// With element items, the Avalonia list box's own <c>Items</c>, <c>SelectedItem</c> and <c>SelectedItems</c> hold
+/// Isotope's internal item slots, not the item controls. An item that throws when it is first shown (during layout) gets
+/// the in-tree fallback in its place; once mounted, its errors go to the nearest error boundary, as any control's do.
+/// </remarks>
 [GenerateReactorDescriptor(typeof(ListBox), ClearValueOnUnset = true, Exclude = new[] { "SelectionChanged" })]
 [WrapManual("Items")]
 [WrapManual("SelectedIndex")]

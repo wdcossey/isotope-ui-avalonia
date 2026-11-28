@@ -207,6 +207,12 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
             return;
         }
 
+        // Checked before anything changes, so a refused render leaves the items as they were.
+        foreach (var item in source)
+            if (item is GroupElement)
+                throw new NotSupportedException(
+                    "A GroupElement is flattened into its container's children; it can't be a list box's item.");
+
         var previous = items.Slots;
         var used = new bool[previous.Count];
         Dictionary<string, Queue<int>>? keyed = null;
@@ -231,15 +237,8 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
             int match = -1;
             if (item is Element child)
             {
-                switch (child)
-                {
-                    // An empty element isn't an item, as it mounted nothing in the items host.
-                    case EmptyElement:
-                        continue;
-                    case GroupElement:
-                        throw new NotSupportedException(
-                            "A GroupElement is flattened into its container's children; it can't be a list box's item.");
-                }
+                // An empty element isn't an item, as it mounted nothing in the items host.
+                if (child is EmptyElement) continue;
                 themeSensitive |= ChildDiffHints.IsThemeSensitive(child);
                 if (child.Key is { } key)
                 {

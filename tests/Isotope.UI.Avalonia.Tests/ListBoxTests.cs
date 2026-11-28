@@ -709,6 +709,38 @@ public sealed class ListBoxTests : IDisposable
     }
 
     [AvaloniaFact]
+    public void An_item_whose_mount_fails_part_way_tears_down_what_it_mounted()
+    {
+        var cleanups = 0;
+        var host = new TestHost(() => ListBox(HStack(
+            Component(ctx =>
+            {
+                ctx.UseEffect(() => () => cleanups++);
+                return TextBlock("mounted first");
+            }),
+            TextBlock("b") with { Setters = [static _ => throw new InvalidOperationException("setter b failed")] }).WithKey("x")));
+        Show(host);
+        var list = List(host);
+        Assert.Contains(AllTexts(ItemControl(list, 0)), t => t.Contains("setter b failed", StringComparison.Ordinal));
+        Assert.Equal(1, cleanups);
+    }
+
+    [AvaloniaFact]
+    public void A_render_with_a_group_among_the_items_is_refused_and_leaves_the_items_as_they_were()
+    {
+        var second = (Element)TextBlock("b").WithKey("b");
+        var first = "a";
+        var host = new TestHost(() => new ListBoxElement([TextBlock(first).WithKey("a"), second]));
+        Show(host);
+        var list = List(host);
+
+        first = "a2";
+        second = Group(TextBlock("x"));
+        Assert.Throws<NotSupportedException>(host.Render);
+        Assert.Equal(["a", "b"], Texts(list));
+    }
+
+    [AvaloniaFact]
     public void A_list_box_whose_element_is_reused_still_hears_a_provider_change_for_its_items()
     {
         var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();

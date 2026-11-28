@@ -297,12 +297,14 @@ Every item's element is built on each render, but an element is mounted only whe
 (realises a container for it), from the item's latest element. From then on it is reconciled by key as above, and it
 stays mounted while it is scrolled out of view, keeping its controls and a component's state, until it leaves the items
 or the list box goes: scrolling never loses state, and an item never shown is never mounted. 10,000 element rows realise 8
-containers in a 300-high list and mount in 15 to 30 ms headless (three invocations of `ListBoxMeasurements`, three runs
+containers in a 300-high list and mount in 15 to 24 ms headless (three invocations of `ListBoxMeasurements`, three runs
 each; 0.33 to 0.52 s when every item was mounted), and an item mounted while the list is laid out reads the context values
 the list box was rendered under. A keyed reorder moves the items, so nothing remounts, but Avalonia recycles a moved
 item's container, as it does an item's scrolled out of view, so a control in it loses keyboard focus. An item that throws
-when it is shown gets the in-tree fallback in its place: an error boundary around the list box doesn't catch it, so put
-one in the item. The selection follows its items when they move, and `OnSelectedIndexChanged` and `OnSelectionChanged`
+when it is first shown gets the in-tree fallback in its place, since no error boundary is rendering then; once mounted,
+its errors go to the nearest boundary, as any control's do, so put a boundary in the item to handle both alike. The
+Avalonia list box's own `Items` and `SelectedItem` hold Isotope's item slots, not the item controls: read the indexes
+or the typed callbacks instead. The selection follows its items when they move, and `OnSelectedIndexChanged` and `OnSelectionChanged`
 report the new indexes; a removed item's selection is reported as gone (-1).
 
 > **Coming from Reactor?** `ListView` is `ListBox`, and `ListView<T>` is `ListBox<T>` (the migration renames both, and
