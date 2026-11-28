@@ -16,10 +16,10 @@ namespace Isotope.UI.Core;
 /// One item of a list box with element items: the list box's <see cref="ItemsControl.Items"/> hold these, one per item,
 /// in order, and Avalonia's containers show the control mounted for each.
 /// </summary>
-internal sealed class ListBoxItemSlot(object source)
+internal sealed class ListBoxItemSlot(object? source)
 {
     /// <summary>The item: its element, as the last render gave it, or a value in a list that mixes values and elements.</summary>
-    public object Source { get; set; } = source;
+    public object? Source { get; set; } = source;
 
     /// <summary>The item's key: its element's.</summary>
     public string? Key => (Source as Element)?.Key;
@@ -33,7 +33,7 @@ internal sealed class ListBoxItemSlot(object source)
     /// <summary>The realised container that shows the item, or null.</summary>
     public ContentControl? Container { get; set; }
 
-    public override string ToString() => Source is Element e ? e.Key ?? e.GetType().Name : Source.ToString() ?? "";
+    public override string ToString() => Source is Element e ? e.Key ?? e.GetType().Name : Source?.ToString() ?? "";
 }
 
 /// <summary>What a list box with element items keeps between renders (<see cref="Reconciler.ReactorState.ListBoxItems"/>).</summary>
@@ -235,7 +235,7 @@ internal sealed record ListBoxItemsHost : ChildrenStrategy<ListBoxElement, ListB
                 }
                 used[match] = true;
                 var slot = previous[match];
-                var old = (Element)slot.Source;
+                var old = (Element)slot.Source!;
                 slot.Source = child;
                 // Only a mounted item has a control to reconcile; the others mount from their latest element when shown.
                 if (slot.Mounted)
