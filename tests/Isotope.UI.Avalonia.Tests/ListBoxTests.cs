@@ -12,9 +12,10 @@ using static Isotope.UI.Factories;
 namespace Isotope.UI.Avalonia.Tests;
 
 /// <summary>
-/// The list box's element and typed items (#94, Reactor's ListView and ListView&lt;T&gt;): items mounted and reconciled as
-/// a panel's children (in place, keyed moves as one Move each, a component's state kept), the controlled and multiple
-/// selection, the item click, and a long list's realisation, in a headless window.
+/// The list box's element and typed items (#94, Reactor's ListView and ListView&lt;T&gt;): items mounted as Avalonia realises
+/// their containers (#102) and reconciled as a panel's children (in place, keyed moves as one Move each, a component's
+/// state kept, out of view too), the controlled and multiple selection, the item click, and a long list's realisation,
+/// in a headless window.
 /// </summary>
 public sealed class ListBoxTests : IDisposable
 {
@@ -44,7 +45,18 @@ public sealed class ListBoxTests : IDisposable
 
     private static ListBox List(TestHost host) => host.All<ListBox>()[0];
 
-    private static List<string?> Texts(ListBox list) => list.Items.Select(TextOf).ToList();
+    // The control mounted for an item (#102: the list box's items are slots, each with its element's control once shown).
+    private static Control? ItemControl(ListBox list, int index) => ((ListBoxItemSlot)list.Items[index]!).Control;
+
+    private static List<string?> Texts(ListBox list) => Enumerable.Range(0, list.Items.Count).Select(i => TextOf(ItemControl(list, i))).ToList();
+
+    private static int Mounted(ListBox list) => list.Items.Cast<ListBoxItemSlot>().Count(s => s.Mounted);
+
+    private static void ScrollTo(Window window, ListBox list, int index)
+    {
+        list.ScrollIntoView(index);
+        Layout(window);
+    }
 
     // An item's text: its text block's, or the first one inside it (a component's border, a stack).
     private static string? TextOf(object? item) => item switch
@@ -75,42 +87,44 @@ public sealed class ListBoxTests : IDisposable
         var host = new TestHost(() => more
             ? ListBox(TextBlock(first), TextBlock("two"), null, TextBlock("three"))
             : ListBox(TextBlock(first)));
+        Show(host);
         var list = List(host);
         Assert.Equal(["one", "two", "three"], Texts(list));
-        var control = list.Items[0];
+        var control = ItemControl(list, 0);
 
         first = "uno";
         host.Render();
         Assert.Same(list, List(host));
-        Assert.Same(control, list.Items[0]);
+        Assert.Same(control, ItemControl(list, 0));
         Assert.Equal(["uno", "two", "three"], Texts(list));
 
         more = false;
         host.Render();
-        Assert.Same(control, Assert.Single(list.Items));
+        Assert.Single(list.Items);
+        Assert.Same(control, ItemControl(list, 0));
     }
 
     [AvaloniaFact]
-    public void A_keyed_reorder_moves_each_item_control_with_one_Move_and_none_leaves_the_list()
+    public void A_keyed_reorder_moves_each_item_with_one_Move_and_keeps_its_control()
     {
         string[] keys = ["a", "b", "c", "d", "e"];
         var host = new TestHost(() => ListBox(Rows(keys)));
-        Show(host);
+        var window = Show(host);
         var list = List(host);
-        var before = list.Items.Cast<TextBlock>().ToDictionary(t => t.Text!);
+        var before = Enumerable.Range(0, keys.Length).Select(i => (TextBlock)ItemControl(list, i)!).ToDictionary(t => t.Text!);
         var edits = new List<NotifyCollectionChangedAction>();
         list.Items.CollectionChanged += (_, e) => edits.Add(e.Action);
-        var detached = 0;
-        foreach (var t in before.Values) t.DetachedFromLogicalTree += (_, _) => detached++;
 
         keys = ["e", "d", "c", "b", "a"];
         host.Render();
         Assert.Equal(keys, Texts(list));
-        Assert.All(keys, (k, i) => Assert.Same(before[k], list.Items[i]));
+        Assert.All(keys, (k, i) => Assert.Same(before[k], ItemControl(list, i)));
         Assert.NotEmpty(edits);
         Assert.All(edits, a => Assert.Equal(NotifyCollectionChangedAction.Move, a));
-        Assert.Equal(0, detached);
-        Assert.All(before.Values, t => Assert.Same(list, t.Parent));
+
+        // Avalonia recycles a moved item's container; once laid out, each control is shown again, in its item's container.
+        Layout(window);
+        Assert.All(keys, (k, i) => Assert.Same(before[k], ((ContentControl)list.ContainerFromIndex(i)!).Content));
     }
 
     [AvaloniaFact]
@@ -163,6 +177,7 @@ public sealed class ListBoxTests : IDisposable
         Element[] items = [Component(ctx => TextBlock("x" + ctx.UseContext(Suffix))).WithKey("x")];
         var suffix = "1";
         var host = new TestHost(() => VStack(ListBox(items)).Provide(Suffix, suffix));
+        Show(host);
         var list = List(host);
         Assert.Equal(["x1"], Texts(list));
 
@@ -215,7 +230,7 @@ public sealed class ListBoxTests : IDisposable
         var reported = new List<int>();
         var host = new TestHost(() => ListBox(TextBlock("a"), ComboBox(["x", "y"])) with { OnSelectedIndexChanged = reported.Add });
         Show(host);
-        var combo = host.Root.Child is ListBox l ? (ComboBox)l.Items[1]! : throw new InvalidOperationException();
+        var combo = host.Root.Child is ListBox l ? (ComboBox)ItemControl(l, 1)! : throw new InvalidOperationException();
         combo.SelectedIndex = 1;
         Assert.Empty(reported);
 
@@ -236,7 +251,7 @@ public sealed class ListBoxTests : IDisposable
         keys = ["d", "c", "b", "a"];
         host.Render();
         Assert.Equal(2, list.SelectedIndex);
-        Assert.Equal("b", ((TextBlock)list.SelectedItem!).Text);
+        Assert.Equal("b", ((ListBoxItemSlot)list.SelectedItem!).Key);
         Assert.Equal([2], reported);
         reported.Clear();
 
@@ -332,7 +347,7 @@ public sealed class ListBoxTests : IDisposable
 
         // A button in an item handles its own click.
         events.Clear();
-        var button = list.Items.OfType<StackPanel>().First().Children.OfType<Button>().Single();
+        var button = ((StackPanel)ItemControl(list, 1)!).Children.OfType<Button>().Single();
         TestHost.HoldOffRepeat(button);
         var centre = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
         window.MouseDown(centre, MouseButton.Left);
@@ -343,7 +358,7 @@ public sealed class ListBoxTests : IDisposable
 
         // Nor is a tap in a text box in an item a click on the item.
         events.Clear();
-        var box = list.Items.OfType<StackPanel>().Last().Children.OfType<TextBox>().Single();
+        var box = ((StackPanel)ItemControl(list, 2)!).Children.OfType<TextBox>().Single();
         var inBox = box.TranslatePoint(new Point(box.Bounds.Width / 2, box.Bounds.Height / 2), window)!.Value;
         window.MouseDown(inBox, MouseButton.Left);
         window.MouseUp(inBox, MouseButton.Left);
@@ -389,7 +404,7 @@ public sealed class ListBoxTests : IDisposable
         Assert.Equal(["p1", "p2", "p3"], element.Items.Cast<Element>().Select(e => e.Key));
         Assert.Same(people, element.ItemsSource);
         Assert.Equal(["0:Ada", "1:Grace", "2:Linus"], Texts(list));
-        var grace = list.Items[1];
+        var grace = ItemControl(list, 1);
 
         ClickItem(window, list, 2);
         ClickItem(window, list, 0);
@@ -398,7 +413,7 @@ public sealed class ListBoxTests : IDisposable
 
         people = [people[1], people[2], people[0]];
         host.Render();
-        Assert.Same(grace, list.Items[0]);
+        Assert.Same(grace, ItemControl(list, 0));
         Assert.Equal(["0:Grace", "1:Linus", "2:Ada"], Texts(list));
     }
 
@@ -450,25 +465,315 @@ public sealed class ListBoxTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void A_long_list_mounts_every_item_and_realises_only_the_containers_in_view()
+    public void A_long_list_mounts_only_the_items_in_view_and_a_reverse_mounts_those_it_brings_into_view()
     {
         var keys = Enumerable.Range(0, 10_000).Select(i => "k" + i).ToArray();
         var host = new TestHost(() => ListBox(Rows(keys)).Height(300));
-        var window = Show(host, 400);
         var list = List(host);
         Assert.Equal(10_000, list.Items.Count);
+        Assert.Equal(0, Mounted(list)); // nothing shown yet
+        var window = Show(host, 400);
         var realised = list.GetRealizedContainers().Count();
         Assert.InRange(realised, 1, 50); // 8 measured: 300 DIPs of 32-DIP Fluent items, plus the panel's buffer
+        Assert.Equal(realised, Mounted(list));
+        var top = ItemControl(list, 0);
 
-        var before = list.Items.Cast<Control>().ToArray();
         var edits = new List<NotifyCollectionChangedAction>();
         list.Items.CollectionChanged += (_, e) => edits.Add(e.Action);
         keys = Enumerable.Reverse(keys).ToArray();
         host.Render();
         Layout(window);
-        Assert.True(Enumerable.Reverse(before).SequenceEqual(list.Items.Cast<Control>()), "every item control is kept, in the new order");
         Assert.All(edits, a => Assert.Equal(NotifyCollectionChangedAction.Move, a));
-        Assert.InRange(list.GetRealizedContainers().Count(), 1, 50);
+        var realisedAfter = list.GetRealizedContainers().Count();
+        Assert.InRange(realisedAfter, 1, 50);
         Assert.Equal("k9999", ((TextBlock)((ContentControl)list.ContainerFromIndex(0)!).Content!).Text);
+        // The rows now in view were mounted as they came into view; those shown before stay mounted, at the end.
+        Assert.Equal(realised + realisedAfter, Mounted(list));
+        Assert.Same(top, ItemControl(list, 9_999));
+    }
+
+    [AvaloniaFact]
+    public void An_item_is_mounted_when_it_is_first_shown_from_its_latest_element()
+    {
+        var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();
+        var label = "a";
+        var host = new TestHost(() => ListBox(keys.Select(k => (Element)TextBlock(k + " " + label).WithKey(k)).ToArray()).Height(300));
+        var list = List(host);
+        Assert.Equal(0, Mounted(list));
+        var window = Show(host);
+        var shown = Mounted(list);
+        Assert.InRange(shown, 1, 50);
+
+        // A render updates the items shown and mounts none: an item out of view only takes its new element.
+        label = "b";
+        host.Render();
+        Assert.Equal(shown, Mounted(list));
+        Assert.Equal("k0 b", TextOf(ItemControl(list, 0)));
+        Assert.Null(ItemControl(list, 500));
+
+        ScrollTo(window, list, 500);
+        Assert.Equal("k500 b", TextOf(ItemControl(list, 500)));
+        Assert.Same(ItemControl(list, 500), ((ContentControl)list.ContainerFromIndex(500)!).Content);
+    }
+
+    [AvaloniaFact]
+    public void An_item_scrolled_out_of_view_stays_mounted_keeps_its_state_and_re_renders_itself_there()
+    {
+        var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();
+        var setters = new Dictionary<string, Action<int>>();
+        int cleanups = 0;
+        Element Row(string key) => Component(ctx =>
+        {
+            var (n, setN) = ctx.UseState(0);
+            setters[key] = setN;
+            ctx.UseEffect(() => () => cleanups++);
+            return TextBlock(key + " " + n);
+        }).WithKey(key);
+        // One element for every render: a row's own re-render reaches it only through the dirty path.
+        var rows = ListBox(keys.Select(Row).ToArray()).Height(300);
+        var host = new TestHost(() => rows);
+        var window = Show(host);
+        var list = List(host);
+        setters["k1"](5);
+        host.Flush();
+        var row = ItemControl(list, 1)!;
+        Assert.Equal("k1 5", TextOf(row));
+
+        ScrollTo(window, list, 900);
+        Assert.Null(list.ContainerFromIndex(1)); // its container shows another item now
+        Assert.Null(row.Parent);
+        Assert.Equal(0, cleanups);
+
+        // Out of view, it re-renders itself: the dirty path goes on from the list box.
+        setters["k1"](6);
+        host.Flush();
+        Assert.Equal("k1 6", TextOf(row));
+
+        ScrollTo(window, list, 0);
+        Assert.Same(row, ((ContentControl)list.ContainerFromIndex(1)!).Content);
+        Assert.Equal("k1 6", TextOf(row));
+        Assert.Equal(0, cleanups);
+
+        var mounted = Mounted(list);
+        host.Unmount();
+        Assert.Equal(mounted, cleanups);
+    }
+
+    [AvaloniaFact]
+    public void An_item_mounted_during_layout_reads_the_providers_the_list_was_rendered_under()
+    {
+        var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();
+        var suffix = "1";
+        var host = new TestHost(() => VStack(
+            ListBox(keys.Select(k => (Element)Component(ctx => TextBlock(k + ctx.UseContext(Suffix))).WithKey(k)).ToArray()).Height(300))
+            .Provide(Suffix, suffix));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal("k01", TextOf(ItemControl(list, 0)));
+
+        ScrollTo(window, list, 500);
+        Assert.Equal("k5001", TextOf(ItemControl(list, 500)));
+
+        suffix = "2";
+        host.Render();
+        ScrollTo(window, list, 900);
+        Assert.Equal("k9002", TextOf(ItemControl(list, 900)));
+        Assert.Equal("k5002", TextOf(ItemControl(list, 500))); // mounted before, out of view: rendered with the new value
+    }
+
+    // Every text under a control: its text blocks', its content's and its children's.
+    private static IEnumerable<string> AllTexts(object? c) => c switch
+    {
+        TextBlock t => t.Text is { } s ? [s] : [],
+        Decorator d => AllTexts(d.Child),
+        Panel p => p.Children.SelectMany(AllTexts),
+        ContentControl cc => AllTexts(cc.Content),
+        _ => [],
+    };
+
+    [AvaloniaFact]
+    public void An_item_that_throws_when_it_is_shown_shows_the_fallback_in_its_place()
+    {
+        var host = new TestHost(() => ListBox(
+            TextBlock("a").WithKey("a"),
+            Component(_ => throw new InvalidOperationException("row b failed")).WithKey("b"),
+            TextBlock("c").WithKey("c")));
+        Show(host);
+        var list = List(host);
+        Assert.Equal("a", TextOf(ItemControl(list, 0)));
+        Assert.Contains(AllTexts(ItemControl(list, 1)), t => t.Contains("row b failed", StringComparison.Ordinal));
+        Assert.Equal("c", TextOf(ItemControl(list, 2)));
+    }
+
+    [AvaloniaFact]
+    public void Removing_an_item_tears_down_what_it_mounted_and_one_never_shown_has_nothing_to_tear_down()
+    {
+        var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();
+        var cleaned = new List<string>();
+        Element Row(string key) => Component(ctx =>
+        {
+            ctx.UseEffect(() => () => cleaned.Add(key));
+            return TextBlock(key);
+        }).WithKey(key);
+        var host = new TestHost(() => ListBox(keys.Select(Row).ToArray()).Height(300));
+        Show(host);
+        var list = List(host);
+
+        keys = keys.Where(k => k is not ("k0" or "k900")).ToArray();
+        host.Render();
+        Assert.Equal(["k0"], cleaned);
+        Assert.Equal(998, list.Items.Count);
+        Assert.Equal("k1", TextOf(ItemControl(list, 0)));
+    }
+
+    [AvaloniaFact]
+    public void An_item_whose_element_changes_type_gets_a_new_control_in_its_container()
+    {
+        var button = false;
+        var host = new TestHost(() => ListBox(
+            TextBlock("a").WithKey("a"),
+            button ? Button("b", () => { }).WithKey("b") : TextBlock("b").WithKey("b")));
+        Show(host);
+        var list = List(host);
+        Assert.IsType<TextBlock>(ItemControl(list, 1));
+
+        button = true;
+        host.Render();
+        var shown = Assert.IsType<Button>(ItemControl(list, 1));
+        Assert.Same(shown, ((ContentControl)list.ContainerFromIndex(1)!).Content);
+    }
+
+    [AvaloniaFact]
+    public void A_list_goes_from_strings_to_elements_and_back()
+    {
+        var elements = false;
+        var cleanups = 0;
+        string[] strings = ["s1", "s2"];
+        var host = new TestHost(() => elements
+            ? ListBox(Component(ctx =>
+            {
+                ctx.UseEffect(() => () => cleanups++);
+                return TextBlock("e1");
+            }).WithKey("e1"))
+            : ListBox(strings));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal(strings, list.Items.Cast<string>());
+
+        elements = true;
+        host.Render();
+        Layout(window);
+        Assert.Same(list, List(host));
+        Assert.Equal(["e1"], Texts(list));
+
+        elements = false;
+        host.Render();
+        Assert.Equal(1, cleanups);
+        Assert.Equal(strings, list.Items.Cast<string>());
+    }
+
+    [AvaloniaFact]
+    public void A_list_of_values_and_elements_shows_both()
+    {
+        var host = new TestHost(() => new ListBoxElement(["value", TextBlock("element")]));
+        Show(host);
+        var list = List(host);
+        Assert.Equal("value", ((ContentControl)list.ContainerFromIndex(0)!).Content);
+        Assert.Equal("element", TextOf(((ContentControl)list.ContainerFromIndex(1)!).Content));
+    }
+
+    [AvaloniaFact]
+    public void An_element_item_keeps_the_list_box_s_data_context_and_a_value_item_has_its_value()
+    {
+        var host = new TestHost(() => new ListBoxElement(["value", TextBlock("element")]));
+        Show(host);
+        var list = List(host);
+        list.DataContext = "outer";
+        Assert.Equal("outer", ItemControl(list, 1)!.DataContext);
+        Assert.Equal("value", list.ContainerFromIndex(0)!.DataContext);
+    }
+
+    [AvaloniaFact]
+    public void An_item_whose_control_fails_to_mount_shows_the_fallback_and_layout_goes_on()
+    {
+        var host = new TestHost(() => ListBox(
+            TextBlock("a").WithKey("a"),
+            (TextBlock("b") with { Setters = [static _ => throw new InvalidOperationException("setter b failed")] }).WithKey("b")));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal("a", TextOf(ItemControl(list, 0)));
+        Assert.Contains(AllTexts(ItemControl(list, 1)), t => t.Contains("setter b failed", StringComparison.Ordinal));
+        var fallback = ItemControl(list, 1);
+        Layout(window);
+        Assert.Same(fallback, ItemControl(list, 1));
+    }
+
+    [AvaloniaFact]
+    public void An_item_whose_mount_fails_part_way_tears_down_what_it_mounted()
+    {
+        var cleanups = 0;
+        var host = new TestHost(() => ListBox(HStack(
+            Component(ctx =>
+            {
+                ctx.UseEffect(() => () => cleanups++);
+                return TextBlock("mounted first");
+            }),
+            TextBlock("b") with { Setters = [static _ => throw new InvalidOperationException("setter b failed")] }).WithKey("x")));
+        Show(host);
+        var list = List(host);
+        Assert.Contains(AllTexts(ItemControl(list, 0)), t => t.Contains("setter b failed", StringComparison.Ordinal));
+        Assert.Equal(1, cleanups);
+    }
+
+    [AvaloniaFact]
+    public void A_render_with_a_group_among_the_items_is_refused_and_leaves_the_items_as_they_were()
+    {
+        var second = (Element)TextBlock("b").WithKey("b");
+        var first = "a";
+        var host = new TestHost(() => new ListBoxElement([TextBlock(first).WithKey("a"), second]));
+        Show(host);
+        var list = List(host);
+
+        first = "a2";
+        second = Group(TextBlock("x"));
+        Assert.Throws<NotSupportedException>(host.Render);
+        Assert.Equal(["a", "b"], Texts(list));
+    }
+
+    [AvaloniaFact]
+    public void A_list_box_whose_element_is_reused_still_hears_a_provider_change_for_its_items()
+    {
+        var keys = Enumerable.Range(0, 1000).Select(i => "k" + i).ToArray();
+        // The same list box element for every render: only the context check reaches it.
+        var rows = ListBox(keys.Select(k => (Element)Component(ctx => TextBlock(k + ctx.UseContext(Suffix))).WithKey(k)).ToArray()).Height(300);
+        var suffix = "1";
+        var host = new TestHost(() => VStack(rows).Provide(Suffix, suffix));
+        var window = Show(host);
+        var list = List(host);
+        Assert.Equal("k01", TextOf(ItemControl(list, 0)));
+
+        suffix = "2";
+        host.Render();
+        Assert.Equal("k02", TextOf(ItemControl(list, 0))); // mounted: re-rendered
+        ScrollTo(window, list, 900);
+        Assert.Equal("k9002", TextOf(ItemControl(list, 900))); // mounted afterwards, under the new value
+    }
+
+    [AvaloniaFact]
+    public void A_reused_list_box_mounts_its_next_items_under_the_new_providers_when_none_shown_reads_them()
+    {
+        // Only the rows far down read the context, so no mounted row tells the list box the value changed.
+        var rows = ListBox(Enumerable.Range(0, 1000).Select(i => i < 500
+            ? (Element)TextBlock("k" + i).WithKey("k" + i)
+            : Component(ctx => TextBlock("k" + i + ctx.UseContext(Suffix))).WithKey("k" + i)).ToArray()).Height(300);
+        var suffix = "1";
+        var host = new TestHost(() => VStack(rows).Provide(Suffix, suffix));
+        var window = Show(host);
+        var list = List(host);
+
+        suffix = "2";
+        host.Render();
+        ScrollTo(window, list, 900);
+        Assert.Equal("k9002", TextOf(ItemControl(list, 900)));
     }
 }

@@ -36,6 +36,8 @@ public sealed partial class Reconciler
             return owner;
         }
         viaToolTip = false;
+        // A list box's item (#102): its container may be recycled, so the path goes on from the list box.
+        if (child.GetValue(ItemsOwnerProperty) is { } list) return list;
         // A control in a text block's inlines (#65) has its inline UI container as its parent, inside spans, inside the
         // text block: the path goes on from the text block.
         var parent = child.Parent;

@@ -215,6 +215,13 @@ public sealed partial class Reconciler
                 var changed = false;
                 VisitInlineUI(text, child => changed = changed || HasConsumedContextChangedInSubtree(child));
                 return changed;
+            // #102: a list box's element items, mounted or still to be: those mounted read a value that changed, or the
+            // providers the list box recorded for the items still to mount have changed.
+            case Avalonia.Controls.ListBox list when list.GetValue(ReactorAttached.StateProperty)?.ListBoxItems is { } items:
+                if (items.Context.IsStale(_contextScope)) return true;
+                foreach (var slot in items.Slots)
+                    if (slot.Control is { } item && HasConsumedContextChangedInSubtree(item)) return true;
+                return false;
             default:
                 return false;
         }
@@ -342,6 +349,9 @@ public sealed partial class Reconciler
 
         /// <summary>The items-host strategy's state for this control.</summary>
         internal V1Protocol.ItemsHostState? ItemsHostState;
+
+        /// <summary>A list box's element items, mounted as their containers are realised (#102).</summary>
+        internal ListBoxItemsState? ListBoxItems;
     }
 
     internal sealed class ReactorAttached : AvaloniaObject

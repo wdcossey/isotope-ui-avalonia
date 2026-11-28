@@ -8,8 +8,8 @@ namespace Isotope.UI.Samples;
 /// <summary>
 /// List boxes (#94): a typed list of fruit whose rows are components with their own counts, keyed by the fruit, so a
 /// row keeps its count when the rows move; Avalonia's selection modes, the selection as items, and the item click; and
-/// a thousand element rows, of which Avalonia realises only those in view. Self-contained: one function component, with
-/// no other page's helpers.
+/// a thousand element rows, of which Avalonia realises only those in view, each mounted when it is first shown (#102).
+/// Self-contained: one function component, with no other page's helpers.
 /// </summary>
 public static class ListsPage
 {
@@ -60,7 +60,7 @@ public static class ListsPage
             }).SelectionMode(Modes[mode].Mode).Height(180),
             TextBlock("Selected: " + (selected.Count == 0 ? "none" : string.Join(", ", selected.Select(f => f.Name)))),
             TextBlock("Last clicked: " + clicked),
-            TextBlock("A thousand rows: Avalonia realises containers only for the rows in view."),
+            TextBlock("A thousand rows: each is mounted when it is first shown."),
             ListBox(Thousand).Height(150))
             .Margin(12);
     }

@@ -293,19 +293,27 @@ public static Element People(RenderContext ctx, IReadOnlyList<Person> people)
 }
 ```
 
-Every item's element is built and mounted, while Avalonia realises containers only for the items in view: 10,000 element
-rows realise 8 containers in a 300-high list and mount in 0.26 to 0.57 s headless (two invocations of
-`ListBoxMeasurements`, three runs each), where 10,000 strings take 3 to 44 ms. A keyed reorder moves the item controls, so nothing remounts, but Avalonia takes a moved item out of its
-container and puts it back, so a control in it loses keyboard focus. The selection follows its items when they move,
-and `OnSelectedIndexChanged` and `OnSelectionChanged` report the new indexes; a removed item's selection is reported as
-gone (-1).
+Every item's element is built on each render, but an element is mounted only when Avalonia first shows its item
+(realises a container for it), from the item's latest element. From then on it is reconciled by key as above, and it
+stays mounted while it is scrolled out of view, keeping its controls and a component's state, until it leaves the items
+or the list box goes: scrolling never loses state, and an item never shown is never mounted. 10,000 element rows realise 8
+containers in a 300-high list and mount in 14 to 36 ms headless (three invocations of `ListBoxMeasurements`, three runs
+each; 0.33 to 0.52 s when every item was mounted), and an item mounted while the list is laid out reads the context values
+the list box was rendered under. A keyed reorder moves the items, so nothing remounts, but Avalonia recycles a moved
+item's container, as it does an item's scrolled out of view, so a control in it loses keyboard focus. An item that throws
+when it is first shown gets the in-tree fallback in its place, since no error boundary is rendering then; once mounted,
+its errors go to the nearest boundary, as any control's do, so put a boundary in the item to handle both alike. The
+Avalonia list box's own `Items` and `SelectedItem` hold Isotope's item slots, not the item controls: read the indexes
+or the typed callbacks instead. The selection follows its items when they move, and `OnSelectedIndexChanged` and `OnSelectionChanged`
+report the new indexes; a removed item's selection is reported as gone (-1).
 
 > **Coming from Reactor?** `ListView` is `ListBox`, and `ListView<T>` is `ListBox<T>` (the migration renames both, and
 > its `viewBuilder` is `itemTemplate`). `ListViewSelectionMode.Extended` is `SelectionMode.Multiple`,
 > `Multiple` is `SelectionMode.Multiple | SelectionMode.Toggle`, and `None` has no counterpart: an Avalonia list box
 > always lets the user select, so use `Single` and ignore it. A list box has no `Header` (put a `TextBlock` above it),
-> `ItemContainerStyle` or `IncrementalLoadingTrigger`. Upstream's `ListView` mounts only the items in view and
-> rebuilds them when the items array changes; here every item stays mounted and keeps its state.
+> `ItemContainerStyle` or `IncrementalLoadingTrigger`. Upstream's `ListView` mounts the items in view too, but
+> rebuilds them when the items array changes and when they are recycled; here an item keeps its state for as long as
+> it is in the list.
 
 Layout has upstream's modifiers too: `.Padding(...)` (one value, horizontal and vertical, or per side:
 `.Padding(top: 8)`), `.WithBorder("Gray", 2)`, `.BorderBrush(...)`, `.BorderThickness(...)`, `.CornerRadius(...)`,
