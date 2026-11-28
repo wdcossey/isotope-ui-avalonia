@@ -16,7 +16,8 @@ namespace Isotope.UI.Core;
 // ItemsList.Of adapts (#12). The items are written before the other members (DescriptorHandler), so a first
 // SelectedIndex lands in a populated list. Avalonia raises SelectionChanged synchronously inside a SelectedIndex
 // write, so the selection uses upstream's counter channel. Reactor's ListView is the list box too (#94): its element
-// items are the list box's Items, and its typed ListView<T> is ListBoxElement<T>.
+// items are the list box's Items, mounted as Avalonia realises their containers (#102, ListBoxItemsHost), and its typed
+// ListView<T> is ListBoxElement<T>.
 
 /// <summary>
 /// A drop-down list of strings, as an Avalonia <see cref="Avalonia.Controls.ComboBox"/>. <see cref="SelectedIndex"/>
@@ -99,9 +100,11 @@ public partial record ComboBoxElement(
 /// <summary>
 /// A list to select from, as an Avalonia <see cref="Avalonia.Controls.ListBox"/> (Reactor's ListBox, and its ListView).
 /// Its <see cref="Items"/> are Avalonia's: strings, shown through Avalonia's recycled containers, or elements, each
-/// mounted and reconciled as a panel's children are (by key, else by position among the unkeyed; updated in place, a
-/// keyed one moved, and a component in one keeps its state). <see cref="SelectedIndex"/> defaults to
-/// <see cref="Optional{T}.Unset"/>, so the control owns its selection until one is given; -1 selects nothing.
+/// mounted when Avalonia first shows it (realises its container) and from then on reconciled as a panel's children are
+/// (by key, else by position among the unkeyed; updated in place, a keyed one moved, and a component in one keeps its
+/// state). A mounted item stays mounted, keeping its state, while it is scrolled out of view, until it leaves the items;
+/// an item never shown is never mounted. <see cref="SelectedIndex"/> defaults to <see cref="Optional{T}.Unset"/>, so the
+/// control owns its selection until one is given; -1 selects nothing.
 /// </summary>
 [GenerateReactorDescriptor(typeof(ListBox), ClearValueOnUnset = true, Exclude = new[] { "SelectionChanged" })]
 [WrapManual("Items")]
@@ -213,12 +216,10 @@ public partial record ListBoxElement(object[] Items) : Element
 
     private static partial ControlDescriptor<ListBoxElement, ListBox> Customize(ControlDescriptor<ListBoxElement, ListBox> d)
     {
-        // The items, strings and elements alike, through upstream's items host (written before the other members, so a
-        // first SelectedIndex lands in a populated list), edited through ListBoxItemsCollection: a keyed move is one Move
-        // and keeps its selection.
-        d.Children = new ItemsHost<ListBoxElement, ListBox>(
-            GetItems:      static e => e.Items,
-            GetCollection: static c => new ListBoxItemsCollection(c));
+        // The items (written before the other members, so a first SelectedIndex lands in a populated list): strings through
+        // upstream's items host, elements mounted as their containers are realised (#102), both edited through
+        // ListBoxItemsCollection: a keyed move is one Move and keeps its selection.
+        d.Children = ListBoxItemsHost.Instance;
         // A keyed move keeps its items selected at new indexes (ListBoxItemsCollection): once the items are in place, the
         // new element's callbacks hear them, before the controlled index is written.
         return d.Imperative(
@@ -271,8 +272,8 @@ public partial record ListBoxElement(object[] Items) : Element
 /// a component's state. <see cref="OnItemClick"/> and <see cref="OnSelectionChanged"/> receive the items.
 /// </summary>
 /// <remarks>
-/// The elements are built when the record is, by calling the item template once per item, and every one is mounted:
-/// Avalonia realises containers only for the items in view.
+/// The elements are built when the record is, by calling the item template once per item; each is mounted when Avalonia
+/// first shows its item (realises a container for it), and stays mounted until the item leaves the list.
 /// </remarks>
 public sealed record ListBoxElement<T> : ListBoxElement
 {
@@ -294,25 +295,15 @@ public sealed record ListBoxElement<T> : ListBoxElement
         _sourceIndexes = built.SourceIndexes;
     }
 
-    // Each item's key and its index in ItemsSource. An item is found by the key of the element its control shows, not by
-    // its position: an item whose template returned Empty() has no control, and while the engine edits the items a
-    // selection change comes from controls that are moving.
+    // Each item's key and its index in ItemsSource. An item is found by the key of the element the list box shows at an
+    // index, not by its position: an item whose template returned Empty() isn't shown, and while the engine edits the
+    // items a selection change comes from items that are moving.
     private readonly Dictionary<string, int> _sourceIndexes;
 
-    // The key of each item control the list box shows, from the items host's record of the elements it mounted.
-    private static Dictionary<object, string> KeysByControl(ListBox list)
+    private bool TryGetItem(ListBox list, int index, out T item)
     {
-        var keys = new Dictionary<object, string>(ReferenceEqualityComparer.Instance);
-        if (Reconciler.TryGetReactorState(list, out var state) && state.ItemsHostState is { } host)
-            foreach (var item in host.Items)
-                if (item is { Source: Element { Key: { } key }, Value: { } control }) keys.TryAdd(control, key);
-        return keys;
-    }
-
-    private bool TryGetItem(ListBox list, Dictionary<object, string> keys, int index, out T item)
-    {
-        if (index >= 0 && index < list.Items.Count && list.Items[index] is { } control
-            && keys.TryGetValue(control, out var key) && _sourceIndexes.TryGetValue(key, out var i) && i < ItemsSource.Count)
+        if (index >= 0 && index < list.Items.Count && list.Items[index] is ListBoxItemSlot { Key: { } key }
+            && _sourceIndexes.TryGetValue(key, out var i) && i < ItemsSource.Count)
         {
             item = ItemsSource[i];
             return true;
@@ -339,17 +330,16 @@ public sealed record ListBoxElement<T> : ListBoxElement
     private protected override void RaiseItemClick(ListBox list, int index)
     {
         base.RaiseItemClick(list, index);
-        if (OnItemClick is { } click && TryGetItem(list, KeysByControl(list), index, out var item)) click(item);
+        if (OnItemClick is { } click && TryGetItem(list, index, out var item)) click(item);
     }
 
     private protected override void RaiseSelectionChanged(ListBox list, IReadOnlyList<int> indexes)
     {
         base.RaiseSelectionChanged(list, indexes);
         if (OnSelectionChanged is not { } changed) return;
-        var keys = KeysByControl(list);
         var selected = new List<T>(indexes.Count);
         foreach (var i in indexes)
-            if (TryGetItem(list, keys, i, out var item)) selected.Add(item);
+            if (TryGetItem(list, i, out var item)) selected.Add(item);
         changed(selected);
     }
 
@@ -382,7 +372,7 @@ public sealed record ListBoxElement<T> : ListBoxElement
 }
 
 /// <summary>
-/// A list box's items as upstream's items host edits them (#94). A keyed move is a single Move of Avalonia's items list:
+/// A list box's items as upstream's items host and the element items (#94, #102) edit them. A keyed move is a single Move of Avalonia's items list:
 /// the items host moves an item with <c>Move</c> only on an <see cref="ObservableCollection{T}"/>, and upstream's removal
 /// and insertion would take the item out of the list box's logical children and put it back, which costs a scan of
 /// them each time (a keyed reverse of 10,000 rows took over 2 s headless). Avalonia's selection treats a move as a

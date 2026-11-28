@@ -473,16 +473,18 @@ public sealed class SampleAppTests : IDisposable
         var lists = All<ListBox>(page);
         Assert.Equal(2, lists.Count);
         var fruit = lists[0];
-        string Row(int i) => All<TextBlock>((Control)fruit.Items[i]!)[0].Text!;
+        // The control mounted for a row (#102: the items are slots, each with its element's control once shown).
+        Control RowControl(int i) => ((ListBoxItemSlot)fruit.Items[i]!).Control!;
+        string Row(int i) => All<TextBlock>(RowControl(i))[0].Text!;
         Assert.Equal(["Apple", "Banana", "Cherry", "Damson"], Enumerable.Range(0, 4).Select(Row));
 
-        Click(All<Button>((Control)fruit.Items[1]!).Single()); // Banana's +1: the button's click, not the item's
-        Assert.Contains("counted 1", Texts((Control)fruit.Items[1]!));
+        Click(All<Button>(RowControl(1)).Single()); // Banana's +1: the button's click, not the item's
+        Assert.Contains("counted 1", Texts(RowControl(1)));
         Assert.Contains("Last clicked: nothing yet", Texts(page));
 
         Click(Labelled<Button>(page, "Reverse"));
         Assert.Equal(["Damson", "Cherry", "Banana", "Apple"], Enumerable.Range(0, 4).Select(Row));
-        Assert.Contains("counted 1", Texts((Control)fruit.Items[2]!)); // Banana kept its count
+        Assert.Contains("counted 1", Texts(RowControl(2))); // Banana kept its count
 
         Click(fruit.ContainerFromIndex(0)!);
         Assert.Contains("Selected: Damson", Texts(page));

@@ -342,6 +342,9 @@ public sealed partial class Reconciler
 
         /// <summary>The items-host strategy's state for this control.</summary>
         internal V1Protocol.ItemsHostState? ItemsHostState;
+
+        /// <summary>A list box's element items, mounted as their containers are realised (#102).</summary>
+        internal ListBoxItemsState? ListBoxItems;
     }
 
     internal sealed class ReactorAttached : AvaloniaObject
