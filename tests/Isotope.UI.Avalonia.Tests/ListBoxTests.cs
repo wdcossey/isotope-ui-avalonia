@@ -726,4 +726,22 @@ public sealed class ListBoxTests : IDisposable
         ScrollTo(window, list, 900);
         Assert.Equal("k9002", TextOf(ItemControl(list, 900))); // mounted afterwards, under the new value
     }
+
+    [AvaloniaFact]
+    public void A_reused_list_box_mounts_its_next_items_under_the_new_providers_when_none_shown_reads_them()
+    {
+        // Only the rows far down read the context, so no mounted row tells the list box the value changed.
+        var rows = ListBox(Enumerable.Range(0, 1000).Select(i => i < 500
+            ? (Element)TextBlock("k" + i).WithKey("k" + i)
+            : Component(ctx => TextBlock("k" + i + ctx.UseContext(Suffix))).WithKey("k" + i)).ToArray()).Height(300);
+        var suffix = "1";
+        var host = new TestHost(() => VStack(rows).Provide(Suffix, suffix));
+        var window = Show(host);
+        var list = List(host);
+
+        suffix = "2";
+        host.Render();
+        ScrollTo(window, list, 900);
+        Assert.Equal("k9002", TextOf(ItemControl(list, 900)));
+    }
 }
